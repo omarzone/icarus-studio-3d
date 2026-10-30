@@ -1,4 +1,4 @@
-import type { ProjectSummary, ProjectsPort } from "./projects-port.ts";
+import type { ProjectFootprint, ProjectSummary, ProjectsPort } from "./projects-port.ts";
 
 // Sample data from the design mockups, used only by the prototype, the design gallery and tests.
 export const PROJECTS_FIXTURE: readonly ProjectSummary[] = [
@@ -28,6 +28,12 @@ export const PROJECTS_FIXTURE: readonly ProjectSummary[] = [
   },
 ];
 
+const FOOTPRINTS_FIXTURE: Readonly<Record<string, ProjectFootprint>> = {
+  "park-pilot": { trainingRuns: 3, runsBytes: 1.8e9 },
+  "fruit-fly": { trainingRuns: 0, runsBytes: 0 },
+  "dance-copy": { trainingRuns: 2, runsBytes: 0.9e9 },
+};
+
 export function createProjectsFixture(): ProjectsPort {
   let projects = [...PROJECTS_FIXTURE];
   const find = (id: string) => {
@@ -46,12 +52,18 @@ export function createProjectsFixture(): ProjectsPort {
       return renamed;
     },
     duplicateProject: async ({ id, name }) => {
-      const copy = { ...find(id), id: `${id}-copy`, name, status: "draft" as const, statusLine: "Draft · now" };
+      const taken = new Set(projects.map((item) => item.id));
+      let copyId = `${id}-copy`;
+      for (let n = 2; taken.has(copyId); n++) {
+        copyId = `${id}-copy-${n}`;
+      }
+      const copy = { ...find(id), id: copyId, name, status: "draft" as const, statusLine: "Draft · now" };
       projects = [...projects, copy];
       return copy;
     },
     deleteProject: async (id) => {
       projects = projects.filter((item) => item.id !== id);
     },
+    getFootprint: async (id) => FOOTPRINTS_FIXTURE[find(id).id] ?? { trainingRuns: 0, runsBytes: 0 },
   };
 }

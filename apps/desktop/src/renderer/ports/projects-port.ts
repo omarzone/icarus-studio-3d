@@ -15,12 +15,20 @@ export type ProjectSummary = {
   revision: string;
 };
 
+// What a project keeps on this computer, for the duplicate and delete dialogs.
+export type ProjectFootprint = {
+  trainingRuns: number;
+  // Size of the training runs and timelapses, in bytes.
+  runsBytes: number;
+};
+
 export type ProjectsPort = {
   listProjects: () => Promise<ProjectSummary[]>;
   getProject: (id: string) => Promise<ProjectSummary>;
   renameProject: (input: { id: string; name: string; description: string }) => Promise<ProjectSummary>;
   duplicateProject: (input: { id: string; name: string; include: readonly string[] }) => Promise<ProjectSummary>;
   deleteProject: (id: string) => Promise<void>;
+  getFootprint: (id: string) => Promise<ProjectFootprint>;
 };
 
 export const projectsPort = definePort<ProjectsPort>({
@@ -39,6 +47,12 @@ export const projectsPort = definePort<ProjectsPort>({
       summary: "Deleting a project",
       sprint: 2,
       ids: ["MOD-DELETE-PROJECT"],
+    }),
+    getFootprint: pending({
+      key: "projects.footprint",
+      summary: "What a project keeps on this computer",
+      sprint: 2,
+      ids: ["MOD-DUPLICATE", "MOD-DELETE-PROJECT"],
     }),
   },
   prototype: createProjectsFixture,
