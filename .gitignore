@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.venv/
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local data produced by the app
+projects/
+runs/
+*.log
+
+# Internal working notes
+docs/plans/schedule.md
+
+# OS and editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
