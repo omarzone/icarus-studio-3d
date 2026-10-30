@@ -1,0 +1,6217 @@
+{
+ "MOD-AUTO-RIG": {
+  "artboard": "AutoRig",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Auto-rig",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add hand colliders",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Show me",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Make it lighter",
+    "goesTo": "SCR-BODY",
+    "kind": "chip"
+   },
+   {
+    "label": "Stiffer knees",
+    "goesTo": "SCR-BODY",
+    "kind": "chip"
+   },
+   {
+    "label": "Copy this video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Run in background",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "See result",
+    "goesTo": "STA-BODY-CHECK-FAILED",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-AUTOPILOT": {
+  "artboard": "Autopilot",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "link"
+   },
+   {
+    "label": "Ask first",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "tool"
+   },
+   {
+    "label": "Pause",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tool"
+   },
+   {
+    "label": "Autopilot",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Try it as run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Explain more",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Why does it scrape?",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with run 2",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "Stop at 500k",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Done",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-BRAIN-SIZES": {
+  "artboard": "BrainOptions",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add a layer",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Network",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Make the brain bigger",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with 25k",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "What does layer 1 do?",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Use Small",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Use Medium",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Use Large",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Browse brains",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-BRAIN-SOURCE": {
+  "artboard": "ConnectomeImport",
+  "anchors": [
+   {
+    "label": "Fruit Fly",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Run test",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Play with it",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "link"
+   },
+   {
+    "label": "Compare with real flies",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "Play with it",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with real flies",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Load into the fly",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-DELETE-PROJECT": {
+  "artboard": "DeleteProject",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Delete project",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-DUPLICATE": {
+  "artboard": "Duplicate",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Duplicate",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-EXPORT-ANIMATION": {
+  "artboard": "ExportAnim",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train copy",
+    "goesTo": "MOD-MOTION-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Detect pose",
+    "goesTo": "MOD-MOTION-TRACKING",
+    "kind": "tool"
+   },
+   {
+    "label": "Trim",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Export",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Train the spin",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Slow it down",
+    "goesTo": "SCR-MOTION",
+    "kind": "chip"
+   },
+   {
+    "label": "Loop it",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Roblox",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Download",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-EXPORT-BRAIN": {
+  "artboard": "ExportBrain",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "Share to community\nPublish so others can remix it",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Export brain\nONNX file · 1.2 MB",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Run on real hardware\nParts list · about $189",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "link"
+   },
+   {
+    "label": "Use in a game\nUnity · Godot · Roblox",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Export animation\nglTF · FBX (for dancers)",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "link"
+   },
+   {
+    "label": "Save draft",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Publish to community",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Write a better description",
+    "goesTo": "SCR-BUILD",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Unity",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Order the parts",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Download",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-HISTORY": {
+  "artboard": "Versions",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": null,
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Restore",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Restore",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Restore",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-IMPORT": {
+  "artboard": "Import",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 1/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Import",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Auto-rig",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "tool"
+   },
+   {
+    "label": "Import as static mesh",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Import and auto-rig",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Import a robot",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Use a template",
+    "goesTo": "SCR-HOME",
+    "kind": "chip"
+   }
+  ]
+ },
+ "MOD-MOTION-TRACKING": {
+  "artboard": "PoseProgress",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train copy",
+    "goesTo": "MOD-MOTION-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Detect pose",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Trim",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Export",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Train the spin",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Slow it down",
+    "goesTo": "SCR-MOTION",
+    "kind": "chip"
+   },
+   {
+    "label": "Loop it",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Roblox",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Run in background",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "See result",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-MOTION-TRAIN": {
+  "artboard": "TrainMotion",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train copy",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Detect pose",
+    "goesTo": "MOD-MOTION-TRACKING",
+    "kind": "tool"
+   },
+   {
+    "label": "Trim",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Export",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Train the spin",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Slow it down",
+    "goesTo": "SCR-MOTION",
+    "kind": "chip"
+   },
+   {
+    "label": "Loop it",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Roblox",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Start training",
+    "goesTo": "STA-MOTION-TRAINING",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-MOTION-VIDEO": {
+  "artboard": "UploadVideo",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Agent",
+    "goesTo": "SCR-IDEAS",
+    "kind": "tool"
+   },
+   {
+    "label": "Goal",
+    "goesTo": "SCR-BRAIN",
+    "kind": "tool"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Show guide · 0 of 5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Import a model or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "A car that learns to park",
+    "goesTo": "SCR-IDEAS",
+    "kind": "chip"
+   },
+   {
+    "label": "Import my robot",
+    "goesTo": "MOD-IMPORT",
+    "kind": "chip"
+   },
+   {
+    "label": "A dancer from a video",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "My character · dancer.glb\nImported and rigged",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Track the motion",
+    "goesTo": "MOD-MOTION-TRACKING",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-PUBLISH": {
+  "artboard": "Publish",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Share to community\nPublish so others can remix it",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Export brain\nONNX file · 1.2 MB",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Run on real hardware\nParts list · about $189",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "link"
+   },
+   {
+    "label": "Use in a game\nUnity · Godot · Roblox",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Export animation\nglTF · FBX (for dancers)",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "link"
+   },
+   {
+    "label": "Save draft",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Publish to community",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Write a better description",
+    "goesTo": "SCR-BUILD",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Unity",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "chip"
+   },
+   {
+    "label": "Order the parts",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Back",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": "MOD-PUBLISHED",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-PUBLISHED": {
+  "artboard": "Published",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "Share to community\nPublish so others can remix it",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Export brain\nONNX file · 1.2 MB",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Run on real hardware\nParts list · about $189",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "link"
+   },
+   {
+    "label": "Use in a game\nUnity · Godot · Roblox",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Export animation\nglTF · FBX (for dancers)",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "link"
+   },
+   {
+    "label": "Save draft",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Publish to community",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Write a better description",
+    "goesTo": "SCR-BUILD",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Unity",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "chip"
+   },
+   {
+    "label": "Order the parts",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "View its page",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Back to Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-RENAME": {
+  "artboard": "Rename",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Save",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-REPORT": {
+  "artboard": "Report",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Watch how it learned · 1:00",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "How it learned",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "Start",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "100k",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "500k",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "1M",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "4M · 93%",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "MA\nMara Ortiz\n@mara · 12 creations\nFollow",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Remix into my projects",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Vote",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Report this creation",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Send report",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-SHARE": {
+  "artboard": "Share",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Invite",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Copy link",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Done",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-SIGN-IN": {
+  "artboard": "SignIn",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Empty world\nTerrain, sky and camera ready",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "Parking car\nLearns to park with sensors",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Walker robot\nLearns to walk and jump",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Dancer\nCopies a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "link"
+   },
+   {
+    "label": "Fruit fly\nA real fly brain in a fly body",
+    "goesTo": "MOD-BRAIN-SOURCE",
+    "kind": "link"
+   },
+   {
+    "label": "Import your own\nModel, robot or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "Featured",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Recent",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Most voted",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "2.3k\nValet Bot\nby mara · 2.3k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.8k\nStair Tripod\nby kenji · 1.8k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.4k\nSalsa Dancer\nby lu · 1.4k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "960\nLot Swarm\nby dev_ana · 960 votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Continue with Google",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Continue with GitHub",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Continue with email",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-START-TRAINING": {
+  "artboard": "StartTraining",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "2 layers · 256",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "link"
+   },
+   {
+    "label": "Network",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Explain the reward",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "chip"
+   },
+   {
+    "label": "Make it faster",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "chip"
+   },
+   {
+    "label": "Reset to default",
+    "goesTo": "SCR-BRAIN",
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Cancel",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Start run 4",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   }
+  ]
+ },
+ "MOD-STOP-RUN": {
+  "artboard": "StopRun",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Ask first",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "tool"
+   },
+   {
+    "label": "Pause",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Stop",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tool"
+   },
+   {
+    "label": "Autopilot",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Try it as run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Explain more",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Why does it scrape?",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with run 2",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "Stop at 500k",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Close",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Keep training",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Pause",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Stop run 3",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   }
+  ]
+ },
+ "POP-ADD-COMPONENT": {
+  "artboard": "Components",
+  "anchors": [
+   {
+    "label": "Property types",
+    "goesTo": "REF-PROPERTY-TYPES",
+    "kind": "link"
+   },
+   {
+    "label": "Back to the editor",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Apply",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Discard",
+    "goesTo": null,
+    "kind": "link"
+   }
+  ]
+ },
+ "POP-NOTIFICATIONS": {
+  "artboard": "Notifications",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Empty world\nTerrain, sky and camera ready",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "Parking car\nLearns to park with sensors",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Walker robot\nLearns to walk and jump",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Dancer\nCopies a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "link"
+   },
+   {
+    "label": "Fruit fly\nA real fly brain in a fly body",
+    "goesTo": "MOD-BRAIN-SOURCE",
+    "kind": "link"
+   },
+   {
+    "label": "Import your own\nModel, robot or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "Featured",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Recent",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Most voted",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "2.3k\nValet Bot\nby mara · 2.3k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.8k\nStair Tripod\nby kenji · 1.8k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.4k\nSalsa Dancer\nby lu · 1.4k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "960\nLot Swarm\nby dev_ana · 960 votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "!\nRun 4 stopped\nThe physics went unstable at 41k steps.\n5 min",
+    "goesTo": "STA-TRAIN-FAILED",
+    "kind": "link"
+   },
+   {
+    "label": "Park Pilot is public\nIt passed review. 12 people saw it in the last hour.\n2 min",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Run 3 finished\nParks 71% of the time. The best brain is saved.\n40 min",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "@mara remixed Tripod Jumper\nHer version climbs stairs.\n3 h",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "!\nDance Copy needs attention\nThe spin at 0:07 loses balance.\nyesterday",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   }
+  ]
+ },
+ "POP-PROJECT-MENU": {
+  "artboard": "ProjectMenu",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Rename",
+    "goesTo": "MOD-RENAME",
+    "kind": "link"
+   },
+   {
+    "label": "Duplicate",
+    "goesTo": "MOD-DUPLICATE",
+    "kind": "link"
+   },
+   {
+    "label": "History\nr14",
+    "goesTo": "MOD-HISTORY",
+    "kind": "link"
+   },
+   {
+    "label": "Open project…\nCtrl O",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Project settings",
+    "goesTo": "SCR-SETTINGS-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Delete project…",
+    "goesTo": "MOD-DELETE-PROJECT",
+    "kind": "link"
+   },
+   {
+    "label": "Back to Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   }
+  ]
+ },
+ "POP-TRAINING-COPIES": {
+  "artboard": "Randomize",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Preview copies",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "Done",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   }
+  ]
+ },
+ "REF-PROPERTY-TYPES": {
+  "artboard": "PropertyTypes",
+  "anchors": [
+   {
+    "label": "See components",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "2 × 256",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-BODY": {
+  "artboard": "Body",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Auto-rig",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add hand colliders",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "link"
+   },
+   {
+    "label": "Show me",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Make it lighter",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Stiffer knees",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Copy this video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-BRAIN": {
+  "artboard": "Brain",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "2 layers · 256",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "link"
+   },
+   {
+    "label": "Network",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Explain the reward",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "chip"
+   },
+   {
+    "label": "Make it faster",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "chip"
+   },
+   {
+    "label": "Reset to default",
+    "goesTo": null,
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-BUILD": {
+  "artboard": "Build",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "Share to community\nPublish so others can remix it",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Export brain\nONNX file · 1.2 MB",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Run on real hardware\nParts list · about $189",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "link"
+   },
+   {
+    "label": "Use in a game\nUnity · Godot · Roblox",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Export animation\nglTF · FBX (for dancers)",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "link"
+   },
+   {
+    "label": "Save draft",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Publish to community",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Write a better description",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Unity",
+    "goesTo": "MOD-EXPORT-BRAIN",
+    "kind": "chip"
+   },
+   {
+    "label": "Order the parts",
+    "goesTo": "STA-BUILD-HARDWARE",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-COMMUNITY": {
+  "artboard": "Community",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Featured",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Recent",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Most voted",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "2.3k\nMA\nValet Bot\n@mara · 412 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.8k\nKE\nStair Tripod\n@kenji · 201 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.4k\nLU\nSalsa Dancer\n@lu · 330 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "960\nDA\nLot Swarm\n@dev_ana · 88 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "720\nRO\nReverse Parker\n@rob · 64 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "610\nSA\nDesk Walker\n@sam · 52 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "540\nJI\nBallet Bot\n@jin · 97 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "480\nPA\nTight Spot\n@pau · 31 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "3.1k\nNA\nFruit Fly\n@neuro_ana · 520 remixes",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "390\nTO\nNight Valet\n@tomas · 22 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "350\nRI\nHip Hop Copy\n@rina · 41 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "300\nGE\nIce Hopper\n@geo · 18 remixes",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-CREATION": {
+  "artboard": "Creation",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Watch how it learned · 1:00",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "How it learned",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "Start",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "100k",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "500k",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "1M",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "4M · 93%",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "MA\nMara Ortiz\n@mara · 12 creations\nFollow",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Remix into my projects",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Vote",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Report this creation",
+    "goesTo": "MOD-REPORT",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-HOME": {
+  "artboard": "Main",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "MOD-SIGN-IN",
+    "kind": "link"
+   },
+   {
+    "label": "Press enter to see 3 ideas →",
+    "goesTo": "SCR-IDEAS",
+    "kind": "link"
+   },
+   {
+    "label": "Empty world\nTerrain, sky and camera ready",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "Parking car\nLearns to park with sensors",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Walker robot\nLearns to walk and jump",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Dancer\nCopies a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "link"
+   },
+   {
+    "label": "Fruit fly\nA real fly brain in a fly body",
+    "goesTo": "MOD-BRAIN-SOURCE",
+    "kind": "link"
+   },
+   {
+    "label": "Import your own\nModel, robot or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "Featured",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Recent",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Most voted",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "View all",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "2.3k\nValet Bot\nby mara · 2.3k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.8k\nStair Tripod\nby kenji · 1.8k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "1.4k\nSalsa Dancer\nby lu · 1.4k votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "960\nLot Swarm\nby dev_ana · 960 votes\nRemix",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-IDEAS": {
+  "artboard": "Proposals",
+  "anchors": [
+   {
+    "label": "Untitled project",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Use this",
+    "goesTo": "STA-WORLD-BUILDING",
+    "kind": "link"
+   },
+   {
+    "label": "Tweak",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Use this",
+    "goesTo": "STA-WORLD-BUILDING",
+    "kind": "link"
+   },
+   {
+    "label": "Tweak",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Use this",
+    "goesTo": "STA-WORLD-BUILDING",
+    "kind": "link"
+   },
+   {
+    "label": "Tweak",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Mix and build",
+    "goesTo": "STA-WORLD-BUILDING",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Make it at night",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Use a bigger car",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Show 3 more",
+    "goesTo": null,
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-MODERATION": {
+  "artboard": "Moderation",
+  "anchors": [
+   {
+    "label": "Keep",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Remove",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Ban user",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Keep",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Remove",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Ban user",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Keep",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Remove",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Ban user",
+    "goesTo": null,
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-MOTION": {
+  "artboard": "Motion",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train copy",
+    "goesTo": "MOD-MOTION-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Detect pose",
+    "goesTo": "MOD-MOTION-TRACKING",
+    "kind": "tool"
+   },
+   {
+    "label": "Trim",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Export",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Train the spin",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Slow it down",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Loop it",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Roblox",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-PLAY": {
+  "artboard": "PlayCar",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Record",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "Use another brain",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add to training",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "Not now",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Make it night",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Try 10 random lots",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Record this",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-PLAY.b": {
+  "artboard": "PlayFly",
+  "anchors": [
+   {
+    "label": "Fruit Fly",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "Record",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Cast a shadow",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Place sugar far away",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Record this",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-PROFILE": {
+  "artboard": "Profile",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Edit profile",
+    "goesTo": "SCR-SETTINGS-MODELS",
+    "kind": "link"
+   },
+   {
+    "label": "New creation",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Park Pilot\nIn review",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Tripod Jumper\nPublic ·\n128",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Dance Copy\nPrivate",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   },
+   {
+    "label": "Parallel Lots\nPublic ·\n46",
+    "goesTo": "SCR-CREATION",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-PROJECTS": {
+  "artboard": "Projects",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Open a file",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "New project",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Park Pilot\nTraining · run 3 at 31%",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Fruit Fly\nConnectome · tested",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "Dance Copy\nNeeds attention",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Tripod Jumper\nPublished ·\n128",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Parallel Lots\nPublished ·\n46",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Untitled project\nDraft · yesterday",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-RESULTS": {
+  "artboard": "Results",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 5/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Use this brain",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Keep training",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Compare",
+    "goesTo": null,
+    "kind": "tab"
+   },
+   {
+    "label": "Where it fails",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "tab"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tab"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "Start\ncircles",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "25k\nhits a car",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "50k\nreaches lot",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "100k\n12%",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "250k\n71%",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Show where it fails",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "chip"
+   },
+   {
+    "label": "Share run 3",
+    "goesTo": "MOD-SHARE",
+    "kind": "chip"
+   },
+   {
+    "label": "Train run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-SETTINGS-MODELS": {
+  "artboard": "Settings",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Profile",
+    "goesTo": "SCR-SETTINGS-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "AI models",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Privacy and safety",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Blocked people",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Training and hardware",
+    "goesTo": "SCR-SETTINGS-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "SCR-SETTINGS-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "Test connection",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Save",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-SETTINGS-NOTIFICATIONS": {
+  "artboard": "SettingsNotifications",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Profile",
+    "goesTo": "SCR-SETTINGS-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "AI models",
+    "goesTo": "SCR-SETTINGS-MODELS",
+    "kind": "link"
+   },
+   {
+    "label": "Privacy and safety",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Blocked people",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Training and hardware",
+    "goesTo": "SCR-SETTINGS-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": null,
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-SETTINGS-PRIVACY": {
+  "artboard": "SettingsPrivacy",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Profile",
+    "goesTo": "SCR-SETTINGS-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "AI models",
+    "goesTo": "SCR-SETTINGS-MODELS",
+    "kind": "link"
+   },
+   {
+    "label": "Privacy and safety",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Blocked people",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Training and hardware",
+    "goesTo": "SCR-SETTINGS-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "SCR-SETTINGS-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "Unblock",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Unblock",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Download my data",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Delete account",
+    "goesTo": null,
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-SETTINGS-PROFILE": {
+  "artboard": "SettingsProfile",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Profile",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "AI models",
+    "goesTo": "SCR-SETTINGS-MODELS",
+    "kind": "link"
+   },
+   {
+    "label": "Privacy and safety",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Blocked people",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Training and hardware",
+    "goesTo": "SCR-SETTINGS-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "SCR-SETTINGS-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "Change photo",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Remove",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Save",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-SETTINGS-TRAINING": {
+  "artboard": "SettingsTraining",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Profile",
+    "goesTo": "SCR-SETTINGS-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "AI models",
+    "goesTo": "SCR-SETTINGS-MODELS",
+    "kind": "link"
+   },
+   {
+    "label": "Privacy and safety",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Blocked people",
+    "goesTo": "SCR-SETTINGS-PRIVACY",
+    "kind": "link"
+   },
+   {
+    "label": "Training and hardware",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "SCR-SETTINGS-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "Restart engine",
+    "goesTo": "SYS-ENGINE-DOWN",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-TIMELAPSE": {
+  "artboard": "Timelapse",
+  "anchors": [
+   {
+    "label": "Exit presentation",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Export video",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   }
+  ]
+ },
+ "SCR-TRAIN": {
+  "artboard": "Train",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "link"
+   },
+   {
+    "label": "Ask first",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "tool"
+   },
+   {
+    "label": "Pause",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tool"
+   },
+   {
+    "label": "Autopilot",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Try it as run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Explain more",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Why does it scrape?",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with run 2",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "Stop at 500k",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "chip"
+   }
+  ]
+ },
+ "SCR-WORLD": {
+  "artboard": "World",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-BODY-CHECK-FAILED": {
+  "artboard": "DesignFailed",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Auto-rig",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Add hand colliders",
+    "goesTo": "MOD-AUTO-RIG",
+    "kind": "link"
+   },
+   {
+    "label": "Show me",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Make it lighter",
+    "goesTo": "SCR-BODY",
+    "kind": "chip"
+   },
+   {
+    "label": "Stiffer knees",
+    "goesTo": "SCR-BODY",
+    "kind": "chip"
+   },
+   {
+    "label": "Copy this video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "chip"
+   },
+   {
+    "label": "Fix both for me",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Show me",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   }
+  ]
+ },
+ "STA-BRAIN-CONNECTOME": {
+  "artboard": "FlyBrain",
+  "anchors": [
+   {
+    "label": "Fruit Fly",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Run test",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Play with it",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "link"
+   },
+   {
+    "label": "Compare with real flies",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "link"
+   },
+   {
+    "label": "Play with it",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with real flies",
+    "goesTo": "STA-RESULTS-REFERENCE",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-BRAIN-NETWORK": {
+  "artboard": "Network",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add a layer",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "link"
+   },
+   {
+    "label": "Network",
+    "goesTo": null,
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Make the brain bigger",
+    "goesTo": "MOD-BRAIN-SIZES",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with 25k",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "What does layer 1 do?",
+    "goesTo": null,
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-BUILD-HARDWARE": {
+  "artboard": "Hardware",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Publish",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "Recheck",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Skip this sensor",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Explain calibration",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Order the parts",
+    "goesTo": null,
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-HOME-EMPTY": {
+  "artboard": "EmptyHome",
+  "anchors": [
+   {
+    "label": "Home",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Projects",
+    "goesTo": "SCR-PROJECTS",
+    "kind": "link"
+   },
+   {
+    "label": "Community",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Search creations",
+    "goesTo": "SCR-COMMUNITY",
+    "kind": "link"
+   },
+   {
+    "label": "Notifications",
+    "goesTo": "POP-NOTIFICATIONS",
+    "kind": "link"
+   },
+   {
+    "label": "O",
+    "goesTo": "SCR-PROFILE",
+    "kind": "link"
+   },
+   {
+    "label": "Empty world\nTerrain, sky and camera ready",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "Parking car\nLearns to park with sensors",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Walker robot\nLearns to walk and jump",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Dancer\nCopies a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "link"
+   },
+   {
+    "label": "Fruit fly\nA real fly brain in a fly body",
+    "goesTo": "MOD-BRAIN-SOURCE",
+    "kind": "link"
+   },
+   {
+    "label": "Import your own\nModel, robot or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "Take the 3 minute tour",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   }
+  ]
+ },
+ "STA-MOTION-TRAINING": {
+  "artboard": "MotionTraining",
+  "anchors": [
+   {
+    "label": "Dance Copy",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Motion",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 3/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "link"
+   },
+   {
+    "label": "Video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Detect pose",
+    "goesTo": "MOD-MOTION-TRACKING",
+    "kind": "tool"
+   },
+   {
+    "label": "Trim",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "tool"
+   },
+   {
+    "label": "Export",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Train the spin",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Slow it down",
+    "goesTo": "SCR-MOTION",
+    "kind": "chip"
+   },
+   {
+    "label": "Loop it",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Export for Roblox",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "chip"
+   },
+   {
+    "label": "Watch",
+    "goesTo": "SCR-MOTION",
+    "kind": "link"
+   },
+   {
+    "label": "Export now",
+    "goesTo": "MOD-EXPORT-ANIMATION",
+    "kind": "link"
+   }
+  ]
+ },
+ "STA-RESULTS-FAILURES": {
+  "artboard": "Diagnose",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 5/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Tight left turns\n23 of 50 test runs",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Overshoots the spot\n9 of 50",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Stops too early\n4 of 50",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Compare",
+    "goesTo": "SCR-RESULTS",
+    "kind": "tab"
+   },
+   {
+    "label": "Where it fails",
+    "goesTo": null,
+    "kind": "tab"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tab"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Apply as revision 14",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Show other failures",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Why only on the left?",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Train run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-RESULTS-REFERENCE": {
+  "artboard": "FlyCompare",
+  "anchors": [
+   {
+    "label": "Fruit Fly",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY.b",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Run test",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Run flying test",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Wire the antennas",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "link"
+   },
+   {
+    "label": "Share it",
+    "goesTo": "MOD-PUBLISH",
+    "kind": "link"
+   },
+   {
+    "label": "Why is grooming late?",
+    "goesTo": "STA-BRAIN-CONNECTOME",
+    "kind": "chip"
+   },
+   {
+    "label": "Record a video",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-TRAIN-FAILED": {
+  "artboard": "TrainFailed",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 4/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "link"
+   },
+   {
+    "label": "Ask first",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "tool"
+   },
+   {
+    "label": "Pause",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Stop",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "tool"
+   },
+   {
+    "label": "Timelapse",
+    "goesTo": "SCR-TIMELAPSE",
+    "kind": "tool"
+   },
+   {
+    "label": "Autopilot",
+    "goesTo": "MOD-AUTOPILOT",
+    "kind": "tool"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Try it as run 4",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Explain more",
+    "goesTo": "STA-BRAIN-NETWORK",
+    "kind": "link"
+   },
+   {
+    "label": "Why does it scrape?",
+    "goesTo": "STA-RESULTS-FAILURES",
+    "kind": "chip"
+   },
+   {
+    "label": "Compare with run 2",
+    "goesTo": "SCR-RESULTS",
+    "kind": "chip"
+   },
+   {
+    "label": "Stop at 500k",
+    "goesTo": "MOD-STOP-RUN",
+    "kind": "chip"
+   },
+   {
+    "label": "Fix and restart",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "View log",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Back to run 3",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   }
+  ]
+ },
+ "STA-WORLD-BUILDING": {
+  "artboard": "Generating",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Open when ready",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Make it night time",
+    "goesTo": "STA-WORLD-PROPOSAL",
+    "kind": "chip"
+   },
+   {
+    "label": "Use a bigger car",
+    "goesTo": "SCR-IDEAS",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-WORLD-EMPTY": {
+  "artboard": "NewProject",
+  "anchors": [
+   {
+    "label": "Untitled project",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": null,
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Agent",
+    "goesTo": "SCR-IDEAS",
+    "kind": "tool"
+   },
+   {
+    "label": "Goal",
+    "goesTo": "SCR-BRAIN",
+    "kind": "tool"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Hide guide",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "I will explore on my own",
+    "goesTo": "STA-WORLD-EMPTY-NOGUIDE",
+    "kind": "link"
+   },
+   {
+    "label": "Import a model or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "A car that learns to park",
+    "goesTo": "SCR-IDEAS",
+    "kind": "chip"
+   },
+   {
+    "label": "Import my robot",
+    "goesTo": "MOD-IMPORT",
+    "kind": "chip"
+   },
+   {
+    "label": "A dancer from a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-WORLD-EMPTY-NOGUIDE": {
+  "artboard": "NewProjectNoGuide",
+  "anchors": [
+   {
+    "label": "Untitled project",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Guide",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Agent",
+    "goesTo": "SCR-IDEAS",
+    "kind": "tool"
+   },
+   {
+    "label": "Goal",
+    "goesTo": "SCR-BRAIN",
+    "kind": "tool"
+   },
+   {
+    "label": "Import",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Show guide · 0 of 5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Import a model or environment",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "A car that learns to park",
+    "goesTo": "SCR-IDEAS",
+    "kind": "chip"
+   },
+   {
+    "label": "Import my robot",
+    "goesTo": "MOD-IMPORT",
+    "kind": "chip"
+   },
+   {
+    "label": "A dancer from a video",
+    "goesTo": "MOD-MOTION-VIDEO",
+    "kind": "chip"
+   }
+  ]
+ },
+ "STA-WORLD-PROPOSAL": {
+  "artboard": "ProposedChange",
+  "anchors": [
+   {
+    "label": "Park Pilot",
+    "goesTo": "POP-PROJECT-MENU",
+    "kind": "link"
+   },
+   {
+    "label": "World",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Body",
+    "goesTo": "SCR-BODY",
+    "kind": "link"
+   },
+   {
+    "label": "Brain",
+    "goesTo": "SCR-BRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "SCR-TRAIN",
+    "kind": "link"
+   },
+   {
+    "label": "Results",
+    "goesTo": "SCR-RESULTS",
+    "kind": "link"
+   },
+   {
+    "label": "Build",
+    "goesTo": "SCR-BUILD",
+    "kind": "link"
+   },
+   {
+    "label": "Play",
+    "goesTo": "SCR-PLAY",
+    "kind": "link"
+   },
+   {
+    "label": "Getting started 2/5",
+    "goesTo": "STA-WORLD-EMPTY",
+    "kind": "link"
+   },
+   {
+    "label": "Share",
+    "goesTo": "MOD-SHARE",
+    "kind": "link"
+   },
+   {
+    "label": "Train",
+    "goesTo": "MOD-START-TRAINING",
+    "kind": "link"
+   },
+   {
+    "label": "Positions, colors",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "link"
+   },
+   {
+    "label": "+ Add component",
+    "goesTo": "POP-ADD-COMPONENT",
+    "kind": "link"
+   },
+   {
+    "label": "Copies",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Randomize",
+    "goesTo": "POP-TRAINING-COPIES",
+    "kind": "tool"
+   },
+   {
+    "label": "Import world",
+    "goesTo": "MOD-IMPORT",
+    "kind": "tool"
+   },
+   {
+    "label": "Import environment .glb .fbx .usd",
+    "goesTo": "MOD-IMPORT",
+    "kind": "link"
+   },
+   {
+    "label": "History",
+    "goesTo": "MOD-HISTORY",
+    "kind": "tab"
+   },
+   {
+    "label": "Apply",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Discard",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Edit by hand",
+    "goesTo": "SCR-WORLD",
+    "kind": "link"
+   },
+   {
+    "label": "Add rain",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Make the spots tighter",
+    "goesTo": null,
+    "kind": "chip"
+   },
+   {
+    "label": "Night time",
+    "goesTo": null,
+    "kind": "chip"
+   }
+  ]
+ },
+ "SYS-ENGINE-DOWN": {
+  "artboard": "EngineDown",
+  "anchors": [
+   {
+    "label": "Restart engine",
+    "goesTo": "SCR-HOME",
+    "kind": "link"
+   },
+   {
+    "label": "Copy error details",
+    "goesTo": null,
+    "kind": "link"
+   }
+  ]
+ }
+}
