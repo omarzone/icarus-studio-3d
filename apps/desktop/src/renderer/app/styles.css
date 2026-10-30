@@ -15,3 +15,17 @@ body {
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Headers double as the window title bar. */
+.title-bar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.title-bar :is(button, a, input, [data-cta]) {
+  -webkit-app-region: no-drag;
+}
+
+.window-controls-end {
+  width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}

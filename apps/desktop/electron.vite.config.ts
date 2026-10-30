@@ -16,7 +16,7 @@ const productionCsp: Plugin = {
 };
 
 export default defineConfig({
-  main: { plugins: [externalizeDepsPlugin()] },
+  main: { plugins: [externalizeDepsPlugin({ exclude: ["@icarus/ui-tokens"] })] },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: { rollupOptions: { output: { format: "cjs", entryFileNames: "[name].cjs" } } },

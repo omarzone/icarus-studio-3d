@@ -1,16 +1,18 @@
 // HDR-WORKSPACE
+import { tokens } from "@icarus/ui-tokens";
 import { ChevronDown, Play } from "lucide-react";
-import { WindowDots } from "../window-dots.tsx";
+import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 
 const WORKSPACES = ["World", "Body", "Brain", "Train", "Results", "Build"] as const;
 
 type Props = { project: string; active: (typeof WORKSPACES)[number]; primary: string };
 
 export function WorkspaceHeader({ project, active, primary }: Props) {
+  useTitleBarHeight(tokens.size.headerWorkspace);
   return (
-    <header data-ui-id="HDR-WORKSPACE" className="col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
-      <WindowDots />
-      <span data-cta="project-menu" className="ml-3 flex items-center gap-2 text-[14px] font-semibold">
+    <header data-ui-id="HDR-WORKSPACE" className="title-bar col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
+      <WindowControlsSpace side="start" />
+      <span data-cta="project-menu" className="flex items-center gap-2 text-[14px] font-semibold">
         {project}
         <ChevronDown size={12} strokeWidth={1.75} className="text-fg-tertiary" aria-hidden />
       </span>
@@ -47,6 +49,7 @@ export function WorkspaceHeader({ project, active, primary }: Props) {
       >
         {primary}
       </span>
+      <WindowControlsSpace side="end" />
     </header>
   );
 }

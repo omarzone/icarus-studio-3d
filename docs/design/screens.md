@@ -47,7 +47,7 @@ Each module is a folder; each tab is a file inside it. Paths are relative to `ap
 
 Top bar of every project workspace. Always visible while a project is open. Folder: `app/shell/workspace-header/`.
 
-- Window controls, then the **project name** with a chevron that opens `POP-PROJECT-MENU`.
+- Native window controls (see the style guide's window frame), then the **project name** with a chevron that opens `POP-PROJECT-MENU`.
 - **Workspace switcher**: segmented tabs `World · Body · Motion · Brain · Train · Results · Build` plus `+` to add a workspace. Tabs depend on the project: `Motion` only exists when the body is a character with motion clips.
 - **Play** button: enters `SCR-PLAY` for the current project. Disabled (35% opacity, tooltip *Available once the project exists*) until a design exists.
 - **Guide** pill: shows *Getting started n/5* while the guide is active, or *Guide* when hidden; opens the guide (`STA-WORLD-EMPTY`).

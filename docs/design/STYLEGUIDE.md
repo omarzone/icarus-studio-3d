@@ -40,6 +40,14 @@ Home, Projects, Community, Creation, Profile and Settings. `HDR-LAUNCHER` on top
 - A workspace may replace the default columns with its own panels (Brain, Train, Results, Build), but the chat column and the header never change.
 - **Play mode** swaps `HDR-WORKSPACE` for `HDR-PLAY` and the side panels for Play panels; Stop restores the exact previous layout.
 
+### Window frame
+
+The app has no system title bar: every header is the title bar. Dragging empty header space moves the window and double-clicking it maximizes. Window controls are always the operating system's own, never drawn by the app:
+
+- **Windows and Linux:** native caption buttons (minimize, maximize, close) at the right end of the header, as tall as the header, on `bg.app` with `fg.tool` symbols. Hovering maximize keeps the Windows snap layouts. The header reserves their width.
+- **macOS:** the traffic lights at the left, 18 px in and centered vertically. The header reserves 60 px for them.
+- Screens without a header (`SYS-ENGINE-DOWN`) keep an invisible 56 px drag strip at the top, under the same controls.
+
 ### Workspace switcher
 
 - Tabs: World, Body, Motion, Brain, Train, Results, Build, then `+`.

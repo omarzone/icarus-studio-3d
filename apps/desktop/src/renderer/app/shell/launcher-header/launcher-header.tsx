@@ -1,17 +1,19 @@
 // HDR-LAUNCHER
+import { tokens } from "@icarus/ui-tokens";
 import { Bell, Search } from "lucide-react";
-import { WindowDots } from "../window-dots.tsx";
+import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 
 const NAV = ["Home", "Projects", "Community"] as const;
 
 export function LauncherHeader({ active }: { active: (typeof NAV)[number] }) {
+  useTitleBarHeight(tokens.size.headerLauncher);
   return (
     <header
       data-ui-id="HDR-LAUNCHER"
-      className="col-span-full flex h-14 items-center gap-4.5 border-b border-line-subtle px-4.5"
+      className="title-bar col-span-full flex h-14 items-center gap-4.5 border-b border-line-subtle px-4.5"
     >
-      <WindowDots />
-      <span className="ml-2.5 text-headline font-semibold">Icarus</span>
+      <WindowControlsSpace side="start" />
+      <span className="text-headline font-semibold">Icarus</span>
       {NAV.map((item) => (
         <span
           key={item}
@@ -30,6 +32,7 @@ export function LauncherHeader({ active }: { active: (typeof NAV)[number] }) {
         Search creations
       </span>
       <Bell size={18} strokeWidth={1.75} aria-label="Notifications" className="text-fg-tool" />
+      <WindowControlsSpace side="end" />
     </header>
   );
 }
