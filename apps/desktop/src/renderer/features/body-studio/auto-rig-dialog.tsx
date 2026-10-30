@@ -1,0 +1,45 @@
+// MOD-AUTO-RIG
+import { useQuery } from "@tanstack/react-query";
+import { CloseOverlay, GoTo } from "../../app/navigation/go-to.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
+import { bodyPort } from "../../ports/body-port.ts";
+import { ActionButton } from "../../ui/action-button.tsx";
+import { Dialog } from "../../ui/dialog.tsx";
+import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProgressBar, ProgressSteps } from "../../ui/progress-steps.tsx";
+import { QueryView } from "../../ui/query-view.tsx";
+
+const BODY = "dance-copy";
+
+// Makes an imported model physical step by step, honestly showing which step runs now.
+export function AutoRigDialog() {
+  const port = usePort(bodyPort);
+  const query = useQuery({ queryKey: ["body", BODY, "auto-rig"], queryFn: () => port.getAutoRig(BODY) });
+  return (
+    <Dialog
+      title={query.data ? `Auto-rigging ${query.data.file}` : "Auto-rigging"}
+      footer={
+        <>
+          <CloseOverlay cta="Run in background" className={dialogButtonClass("secondary")}>
+            Run in background
+          </CloseOverlay>
+          <ActionButton cta="Cancel" run={() => port.cancelAutoRig(BODY)} className={dialogButtonClass("secondary")}>
+            Cancel
+          </ActionButton>
+          <GoTo to="STA-BODY-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>
+            See result
+          </GoTo>
+        </>
+      }
+    >
+      <QueryView query={query}>
+        {(progress) => (
+          <>
+            <ProgressBar percent={progress.percent} label="Auto-rig progress" />
+            <ProgressSteps steps={progress.steps} />
+          </>
+        )}
+      </QueryView>
+    </Dialog>
+  );
+}
