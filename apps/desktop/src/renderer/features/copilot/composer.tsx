@@ -8,13 +8,14 @@ const AUTONOMY_LABEL: Record<AutonomyMode, string> = { ask: "Ask before changes"
 type Props = {
   placeholder: string;
   autonomy: AutonomyMode;
+  autonomyNote?: string;
   onSend: (text: string) => void;
   onAttach: () => void;
   onAutonomy: (mode: AutonomyMode) => void;
 };
 
 // Composer: workspace-specific placeholder, + to attach, autonomy mode and the round send button.
-export function Composer({ placeholder, autonomy, onSend, onAttach, onAutonomy }: Props) {
+export function Composer({ placeholder, autonomy, autonomyNote, onSend, onAttach, onAutonomy }: Props) {
   const [text, setText] = useState("");
   const field = useRef<HTMLInputElement>(null);
   const send = () => {
@@ -58,7 +59,7 @@ export function Composer({ placeholder, autonomy, onSend, onAttach, onAutonomy }
           onClick={() => onAutonomy(autonomy === "ask" ? "autopilot" : "ask")}
           className="flex items-center gap-1 rounded-control px-1 py-0.5 hover:bg-fill-hover hover:text-fg"
         >
-          {AUTONOMY_LABEL[autonomy]}
+          {autonomyNote ? `${AUTONOMY_LABEL[autonomy]} · ${autonomyNote}` : AUTONOMY_LABEL[autonomy]}
           <ChevronDown size={12} strokeWidth={1.75} aria-hidden />
         </Act>
         <Act

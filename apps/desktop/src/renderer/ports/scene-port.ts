@@ -82,7 +82,7 @@ export type Swatch = { kind: "color"; value: string } | { kind: "gradient"; from
 export type ListOption = { value: string; label: string; icon?: SceneIcon; swatch?: Swatch };
 
 // Surfaces a property can open; each workspace decides where they lead.
-export type PropertyPanel = "training-copies" | "brain-sizes" | "randomize";
+export type PropertyPanel = "training-copies" | "brain-sizes" | "randomize" | "autopilot";
 
 export type PropertyValue =
   | { type: "number"; value: number; unit?: string; auto?: boolean }
