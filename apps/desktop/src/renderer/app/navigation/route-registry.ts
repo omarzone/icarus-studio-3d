@@ -35,6 +35,4 @@ export function collectCatalogs(modules: Record<string, { catalog: Catalog }>): 
   return { routes, modules: moduleEntries };
 }
 
-export const catalog = collectCatalogs(
-  import.meta.glob<{ catalog: Catalog }>("../../**/catalog.tsx", { eager: true }),
-);
+export const catalog = collectCatalogs(import.meta.glob<{ catalog: Catalog }>("../../**/catalog.tsx", { eager: true }));
