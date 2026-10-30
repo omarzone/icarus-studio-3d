@@ -32,15 +32,19 @@ function createWindow(): BrowserWindow {
   if (!headless) {
     win.once("ready-to-show", () => win.show());
   }
-  const query = process.env.ICARUS_DESIGN_GALLERY === "1" ? { gallery: "1" } : undefined;
+  const prototype = process.argv.includes("--prototype");
+  const query = process.env.ICARUS_DESIGN_GALLERY === "1" || prototype ? { gallery: "1" } : undefined;
+  // The prototype runs every screen on fixture data so flows can be tried before their logic exists.
+  const hash = prototype ? "/__prototype/SCR-HOME" : undefined;
   if (process.env.ELECTRON_RENDERER_URL) {
     const url = new URL(process.env.ELECTRON_RENDERER_URL);
     for (const [key, value] of Object.entries(query ?? {})) {
       url.searchParams.set(key, value);
     }
+    url.hash = hash ?? "";
     void win.loadURL(url.toString());
   } else {
-    void win.loadFile(join(import.meta.dirname, "../renderer/index.html"), { query });
+    void win.loadFile(join(import.meta.dirname, "../renderer/index.html"), { query, hash });
   }
   return win;
 }
