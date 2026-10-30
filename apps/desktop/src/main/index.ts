@@ -1,10 +1,12 @@
 import { join, resolve } from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
+import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
 
 const headless = process.env.ICARUS_HEADLESS === "1";
-const engine = new EngineSupervisor(resolve(app.getAppPath(), "..", ".."), process.env.ICARUS_ENGINE_URL);
+const repoRoot = findRepoRoot(import.meta.dirname) ?? resolve(app.getAppPath(), "..", "..");
+const engine = new EngineSupervisor(repoRoot, process.env.ICARUS_ENGINE_URL);
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -12,6 +14,7 @@ function createWindow(): BrowserWindow {
     height: 900,
     minWidth: 1280,
     minHeight: 800,
+    useContentSize: true,
     show: false,
     backgroundColor: "#121212",
     webPreferences: {
@@ -19,15 +22,21 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      backgroundThrottling: !headless,
     },
   });
   if (!headless) {
     win.once("ready-to-show", () => win.show());
   }
+  const query = process.env.ICARUS_DESIGN_GALLERY === "1" ? { gallery: "1" } : undefined;
   if (process.env.ELECTRON_RENDERER_URL) {
-    void win.loadURL(process.env.ELECTRON_RENDERER_URL);
+    const url = new URL(process.env.ELECTRON_RENDERER_URL);
+    for (const [key, value] of Object.entries(query ?? {})) {
+      url.searchParams.set(key, value);
+    }
+    void win.loadURL(url.toString());
   } else {
-    void win.loadFile(join(import.meta.dirname, "../renderer/index.html"));
+    void win.loadFile(join(import.meta.dirname, "../renderer/index.html"), { query });
   }
   return win;
 }

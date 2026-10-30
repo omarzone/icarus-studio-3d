@@ -1,4 +1,4 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { join } from "node:path";
 
@@ -36,10 +36,19 @@ export function spawnEngine(repoRoot: string, port: number, onLine: (line: strin
   return child;
 }
 
+// Synchronous so the engine tree is gone before the app process exits.
+function killSync(cmd: string, args: string[]): void {
+  try {
+    execFileSync(cmd, args, { stdio: "ignore", windowsHide: true });
+  } catch {
+    // Already gone.
+  }
+}
+
 export function stopEngine(
   pid: number,
   platform: NodeJS.Platform,
-  run: (cmd: string, args: string[]) => void = (cmd, args) => execFile(cmd, args),
+  run: (cmd: string, args: string[]) => void = killSync,
 ): void {
   if (platform === "win32") {
     run("taskkill", ["/PID", String(pid), "/T", "/F"]);
