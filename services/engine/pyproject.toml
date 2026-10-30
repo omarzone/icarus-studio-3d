@@ -1,0 +1,48 @@
+[project]
+name = "icarus-engine"
+version = "0.1.0"
+description = "Local engine of Icarus Studio 3D: design, simulation, training and copilot."
+requires-python = "==3.12.*"
+dependencies = [
+    "fastapi>=0.162.0",
+    "pydantic>=2.14.2",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+icarus-engine = "icarus.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.31,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "icarus"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: real training for a few thousand steps",
+    "live: calls real model providers and needs credentials",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]

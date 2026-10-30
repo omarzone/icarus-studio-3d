@@ -10,7 +10,11 @@
     "lint": "biome check .",
     "test": "pnpm -r --if-present test",
     "check:max-lines": "pnpm -F max-lines report",
-    "check": "pnpm lint && pnpm test && pnpm check:max-lines"
+    "check": "pnpm lint && pnpm engine:lint && pnpm test && pnpm engine:test && pnpm check:max-lines",
+    "engine:sync": "uv sync --project services/engine",
+    "engine:dev": "uv run --project services/engine icarus-engine --port 8765 --reload",
+    "engine:test": "uv run --project services/engine pytest -m \"not slow and not live\"",
+    "engine:lint": "uv run --project services/engine ruff check services/engine && uv run --project services/engine ruff format --check services/engine && uv run --project services/engine pyright -p services/engine"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
