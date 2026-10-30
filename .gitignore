@@ -28,10 +28,10 @@ htmlcov/
 
 # Local data produced by the app
 projects/
+runs/
 # App code folders may share those names.
 !apps/desktop/src/**/projects/
 !apps/desktop/src/**/runs/
-runs/
 *.log
 
 # Local working files
