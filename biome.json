@@ -15,7 +15,9 @@
       "!docs/design/reference",
       "!services/engine",
       "!pnpm-lock.yaml",
-      "!**/*.md"
+      "!**/*.md",
+      "!**/test-results",
+      "!docs/design/inventory.json"
     ]
   },
   "formatter": {
