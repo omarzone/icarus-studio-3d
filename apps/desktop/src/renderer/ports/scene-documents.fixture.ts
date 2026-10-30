@@ -1,5 +1,6 @@
 import { JOINT_SECTIONS } from "./joint-sections.fixture.ts";
 import type { GuideProgress, Inspection, InspectorSection, SceneTree, TrainingCopies } from "./scene-port.ts";
+import { TRAINING_SCENE_DOCUMENTS } from "./training-scene.fixture.ts";
 
 // Sample project documents from the design, used only by the prototype, the design gallery and tests.
 export type SceneDocument = {
@@ -227,4 +228,5 @@ export const SCENE_DOCUMENTS: Readonly<Record<string, SceneDocument>> = {
     },
     guide: { started: false, done: 0, total: 5 },
   },
+  ...TRAINING_SCENE_DOCUMENTS,
 };
