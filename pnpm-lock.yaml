@@ -27,6 +27,8 @@ importers:
         specifier: 16.0.0
         version: 16.0.0
 
+  packages/ui-tokens: {}
+
   tools/max-lines: {}
 
 packages:

@@ -1,0 +1,14 @@
+{
+  "name": "@icarus/ui-tokens",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./dist/tokens.css"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "build": "node src/write-css.ts"
+  }
+}
