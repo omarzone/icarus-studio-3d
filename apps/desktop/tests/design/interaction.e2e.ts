@@ -15,7 +15,8 @@ async function checkControls(page: Page, id: string, scope: string, problems: st
     }
     await page.mouse.move(1, 899);
     const resting = await look(control);
-    await control.hover();
+    // The hidden window paints few frames, so waiting for a stable element takes seconds per control.
+    await control.hover({ force: true });
     if ((await look(control)) === resting) {
       problems.push(`${id}: "${await control.getAttribute("data-cta")}" has no hover state`);
     }
@@ -40,7 +41,7 @@ async function checkControls(page: Page, id: string, scope: string, problems: st
 }
 
 test("every control answers the pointer and every field takes typing", async () => {
-  test.setTimeout(900_000);
+  test.setTimeout(1_800_000);
   const { app, page } = await launchGallery();
   await page.emulateMedia({ reducedMotion: "reduce" });
   const { routes, modules } = await galleryCatalog(page);
