@@ -65,6 +65,19 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `settings.models-save` | Saving AI model connections | `SCR-SETTINGS-MODELS` |
 | `settings.models-test` | Testing an AI model connection | `SCR-SETTINGS-MODELS` |
 
+## Sprint 12
+
+| Action | What it does | Used in |
+|---|---|---|
+| `build.export-download` | Downloading an exported brain | `MOD-EXPORT-BRAIN` |
+| `build.export-format` | Choosing the brain export format | `MOD-EXPORT-BRAIN` |
+| `build.export-option` | Choosing what goes in a brain export | `MOD-EXPORT-BRAIN` |
+| `build.export-plan` | Exporting a brain | `MOD-EXPORT-BRAIN` |
+| `build.hardware` | Running a brain on real hardware | `STA-BUILD-HARDWARE` |
+| `build.hardware-recheck` | Checking a sensor on the device again | `STA-BUILD-HARDWARE` |
+| `build.hardware-skip` | Running without one sensor | `STA-BUILD-HARDWARE` |
+| `build.targets` | What you can build from a project | `SCR-BUILD`, `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED` |
+
 ## Sprint 13
 
 | Action | What it does | Used in |
@@ -88,6 +101,13 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `moderation.list` | Reported creations | `SCR-MODERATION` |
 | `notifications.list` | Notifications | `POP-NOTIFICATIONS` |
 | `notifications.mark-all-read` | Marking notifications read | `POP-NOTIFICATIONS` |
+| `publish.guidelines` | Agreeing to the community guidelines | `MOD-PUBLISH` |
+| `publish.page` | The community page of a project | `SCR-BUILD`, `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED` |
+| `publish.page-edit` | Editing the community page | `SCR-BUILD` |
+| `publish.readiness` | Checking a creation before it is published | `MOD-PUBLISH` |
+| `publish.review` | The review of a published creation | `MOD-PUBLISHED` |
+| `publish.save-draft` | Saving the community page as a draft | `SCR-BUILD` |
+| `publish.send` | Publishing to the community | `MOD-PUBLISH` |
 | `settings.delete-account` | Deleting your account | `SCR-SETTINGS-PRIVACY` |
 | `settings.download-data` | Downloading your data | `SCR-SETTINGS-PRIVACY` |
 | `settings.notifications` | Notification settings | `SCR-SETTINGS-NOTIFICATIONS` |
@@ -107,18 +127,14 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `MOD-BRAIN-SIZES`
 - `MOD-BRAIN-SOURCE`
 - `MOD-EXPORT-ANIMATION`
-- `MOD-EXPORT-BRAIN`
 - `MOD-IMPORT`
 - `MOD-MOTION-TRACKING`
 - `MOD-MOTION-TRAIN`
 - `MOD-MOTION-VIDEO`
-- `MOD-PUBLISH`
-- `MOD-PUBLISHED`
 - `MOD-START-TRAINING`
 - `MOD-STOP-RUN`
 - `SCR-BODY`
 - `SCR-BRAIN`
-- `SCR-BUILD`
 - `SCR-MOTION`
 - `SCR-PLAY`
 - `SCR-PLAY.b`
@@ -128,7 +144,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `STA-BODY-CHECK-FAILED`
 - `STA-BRAIN-CONNECTOME`
 - `STA-BRAIN-NETWORK`
-- `STA-BUILD-HARDWARE`
 - `STA-MOTION-TRAINING`
 - `STA-RESULTS-FAILURES`
 - `STA-RESULTS-REFERENCE`
