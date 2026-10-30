@@ -1,0 +1,21 @@
+{
+  "name": "icarus-studio-3d",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.8",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "pnpm -r --if-present test",
+    "check:max-lines": "pnpm -F max-lines report",
+    "check": "pnpm lint && pnpm test && pnpm check:max-lines"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

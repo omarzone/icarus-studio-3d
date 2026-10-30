@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+
+# Only install versions published at least 3 days ago (minutes).
+minimumReleaseAge: 4320
+
+savePrefix: ""
+
+allowBuilds:
+  electron: true
+  esbuild: true
