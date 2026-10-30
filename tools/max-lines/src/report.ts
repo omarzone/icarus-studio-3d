@@ -4,8 +4,7 @@ import { countCodeLines, type Language } from "./count-code-lines.ts";
 
 export type Oversized = { path: string; lines: number; limit: number };
 
-const SKIP_DIRS = new Set(["node_modules", ".venv", "dist", "out", ".git", ".superpowers", "test-results"]);
-const SKIP_PATHS = new Set(["design/canvas"]);
+const SKIP_DIRS = new Set(["node_modules", ".venv", "dist", "out", ".git", ".superpowers", ".local", "test-results"]);
 const SKIP_FILES = new Set(["generated.ts"]);
 
 function limitFor(name: string): { limit: number; language: Language } | null {
@@ -27,8 +26,7 @@ export async function findOversized(root: string): Promise<Oversized[]> {
   async function walk(dir: string): Promise<void> {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       if (entry.isDirectory()) {
-        const rel = relative(root, join(dir, entry.name)).replaceAll("\\", "/");
-        if (!SKIP_DIRS.has(entry.name) && !SKIP_PATHS.has(rel)) {
+        if (!SKIP_DIRS.has(entry.name)) {
           await walk(join(dir, entry.name));
         }
         continue;
