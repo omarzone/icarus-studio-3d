@@ -14,6 +14,59 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `projects.list` | Your projects list | `SCR-PROJECTS` |
 | `projects.rename` | Renaming a project | `MOD-RENAME` |
 
+## Sprint 3
+
+| Action | What it does | Used in |
+|---|---|---|
+| `templates.list` | Starter templates from the library | `SCR-HOME`, `STA-HOME-EMPTY` |
+
+## Sprint 5
+
+| Action | What it does | Used in |
+|---|---|---|
+| `settings.restart-engine` | Restarting the engine from settings | `SCR-SETTINGS-TRAINING` |
+| `settings.training` | Training and hardware settings | `SCR-SETTINGS-TRAINING` |
+| `settings.training-set` | Changing training settings | `SCR-SETTINGS-TRAINING` |
+
+## Sprint 6
+
+| Action | What it does | Used in |
+|---|---|---|
+| `settings.models` | AI model connections | `SCR-SETTINGS-MODELS` |
+| `settings.models-save` | Saving AI model connections | `SCR-SETTINGS-MODELS` |
+| `settings.models-test` | Testing an AI model connection | `SCR-SETTINGS-MODELS` |
+
+## Sprint 13
+
+| Action | What it does | Used in |
+|---|---|---|
+| `account.change-photo` | Changing your photo | `SCR-SETTINGS-PROFILE` |
+| `account.follow` | Following people | `SCR-CREATION` |
+| `account.get` | Your community account | `SCR-HOME`, `SCR-PROFILE` |
+| `account.profile` | Profiles | `SCR-PROFILE` |
+| `account.profile-creations` | Creations on a profile | `SCR-PROFILE` |
+| `account.remove-photo` | Removing your photo | `SCR-SETTINGS-PROFILE` |
+| `account.sign-in` | Signing in | `MOD-SIGN-IN` |
+| `account.update-profile` | Editing your profile | `SCR-SETTINGS-PROFILE` |
+| `community.categories` | Community categories | `SCR-COMMUNITY` |
+| `community.creation` | Creation pages | `SCR-CREATION` |
+| `community.list` | Creations from the community | `SCR-HOME`, `SCR-COMMUNITY` |
+| `community.remix` | Remixing a creation into your projects | `SCR-CREATION` |
+| `community.report` | Reporting a creation | `MOD-REPORT` |
+| `community.vote` | Voting for a creation | `SCR-CREATION` |
+| `moderation.counts` | Moderation queues | `SCR-MODERATION` |
+| `moderation.decide` | Keeping, removing or banning | `SCR-MODERATION` |
+| `moderation.list` | Reported creations | `SCR-MODERATION` |
+| `notifications.list` | Notifications | `POP-NOTIFICATIONS` |
+| `notifications.mark-all-read` | Marking notifications read | `POP-NOTIFICATIONS` |
+| `settings.delete-account` | Deleting your account | `SCR-SETTINGS-PRIVACY` |
+| `settings.download-data` | Downloading your data | `SCR-SETTINGS-PRIVACY` |
+| `settings.notifications` | Notification settings | `SCR-SETTINGS-NOTIFICATIONS` |
+| `settings.notifications-set` | Changing notification settings | `SCR-SETTINGS-NOTIFICATIONS` |
+| `settings.privacy` | Privacy settings | `SCR-SETTINGS-PRIVACY` |
+| `settings.privacy-set` | Changing privacy settings | `SCR-SETTINGS-PRIVACY` |
+| `settings.unblock` | Unblocking people | `SCR-SETTINGS-PRIVACY` |
+
 ## Screens not built yet
 
 - `MOD-AUTO-RIG`
@@ -32,35 +85,21 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `MOD-PUBLISH`
 - `MOD-PUBLISHED`
 - `MOD-RENAME`
-- `MOD-REPORT`
 - `MOD-SHARE`
-- `MOD-SIGN-IN`
 - `MOD-START-TRAINING`
 - `MOD-STOP-RUN`
 - `POP-ADD-COMPONENT`
-- `POP-NOTIFICATIONS`
 - `POP-PROJECT-MENU`
 - `POP-TRAINING-COPIES`
 - `REF-PROPERTY-TYPES`
 - `SCR-BODY`
 - `SCR-BRAIN`
 - `SCR-BUILD`
-- `SCR-COMMUNITY`
-- `SCR-CREATION`
-- `SCR-HOME`
 - `SCR-IDEAS`
-- `SCR-MODERATION`
 - `SCR-MOTION`
 - `SCR-PLAY`
 - `SCR-PLAY.b`
-- `SCR-PROFILE`
-- `SCR-PROJECTS`
 - `SCR-RESULTS`
-- `SCR-SETTINGS-MODELS`
-- `SCR-SETTINGS-NOTIFICATIONS`
-- `SCR-SETTINGS-PRIVACY`
-- `SCR-SETTINGS-PROFILE`
-- `SCR-SETTINGS-TRAINING`
 - `SCR-TIMELAPSE`
 - `SCR-TRAIN`
 - `SCR-WORLD`
@@ -68,7 +107,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `STA-BRAIN-CONNECTOME`
 - `STA-BRAIN-NETWORK`
 - `STA-BUILD-HARDWARE`
-- `STA-HOME-EMPTY`
 - `STA-MOTION-TRAINING`
 - `STA-RESULTS-FAILURES`
 - `STA-RESULTS-REFERENCE`
