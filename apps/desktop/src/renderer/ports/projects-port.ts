@@ -1,3 +1,4 @@
+import type { ScreenId } from "../app/navigation/catalog-id.ts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createProjectsFixture } from "./projects.fixture.ts";
@@ -13,6 +14,10 @@ export type ProjectSummary = {
   // Short status line under the name ("Training · run 3 at 31%").
   statusLine: string;
   revision: string;
+  // Workspace the project reopens in; the World workspace when absent.
+  lastScreen?: ScreenId;
+  // Community votes once published.
+  votes?: number;
 };
 
 // What a project keeps on this computer, for the duplicate and delete dialogs.

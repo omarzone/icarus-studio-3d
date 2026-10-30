@@ -13,9 +13,15 @@ const NAV: Record<LauncherPage, ScreenId> = { Home: "SCR-HOME", Projects: "SCR-P
 
 export type Account = { initial: string; signedIn: boolean };
 
-type Props = { active: LauncherPage | null; account: Account; unread?: boolean };
+export type LauncherHeaderProps = {
+  active: LauncherPage | null;
+  // Where the active link leads on pages below it (Creation, Profile, Settings); omitted when it acts in place.
+  activeGoesTo?: ScreenId;
+  account: Account;
+  unread?: boolean;
+};
 
-export function LauncherHeader({ active, account, unread = false }: Props) {
+export function LauncherHeader({ active, activeGoesTo, account, unread = false }: LauncherHeaderProps) {
   useTitleBarHeight(tokens.size.headerLauncher);
   const go = useNavigation((state) => state.go);
   return (
@@ -26,7 +32,17 @@ export function LauncherHeader({ active, account, unread = false }: Props) {
       <WindowControlsSpace side="start" />
       <span className="text-headline font-semibold">Icarus Studio 3D</span>
       {PAGES.map((item) =>
-        item === active ? (
+        item === active && activeGoesTo ? (
+          <GoTo
+            key={item}
+            to={activeGoesTo}
+            cta={item}
+            aria-current="page"
+            className="px-1 py-4 text-body font-semibold text-fg shadow-[inset_0_-2px_0_var(--ic-fg)]"
+          >
+            {item}
+          </GoTo>
+        ) : item === active ? (
           <Act
             key={item}
             cta={item}

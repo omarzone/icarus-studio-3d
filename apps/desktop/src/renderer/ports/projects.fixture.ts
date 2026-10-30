@@ -17,6 +17,7 @@ export const PROJECTS_FIXTURE: readonly ProjectSummary[] = [
     status: "tested",
     statusLine: "Connectome · tested",
     revision: "r6",
+    lastScreen: "STA-BRAIN-CONNECTOME",
   },
   {
     id: "dance-copy",
@@ -25,6 +26,35 @@ export const PROJECTS_FIXTURE: readonly ProjectSummary[] = [
     status: "attention",
     statusLine: "Needs attention",
     revision: "r9",
+    lastScreen: "SCR-MOTION",
+  },
+  {
+    id: "tripod-jumper",
+    name: "Tripod Jumper",
+    description: "A three-legged robot that learns to jump",
+    status: "published",
+    statusLine: "Published",
+    revision: "r21",
+    votes: 128,
+  },
+  {
+    id: "parallel-lots",
+    name: "Parallel Lots",
+    description: "Many parking lots training at once",
+    status: "published",
+    statusLine: "Published",
+    revision: "r7",
+    lastScreen: "SCR-TRAIN",
+    votes: 46,
+  },
+  {
+    id: "untitled",
+    name: "Untitled project",
+    description: "",
+    status: "draft",
+    statusLine: "Draft · yesterday",
+    revision: "r1",
+    lastScreen: "STA-WORLD-EMPTY-NOGUIDE",
   },
 ];
 
