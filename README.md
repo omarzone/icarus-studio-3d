@@ -16,8 +16,8 @@
 </div>
 
 > [!NOTE]
-> **Built for the Meta Global AI Developer Hackathon.** We are thrilled to take part and to build in the open alongside developers from all over the world.
-> We hope Icarus Studio 3D shows that teaching a body to move, once a job for robotics labs, can start with a single sentence and a curious mind.
+> **Built for the Meta Global AI Developer Hackathon (Indie track).** I am a solo developer, and I am thrilled to take part and to build in the open alongside developers from all over the world.
+> I hope Icarus Studio 3D shows that teaching a body to move, once a job for robotics labs, can start with a single sentence and a curious mind.
 > If it sparks one person to build, train and share their first robot brain, it has done its job.
 
 ## What is Icarus Studio 3D?
