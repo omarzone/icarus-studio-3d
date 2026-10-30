@@ -28,6 +28,7 @@ htmlcov/
 
 # Local data produced by the app
 projects/
+!apps/desktop/src/renderer/features/projects/
 runs/
 *.log
 
