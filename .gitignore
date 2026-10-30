@@ -5,6 +5,8 @@ node_modules/
 
 # Build output
 out/
+test-results/
+playwright-report/
 dist/
 release/
 *.tsbuildinfo
@@ -28,6 +30,9 @@ htmlcov/
 projects/
 runs/
 *.log
+
+# Exported design canvas (local only; source for docs/design/reference)
+design/canvas/
 
 # Internal working notes
 docs/plans/schedule.md

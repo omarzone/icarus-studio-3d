@@ -1,0 +1,10 @@
+{
+  "name": "max-lines",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "report": "node src/report.ts"
+  }
+}

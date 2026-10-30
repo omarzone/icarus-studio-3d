@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "@icarus/ui-tokens/tokens.css";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--ic-bg-app);
+  color: var(--ic-fg);
+  font-family: var(--ic-font-ui);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}

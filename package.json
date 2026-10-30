@@ -1,0 +1,30 @@
+{
+  "name": "icarus-studio-3d",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.8",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "pnpm -r --if-present test",
+    "check:max-lines": "pnpm -F max-lines report",
+    "check": "pnpm lint && pnpm engine:lint && pnpm check:contracts && pnpm typecheck && pnpm test && pnpm engine:test && pnpm check:max-lines",
+    "engine:sync": "uv sync --project services/engine",
+    "engine:dev": "uv run --project services/engine icarus-engine --port 8765 --reload",
+    "engine:test": "uv run --directory services/engine pytest -m \"not slow and not live\"",
+    "engine:lint": "uv run --project services/engine ruff check services/engine && uv run --project services/engine ruff format --check services/engine && uv run --project services/engine pyright -p services/engine",
+    "gen:contracts": "pnpm -F @icarus/contracts generate",
+    "check:contracts": "pnpm -F @icarus/contracts check-stale",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "design:references": "pnpm -F design-reference export",
+    "test:design": "pnpm -F desktop test:design"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

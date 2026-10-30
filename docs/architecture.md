@@ -366,7 +366,10 @@ Icarus ships as one installable application per platform (Windows, macOS, Linux)
 
 ## Community service
 
-`services/community` is an online service with accounts, bundle storage, a searchable catalog with previews (thumbnails, short rollouts) and lineage between creations. The desktop app talks to it through `community-client`; uploads and downloads are bundles produced and validated by the engine. Its stack and hosting are recorded in an ADR when it is built.
+`services/community` is an online service with accounts, bundle storage, a searchable catalog with previews (thumbnails, short rollouts) and lineage between creations. The desktop app talks to it through `community-client`; uploads and downloads are bundles produced and validated by the engine, and validated again by the service before they are stored. Its stack and hosting are recorded in an ADR when it is built.
+
+- **Open source and self-hostable.** The service lives in this repository and runs with one `docker compose up`. The maintainers operate the official instance; anyone can run their own, and the app's *Community server* setting chooses which one to use.
+- **Accounts only for sharing.** Sign-in (Google, GitHub, email) is needed to publish, remix, vote and comment, never to create or train. The desktop app signs in through the system browser with OAuth PKCE and an `icarus://` deep link, and keeps the session in the operating system keychain.
 
 ## Quality
 

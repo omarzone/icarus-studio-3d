@@ -1,0 +1,17 @@
+{
+  "name": "@icarus/contracts",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsc -p . && vitest run",
+    "typecheck": "tsc -p .",
+    "generate": "node scripts/generate.mjs",
+    "check-stale": "node scripts/check-stale.mjs"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "16.0.0"
+  }
+}
