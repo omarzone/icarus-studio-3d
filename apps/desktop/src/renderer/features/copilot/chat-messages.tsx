@@ -34,7 +34,7 @@ type CopilotProps = { title?: string; text: RichText; checks?: readonly CheckIte
 export function CopilotBubble({ title, text, checks }: CopilotProps) {
   if (checks && checks.length > 0) {
     return (
-      <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55]">
+      <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55] [&>span]:leading-[1.55]">
         <RichTextView text={text} />
         <CheckList items={checks} />
       </div>
