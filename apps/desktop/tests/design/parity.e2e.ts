@@ -22,7 +22,10 @@ test("every implemented catalog ID matches its design", async () => {
     }, `#/__design/${id}`);
     await page.waitForSelector("[data-design-root]");
     await page.evaluate(() => document.fonts.ready);
-    const actual = PNG.sync.read(await page.screenshot({ clip: { x: 0, y: 0, width: 1440, height: 900 } }));
+    const actual = PNG.sync.read(
+      await page.screenshot({ clip: { x: 0, y: 0, width: 1440, height: 900 }, scale: "css" }),
+    );
+    expect([actual.width, actual.height], `${id} capture size`).toEqual([1440, 900]);
     const reference = PNG.sync.read(readFileSync(join(designDir, "reference", `${id}.png`)));
     const { ratio, diff } = compareImages(reference, actual, regions[id]?.masks ?? []);
     results.push({ id, ratio, maxDiff, reference, actual, diff });

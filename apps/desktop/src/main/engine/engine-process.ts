@@ -4,7 +4,10 @@ import { join } from "node:path";
 
 export function engineCommand(repoRoot: string, port: number): { command: string; args: string[] } {
   const project = join(repoRoot, "services", "engine").replaceAll("\\", "/");
-  return { command: "uv", args: ["run", "--project", project, "icarus-engine", "--port", String(port)] };
+  return {
+    command: "uv",
+    args: ["run", "--project", project, "icarus-engine", "--port", String(port), "--exit-with-stdin"],
+  };
 }
 
 export function freePort(): Promise<number> {

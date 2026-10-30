@@ -56,3 +56,12 @@ test("the app recovers from an engine crash and leaves no engine behind", async 
     await expect.poll(() => portOpen(second), { timeout: 15_000 }).toBe(false);
   });
 });
+
+test("the engine does not outlive an app that crashes", async () => {
+  test.setTimeout(180_000);
+  const { app, page } = await launchApp({});
+  await expect.poll(async () => (await status(page)).kind, { timeout: 120_000 }).toBe("ready");
+  const port = Number(new URL((await status(page)).url ?? "").port);
+  app.process().kill("SIGKILL");
+  await expect.poll(() => portOpen(port), { timeout: 20_000 }).toBe(false);
+});

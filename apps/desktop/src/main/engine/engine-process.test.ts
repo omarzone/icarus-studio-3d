@@ -9,6 +9,7 @@ it("passes the repo path as one argument even with spaces", () => {
     "icarus-engine",
     "--port",
     "9100",
+    "--exit-with-stdin",
   ]);
 });
 
