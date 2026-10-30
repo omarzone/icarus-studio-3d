@@ -31,6 +31,10 @@ export type WorkspaceHeaderProps = {
   // "Getting started 2/5" while the guide is active, "Guide" when hidden.
   guide: string;
   playEnabled?: boolean;
+  // Where Play leads when the project plays somewhere else (a motion clip, a second example).
+  playTo?: RouteId;
+  // Destinations of workspace tabs that differ for this project (a connectome brain, reference results).
+  routes?: Partial<Record<Workspace, RouteId>>;
   primary: { label: string; to: RouteId; disabled?: boolean };
 };
 
@@ -41,6 +45,8 @@ export function WorkspaceHeader({
   activeGoesTo,
   guide,
   playEnabled = true,
+  playTo = "SCR-PLAY",
+  routes = {},
   primary,
 }: WorkspaceHeaderProps) {
   useTitleBarHeight(tokens.size.headerWorkspace);
@@ -62,7 +68,7 @@ export function WorkspaceHeader({
             const className = isActive
               ? "rounded-control bg-selected px-3.5 py-1.5 text-ui font-semibold text-on-selected"
               : "rounded-control px-3.5 py-1.5 text-ui text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80";
-            const to = isActive ? activeGoesTo : WORKSPACE_ROUTES[name];
+            const to = isActive ? activeGoesTo : (routes[name] ?? WORKSPACE_ROUTES[name]);
             return to ? (
               <GoTo key={name} to={to} cta={name} aria-current={isActive ? "page" : undefined} className={className}>
                 {name}
@@ -75,7 +81,7 @@ export function WorkspaceHeader({
           })}
         </div>
         <GoTo
-          to="SCR-PLAY"
+          to={playTo}
           cta="Play"
           disabled={!playEnabled}
           title={playEnabled ? undefined : UNAVAILABLE}

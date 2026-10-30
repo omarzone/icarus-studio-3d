@@ -3,6 +3,7 @@ import type { AutonomyMode, ChatMessage, Conversation } from "../../ports/copilo
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { CopilotBubble, UserBubble } from "./chat-messages.tsx";
 import { Composer } from "./composer.tsx";
+import { InlineActions } from "./inline-actions.tsx";
 import { ProposalCard, type ProposalRoutes } from "./proposal-card.tsx";
 import { SuggestionChips, type SuggestionRoutes } from "./suggestion-chips.tsx";
 
@@ -42,12 +43,30 @@ export function ChatTab(props: ChatTabProps) {
   );
 }
 
-function Message({ message, proposalRoutes, onApply, onDiscard }: ChatTabProps & { message: ChatMessage }) {
+function Message({
+  message,
+  proposalRoutes,
+  suggestionRoutes,
+  onSend,
+  onApply,
+  onDiscard,
+}: ChatTabProps & { message: ChatMessage }) {
   switch (message.role) {
     case "user":
       return <UserBubble text={message.text} />;
     case "copilot":
-      return <CopilotBubble title={message.title} text={message.text} checks={message.checks} />;
+      return (
+        <CopilotBubble
+          title={message.title}
+          text={message.text}
+          checks={message.checks}
+          actions={
+            message.actions ? (
+              <InlineActions actions={message.actions} routes={suggestionRoutes} onSend={onSend} />
+            ) : undefined
+          }
+        />
+      );
     case "proposal":
       return (
         <ProposalCard

@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import type { ReactNode } from "react";
 import type { CheckItem, RichText } from "../../ports/copilot-port.ts";
 
 export function RichTextView({ text }: { text: RichText }) {
@@ -28,15 +29,16 @@ export function UserBubble({ text }: { text: string }) {
   );
 }
 
-type CopilotProps = { title?: string; text: RichText; checks?: readonly CheckItem[] };
+type CopilotProps = { title?: string; text: RichText; checks?: readonly CheckItem[]; actions?: ReactNode };
 
 // Copilot bubble: grey, no avatar; a sentence, then a check list when the answer is structured.
-export function CopilotBubble({ title, text, checks }: CopilotProps) {
-  if (checks && checks.length > 0) {
+export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
+  if ((checks && checks.length > 0) || actions) {
     return (
       <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55]">
         <RichTextView text={text} />
-        <CheckList items={checks} />
+        {checks ? <CheckList items={checks} /> : null}
+        {actions}
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
-import { CloseOverlay, useCloseOverlay } from "../app/navigation/go-to.tsx";
+import type { RouteId } from "../app/navigation/catalog-id.ts";
+import { CloseOverlay, GoTo, useCloseOverlay } from "../app/navigation/go-to.tsx";
 import { buttonClass } from "./button-styles.ts";
 
 type Props = {
@@ -9,10 +10,12 @@ type Props = {
   width?: string;
   children: ReactNode;
   footer?: ReactNode;
+  // Where × leads when closing leaves the flow (a dialog opened from Home returns Home); closes in place by default.
+  closeTo?: RouteId;
 };
 
 // Modal from the style guide: centered, 60% scrim, Escape and × close it and return to the screen underneath.
-export function Dialog({ title, width = "w-120", children, footer }: Props) {
+export function Dialog({ title, width = "w-120", children, footer, closeTo }: Props) {
   const close = useCloseOverlay();
   useEscape(close);
   return (
@@ -24,9 +27,15 @@ export function Dialog({ title, width = "w-120", children, footer }: Props) {
       >
         <header className="flex items-start justify-between gap-3">
           <h2 className="text-title-3 font-semibold">{title}</h2>
-          <CloseOverlay cta="Close" aria-label="Close" className={buttonClass("icon", "-my-1 -mr-1")}>
-            <X size={16} strokeWidth={1.75} aria-hidden />
-          </CloseOverlay>
+          {closeTo ? (
+            <GoTo to={closeTo} cta="Close" aria-label="Close" className={buttonClass("icon", "-my-1 -mr-1")}>
+              <X size={16} strokeWidth={1.75} aria-hidden />
+            </GoTo>
+          ) : (
+            <CloseOverlay cta="Close" aria-label="Close" className={buttonClass("icon", "-my-1 -mr-1")}>
+              <X size={16} strokeWidth={1.75} aria-hidden />
+            </CloseOverlay>
+          )}
         </header>
         {children}
         {footer ? <footer className="flex items-center justify-end gap-2">{footer}</footer> : null}

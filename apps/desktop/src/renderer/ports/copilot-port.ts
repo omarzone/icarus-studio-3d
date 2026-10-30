@@ -26,13 +26,42 @@ export type Proposal = {
 
 export type ChatMessage =
   | { id: string; role: "user"; text: string }
-  | { id: string; role: "copilot"; title?: string; text: RichText; checks?: readonly CheckItem[] }
+  | {
+      id: string;
+      role: "copilot";
+      title?: string;
+      text: RichText;
+      checks?: readonly CheckItem[];
+      // Inline buttons under the answer; the first is the primary one. They route like suggestion chips.
+      actions?: readonly Suggestion[];
+    }
   | { id: string; role: "proposal"; proposal: Proposal }
   // Live progress of the project the copilot is building.
   | { id: string; role: "build"; scene: string };
 
 // What a suggestion does when sent; each workspace decides where that leads.
-export type SuggestionIntent = "propose-change" | "new-idea" | "refine-ideas" | "import" | "motion-video";
+export type SuggestionIntent =
+  | "propose-change"
+  | "new-idea"
+  | "refine-ideas"
+  | "import"
+  | "motion-video"
+  | "record"
+  | "diagnose"
+  | "compare"
+  | "stop-run"
+  | "train-run"
+  | "share"
+  | "explain"
+  | "apply-fix"
+  | "add-to-training"
+  | "ask"
+  | "dismiss"
+  | "resize-brain"
+  | "play"
+  | "show"
+  | "template"
+  | "export";
 
 export type Suggestion = { text: string; intent: SuggestionIntent };
 
