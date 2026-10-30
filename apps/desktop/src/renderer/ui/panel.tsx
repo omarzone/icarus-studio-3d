@@ -14,8 +14,11 @@ type PanelProps = {
 // Panel from the style guide: a 38 px tab bar (grip, tabs, options) over its body.
 export function Panel({ id, tabs, options, children, className = "" }: PanelProps) {
   return (
-    <section data-ui-id={id} className={`flex min-h-0 flex-col overflow-hidden rounded-card bg-panel ${className}`}>
-      <div className="flex h-9.5 shrink-0 items-center gap-1 border-b border-line-subtle px-2">
+    <section
+      data-ui-id={id}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-card border border-line bg-panel ${className}`}
+    >
+      <div className="flex h-9.75 shrink-0 items-center gap-0.5 border-b border-line-subtle bg-strip px-2">
         <GripVertical size={14} strokeWidth={1.75} className="shrink-0 text-fg-disabled" aria-hidden />
         <div className="flex min-w-0 items-center gap-0.5">{tabs}</div>
         {options ? <div className="ml-auto flex items-center gap-1">{options}</div> : null}
