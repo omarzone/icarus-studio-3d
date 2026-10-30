@@ -1,0 +1,50 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm engine:sync
+      - run: pnpm -F @icarus/ui-tokens build
+      - run: pnpm check
+
+  design:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm engine:sync
+      - run: pnpm -F @icarus/ui-tokens build
+      - run: xvfb-run --auto-servernum pnpm test:design
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-parity
+          path: apps/desktop/test-results/design
