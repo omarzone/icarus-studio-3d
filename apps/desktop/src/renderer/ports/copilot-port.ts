@@ -26,10 +26,41 @@ export type Proposal = {
 
 export type ChatMessage =
   | { id: string; role: "user"; text: string }
-  | { id: string; role: "copilot"; title?: string; text: RichText; checks?: readonly CheckItem[] }
+  | {
+      id: string;
+      role: "copilot";
+      title?: string;
+      text: RichText;
+      checks?: readonly CheckItem[];
+      // Inline actions under the answer; the first is the primary one.
+      actions?: readonly Suggestion[];
+    }
   | { id: string; role: "proposal"; proposal: Proposal }
   // Live progress of the project the copilot is building.
-  | { id: string; role: "build"; scene: string };
+  | { id: string; role: "build"; scene: string }
+  // A point in a training run the following messages belong to ("100k steps").
+  | { id: string; role: "milestone"; text: string }
+  // Live progress of a training run with its goals.
+  | { id: string; role: "progress"; progress: RunProgress }
+  // Changes the copilot suggests for the next step, with the actions that take them.
+  | { id: string; role: "plan"; plan: NextStepPlan };
+
+export type GoalState = "done" | "running" | "todo";
+
+export type RunProgress = {
+  title: string;
+  // When it started ("6 min ago").
+  meta: string;
+  // Share of the run done, from 0 to 1.
+  done: number;
+  goals: readonly { text: string; state: GoalState }[];
+};
+
+export type NextStepPlan = {
+  title: string;
+  items: readonly { mark: "add" | "change"; label: string; detail: string }[];
+  actions: readonly Suggestion[];
+};
 
 // What a suggestion does when sent; each workspace decides where that leads.
 export type SuggestionIntent =
@@ -40,7 +71,17 @@ export type SuggestionIntent =
   | "motion-video"
   | "explain"
   | "export-brain"
-  | "order-parts";
+  | "order-parts"
+  | "record"
+  | "diagnose"
+  | "compare"
+  | "stop-run"
+  | "train-run"
+  | "share"
+  | "apply-fix"
+  | "add-to-training"
+  | "ask"
+  | "dismiss";
 
 export type Suggestion = { text: string; intent: SuggestionIntent };
 
@@ -50,6 +91,8 @@ export type Conversation = {
   messages: readonly ChatMessage[];
   suggestions: readonly Suggestion[];
   autonomy: AutonomyMode;
+  // Limit shown next to the autonomy mode ("5 tries").
+  autonomyNote?: string;
 };
 
 export type CopilotPort = {
@@ -68,6 +111,12 @@ const chatIds = [
   "STA-WORLD-BUILDING",
   "STA-WORLD-PROPOSAL",
   "SCR-IDEAS",
+  "SCR-PLAY",
+  "SCR-PLAY.b",
+  "SCR-TRAIN",
+  "SCR-RESULTS",
+  "STA-RESULTS-FAILURES",
+  "STA-RESULTS-REFERENCE",
 ] as const;
 
 export const copilotPort = definePort<CopilotPort>({

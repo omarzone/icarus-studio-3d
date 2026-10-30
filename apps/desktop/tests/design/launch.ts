@@ -49,7 +49,8 @@ export async function openRoute(page: Page, id: string): Promise<void> {
   const attribute = id.startsWith("MOD-") || id.startsWith("POP-") ? "data-route-overlay" : "data-route-screen";
   await page.waitForSelector(`[${attribute}="${id}"]`);
   // Fixture data arrives a tick after the route; read the screen only once nothing is loading.
-  // The hidden window paints few frames, so poll on a timer instead of animation frames.
+  // Queries start a tick after the reset; then poll on a timer because the hidden window paints few frames.
+  await page.waitForTimeout(60);
   await page.waitForFunction(() => window.__icarusCatalog?.settled() ?? false, undefined, { polling: 25 });
 }
 

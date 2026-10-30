@@ -16,6 +16,8 @@ export type ViewportPanelProps = {
   tabs?: readonly ViewportTab[];
   // View options on the right of the tab bar (Lit, Perspective, speed).
   viewOptions?: readonly string[];
+  // Plain note before the view options ("Tools follow its senses").
+  note?: string;
   // PNL-TOOLBAR strip drawn between the tab bar and the view.
   toolbar?: ReactNode;
   // Cards, pills and buttons floating over the view; they position themselves (see viewport-overlays.tsx).
@@ -35,6 +37,7 @@ export function ViewportPanel({
   label,
   tabs = DEFAULT_VIEWPORT_TABS,
   viewOptions = DEFAULT_OPTIONS,
+  note,
   toolbar,
   overlays,
   tint,
@@ -61,15 +64,20 @@ export function ViewportPanel({
           </Act>
         </>
       }
-      options={viewOptions.map((option) => (
-        <Act
-          key={option}
-          cta={option}
-          className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg"
-        >
-          {option}
-        </Act>
-      ))}
+      options={
+        <>
+          {note ? <span className="mr-1 text-ui text-fg-tertiary">{note}</span> : null}
+          {viewOptions.map((option) => (
+            <Act
+              key={option}
+              cta={option}
+              className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg"
+            >
+              {option}
+            </Act>
+          ))}
+        </>
+      }
     >
       <div className="flex h-full flex-col">
         {toolbar}

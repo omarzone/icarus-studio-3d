@@ -37,6 +37,14 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `scene.tree` | The project's scene tree | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`, `STA-WORLD-BUILDING` |
 | `templates.list` | Starter templates from the library | `SCR-HOME`, `STA-HOME-EMPTY` |
 
+## Sprint 4
+
+| Action | What it does | Used in |
+|---|---|---|
+| `play.session` | Playing with the brain live in its world | `SCR-PLAY`, `SCR-PLAY.b` |
+| `play.speed` | Changing the Play speed | `SCR-PLAY`, `SCR-PLAY.b` |
+| `play.tool` | Using a Play tool in the world | `SCR-PLAY`, `SCR-PLAY.b` |
+
 ## Sprint 5
 
 | Action | What it does | Used in |
@@ -44,6 +52,18 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `settings.restart-engine` | Restarting the engine from settings | `SCR-SETTINGS-TRAINING` |
 | `settings.training` | Training and hardware settings | `SCR-SETTINGS-TRAINING` |
 | `settings.training-set` | Changing training settings | `SCR-SETTINGS-TRAINING` |
+| `training.console` | The training log | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
+| `training.failure` | Why a run stopped by itself | `STA-TRAIN-FAILED` |
+| `training.liveView` | Watching the parallel copies train | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
+| `training.metrics` | Live training metrics | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
+| `training.pause` | Pausing a training run | `MOD-STOP-RUN` |
+| `training.plan` | The cost of a training run | `MOD-START-TRAINING` |
+| `training.runs` | The training runs | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
+| `training.selectRun` | Selecting a run | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
+| `training.start` | Starting a training run | `MOD-START-TRAINING` |
+| `training.stop` | Stopping a training run | `MOD-STOP-RUN` |
+| `training.stopSummary` | What stopping a run keeps | `MOD-STOP-RUN` |
+| `training.updatePlan` | Changing the steps and copies of a run | `MOD-START-TRAINING` |
 
 ## Sprint 6
 
@@ -51,11 +71,11 @@ Every action below is reachable in the interface and shows *Not available yet* u
 |---|---|---|
 | `build.progress` | Progress of the project being built | `STA-WORLD-BUILDING` |
 | `copilot.apply` | Applying a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `copilot.autonomy` | Choosing when the copilot asks before changing things | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `copilot.conversation` | The copilot conversation | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
+| `copilot.autonomy` | Choosing when the copilot asks before changing things | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
+| `copilot.conversation` | The copilot conversation | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
 | `copilot.discard` | Discarding a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `copilot.send` | Talking to the copilot | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `copilot.send` | Talking to the copilot | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
 | `ideas.list` | Ideas generated from your description | `SCR-IDEAS` |
 | `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
 | `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
@@ -64,6 +84,38 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `settings.models` | AI model connections | `SCR-SETTINGS-MODELS` |
 | `settings.models-save` | Saving AI model connections | `SCR-SETTINGS-MODELS` |
 | `settings.models-test` | Testing an AI model connection | `SCR-SETTINGS-MODELS` |
+
+## Sprint 7
+
+| Action | What it does | Used in |
+|---|---|---|
+| `results.bestBrains` | The best brain of each run | `SCR-RESULTS` |
+| `results.compare` | Choosing runs to compare | `SCR-RESULTS` |
+| `results.comparison` | Two runs side by side on the same seed | `SCR-RESULTS` |
+| `results.failures` | Failure groups found by the copilot | `STA-RESULTS-FAILURES` |
+| `results.history` | How it learned, checkpoint by checkpoint | `SCR-RESULTS` |
+| `results.notes` | Notes about the runs | `SCR-RESULTS`, `STA-RESULTS-FAILURES` |
+| `results.replay` | Replay of a failing test run | `STA-RESULTS-FAILURES` |
+| `results.runs` | Runs with their scores | `SCR-RESULTS` |
+| `results.saveNotes` | Saving notes | `SCR-RESULTS`, `STA-RESULTS-FAILURES` |
+| `results.selectFailure` | Replaying a failure group | `STA-RESULTS-FAILURES` |
+| `results.summary` | The summary of the best brain | `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
+| `results.testRuns` | Every test run with pass or fail | `STA-RESULTS-FAILURES` |
+| `results.timelapse` | The timelapse of how it learned | `SCR-TIMELAPSE` |
+| `results.timelapseFrame` | Jumping to a checkpoint in the timelapse | `SCR-TIMELAPSE` |
+| `training.autopilot` | What the copilot may change while training | `MOD-AUTOPILOT` |
+| `training.setAutopilot` | Choosing what the copilot may change while training | `MOD-AUTOPILOT` |
+
+## Sprint 11
+
+| Action | What it does | Used in |
+|---|---|---|
+| `results.behaviorMatch` | How close each behavior is to the recordings | `STA-RESULTS-REFERENCE` |
+| `results.neurons` | Which neurons drive each behavior | `STA-RESULTS-REFERENCE` |
+| `results.recordings` | Recordings imported for comparison | `STA-RESULTS-REFERENCE` |
+| `results.referenceComparison` | Recorded and simulated behavior side by side | `STA-RESULTS-REFERENCE` |
+| `results.referenceTests` | Tests against recorded real behavior | `STA-RESULTS-REFERENCE` |
+| `results.selectReferenceTest` | Opening a behavior test | `STA-RESULTS-REFERENCE` |
 
 ## Sprint 12
 
