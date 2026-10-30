@@ -29,6 +29,11 @@ test("every control answers the pointer and every field takes typing", async () 
       );
     }
     for (const field of await page.locator("input").all()) {
+      await field.click();
+      expect(
+        await field.evaluate((element) => getComputedStyle(element).outlineStyle),
+        `${id}: field shows a ring`,
+      ).toBe("none");
       await field.fill("");
       await field.pressSequentially("walker");
       await expect(field).toHaveValue("walker");

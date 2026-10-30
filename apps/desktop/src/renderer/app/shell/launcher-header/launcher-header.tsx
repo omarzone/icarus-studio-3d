@@ -13,7 +13,7 @@ export function LauncherHeader({ active }: { active: (typeof NAV)[number] }) {
       className="title-bar col-span-full flex h-14 items-center gap-4.5 border-b border-line-subtle px-4.5"
     >
       <WindowControlsSpace side="start" />
-      <span className="text-headline font-semibold">Icarus</span>
+      <span className="text-headline font-semibold">Icarus Studio 3D</span>
       {NAV.map((item) => (
         <button
           key={item}
