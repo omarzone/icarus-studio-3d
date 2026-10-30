@@ -7,6 +7,8 @@ it("emits css variables and the shadcn mapping", () => {
   expect(css).toContain("--ic-bg-app: #121212;");
   expect(css).toContain("--background: var(--ic-bg-app);");
   expect(css).toContain("--radius: 10px;");
+  expect(css).toContain("--ic-motion-fast: 120ms;");
+  expect(css).toContain("--ic-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);");
 });
 
 it("exposes token utilities to Tailwind", () => {

@@ -29,7 +29,7 @@ export function EngineDown({ reason, lastLog, onRestart, onCopy }: Props) {
             data-cta="restart-engine"
             data-goes-to="SCR-HOME"
             onClick={onRestart}
-            className="h-8.5 rounded-button bg-selected px-4 text-body font-semibold text-on-selected"
+            className="h-8.5 rounded-button bg-selected px-4 text-body font-semibold text-on-selected hover:opacity-90 active:opacity-80"
           >
             Restart engine
           </button>
@@ -37,7 +37,7 @@ export function EngineDown({ reason, lastLog, onRestart, onCopy }: Props) {
             type="button"
             data-cta="copy-error-details"
             onClick={() => onCopy(details)}
-            className="h-8.5 rounded-button bg-control px-4 text-body text-fg"
+            className="h-8.5 rounded-button bg-control px-4 text-body text-fg hover:bg-control-raised active:opacity-80"
           >
             Copy error details
           </button>

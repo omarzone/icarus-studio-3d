@@ -32,6 +32,7 @@ Electron · electron-vite · React · strict TypeScript · React Three Fiber + d
 - **Coordinate conversion in one place** (`scene/coordinates.ts`): MuJoCo is Z-up with wxyz quaternions; Three.js is Y-up with xyzw.
 - **Rendering is not tied to rollout fps:** interpolate between frames by time inside `useFrame`.
 - **Every metric on screen comes from the engine.** No hardcoded demo values in components. Empty states show an empty state, never fake data.
+- **Interaction states:** every control is a real `button`, `input` or link with `data-cta`, and has the hover, pressed and focus looks from the style guide's "Interaction states". `tests/design/interaction.e2e.ts` hovers every control in the design gallery and types into every field; add new modules to its list.
 - **Required states** for every view that queries the engine: loading, empty, error (with a useful message) and engine down.
 - **Presentation-ready:** every screen must look good at 1920×1080 and in presentation mode, with no debug UI visible.
 - **Do not steal focus** in automated tasks: no `win.show()`/`focus()` in tests; validate with headless Playwright or screenshots.
