@@ -1,0 +1,83 @@
+import { Check } from "lucide-react";
+import type { CheckItem, RichText } from "../../ports/copilot-port.ts";
+
+export function RichTextView({ text }: { text: RichText }) {
+  return (
+    <span>
+      {text.map((part, index) =>
+        part.strong ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: parts of one sentence never reorder.
+          <b key={index} className="font-semibold">
+            {part.text}
+          </b>
+        ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: parts of one sentence never reorder.
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
+// User bubble: right-aligned, white, radius 20 20 6 20, max 82%.
+export function UserBubble({ text }: { text: string }) {
+  return (
+    <div className="max-w-[calc(82%+28px)] self-end rounded-[20px_20px_6px_20px] bg-selected px-3.5 py-2.5 text-body leading-[1.45] text-on-selected">
+      {text}
+    </div>
+  );
+}
+
+type CopilotProps = { title?: string; text: RichText; checks?: readonly CheckItem[] };
+
+// Copilot bubble: grey, no avatar; a sentence, then a check list when the answer is structured.
+export function CopilotBubble({ title, text, checks }: CopilotProps) {
+  if (checks && checks.length > 0) {
+    return (
+      <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55]">
+        <RichTextView text={text} />
+        <CheckList items={checks} />
+      </div>
+    );
+  }
+  if (title) {
+    return (
+      <div className="rounded-bubble bg-control p-3.5 text-body leading-[1.55]">
+        <span className="font-semibold">{title}</span>
+        <br />
+        <RichTextView text={text} />
+      </div>
+    );
+  }
+  return (
+    <div className="max-w-[calc(92%+28px)] rounded-bubble bg-control px-3.5 py-2.75 text-body leading-normal">
+      <RichTextView text={text} />
+    </div>
+  );
+}
+
+export function CheckList({ items }: { items: readonly CheckItem[] }) {
+  return (
+    <>
+      {items.map((item) => (
+        <CheckLine key={item.text} item={item} />
+      ))}
+    </>
+  );
+}
+
+// A fact with its meaning: green check when it works, amber "!" when it needs attention.
+export function CheckLine({ item }: { item: CheckItem }) {
+  return (
+    <span className="flex items-center gap-2.25 text-ui leading-tight">
+      {item.tone === "ok" ? (
+        <Check size={13} strokeWidth={1.75} className="shrink-0 text-ok" aria-label="Done" />
+      ) : (
+        <span role="img" aria-label="Needs attention" className="w-3.25 shrink-0 text-center font-bold text-warn">
+          !
+        </span>
+      )}
+      <span>{item.text}</span>
+    </span>
+  );
+}
