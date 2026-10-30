@@ -32,7 +32,15 @@ export type ChatMessage =
   | { id: string; role: "build"; scene: string };
 
 // What a suggestion does when sent; each workspace decides where that leads.
-export type SuggestionIntent = "propose-change" | "new-idea" | "refine-ideas" | "import" | "motion-video";
+export type SuggestionIntent =
+  | "propose-change"
+  | "new-idea"
+  | "refine-ideas"
+  | "import"
+  | "motion-video"
+  | "explain"
+  | "export-brain"
+  | "order-parts";
 
 export type Suggestion = { text: string; intent: SuggestionIntent };
 

@@ -1,3 +1,4 @@
+import { BUILD_CONVERSATIONS } from "./build-conversations.fixture.ts";
 import type { ChatMessage, Conversation, CopilotPort, ProposalStatus } from "./copilot-port.ts";
 
 // Sample conversations from the design, one per workspace, used only by the prototype, the design gallery and tests.
@@ -135,6 +136,7 @@ const CONVERSATIONS: Readonly<Record<string, Conversation>> = {
       },
     ],
   },
+  ...BUILD_CONVERSATIONS,
 };
 
 // Conversations that only preview a proposal, and the workspace conversation it belongs to.
