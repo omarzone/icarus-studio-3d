@@ -42,7 +42,6 @@ export const tokens = {
     banner: { warn: { DEFAULT: "#2A2014", border: "rgba(226, 134, 0, 0.45)" } },
     avatar: ["#3EC5A8", "#F5A03C", "#6A6BF5", "#D9508A", "#3B82F6", "#9B5CF6", "#F2622A"],
     avatarInk: "#101014",
-    window: { close: "#FF5F57", minimize: "#FEBC2E", zoom: "#28C840" },
   },
   colorLight: {
     bg: {

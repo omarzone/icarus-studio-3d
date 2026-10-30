@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { ENGINE_CHANNEL, type EngineBridge, type EngineStatus } from "../shared/engine-bridge.ts";
+import { WINDOW_CHANNEL, type WindowBridge } from "../shared/window-bridge.ts";
 
 const engine: EngineBridge = {
   status: () => ipcRenderer.invoke(ENGINE_CHANNEL.status),
@@ -13,4 +14,9 @@ const engine: EngineBridge = {
   },
 };
 
-contextBridge.exposeInMainWorld("icarus", { engine });
+const windowBridge: WindowBridge = {
+  platform: process.platform,
+  setTitleBarHeight: (height) => ipcRenderer.send(WINDOW_CHANNEL.titleBarHeight, height),
+};
+
+contextBridge.exposeInMainWorld("icarus", { engine, window: windowBridge });

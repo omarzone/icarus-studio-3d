@@ -88,7 +88,6 @@ Rules: blue means *proposed by the copilot* and nothing else; green never decora
 | Token | Values | Use |
 |---|---|---|
 | `color.avatar.1…7` | `#3EC5A8` `#F5A03C` `#6A6BF5` `#D9508A` `#3B82F6` `#9B5CF6` `#F2622A` | Avatar backgrounds, picked by a stable hash of the user id; initials in `#101014` |
-| `color.window.close/minimize/zoom` | `#FF5F57` `#FEBC2E` `#28C840` | Custom window controls on macOS-style frames only; Windows and Linux use native controls |
 
 ### Data visualization
 

@@ -1,8 +1,11 @@
 import { join, resolve } from "node:path";
+import { tokens } from "@icarus/ui-tokens";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
+import { WINDOW_CHANNEL } from "../shared/window-bridge.ts";
 import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
+import { isTitleBarHeight, resizeTitleBar, windowFrame } from "./window-frame.ts";
 
 const headless = process.env.ICARUS_HEADLESS === "1";
 const repoRoot = findRepoRoot(import.meta.dirname) ?? resolve(app.getAppPath(), "..", "..");
@@ -16,7 +19,8 @@ function createWindow(): BrowserWindow {
     minHeight: 800,
     useContentSize: true,
     show: false,
-    backgroundColor: "#121212",
+    backgroundColor: tokens.color.bg.app,
+    ...windowFrame(process.platform, tokens.size.headerLauncher),
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
       contextIsolation: true,
@@ -45,6 +49,11 @@ void app.whenReady().then(() => {
   ipcMain.handle(ENGINE_CHANNEL.status, () => engine.status);
   ipcMain.handle(ENGINE_CHANNEL.restart, () => engine.restart());
   const win = createWindow();
+  ipcMain.on(WINDOW_CHANNEL.titleBarHeight, (_event, height: unknown) => {
+    if (isTitleBarHeight(height)) {
+      resizeTitleBar(win, process.platform, height);
+    }
+  });
   engine.onChange((status) => win.webContents.send(ENGINE_CHANNEL.changed, status));
   void engine.start();
 });

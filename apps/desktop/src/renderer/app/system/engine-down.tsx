@@ -1,5 +1,6 @@
 // SYS-ENGINE-DOWN
 import { Power } from "lucide-react";
+import { WindowDragArea } from "../shell/window-frame.tsx";
 
 type Props = {
   reason: string;
@@ -11,7 +12,8 @@ type Props = {
 export function EngineDown({ reason, lastLog, onRestart, onCopy }: Props) {
   const details = [reason, ...(lastLog.length > 0 ? lastLog : ["No output from the engine."])].join("\n");
   return (
-    <div data-ui-id="SYS-ENGINE-DOWN" className="grid h-full place-items-center bg-app text-fg">
+    <div data-ui-id="SYS-ENGINE-DOWN" className="relative grid h-full place-items-center bg-app text-fg">
+      <WindowDragArea />
       <div className="flex w-130 flex-col items-center gap-3.5 text-center">
         <span className="grid size-16 place-items-center rounded-bubble bg-control">
           <Power size={30} strokeWidth={1.75} aria-hidden />
