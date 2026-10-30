@@ -77,6 +77,22 @@ Each component has one look. Variants are listed; anything else is a new compone
 
 Rules: icon left of the label, 14–16 px; labels are verbs (*Start run 4*, *Track the motion*); a dialog's buttons are right-aligned with the primary last; at most one primary per dialog or panel.
 
+### Interaction states
+
+Anything that looks interactive is a real control (button, field, link or row) and answers both the pointer and the keyboard. Never draw a control as a picture.
+
+| State | Look |
+|---|---|
+| Hover | Primary: 90% opacity. Secondary buttons and fields: `bg.control-raised`. Ghost buttons, icon buttons, tabs, rows and menu items: `fill.hover` and `fg.default`. Text links and nav: `fg.default` |
+| Pressed | 80% opacity while held |
+| Focus | 2 px `focus.ring` outline with 2 px offset, from the keyboard only (`:focus-visible`); a focused field also takes its hover background |
+| Current or selected | Its selected look, unchanged on hover; marked with `aria-current` or `aria-selected` |
+| Disabled | See Buttons: 35%, no hover, tooltip with the reason |
+
+- Color, background and opacity change over `motion.fast` with the standard easing; instantly when the system asks for reduced motion.
+- The pointer stays the arrow on buttons, tabs and rows, as in native desktop apps; fields show the text cursor; the hand appears only on links that open a web page.
+- Text fields accept typing and selection as soon as they are shown.
+
 ### Chips and pills
 
 - **Suggestion chip** (chat): 28 px, radius full, `bg.control`, `fg.secondary`, 12 px. Clicking sends that exact text to the copilot.

@@ -74,6 +74,10 @@ export function toCssVariables(t: Tokens): string {
   for (const [name, value] of Object.entries(t.shadow)) {
     lines.push(`  --ic-shadow-${name}: ${value};`);
   }
+  for (const [name, value] of Object.entries(t.motion)) {
+    const kebab = name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+    lines.push(`  --ic-motion-${kebab}: ${typeof value === "number" ? `${value}ms` : value};`);
+  }
   for (const [name, ref] of SHADCN) {
     lines.push(`  --${name}: var(--ic-${ref});`);
   }

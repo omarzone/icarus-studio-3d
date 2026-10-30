@@ -16,6 +16,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+button,
+input,
+[data-cta] {
+  transition-property: background-color, color, opacity, box-shadow;
+  transition-duration: var(--ic-motion-fast);
+  transition-timing-function: var(--ic-motion-ease-standard);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ic-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  input,
+  [data-cta] {
+    transition-duration: 0s;
+  }
+}
+
 /* Headers double as the window title bar. */
 .title-bar {
   -webkit-app-region: drag;
