@@ -47,7 +47,11 @@ export function ProjectsScreen() {
             }))}
           />
           <span className="ml-auto flex gap-2">
-            <GoTo to="MOD-IMPORT" cta="Open a file" className={buttonClass("secondary", "h-8.5 gap-1.75 px-4 text-body")}>
+            <GoTo
+              to="MOD-IMPORT"
+              cta="Open a file"
+              className={buttonClass("secondary", "h-8.5 gap-1.75 px-4 text-body")}
+            >
               <FolderOpen size={14} strokeWidth={1.75} aria-hidden />
               Open a file
             </GoTo>
@@ -66,7 +70,9 @@ export function ProjectsScreen() {
           empty={<EmptyState title="No projects yet" body="Describe an idea on Home or start a new project." />}
         >
           {(list) => (
-            <ProjectGrid projects={list.filter((project) => statuses === null || statuses.some((s) => s === project.status))} />
+            <ProjectGrid
+              projects={list.filter((project) => statuses === null || statuses.some((s) => s === project.status))}
+            />
           )}
         </QueryView>
       </div>
