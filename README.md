@@ -109,6 +109,8 @@ One contract is defined in Python with Pydantic and generated into TypeScript, s
 
 Icarus Studio 3D is in active development. The product, the architecture and the complete interface design are defined, and the code is landing zone by zone on top of them. This README is updated as each part becomes real; anything not built yet is described as a goal, never shown as a result.
 
+**Now real:** the foundation. The desktop app starts, supervises and restarts the local engine; the engine and the app share one generated contract; the interface is built from the design tokens; and every screen is checked against its design and its catalog entry by automated tests. A first measurement shows a car learning to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)).
+
 ## Development
 
 Requirements: Node.js 22+, pnpm, [uv](https://docs.astral.sh/uv/) and Git. No GPU is needed; training runs on the CPU.
