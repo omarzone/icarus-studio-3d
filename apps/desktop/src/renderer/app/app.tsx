@@ -14,6 +14,7 @@ export function App() {
   if (status.kind === "down") {
     return (
       <EngineDown
+        reason={status.reason}
         lastLog={status.lastLog}
         onRestart={() => void window.icarus.engine.restart()}
         onCopy={(text) => void navigator.clipboard.writeText(text)}

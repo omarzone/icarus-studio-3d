@@ -11,6 +11,16 @@ it("goes down with the last log lines when the engine exits", () => {
   expect(nextStatus({ kind: "down", reason: "x", lastLog: [] }, { type: "restart" })).toEqual({ kind: "starting" });
 });
 
+it("goes down with the given reason when the engine cannot run", () => {
+  expect(nextStatus({ kind: "starting" }, { type: "failed", reason: "uv was not found on PATH", lastLog: [] })).toEqual(
+    {
+      kind: "down",
+      reason: "uv was not found on PATH",
+      lastLog: [],
+    },
+  );
+});
+
 it("goes down with a reason when the engine never becomes healthy", () => {
   expect(nextStatus({ kind: "starting" }, { type: "timeout", lastLog: ["uv: not found"] })).toEqual({
     kind: "down",

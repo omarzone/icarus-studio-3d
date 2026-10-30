@@ -2,13 +2,14 @@
 import { Power } from "lucide-react";
 
 type Props = {
+  reason: string;
   lastLog: string[];
   onRestart: () => void;
   onCopy: (text: string) => void;
 };
 
-export function EngineDown({ lastLog, onRestart, onCopy }: Props) {
-  const details = lastLog.length > 0 ? lastLog.join("\n") : "No output from the engine.";
+export function EngineDown({ reason, lastLog, onRestart, onCopy }: Props) {
+  const details = [reason, ...(lastLog.length > 0 ? lastLog : ["No output from the engine."])].join("\n");
   return (
     <div data-ui-id="SYS-ENGINE-DOWN" className="grid h-full place-items-center bg-app text-fg">
       <div className="flex w-130 flex-col items-center gap-3.5 text-center">
