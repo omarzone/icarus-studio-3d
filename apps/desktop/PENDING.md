@@ -21,6 +21,20 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
+| `library.list` | The library of ready-made pieces | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE` |
+| `library.preview` | Previewing a library piece in the world | `SCR-WORLD`, `STA-WORLD-EMPTY` |
+| `scene.addComponent` | Adding a component | `POP-ADD-COMPONENT` |
+| `scene.componentKinds` | The components you can add | `POP-ADD-COMPONENT` |
+| `scene.guide` | The getting started guide | `STA-WORLD-EMPTY` |
+| `scene.inspect` | The properties of the selected object | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
+| `scene.propertyReference` | The property types reference | `REF-PROPERTY-TYPES` |
+| `scene.resetProperty` | Resetting a property | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
+| `scene.select` | Selecting an object | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
+| `scene.setProperty` | Editing a property | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
+| `scene.setTrainingCopies` | Changing the number of training copies | `POP-TRAINING-COPIES` |
+| `scene.toggleVariation` | Changing what varies between copies | `POP-TRAINING-COPIES` |
+| `scene.trainingCopies` | Training copies and what changes between them | `POP-TRAINING-COPIES` |
+| `scene.tree` | The project's scene tree | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`, `STA-WORLD-BUILDING` |
 | `templates.list` | Starter templates from the library | `SCR-HOME`, `STA-HOME-EMPTY` |
 
 ## Sprint 5
@@ -35,6 +49,18 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
+| `build.progress` | Progress of the project being built | `STA-WORLD-BUILDING` |
+| `copilot.apply` | Applying a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
+| `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `copilot.autonomy` | Choosing when the copilot asks before changing things | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `copilot.conversation` | The copilot conversation | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `copilot.discard` | Discarding a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
+| `copilot.send` | Talking to the copilot | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
+| `ideas.list` | Ideas generated from your description | `SCR-IDEAS` |
+| `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
+| `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
+| `ideas.use` | Building a project from an idea | `SCR-IDEAS` |
+| `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
 | `settings.models` | AI model connections | `SCR-SETTINGS-MODELS` |
 | `settings.models-save` | Saving AI model connections | `SCR-SETTINGS-MODELS` |
 | `settings.models-test` | Testing an AI model connection | `SCR-SETTINGS-MODELS` |
@@ -74,42 +100,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `share.role` | Changing what a collaborator can do | `MOD-SHARE` |
 | `share.visibility` | Changing who can open a project | `MOD-SHARE` |
 
-## Sprint 3
-
-| Action | What it does | Used in |
-|---|---|---|
-| `library.list` | The library of ready-made pieces | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE` |
-| `library.preview` | Previewing a library piece in the world | `SCR-WORLD`, `STA-WORLD-EMPTY` |
-| `scene.addComponent` | Adding a component | `POP-ADD-COMPONENT` |
-| `scene.componentKinds` | The components you can add | `POP-ADD-COMPONENT` |
-| `scene.guide` | The getting started guide | `STA-WORLD-EMPTY` |
-| `scene.inspect` | The properties of the selected object | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `scene.propertyReference` | The property types reference | `REF-PROPERTY-TYPES` |
-| `scene.resetProperty` | Resetting a property | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
-| `scene.select` | Selecting an object | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
-| `scene.setProperty` | Editing a property | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL` |
-| `scene.setTrainingCopies` | Changing the number of training copies | `POP-TRAINING-COPIES` |
-| `scene.toggleVariation` | Changing what varies between copies | `POP-TRAINING-COPIES` |
-| `scene.trainingCopies` | Training copies and what changes between them | `POP-TRAINING-COPIES` |
-| `scene.tree` | The project's scene tree | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`, `STA-WORLD-BUILDING` |
-
-## Sprint 6
-
-| Action | What it does | Used in |
-|---|---|---|
-| `build.progress` | Progress of the project being built | `STA-WORLD-BUILDING` |
-| `copilot.apply` | Applying a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `copilot.autonomy` | Choosing when the copilot asks before changing things | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `copilot.conversation` | The copilot conversation | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `copilot.discard` | Discarding a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `copilot.send` | Talking to the copilot | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS` |
-| `ideas.list` | Ideas generated from your description | `SCR-IDEAS` |
-| `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
-| `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
-| `ideas.use` | Building a project from an idea | `SCR-IDEAS` |
-| `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
-
 ## Screens not built yet
 
 - `MOD-AUTO-RIG`
@@ -133,14 +123,18 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `MOD-SIGN-IN`
 - `MOD-START-TRAINING`
 - `MOD-STOP-RUN`
+- `POP-ADD-COMPONENT`
 - `POP-NOTIFICATIONS`
 - `POP-PROJECT-MENU`
+- `POP-TRAINING-COPIES`
+- `REF-PROPERTY-TYPES`
 - `SCR-BODY`
 - `SCR-BRAIN`
 - `SCR-BUILD`
 - `SCR-COMMUNITY`
 - `SCR-CREATION`
 - `SCR-HOME`
+- `SCR-IDEAS`
 - `SCR-MODERATION`
 - `SCR-MOTION`
 - `SCR-PLAY`
@@ -155,6 +149,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `SCR-SETTINGS-TRAINING`
 - `SCR-TIMELAPSE`
 - `SCR-TRAIN`
+- `SCR-WORLD`
 - `STA-BODY-CHECK-FAILED`
 - `STA-BRAIN-CONNECTOME`
 - `STA-BRAIN-NETWORK`
@@ -164,3 +159,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `STA-RESULTS-FAILURES`
 - `STA-RESULTS-REFERENCE`
 - `STA-TRAIN-FAILED`
+- `STA-WORLD-BUILDING`
+- `STA-WORLD-EMPTY`
+- `STA-WORLD-EMPTY-NOGUIDE`
+- `STA-WORLD-PROPOSAL`
