@@ -36,5 +36,5 @@ export function collectCatalogs(modules: Record<string, { catalog: Catalog }>): 
 }
 
 export const catalog = collectCatalogs(
-  import.meta.glob<{ catalog: Catalog }>(["../../**/catalog.tsx", "!../../**/*.test.tsx"], { eager: true }),
+  import.meta.glob<{ catalog: Catalog }>("../../**/catalog.tsx", { eager: true }),
 );
