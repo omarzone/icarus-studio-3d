@@ -24,7 +24,7 @@ export function Dialog({ title, width = "w-120", children, footer }: Props) {
       >
         <header className="flex items-start justify-between gap-3">
           <h2 className="text-title-3 font-semibold">{title}</h2>
-          <CloseOverlay cta="Close" aria-label="Close" className={buttonClass("icon", "-mt-1 -mr-1")}>
+          <CloseOverlay cta="Close" aria-label="Close" className={buttonClass("icon", "-my-1 -mr-1")}>
             <X size={16} strokeWidth={1.75} aria-hidden />
           </CloseOverlay>
         </header>

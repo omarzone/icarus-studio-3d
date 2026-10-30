@@ -10,9 +10,21 @@ Every action below is reachable in the interface and shows *Not available yet* u
 |---|---|---|
 | `projects.delete` | Deleting a project | `MOD-DELETE-PROJECT` |
 | `projects.duplicate` | Duplicating a project | `MOD-DUPLICATE` |
+| `projects.footprint` | What a project keeps on this computer | `MOD-DUPLICATE`, `MOD-DELETE-PROJECT` |
 | `projects.get` | Opening a project | `SCR-WORLD` |
 | `projects.list` | Your projects list | `SCR-PROJECTS` |
 | `projects.rename` | Renaming a project | `MOD-RENAME` |
+| `revisions.list` | The history of a project | `MOD-HISTORY`, `POP-PROJECT-MENU` |
+| `revisions.restore` | Restoring a revision | `MOD-HISTORY` |
+
+## Sprint 13
+
+| Action | What it does | Used in |
+|---|---|---|
+| `share.get` | Sharing a project | `MOD-SHARE` |
+| `share.invite` | Inviting people to a project | `MOD-SHARE` |
+| `share.role` | Changing what a collaborator can do | `MOD-SHARE` |
+| `share.visibility` | Changing who can open a project | `MOD-SHARE` |
 
 ## Screens not built yet
 
@@ -20,26 +32,20 @@ Every action below is reachable in the interface and shows *Not available yet* u
 - `MOD-AUTOPILOT`
 - `MOD-BRAIN-SIZES`
 - `MOD-BRAIN-SOURCE`
-- `MOD-DELETE-PROJECT`
-- `MOD-DUPLICATE`
 - `MOD-EXPORT-ANIMATION`
 - `MOD-EXPORT-BRAIN`
-- `MOD-HISTORY`
 - `MOD-IMPORT`
 - `MOD-MOTION-TRACKING`
 - `MOD-MOTION-TRAIN`
 - `MOD-MOTION-VIDEO`
 - `MOD-PUBLISH`
 - `MOD-PUBLISHED`
-- `MOD-RENAME`
 - `MOD-REPORT`
-- `MOD-SHARE`
 - `MOD-SIGN-IN`
 - `MOD-START-TRAINING`
 - `MOD-STOP-RUN`
 - `POP-ADD-COMPONENT`
 - `POP-NOTIFICATIONS`
-- `POP-PROJECT-MENU`
 - `POP-TRAINING-COPIES`
 - `REF-PROPERTY-TYPES`
 - `SCR-BODY`
