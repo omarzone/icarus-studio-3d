@@ -1,6 +1,6 @@
 # Screen catalog
 
-Every screen, dialog, menu and state of the Icarus desktop app, with a stable identifier, its purpose, its modules and tabs, and every action. Identifiers are used in code, issues and tests: a module or tab ID maps to one folder or file in `apps/desktop/src/renderer/`. The interactive design lives in the Workspaces canvas; the canvas artboard of each entry is listed.
+Every screen, dialog, menu and state of the Icarus desktop app, with a stable identifier, its purpose, its modules and tabs, and every action. Identifiers are used in code, issues and tests: a module or tab ID maps to one folder or file in `apps/desktop/src/renderer/`. The mockup of each entry is listed.
 
 The examples on screen (a car that parks, a dancer, a fruit fly) are sample data. Every label of the interface itself is generic and works for any world, body or brain.
 
@@ -529,14 +529,14 @@ Errors never lose work.
 
 ## Screens by flow
 
-Order follows the canvas rows. For each entry: kind, parent, how you get there, purpose, content, then regions with their modules and every action.
+Order follows the main flows. For each entry: kind, parent, how you get there, purpose, content, then regions with their modules and every action.
 
 ### Create from a sentence · Park Pilot
 
 #### `SCR-HOME` Home
 
 - **Kind:** Screen
-- **Canvas artboard:** *Home* (`Main`)
+- **Mockup:** *Home* (`Main`)
 - **Reached from:** `MOD-IMPORT`, `POP-PROJECT-MENU`, `SCR-SETTINGS-MODELS`, `SYS-ENGINE-DOWN` · also from every workspace header
 - **Purpose:** Launcher and front door. Gets a beginner from a sentence to a project in one step, and shows what the community makes.
 - **Content:**
@@ -568,7 +568,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-IDEAS` Ideas
 
 - **Kind:** Screen
-- **Canvas artboard:** *Three ideas to pick from* (`Proposals`)
+- **Mockup:** *Three ideas to pick from* (`Proposals`)
 - **Reached from:** `MOD-MOTION-VIDEO`, `SCR-HOME`, `STA-WORLD-BUILDING`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`
 - **Purpose:** Before building anything, the copilot shows three different ways to make the idea, so the user chooses with their eyes instead of reading text.
 - **Content:**
@@ -592,7 +592,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-WORLD-BUILDING` World · building
 
 - **Kind:** State of a screen of `SCR-WORLD` World workspace
-- **Canvas artboard:** *Building it* (`Generating`)
+- **Mockup:** *Building it* (`Generating`)
 - **Reached from:** `SCR-IDEAS`
 - **Purpose:** The project is being generated. The user sees the world appear and can keep talking.
 - **Content:**
@@ -615,7 +615,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-WORLD` World workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *World* (`World`)
+- **Mockup:** *World* (`World`)
 - **Reached from:** `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-IMPORT`, `MOD-RENAME`, `MOD-SHARE`, `MOD-SIGN-IN`, `POP-ADD-COMPONENT`, `POP-NOTIFICATIONS`, `POP-TRAINING-COPIES`, `SCR-HOME`, `SCR-PROJECTS`, `STA-HOME-EMPTY`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL` · also from every workspace header
 - **Purpose:** Edit the environment the agent lives and trains in.
 - **Content:**
@@ -644,7 +644,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-PLAY` Play
 
 - **Kind:** Screen
-- **Canvas artboard:** *Play · test the car live* (`PlayCar`)
+- **Mockup:** *Play · test the car live* (`PlayCar`)
 - **Reached from:** `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME` · also from every workspace header
 - **Purpose:** Play mode: run the current brain live in its world and poke it, with no training and no changes to the project. The playground for beginners and the quick test for experts.
 - **Content:**
@@ -673,7 +673,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-BRAIN` Brain workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Brain* (`Brain`)
+- **Mockup:** *Brain* (`Brain`)
 - **Reached from:** `MOD-MOTION-VIDEO`, `MOD-START-TRAINING`, `STA-RESULTS-FAILURES`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE` · also from every workspace header
 - **Purpose:** Decide what the agent perceives, what it can do and what it is rewarded for. Beginners stay at the top; expert settings are collapsed.
 - **Content:**
@@ -698,7 +698,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-BRAIN-SIZES` Brain sizes
 
 - **Kind:** Modal dialog of `STA-BRAIN-NETWORK` Brain · network view
-- **Canvas artboard:** *Brain sizes* (`BrainOptions`)
+- **Mockup:** *Brain sizes* (`BrainOptions`)
 - **Reached from:** `MOD-START-TRAINING`, `REF-PROPERTY-TYPES`, `SCR-BRAIN`, `STA-BRAIN-NETWORK`
 - **Purpose:** Help choose a network size with honest trade-offs.
 - **Content:**
@@ -728,7 +728,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-BRAIN-NETWORK` Brain · network view
 
 - **Kind:** State of a screen of `SCR-BRAIN` Brain workspace
-- **Canvas artboard:** *Brain · network* (`Network`)
+- **Mockup:** *Brain · network* (`Network`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-BRAIN-SIZES`, `MOD-START-TRAINING`, `MOD-STOP-RUN`, `SCR-BRAIN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`
 - **Purpose:** See and size the network that is learning, connected to the body.
 - **Content:**
@@ -752,7 +752,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-START-TRAINING` Start training
 
 - **Kind:** Modal dialog of `SCR-BRAIN` Brain workspace
-- **Canvas artboard:** *Start training* (`StartTraining`)
+- **Mockup:** *Start training* (`StartTraining`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-RESULTS`, `SCR-TRAIN`, `STA-RESULTS-FAILURES`, `STA-TRAIN-FAILED` · also from every workspace header
 - **Purpose:** Confirm a training run with a clear cost.
 - **Content:**
@@ -778,7 +778,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-TRAIN` Train workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Train* (`Train`)
+- **Mockup:** *Train* (`Train`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-START-TRAINING`, `MOD-STOP-RUN`, `SCR-PROJECTS`, `SCR-RESULTS`, `SCR-TIMELAPSE`, `STA-TRAIN-FAILED` · also from every workspace header
 - **Purpose:** Watch learning happen live.
 - **Content:**
@@ -809,7 +809,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-RESULTS` Results workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Results* (`Results`)
+- **Mockup:** *Results* (`Results`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-BRAIN-SIZES`, `MOD-STOP-RUN`, `POP-NOTIFICATIONS`, `SCR-PLAY`, `SCR-TRAIN`, `STA-BRAIN-NETWORK`, `STA-RESULTS-FAILURES`, `STA-TRAIN-FAILED` · also from every workspace header
 - **Purpose:** Judge whether a brain is better, with fair comparisons.
 - **Content:**
@@ -840,7 +840,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-RESULTS-FAILURES` Results · where it fails
 
 - **Kind:** State of a screen of `SCR-RESULTS` Results workspace
-- **Canvas artboard:** *Where it fails* (`Diagnose`)
+- **Mockup:** *Where it fails* (`Diagnose`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-RESULTS`, `SCR-TRAIN`, `STA-TRAIN-FAILED`
 - **Purpose:** Explain why it fails and propose the fix. This is where the copilot's vision earns its place.
 - **Content:**
@@ -868,7 +868,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-BUILD` Build workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Build* (`Build`)
+- **Mockup:** *Build* (`Build`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-RESULTS`, `SCR-TIMELAPSE` · also from every workspace header
 - **Purpose:** Get the creation out: community, files, hardware, games.
 - **Content:**
@@ -896,7 +896,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-PUBLISH` Publish to the community
 
 - **Kind:** Modal dialog of `SCR-BUILD` Build workspace
-- **Canvas artboard:** *Publish* (`Publish`)
+- **Mockup:** *Publish* (`Publish`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-PUBLISHED`, `SCR-BUILD`, `STA-RESULTS-REFERENCE` · also from every workspace header
 - **Purpose:** Last check before something becomes public.
 - **Content:**
@@ -927,7 +927,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-PUBLISHED` Sent for review
 
 - **Kind:** Modal dialog of `SCR-BUILD` Build workspace
-- **Canvas artboard:** *Sent for review* (`Published`)
+- **Mockup:** *Sent for review* (`Published`)
 - **Reached from:** `MOD-PUBLISH`
 - **Purpose:** Confirm the creation was sent for review and say what happens next.
 - **Content:**
@@ -960,7 +960,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-MOTION-VIDEO` Copy motion from a video
 
 - **Kind:** Modal dialog of `STA-WORLD-EMPTY-NOGUIDE` World · new project, guide hidden
-- **Canvas artboard:** *Upload the dance video* (`UploadVideo`)
+- **Mockup:** *Upload the dance video* (`UploadVideo`)
 - **Reached from:** `MOD-AUTO-RIG`, `MOD-EXPORT-ANIMATION`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-BODY`, `SCR-HOME`, `SCR-MOTION`, `STA-BODY-CHECK-FAILED`, `STA-HOME-EMPTY`, `STA-MOTION-TRAINING`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`
 - **Purpose:** Bring a reference video for a character to copy.
 - **Content:**
@@ -994,7 +994,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-MOTION-TRACKING` Tracking the motion
 
 - **Kind:** Modal dialog of `SCR-MOTION` Motion workspace
-- **Canvas artboard:** *Tracking the pose* (`PoseProgress`)
+- **Mockup:** *Tracking the pose* (`PoseProgress`)
 - **Reached from:** `MOD-EXPORT-ANIMATION`, `MOD-MOTION-TRAIN`, `MOD-MOTION-VIDEO`, `SCR-MOTION`, `STA-MOTION-TRAINING`
 - **Purpose:** Show pose tracking progress honestly.
 - **Content:**
@@ -1023,7 +1023,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-MOTION` Motion workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Motion · side by side* (`Motion`)
+- **Mockup:** *Motion · side by side* (`Motion`)
 - **Reached from:** `MOD-EXPORT-ANIMATION`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `POP-NOTIFICATIONS`, `SCR-PROJECTS`, `STA-MOTION-TRAINING` · also from every workspace header
 - **Purpose:** Compare the reference with the physics character and decide what to improve.
 - **Content:**
@@ -1051,7 +1051,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-MOTION-TRAIN` Train the copy
 
 - **Kind:** Modal dialog of `SCR-MOTION` Motion workspace
-- **Canvas artboard:** *Train the copy* (`TrainMotion`)
+- **Mockup:** *Train the copy* (`TrainMotion`)
 - **Reached from:** the workspace header
 - **Purpose:** Start training the copy with a clear focus.
 - **Content:**
@@ -1080,7 +1080,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-MOTION-TRAINING` Motion · training the copy
 
 - **Kind:** State of a screen of `SCR-MOTION` Motion workspace
-- **Canvas artboard:** *Training the copy* (`MotionTraining`)
+- **Mockup:** *Training the copy* (`MotionTraining`)
 - **Reached from:** `MOD-MOTION-TRAIN`
 - **Purpose:** Follow the copy while it trains without leaving the comparison.
 - **Content:**
@@ -1108,7 +1108,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-EXPORT-ANIMATION` Export animation
 
 - **Kind:** Modal dialog of `SCR-MOTION` Motion workspace
-- **Canvas artboard:** *Export animation* (`ExportAnim`)
+- **Mockup:** *Export animation* (`ExportAnim`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`, `SCR-MOTION`, `STA-MOTION-TRAINING`
 - **Purpose:** Export the motion as an animation file.
 - **Content:**
@@ -1139,7 +1139,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-IMPORT` Import
 
 - **Kind:** Modal dialog of `SCR-BODY` Body workspace
-- **Canvas artboard:** *Import* (`Import`)
+- **Mockup:** *Import* (`Import`)
 - **Reached from:** `MOD-AUTO-RIG`, `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-MOTION-VIDEO`, `MOD-RENAME`, `MOD-SHARE`, `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `POP-PROJECT-MENU`, `POP-TRAINING-COPIES`, `SCR-BODY`, `SCR-HOME`, `SCR-PROJECTS`, `SCR-WORLD`, `STA-BODY-CHECK-FAILED`, `STA-HOME-EMPTY`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`
 - **Purpose:** Bring an external model, environment or robot description in.
 - **Content:**
@@ -1163,7 +1163,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-AUTO-RIG` Auto-rig progress
 
 - **Kind:** Modal dialog of `SCR-BODY` Body workspace
-- **Canvas artboard:** *Auto-rig progress* (`AutoRig`)
+- **Mockup:** *Auto-rig progress* (`AutoRig`)
 - **Reached from:** `MOD-IMPORT`, `SCR-BODY`, `STA-BODY-CHECK-FAILED`
 - **Purpose:** Make an imported model physical, step by step.
 - **Content:**
@@ -1193,7 +1193,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-BODY` Body workspace
 
 - **Kind:** Screen
-- **Canvas artboard:** *Body · rig* (`Body`)
+- **Mockup:** *Body · rig* (`Body`)
 - **Reached from:** `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` · also from every workspace header
 - **Purpose:** Edit the body: bones, joints, motors, sensors and colliders.
 - **Content:**
@@ -1219,7 +1219,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-BODY-CHECK-FAILED` Body · physics check failed
 
 - **Kind:** State of a screen of `SCR-BODY` Body workspace
-- **Canvas artboard:** *Physics check failed* (`DesignFailed`)
+- **Mockup:** *Physics check failed* (`DesignFailed`)
 - **Reached from:** `MOD-AUTO-RIG`
 - **Purpose:** Block training until the body is physically valid, and offer the fix.
 - **Content:**
@@ -1249,7 +1249,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-BRAIN-SOURCE` Choose the brain source
 
 - **Kind:** Modal dialog of `STA-BRAIN-CONNECTOME` Brain · connectome
-- **Canvas artboard:** *Choose the fly brain* (`ConnectomeImport`)
+- **Mockup:** *Choose the fly brain* (`ConnectomeImport`)
 - **Reached from:** `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-HOME`, `STA-HOME-EMPTY`
 - **Purpose:** Choose what drives the body.
 - **Content:**
@@ -1273,7 +1273,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-BRAIN-CONNECTOME` Brain · connectome
 
 - **Kind:** State of a screen of `SCR-BRAIN` Brain workspace
-- **Canvas artboard:** *Fly brain · live* (`FlyBrain`)
+- **Mockup:** *Fly brain · live* (`FlyBrain`)
 - **Reached from:** `MOD-BRAIN-SOURCE`, `SCR-COMMUNITY`, `SCR-PROJECTS`, `STA-RESULTS-REFERENCE` · also from every workspace header
 - **Purpose:** Inspect a connectome brain wired into its body. No training.
 - **Content:**
@@ -1308,7 +1308,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-RESULTS-REFERENCE` Results · compare with recordings
 
 - **Kind:** State of a screen of `SCR-RESULTS` Results workspace
-- **Canvas artboard:** *Fly vs real flies* (`FlyCompare`)
+- **Mockup:** *Fly vs real flies* (`FlyCompare`)
 - **Reached from:** `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME` · also from every workspace header
 - **Purpose:** Measure how close simulated behavior is to recorded real behavior.
 - **Content:**
@@ -1334,7 +1334,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `REF-PROPERTY-TYPES` Property types
 
 - **Kind:** Design reference
-- **Canvas artboard:** *Property types* (`PropertyTypes`)
+- **Mockup:** *Property types* (`PropertyTypes`)
 - **Reached from:** `POP-ADD-COMPONENT`
 - **Purpose:** Design reference for the inspector: the 12 property types, their 6 states and what each interaction does. Not a screen in the app.
 - **Content:**
@@ -1352,7 +1352,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `POP-ADD-COMPONENT` Components and Add component
 
 - **Kind:** Popover or menu of `PNL-INSPECTOR` Inspector
-- **Canvas artboard:** *Components* (`Components`)
+- **Mockup:** *Components* (`Components`)
 - **Reached from:** `MOD-AUTO-RIG`, `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-MOTION-VIDEO`, `MOD-RENAME`, `MOD-SHARE`, `POP-PROJECT-MENU`, `POP-TRAINING-COPIES`, `REF-PROPERTY-TYPES`, `SCR-BODY`, `SCR-WORLD`, `STA-BODY-CHECK-FAILED`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`
 - **Purpose:** Add a component to any object. Shown on the reference board with a generic imported object.
 - **Content:**
@@ -1374,7 +1374,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-WORLD-EMPTY` World · new project with guide
 
 - **Kind:** State of a screen of `SCR-WORLD` World workspace
-- **Canvas artboard:** *New project · guide* (`NewProject`)
+- **Mockup:** *New project · guide* (`NewProject`)
 - **Reached from:** `MOD-MOTION-VIDEO`, `MOD-REPORT`, `SCR-CREATION`, `SCR-PROFILE`, `SCR-PROJECTS`, `STA-HOME-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE` · also from every workspace header
 - **Purpose:** First minutes of a new project: a working default world and a guide that never forces an order.
 - **Content:**
@@ -1403,7 +1403,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-WORLD-EMPTY-NOGUIDE` World · new project, guide hidden
 
 - **Kind:** State of a screen of `SCR-WORLD` World workspace
-- **Canvas artboard:** *New project · guide hidden* (`NewProjectNoGuide`)
+- **Mockup:** *New project · guide hidden* (`NewProjectNoGuide`)
 - **Reached from:** `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-HOME`, `SCR-PROJECTS`, `STA-HOME-EMPTY`, `STA-WORLD-EMPTY`
 - **Purpose:** Same as the new project, with the guide collapsed into a *Show guide* pill.
 - **Header:** `HDR-WORKSPACE` · project **Untitled project** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → disabled
@@ -1427,7 +1427,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-WORLD-PROPOSAL` World · copilot proposal preview
 
 - **Kind:** State of a screen of `SCR-WORLD` World workspace
-- **Canvas artboard:** *Copilot proposes a change* (`ProposedChange`)
+- **Mockup:** *Copilot proposes a change* (`ProposedChange`)
 - **Reached from:** `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-RENAME`, `MOD-SHARE`, `POP-PROJECT-MENU`, `POP-TRAINING-COPIES`, `SCR-IDEAS`, `SCR-WORLD`, `STA-WORLD-BUILDING`
 - **Purpose:** Preview a copilot change before it exists.
 - **Content:**
@@ -1459,7 +1459,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `POP-PROJECT-MENU` Project menu
 
 - **Kind:** Popover or menu
-- **Canvas artboard:** *Project menu* (`ProjectMenu`)
+- **Mockup:** *Project menu* (`ProjectMenu`)
 - **Reached from:** the workspace header
 - **Purpose:** Project-level actions from the project name.
 - **Content:**
@@ -1493,7 +1493,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-RENAME` Rename project
 
 - **Kind:** Modal dialog of `POP-PROJECT-MENU` Project menu
-- **Canvas artboard:** *Rename* (`Rename`)
+- **Mockup:** *Rename* (`Rename`)
 - **Reached from:** `POP-PROJECT-MENU`
 - **Purpose:** Rename the project and its short description.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
@@ -1521,7 +1521,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-DUPLICATE` Duplicate project
 
 - **Kind:** Modal dialog of `POP-PROJECT-MENU` Project menu
-- **Canvas artboard:** *Duplicate* (`Duplicate`)
+- **Mockup:** *Duplicate* (`Duplicate`)
 - **Reached from:** `POP-PROJECT-MENU`
 - **Purpose:** Copy the project, choosing what heavy data comes along.
 - **Content:**
@@ -1551,7 +1551,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-HISTORY` History
 
 - **Kind:** Modal dialog
-- **Canvas artboard:** *History* (`Versions`)
+- **Mockup:** *History* (`Versions`)
 - **Reached from:** `MOD-AUTO-RIG`, `MOD-AUTOPILOT`, `MOD-BRAIN-SIZES`, `MOD-BRAIN-SOURCE`, `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-EXPORT-ANIMATION`, `MOD-EXPORT-BRAIN`, `MOD-IMPORT`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `MOD-MOTION-VIDEO`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `MOD-RENAME`, `MOD-SHARE`, `MOD-START-TRAINING`, `MOD-STOP-RUN`, `POP-PROJECT-MENU`, `POP-TRAINING-COPIES`, `SCR-BODY`, `SCR-BRAIN`, `SCR-BUILD`, `SCR-IDEAS`, `SCR-MOTION`, `SCR-PLAY`, `SCR-RESULTS`, `SCR-TRAIN`, `SCR-WORLD`, `STA-BODY-CHECK-FAILED`, `STA-BRAIN-CONNECTOME`, `STA-BRAIN-NETWORK`, `STA-BUILD-HARDWARE`, `STA-MOTION-TRAINING`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE`, `STA-TRAIN-FAILED`, `STA-WORLD-BUILDING`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`
 - **Purpose:** Every revision, by the user or the copilot, and restore.
 - **Content:**
@@ -1579,7 +1579,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-SHARE` Share
 
 - **Kind:** Modal dialog
-- **Canvas artboard:** *Share* (`Share`)
+- **Mockup:** *Share* (`Share`)
 - **Reached from:** `SCR-RESULTS` · also from every workspace header
 - **Purpose:** Private sharing and collaboration. Publishing to the community is in Build.
 - **Content:**
@@ -1610,7 +1610,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `POP-TRAINING-COPIES` Training copies
 
 - **Kind:** Popover or menu of `SCR-WORLD` World workspace
-- **Canvas artboard:** *Training copies* (`Randomize`)
+- **Mockup:** *Training copies* (`Randomize`)
 - **Reached from:** `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-RENAME`, `MOD-SHARE`, `POP-PROJECT-MENU`, `SCR-PLAY`, `SCR-WORLD`, `STA-WORLD-PROPOSAL`
 - **Purpose:** Set how many copies train in parallel and what changes between them.
 - **Content:**
@@ -1640,7 +1640,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-AUTOPILOT` Autopilot
 
 - **Kind:** Modal dialog of `SCR-TRAIN` Train workspace
-- **Canvas artboard:** *Autopilot* (`Autopilot`)
+- **Mockup:** *Autopilot* (`Autopilot`)
 - **Reached from:** `MOD-STOP-RUN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`
 - **Purpose:** Decide how much the copilot may change on its own during training.
 - **Content:**
@@ -1671,7 +1671,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-STOP-RUN` Stop run
 
 - **Kind:** Modal dialog of `SCR-TRAIN` Train workspace
-- **Canvas artboard:** *Stop run* (`StopRun`)
+- **Mockup:** *Stop run* (`StopRun`)
 - **Reached from:** `MOD-AUTOPILOT`, `SCR-TRAIN`, `STA-TRAIN-FAILED` · also from every workspace header
 - **Purpose:** Stop or pause a run without losing anything.
 - **Content:**
@@ -1704,7 +1704,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-TRAIN-FAILED` Train · run failed
 
 - **Kind:** State of a screen of `SCR-TRAIN` Train workspace
-- **Canvas artboard:** *Training failed* (`TrainFailed`)
+- **Mockup:** *Training failed* (`TrainFailed`)
 - **Reached from:** `POP-NOTIFICATIONS`
 - **Purpose:** A run stopped by itself. Explain why and what is safe.
 - **Content:**
@@ -1736,7 +1736,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-TIMELAPSE` Timelapse presentation
 
 - **Kind:** Screen
-- **Canvas artboard:** *Timelapse · presentation* (`Timelapse`)
+- **Mockup:** *Timelapse · presentation* (`Timelapse`)
 - **Reached from:** `MOD-AUTOPILOT`, `MOD-REPORT`, `MOD-STOP-RUN`, `POP-TRAINING-COPIES`, `SCR-CREATION`, `SCR-PLAY`, `SCR-RESULTS`, `SCR-TRAIN`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE`, `STA-TRAIN-FAILED` · also from every workspace header
 - **Purpose:** Presentation mode: show how it learned, full screen, with real metrics.
 - **Content:**
@@ -1756,7 +1756,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-EXPORT-BRAIN` Export brain
 
 - **Kind:** Modal dialog of `SCR-BUILD` Build workspace
-- **Canvas artboard:** *Export brain* (`ExportBrain`)
+- **Mockup:** *Export brain* (`ExportBrain`)
 - **Reached from:** `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
 - **Purpose:** Export the trained brain as a file.
 - **Content:**
@@ -1787,7 +1787,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-BUILD-HARDWARE` Build · real hardware
 
 - **Kind:** State of a screen of `SCR-BUILD` Build workspace
-- **Canvas artboard:** *Run on real hardware* (`Hardware`)
+- **Mockup:** *Run on real hardware* (`Hardware`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
 - **Purpose:** Run the brain on a real device, step by step and safely.
 - **Content:**
@@ -1810,7 +1810,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-DELETE-PROJECT` Delete project
 
 - **Kind:** Modal dialog of `POP-PROJECT-MENU` Project menu
-- **Canvas artboard:** *Delete project* (`DeleteProject`)
+- **Mockup:** *Delete project* (`DeleteProject`)
 - **Reached from:** `POP-PROJECT-MENU`
 - **Purpose:** Destructive confirmation with exact consequences.
 - **Content:**
@@ -1842,7 +1842,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-PROJECTS` Projects
 
 - **Kind:** Screen
-- **Canvas artboard:** *Projects* (`Projects`)
+- **Mockup:** *Projects* (`Projects`)
 - **Reached from:** `MOD-DELETE-PROJECT`, `POP-PROJECT-MENU` · also from every workspace header
 - **Purpose:** All local projects in one place.
 - **Content:**
@@ -1864,7 +1864,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-SIGN-IN` Sign in
 
 - **Kind:** Modal dialog of `SCR-HOME` Home
-- **Canvas artboard:** *Sign in* (`SignIn`)
+- **Mockup:** *Sign in* (`SignIn`)
 - **Reached from:** the workspace header
 - **Purpose:** Sign in only when needed (sharing, remixing).
 - **Content:**
@@ -1896,7 +1896,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-COMMUNITY` Community
 
 - **Kind:** Screen
-- **Canvas artboard:** *Community* (`Community`)
+- **Mockup:** *Community* (`Community`)
 - **Reached from:** `MOD-BRAIN-SIZES`, `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-HOME` · also from every workspace header
 - **Purpose:** Browse what others made.
 - **Content:**
@@ -1925,7 +1925,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-CREATION` Creation page
 
 - **Kind:** Screen
-- **Canvas artboard:** *Creation page* (`Creation`)
+- **Mockup:** *Creation page* (`Creation`)
 - **Reached from:** `MOD-PUBLISHED`, `MOD-REPORT`, `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-COMMUNITY`, `SCR-HOME`, `SCR-PROFILE`
 - **Purpose:** One creation's public page.
 - **Content:**
@@ -1950,7 +1950,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `MOD-REPORT` Report a creation
 
 - **Kind:** Modal dialog of `SCR-CREATION` Creation page
-- **Canvas artboard:** *Report* (`Report`)
+- **Mockup:** *Report* (`Report`)
 - **Reached from:** `SCR-CREATION`
 - **Purpose:** Report a creation and optionally block its author.
 - **Content:**
@@ -1979,7 +1979,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-PROFILE` Profile
 
 - **Kind:** Screen
-- **Canvas artboard:** *Profile* (`Profile`)
+- **Mockup:** *Profile* (`Profile`)
 - **Reached from:** `MOD-REPORT`, `MOD-SIGN-IN`, `POP-NOTIFICATIONS`, `SCR-CREATION`, `SCR-SETTINGS-PROFILE` · also from every workspace header
 - **Purpose:** Public identity in the community.
 - **Content:**
@@ -1999,7 +1999,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `POP-NOTIFICATIONS` Notifications
 
 - **Kind:** Popover or menu
-- **Canvas artboard:** *Notifications* (`Notifications`)
+- **Mockup:** *Notifications* (`Notifications`)
 - **Reached from:** the workspace header
 - **Purpose:** What happened while the user was away.
 - **Content:**
@@ -2032,7 +2032,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `STA-HOME-EMPTY` Home · first launch
 
 - **Kind:** State of a screen of `SCR-HOME` Home
-- **Canvas artboard:** *Home · no creations yet* (`EmptyHome`)
+- **Mockup:** *Home · no creations yet* (`EmptyHome`)
 - **Reached from:** entry point
 - **Purpose:** Home on first launch, before any creation.
 - **Content:**
@@ -2053,7 +2053,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-SETTINGS-MODELS` Settings · AI models
 
 - **Kind:** Screen
-- **Canvas artboard:** *Settings · AI models* (`Settings`)
+- **Mockup:** *Settings · AI models* (`Settings`)
 - **Reached from:** `SCR-PROFILE`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Connect AI models per capability.
 - **Content:**
@@ -2076,7 +2076,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-SETTINGS-PROFILE` Settings · profile
 
 - **Kind:** Screen
-- **Canvas artboard:** *Settings · profile* (`SettingsProfile`)
+- **Mockup:** *Settings · profile* (`SettingsProfile`)
 - **Reached from:** `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Edit the public profile and signature.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
@@ -2098,7 +2098,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-SETTINGS-PRIVACY` Settings · privacy and safety
 
 - **Kind:** Screen
-- **Canvas artboard:** *Settings · privacy* (`SettingsPrivacy`)
+- **Mockup:** *Settings · privacy* (`SettingsPrivacy`)
 - **Reached from:** `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Control what is public and who is blocked.
 - **Content:**
@@ -2122,7 +2122,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-SETTINGS-TRAINING` Settings · training and hardware
 
 - **Kind:** Screen
-- **Canvas artboard:** *Settings · training* (`SettingsTraining`)
+- **Mockup:** *Settings · training* (`SettingsTraining`)
 - **Reached from:** `POP-PROJECT-MENU`, `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`
 - **Purpose:** Control how training uses this computer.
 - **Content:**
@@ -2144,7 +2144,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications
 
 - **Kind:** Screen
-- **Canvas artboard:** *Settings · notifications* (`SettingsNotifications`)
+- **Mockup:** *Settings · notifications* (`SettingsNotifications`)
 - **Reached from:** `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Choose what to be told about.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
@@ -2165,7 +2165,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SYS-ENGINE-DOWN` Engine stopped
 
 - **Kind:** System screen
-- **Canvas artboard:** *Engine stopped* (`EngineDown`)
+- **Mockup:** *Engine stopped* (`EngineDown`)
 - **Reached from:** `SCR-SETTINGS-TRAINING`
 - **Purpose:** The local engine stopped. Reassure and recover.
 - **Content:**
@@ -2181,7 +2181,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 #### `SCR-MODERATION` Moderation (team tool)
 
 - **Kind:** Screen
-- **Canvas artboard:** *Moderation · team only* (`Moderation`)
+- **Mockup:** *Moderation · team only* (`Moderation`)
 - **Reached from:** entry point
 - **Purpose:** Team-only tool to review reported creations. Not part of the desktop app.
 - **Content:**
@@ -2198,7 +2198,7 @@ Order follows the canvas rows. For each entry: kind, parent, how you get there, 
 
 ## Index
 
-| ID | Name | Kind | Canvas artboard |
+| ID | Name | Kind | Mockup |
 |---|---|---|---|
 | `MOD-AUTO-RIG` | Auto-rig progress | Modal dialog | `AutoRig` |
 | `MOD-AUTOPILOT` | Autopilot | Modal dialog | `Autopilot` |

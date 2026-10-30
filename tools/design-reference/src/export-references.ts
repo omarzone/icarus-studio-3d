@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { type Box, moduleRegions, type Panel } from "./regions.ts";
 
 const repo = join(import.meta.dirname, "..", "..", "..");
-const canvas = process.env.ICARUS_DESIGN_CANVAS ?? join(repo, "design", "canvas");
+const mockups = process.env.ICARUS_MOCKUPS ?? join(repo, ".local", "mockups");
 const out = join(repo, "docs", "design", "reference");
 const require = createRequire(import.meta.url);
 const FONTS: Record<string, string> = {
@@ -48,7 +48,7 @@ function serve(): Promise<{ url: string; close: () => void }> {
     const path = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
     const [, root, ...rest] = path.split("/");
     const base = root === "fonts" && rest[0] ? FONTS[rest[0]] : undefined;
-    const file = base ? join(base, ...rest.slice(1)) : join(canvas, normalize(path));
+    const file = base ? join(base, ...rest.slice(1)) : join(mockups, normalize(path));
     if (!existsSync(file) || statSync(file).isDirectory()) {
       res.writeHead(404).end();
       return;
@@ -70,8 +70,8 @@ function compact(byId: Record<string, unknown>): string {
 }
 
 async function main(): Promise<void> {
-  if (!existsSync(join(canvas, "preview.html"))) {
-    throw new Error(`No canvas export at ${canvas}. Export the Workspaces canvas there or set ICARUS_DESIGN_CANVAS.`);
+  if (!existsSync(join(mockups, "preview.html"))) {
+    throw new Error(`No mockups at ${mockups}. Export them there or set ICARUS_MOCKUPS.`);
   }
   const ids = artboardIds();
   mkdirSync(out, { recursive: true });

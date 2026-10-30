@@ -11,13 +11,13 @@
       "!**/generated.ts",
       "!**/dist",
       "!**/out",
-      "!design/canvas",
       "!docs/design/reference",
       "!services/engine",
       "!pnpm-lock.yaml",
       "!**/*.md",
       "!**/test-results",
-      "!docs/design/inventory.json"
+      "!docs/design/inventory.json",
+      "!.local"
     ]
   },
   "formatter": {

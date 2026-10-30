@@ -255,7 +255,7 @@ it("kills the whole process tree on Windows", () => {
 ### Task 6: Design references in the repo
 
 **Files:**
-- Create: `design/canvas/` (exported artboards `*.dc.html`, the preview shim `preview.html`, `vendor/three.min.js`, `README.md` saying these are the exported Workspaces canvas, read-only)
+- Local, not versioned: `.local/mockups/` (exported mockups `*.dc.html`, the preview shim `preview.html`, `vendor/three.min.js`)
 - Create: `tools/design-reference/package.json`, `tools/design-reference/src/export-references.ts`, `tools/design-reference/src/regions.ts`
 - Create (generated): `docs/design/reference/<ID>.png` (62), `docs/design/reference/regions.json`, `docs/design/inventory.json`
 - Test: `tools/design-reference/src/regions.test.ts`
@@ -264,7 +264,7 @@ it("kills the whole process tree on Windows", () => {
 - Consumes: artboard → ID map from the Index table of `docs/design/screens.md`; tab-strip → module map (`STRIP`) used to build the catalog.
 - Produces: `docs/design/reference/<ID>.png` at 1440×900, `deviceScaleFactor: 1`; second examples get a suffix (`SCR-PLAY.png`, `SCR-PLAY.b.png`). `regions.json`: `{ [screenId]: { modules: { [moduleId]: { x: number; y: number; w: number; h: number } }; masks: Array<{ x: number; y: number; w: number; h: number }> } }`, masks covering every 3D image (`img` inside viewport, idea and thumbnail cards). `docs/design/inventory.json` (same shape as the catalog generator's: regions, tab strips, tools, inspector rows, anchors with label, destination artboard and kind). Root script `design:references`.
 
-- [ ] **Step 1: Copy** the current canvas export (the 62 `*.dc.html`, `preview.html`, `vendor/`) into `design/canvas/`.
+- [ ] **Step 1: Copy** the exported mockups (the 62 `*.dc.html`, `preview.html`, `vendor/`) into `.local/mockups/`.
 - [ ] **Step 2: Write the failing test** for the pure part:
 
 ```ts
@@ -278,9 +278,9 @@ it("ignores strips that are not in the module map", () => {
 });
 ```
 
-- [ ] **Step 3: Run** → FAIL. **Implement** `moduleRegions` and `export-references.ts`: serve `design/canvas/` over a local static server, open each artboard in Playwright Chromium at 1440×900 with `deviceScaleFactor: 1`, wait for `document.fonts.ready` and for every `img[src^="data:"]` to load, screenshot to `docs/design/reference/<ID>.png`, read each panel's bounding box and tab labels from the DOM for `regions.json`, collect masks from 3D images.
+- [ ] **Step 3: Run** → FAIL. **Implement** `moduleRegions` and `export-references.ts`: serve `.local/mockups/` over a local static server, open each artboard in Playwright Chromium at 1440×900 with `deviceScaleFactor: 1`, wait for `document.fonts.ready` and for every `img[src^="data:"]` to load, screenshot to `docs/design/reference/<ID>.png`, read each panel's bounding box and tab labels from the DOM for `regions.json`, collect masks from 3D images.
 - [ ] **Step 4: Run** `pnpm design:references`. Expected: 63 PNGs, `regions.json` with a module box for `PNL-INSPECTOR` on `SCR-WORLD`, and tests PASS.
-- [ ] **Step 5: Commit** `docs(design): add canvas export, reference images and inventory`.
+- [ ] **Step 5: Commit** `docs(design): add design reference images and inventory`.
 
 ### Task 7: Design parity and catalog checks
 

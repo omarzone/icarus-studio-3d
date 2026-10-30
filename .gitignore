@@ -31,8 +31,8 @@ projects/
 runs/
 *.log
 
-# Exported design canvas (local only; source for docs/design/reference)
-design/canvas/
+# Local working files
+.local/
 
 # Internal working notes
 docs/plans/schedule.md
