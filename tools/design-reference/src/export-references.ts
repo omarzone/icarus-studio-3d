@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 import { type Box, moduleRegions, type Panel } from "./regions.ts";
 
 const repo = join(import.meta.dirname, "..", "..", "..");
-const canvas = join(repo, "design", "canvas");
+const canvas = process.env.ICARUS_DESIGN_CANVAS ?? join(repo, "design", "canvas");
 const out = join(repo, "docs", "design", "reference");
 const require = createRequire(import.meta.url);
 const FONTS: Record<string, string> = {
@@ -63,7 +63,16 @@ function serve(): Promise<{ url: string; close: () => void }> {
   );
 }
 
+// One line per catalog ID keeps the generated files small in diffs.
+function compact(byId: Record<string, unknown>): string {
+  const lines = Object.entries(byId).map(([id, value]) => `  ${JSON.stringify(id)}: ${JSON.stringify(value)}`);
+  return `{\n${lines.join(",\n")}\n}\n`;
+}
+
 async function main(): Promise<void> {
+  if (!existsSync(join(canvas, "preview.html"))) {
+    throw new Error(`No canvas export at ${canvas}. Export the Workspaces canvas there or set ICARUS_DESIGN_CANVAS.`);
+  }
   const ids = artboardIds();
   mkdirSync(out, { recursive: true });
   const { url, close } = await serve();
@@ -133,8 +142,8 @@ async function main(): Promise<void> {
     };
     console.log(`${id} ${Object.keys(regions[id].modules).length} modules, ${inventory[id].anchors.length} controls`);
   }
-  writeFileSync(join(out, "regions.json"), `${JSON.stringify(regions, null, 1)}\n`);
-  writeFileSync(join(repo, "docs", "design", "inventory.json"), `${JSON.stringify(inventory, null, 1)}\n`);
+  writeFileSync(join(out, "regions.json"), compact(regions));
+  writeFileSync(join(repo, "docs", "design", "inventory.json"), compact(inventory));
   await browser.close();
   close();
 }
