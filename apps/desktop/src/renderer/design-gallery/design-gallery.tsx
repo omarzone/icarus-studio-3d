@@ -1,9 +1,11 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { AppProviders, HOME } from "../app/app-providers.tsx";
 import { isOverlay } from "../app/navigation/catalog-id.ts";
 import { type NavigationLocation, useNavigationStore } from "../app/navigation/navigation-store.tsx";
 import { catalog } from "../app/navigation/route-registry.ts";
 import { Router } from "../app/navigation/router.tsx";
+import { resetPrototypes } from "../app/runtime/port.tsx";
 
 export const GALLERY_PREFIX = "#/__design/";
 export const PROTOTYPE_PREFIX = "#/__prototype/";
@@ -26,6 +28,7 @@ export function locationOf(id: string): NavigationLocation | null {
 // Exposes the catalog and a reset to the design checks in tests/design.
 function TestHooks() {
   const store = useNavigationStore();
+  const queries = useQueryClient();
   useEffect(() => {
     window.__icarusCatalog = {
       routes: [...catalog.routes.values()].map(({ id, maxDiff }) => ({ id, maxDiff })),
@@ -33,12 +36,15 @@ function TestHooks() {
       open: (id) => {
         const target = locationOf(id);
         if (target) {
+          resetPrototypes();
+          queries.clear();
           store.getState().reset(target);
         }
         return target !== null;
       },
+      settled: () => queries.isFetching() === 0 && queries.isMutating() === 0,
     };
-  }, [store]);
+  }, [store, queries]);
   return null;
 }
 

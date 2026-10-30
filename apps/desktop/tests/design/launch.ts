@@ -10,7 +10,7 @@ export async function launchApp(env: Record<string, string>): Promise<{ app: Ele
     cwd: appDir,
     env: { ...process.env, ICARUS_HEADLESS: "1", ...env } as Record<string, string>,
   });
-  const page = await app.firstWindow();
+  const page = await app.firstWindow({ timeout: 120_000 });
   await page.setViewportSize({ width: 1440, height: 900 });
   return { app, page };
 }
@@ -48,6 +48,9 @@ export async function openRoute(page: Page, id: string): Promise<void> {
   }
   const attribute = id.startsWith("MOD-") || id.startsWith("POP-") ? "data-route-overlay" : "data-route-screen";
   await page.waitForSelector(`[${attribute}="${id}"]`);
+  // Fixture data arrives a tick after the route; read the screen only once nothing is loading.
+  // The hidden window paints few frames, so poll on a timer instead of animation frames.
+  await page.waitForFunction(() => window.__icarusCatalog?.settled() ?? false, undefined, { polling: 25 });
 }
 
 // Controls a person can reach on a route: inside the dialog when one is open.

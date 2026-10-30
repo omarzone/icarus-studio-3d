@@ -10,6 +10,7 @@ declare global {
       routes: { id: RouteId; maxDiff: number }[];
       modules: string[];
       open: (id: string) => boolean;
+      settled: () => boolean;
     };
   }
 }

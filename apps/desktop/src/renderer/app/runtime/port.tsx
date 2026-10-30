@@ -20,7 +20,12 @@ export function definePort<Port>(definition: PortDefinition<Port>): PortDefiniti
   return definition;
 }
 
-const prototypes = new WeakMap<PortDefinition<unknown>, unknown>();
+let prototypes = new WeakMap<PortDefinition<unknown>, unknown>();
+
+// Starts every prototype port from its fixture again (design checks open each screen on fresh data).
+export function resetPrototypes(): void {
+  prototypes = new WeakMap();
+}
 
 export function usePort<Port>(definition: PortDefinition<Port>): Port {
   const mode = useRuntimeMode();
