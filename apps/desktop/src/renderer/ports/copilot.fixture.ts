@@ -1,4 +1,5 @@
 import type { ChatMessage, Conversation, CopilotPort, ProposalStatus } from "./copilot-port.ts";
+import { TRAINING_CONVERSATIONS } from "./training-conversations.fixture.ts";
 
 // Sample conversations from the design, one per workspace, used only by the prototype, the design gallery and tests.
 const worldChips = [
@@ -135,6 +136,7 @@ const CONVERSATIONS: Readonly<Record<string, Conversation>> = {
       },
     ],
   },
+  ...TRAINING_CONVERSATIONS,
 };
 
 // Conversations that only preview a proposal, and the workspace conversation it belongs to.
