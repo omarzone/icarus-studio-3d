@@ -44,6 +44,9 @@ function colorVariables(t: Tokens): Pair[] {
     ["proposal-tint", c.proposal.tint],
     ["banner-warn", c.banner.warn.DEFAULT],
     ["banner-warn-border", c.banner.warn.border],
+    ["window-close", c.window.close],
+    ["window-minimize", c.window.minimize],
+    ["window-zoom", c.window.zoom],
   ];
 }
 
