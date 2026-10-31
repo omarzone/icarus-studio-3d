@@ -1,11 +1,14 @@
 import type { ComponentType } from "react";
 import type { ModuleId, RouteId, ScreenId } from "./catalog-id.ts";
+import type { RouteParams } from "./navigation-store.tsx";
 
 export type RouteEntry = {
   id: RouteId;
   component: ComponentType;
   // Screen drawn underneath when an overlay is opened on its own (gallery, prototype start).
   over?: ScreenId;
+  // Route parameters the design assumes when the ID is opened on its own.
+  params?: RouteParams;
   // Largest share of differing pixels allowed against docs/design/reference/<id>.png.
   maxDiff: number;
 };

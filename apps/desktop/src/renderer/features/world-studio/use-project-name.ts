@@ -5,17 +5,19 @@ import { projectsPort } from "../../ports/projects-port.ts";
 
 export const UNTITLED_PROJECT = "Untitled project";
 
-// Name of the open project: route parameter `project`, else the first project (gallery); none before it exists.
+// Name of the open project: route parameter `project`, else the first project (gallery).
+// Before it exists: the name the copilot proposed (`draftName`), else untitled.
 export function useProjectName(hasProject: boolean): string {
   const port = usePort(projectsPort);
   const id = useNavigation((state) => state.params.project);
+  const draftName = useNavigation((state) => state.params.draftName);
   const project = useQuery({
     queryKey: id ? ["projects", "get", id] : ["projects", "list"],
     queryFn: async () => (id ? port.getProject(id) : port.listProjects()),
     enabled: hasProject,
   });
   if (!hasProject) {
-    return UNTITLED_PROJECT;
+    return draftName ?? UNTITLED_PROJECT;
   }
   const data = project.data;
   const name = Array.isArray(data) ? data[0]?.name : data?.name;

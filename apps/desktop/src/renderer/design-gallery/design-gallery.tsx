@@ -5,6 +5,7 @@ import { isOverlay } from "../app/navigation/catalog-id.ts";
 import { type NavigationLocation, useNavigationStore } from "../app/navigation/navigation-store.tsx";
 import { catalog } from "../app/navigation/route-registry.ts";
 import { Router } from "../app/navigation/router.tsx";
+import { useNotices } from "../app/runtime/notices.ts";
 import { resetPrototypes } from "../app/runtime/port.tsx";
 
 export const GALLERY_PREFIX = "#/__design/";
@@ -20,9 +21,9 @@ export function locationOf(id: string): NavigationLocation | null {
     return null;
   }
   if (isOverlay(entry.id)) {
-    return entry.over ? { screen: entry.over, overlay: entry.id, params: {} } : null;
+    return entry.over ? { screen: entry.over, overlay: entry.id, params: entry.params ?? {} } : null;
   }
-  return { screen: entry.id, overlay: null, params: {} };
+  return { screen: entry.id, overlay: null, params: entry.params ?? {} };
 }
 
 // Exposes the catalog and a reset to the design checks in tests/design.
@@ -37,6 +38,7 @@ function TestHooks() {
         const target = locationOf(id);
         if (target) {
           resetPrototypes();
+          useNotices.setState({ notices: [] });
           queries.clear();
           store.getState().reset(target);
         }

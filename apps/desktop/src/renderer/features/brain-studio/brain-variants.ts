@@ -98,6 +98,10 @@ const UNDER_OVERLAY: Readonly<Partial<Record<OverlayId, (config: BrainConfig) =>
     suggestionRoutes: { compare: "SCR-RESULTS", explain: "STA-BRAIN-NETWORK" },
     addLayerTo: undefined,
   }),
+  "MOD-START-TRAINING": (config) => ({
+    ...config,
+    suggestionRoutes: { ...config.suggestionRoutes, "propose-change": "SCR-BRAIN" },
+  }),
 };
 
 export function brainConfig(variant: BrainVariant, overlay: OverlayId | null): BrainConfig {
