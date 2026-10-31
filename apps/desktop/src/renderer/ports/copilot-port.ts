@@ -81,7 +81,12 @@ export type SuggestionIntent =
   | "apply-fix"
   | "add-to-training"
   | "ask"
-  | "dismiss";
+  | "dismiss"
+  | "resize-brain"
+  | "play"
+  | "show"
+  | "template"
+  | "export";
 
 export type Suggestion = { text: string; intent: SuggestionIntent };
 

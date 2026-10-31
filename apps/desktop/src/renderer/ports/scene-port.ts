@@ -9,6 +9,8 @@ export type SceneIcon =
   | "add"
   | "agent"
   | "balance"
+  | "bone"
+  | "bug"
   | "box"
   | "brain"
   | "camera"
@@ -17,6 +19,9 @@ export type SceneIcon =
   | "community"
   | "connectome"
   | "dancer"
+  | "export"
+  | "eye"
+  | "film"
   | "goal"
   | "grid"
   | "joint"
@@ -25,7 +30,9 @@ export type SceneIcon =
   | "mesh"
   | "motor"
   | "physics"
+  | "pose-track"
   | "ray"
+  | "retarget"
   | "reward"
   | "shuffle"
   | "sky"
@@ -40,6 +47,7 @@ export type SceneIcon =
   | "walls"
   | "water"
   | "wind"
+  | "wing"
   | "zone";
 
 export type SceneObject = {

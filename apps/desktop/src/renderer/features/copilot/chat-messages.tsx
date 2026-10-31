@@ -43,7 +43,7 @@ export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
     return (
       <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55] [&>span]:leading-[1.55]">
         <RichTextView text={text} />
-        <CheckList items={checks ?? []} />
+        {checks ? <CheckList items={checks} leading="leading-[1.55]" /> : null}
         {actions}
       </div>
     );
@@ -64,20 +64,21 @@ export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
   );
 }
 
-export function CheckList({ items }: { items: readonly CheckItem[] }) {
+export function CheckList({ items, leading }: { items: readonly CheckItem[]; leading?: string }) {
   return (
     <>
       {items.map((item) => (
-        <CheckLine key={item.text} item={item} />
+        <CheckLine key={item.text} item={item} leading={leading} />
       ))}
     </>
   );
 }
 
 // A fact with its meaning: green check when it works, amber "!" when it needs attention.
-export function CheckLine({ item }: { item: CheckItem }) {
+// Inside a copilot answer lines follow the bubble's 1.55 line height; elsewhere they stay tight.
+export function CheckLine({ item, leading = "leading-tight" }: { item: CheckItem; leading?: string }) {
   return (
-    <span className="flex items-center gap-2.25 text-ui leading-tight">
+    <span className={`flex items-center gap-2.25 text-ui ${leading}`}>
       {item.tone === "ok" ? (
         <Check size={13} strokeWidth={1.75} className="shrink-0 text-ok" aria-label="Done" />
       ) : (

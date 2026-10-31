@@ -106,10 +106,73 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `training.autopilot` | What the copilot may change while training | `MOD-AUTOPILOT` |
 | `training.setAutopilot` | Choosing what the copilot may change while training | `MOD-AUTOPILOT` |
 
+## Sprint 8
+
+| Action | What it does | Used in |
+|---|---|---|
+| `brain.addLayer` | Adding a layer to the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+| `brain.chooseSize` | Choosing a brain size | `MOD-BRAIN-SIZES` |
+| `brain.learning` | The reward, goal and curriculum | `SCR-BRAIN` |
+| `brain.network` | The live diagram of the network | `STA-BRAIN-NETWORK` |
+| `brain.readings` | What the brain senses right now | `SCR-BRAIN`, `STA-BRAIN-CONNECTOME` |
+| `brain.sensesActions` | What the brain senses and what it can do | `SCR-BRAIN` |
+| `brain.setDecisionsPerSecond` | Changing how often the brain decides | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+| `brain.setLayerSize` | Changing a layer size | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+| `brain.setRewardWeight` | Changing a reward weight | `SCR-BRAIN` |
+| `brain.shape` | The shape of the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+| `brain.sizes` | Brain sizes with their training estimates | `MOD-BRAIN-SIZES` |
+| `brain.toggleInput` | Turning a sense on or off | `SCR-BRAIN` |
+| `brain.toggleOutput` | Turning an action on or off | `SCR-BRAIN` |
+| `brain.toggleRule` | Changing an episode rule | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+
+## Sprint 9
+
+| Action | What it does | Used in |
+|---|---|---|
+| `body.applyPose` | Trying a test pose | `SCR-BODY` |
+| `body.autoFixWeights` | Fixing skin weights automatically | `SCR-BODY` |
+| `body.autoRig` | Auto-rig progress | `MOD-AUTO-RIG` |
+| `body.cancelAutoRig` | Cancelling the auto-rig | `MOD-AUTO-RIG` |
+| `body.fixProblems` | Fixing the problems in the body | `STA-BODY-CHECK-FAILED` |
+| `body.import` | Reading a model to import | `MOD-IMPORT` |
+| `body.importAndRig` | Importing and auto-rigging a model | `MOD-IMPORT` |
+| `body.importStatic` | Importing a model as a static mesh | `MOD-IMPORT` |
+| `body.rigCheck` | The physics checks of the body | `SCR-BODY`, `STA-BODY-CHECK-FAILED`, `MOD-AUTO-RIG` |
+| `body.setImportKind` | Choosing what kind of file to import | `MOD-IMPORT` |
+| `body.weights` | Skin weights per bone | `SCR-BODY` |
+
+## Sprint 10
+
+| Action | What it does | Used in |
+|---|---|---|
+| `motion.clip` | The clip frames and match curve | `SCR-MOTION`, `STA-MOTION-TRAINING` |
+| `motion.compare` | The reference and the physics copy side by side | `SCR-MOTION`, `STA-MOTION-TRAINING` |
+| `motion.download` | Downloading the animation | `MOD-EXPORT-ANIMATION` |
+| `motion.export` | The animation export settings | `MOD-EXPORT-ANIMATION` |
+| `motion.partMatch` | Match per body part | `SCR-MOTION` |
+| `motion.selectFrame` | Moving to a frame | `SCR-MOTION`, `STA-MOTION-TRAINING` |
+| `motion.setExportFormat` | Choosing the animation format | `MOD-EXPORT-ANIMATION` |
+| `motion.setSpeed` | Changing the playback speed | `SCR-MOTION`, `STA-MOTION-TRAINING` |
+| `motion.setTrainingFocus` | Choosing what the copy practices | `MOD-MOTION-TRAIN` |
+| `motion.setVideoChoice` | Choosing who to copy and onto what | `MOD-MOTION-VIDEO` |
+| `motion.startTraining` | Training the copy | `MOD-MOTION-TRAIN` |
+| `motion.toggleExportOption` | Changing an export option | `MOD-EXPORT-ANIMATION` |
+| `motion.track` | Tracking the motion in the video | `MOD-MOTION-VIDEO` |
+| `motion.tracking` | Pose tracking progress | `MOD-MOTION-TRACKING` |
+| `motion.trainingPlan` | The training plan for the copy | `MOD-MOTION-TRAIN` |
+| `motion.trainingStatus` | How the copy is training | `STA-MOTION-TRAINING` |
+| `motion.trainWeakest` | Training the weakest moment | `SCR-MOTION` |
+| `motion.videoSource` | Reading the reference video | `MOD-MOTION-VIDEO` |
+
 ## Sprint 11
 
 | Action | What it does | Used in |
 |---|---|---|
+| `brain.activity` | Brain activity by region | `STA-BRAIN-CONNECTOME`, `MOD-BRAIN-SOURCE` |
+| `brain.behaviors` | Behaviors observed so far | `STA-BRAIN-CONNECTOME` |
+| `brain.loadSource` | Loading a brain into the body | `MOD-BRAIN-SOURCE` |
+| `brain.source` | The brains that can drive this body | `MOD-BRAIN-SOURCE` |
+| `brain.wiring` | How the brain's neurons connect to the body | `STA-BRAIN-CONNECTOME` |
 | `results.behaviorMatch` | How close each behavior is to the recordings | `STA-RESULTS-REFERENCE` |
 | `results.neurons` | Which neurons drive each behavior | `STA-RESULTS-REFERENCE` |
 | `results.recordings` | Recordings imported for comparison | `STA-RESULTS-REFERENCE` |
@@ -174,29 +237,4 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 ## Screens not built yet
 
-- `MOD-AUTO-RIG`
-- `MOD-AUTOPILOT`
-- `MOD-BRAIN-SIZES`
-- `MOD-BRAIN-SOURCE`
-- `MOD-EXPORT-ANIMATION`
-- `MOD-IMPORT`
-- `MOD-MOTION-TRACKING`
-- `MOD-MOTION-TRAIN`
-- `MOD-MOTION-VIDEO`
-- `MOD-START-TRAINING`
-- `MOD-STOP-RUN`
-- `SCR-BODY`
-- `SCR-BRAIN`
-- `SCR-MOTION`
-- `SCR-PLAY`
-- `SCR-PLAY.b`
-- `SCR-RESULTS`
-- `SCR-TIMELAPSE`
-- `SCR-TRAIN`
-- `STA-BODY-CHECK-FAILED`
-- `STA-BRAIN-CONNECTOME`
-- `STA-BRAIN-NETWORK`
-- `STA-MOTION-TRAINING`
-- `STA-RESULTS-FAILURES`
-- `STA-RESULTS-REFERENCE`
-- `STA-TRAIN-FAILED`
+None.

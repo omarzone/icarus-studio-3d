@@ -9,9 +9,9 @@
     "prototype": "pnpm -F @icarus/ui-tokens build && electron-vite dev -- --prototype",
     "prebuild": "pnpm -F @icarus/ui-tokens build",
     "build": "electron-vite build",
-    "test": "vitest run src tests/design/compare.test.ts",
+    "test": "vitest run --no-fsModuleCache src tests/design/compare.test.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "gen:pending": "node -e \"process.env.UPDATE_PENDING='1';require('node:child_process').execSync('vitest run src/renderer/app/runtime/pending-report.test.ts',{stdio:'inherit'})\"",
+    "gen:pending": "node -e \"process.env.UPDATE_PENDING='1';require('node:child_process').execSync('vitest run --no-fsModuleCache src/renderer/app/runtime/pending-report.test.ts',{stdio:'inherit'})\"",
     "test:design": "electron-vite build && playwright test"
   },
   "dependencies": {

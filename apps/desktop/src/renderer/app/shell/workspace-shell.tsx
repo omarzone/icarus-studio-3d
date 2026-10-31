@@ -8,12 +8,18 @@ type Props = {
   // Replaces the left and center columns with one page panel (Ideas).
   page?: ReactNode;
   chat: ReactNode;
+  // A 360 px chat column for views that need a wider center (the network view).
+  narrowChat?: boolean;
 };
 
 // Workspace shell from the style guide: 270 px left column, flexible center, 380 px chat column.
-export function WorkspaceShell({ header, left, center, page, chat }: Props) {
+export function WorkspaceShell({ header, left, center, page, chat, narrowChat = false }: Props) {
   return (
-    <div className="grid h-full grid-cols-[270px_minmax(0,1fr)_380px] grid-rows-[52px_minmax(0,1fr)] border border-line-strong bg-app text-fg">
+    <div
+      className={`grid h-full grid-rows-[52px_minmax(0,1fr)] border border-line-strong bg-app text-fg ${
+        narrowChat ? "grid-cols-[270px_minmax(0,1fr)_360px]" : "grid-cols-[270px_minmax(0,1fr)_380px]"
+      }`}
+    >
       <WorkspaceHeader {...header} />
       {page ? (
         <div className="col-span-2 flex min-h-0 flex-col gap-2.5 pr-1.5 pb-3 pl-3">{page}</div>
