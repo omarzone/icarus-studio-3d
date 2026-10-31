@@ -7,16 +7,26 @@ const look = (control: Locator) =>
     return [style.backgroundColor, style.color, style.opacity, style.boxShadow, style.textDecorationLine].join(" | ");
   });
 
+// Center of a control a person can see, scrolled into view; null when it is hidden.
+const pointAt = (control: Locator) =>
+  control.evaluate((element) => {
+    element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const box = element.getBoundingClientRect();
+    const hidden = box.width === 0 || box.height === 0 || getComputedStyle(element).visibility === "hidden";
+    return hidden ? null : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  });
+
 async function checkControls(page: Page, id: string, scope: string, problems: string[]): Promise<void> {
   const controls = page.locator(`${scope}[data-cta]:not([aria-current]):not([aria-selected="true"]):not(:disabled)`);
   for (const control of await controls.all()) {
-    if (!(await control.isVisible())) {
+    const point = await pointAt(control);
+    if (!point) {
       continue;
     }
     await page.mouse.move(1, 899);
     const resting = await look(control);
-    // The hidden window paints few frames, so waiting for a stable element takes seconds per control.
-    await control.hover({ force: true });
+    // Moving the pointer directly skips actionability waits, which take seconds per control in the hidden window.
+    await page.mouse.move(point.x, point.y);
     if ((await look(control)) === resting) {
       problems.push(`${id}: "${await control.getAttribute("data-cta")}" has no hover state`);
     }
@@ -40,21 +50,38 @@ async function checkControls(page: Page, id: string, scope: string, problems: st
   }
 }
 
-test("every control answers the pointer and every field takes typing", async () => {
+test("every module control answers the pointer and every field takes typing", async () => {
   test.setTimeout(1_800_000);
   const { app, page } = await launchGallery();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const { routes, modules } = await galleryCatalog(page);
+  const { modules } = await galleryCatalog(page);
   const problems: string[] = [];
   for (const id of modules) {
     await openGallery(page, id);
     await checkControls(page, id, "", problems);
   }
-  await openGallery(page, "SYS-ENGINE-DOWN");
-  for (const { id } of routes) {
-    await openRoute(page, id);
-    await checkControls(page, id, reachable(id), problems);
-  }
   await app.close();
   expect(problems).toEqual([]);
 });
+
+// Screens run in chunks so each fits its time limit; the catalog only grows.
+const SCREEN_CHUNKS = 4;
+
+for (let chunk = 0; chunk < SCREEN_CHUNKS; chunk += 1) {
+  test(`every screen control answers the pointer and every field takes typing (part ${chunk + 1})`, async () => {
+    test.setTimeout(1_800_000);
+    const { app, page } = await launchGallery();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const { routes } = await galleryCatalog(page);
+    const problems: string[] = [];
+    for (const [index, { id }] of routes.entries()) {
+      if (index % SCREEN_CHUNKS !== chunk) {
+        continue;
+      }
+      await openRoute(page, id);
+      await checkControls(page, id, reachable(id), problems);
+    }
+    await app.close();
+    expect(problems).toEqual([]);
+  });
+}
