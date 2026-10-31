@@ -87,16 +87,7 @@ const SESSIONS: Readonly<Record<string, PlaySession>> = {
       note: "What reaches its brain right now",
     },
     vision: [eye("Left eye", 5), eye("Right eye", 2)],
-    activity: {
-      live: true,
-      regions: [
-        { name: "Visual system", total: 34, active: 9 },
-        { name: "Central complex", total: 26, active: 6 },
-        { name: "Mushroom body", total: 28, active: 4 },
-        { name: "Descending neurons", total: 30, active: 11 },
-        { name: "Ventral nerve cord", total: 32, active: 8 },
-      ],
-    },
+    activity: true,
     events: [
       { time: "0:02", text: "Smelled sugar on the right, turned toward it" },
       { time: "0:05", text: "Walking with a tripod gait" },

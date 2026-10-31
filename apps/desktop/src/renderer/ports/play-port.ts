@@ -29,8 +29,6 @@ export type LiveBar = { id: string; label: string; icon?: SenseIcon; ratio: numb
 
 export type CompoundEye = { label: string; rows: number; columns: number; cells: readonly number[] };
 
-export type ActivityRegion = { name: string; total: number; active: number };
-
 export type PlayEvent = { time: string; text: string };
 
 export type PlaySession = {
@@ -48,8 +46,8 @@ export type PlaySession = {
   decisions?: { bars: readonly LiveBar[]; brain: string };
   // What each eye or camera sees, when the body has vision.
   vision?: readonly CompoundEye[];
-  // Neuron activity by region, for connectome brains.
-  activity?: { live: boolean; regions: readonly ActivityRegion[] };
+  // Connectome brains show their live neuron activity (read from the brain port).
+  activity?: boolean;
   events: readonly PlayEvent[];
 };
 

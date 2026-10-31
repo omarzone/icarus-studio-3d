@@ -1,18 +1,27 @@
 // PNL-BRAIN-ACTIVITY
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { usePort } from "../../../app/runtime/port.tsx";
-import { brainPort } from "../../../ports/brain-port.ts";
-import { Panel, PanelTab } from "../../../ui/panel.tsx";
-import { QueryView } from "../../../ui/query-view.tsx";
-import { EmptyState } from "../../../ui/states.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
+import { brainPort } from "../../ports/brain-port.ts";
+import { Panel, PanelTab } from "../../ui/panel.tsx";
+import { QueryView } from "../../ui/query-view.tsx";
+import { EmptyState } from "../../ui/states.tsx";
 import { BehaviorsTab } from "./behaviors-tab.tsx";
 import { BrainActivityTab } from "./brain-activity-tab.tsx";
 import { WiringTab } from "./wiring-tab.tsx";
 
 type Tab = "activity" | "behaviors" | "wiring";
 
-export function BrainActivityPanel({ brain, className = "h-49 shrink-0" }: { brain: string; className?: string }) {
+const ALL_TABS: readonly Tab[] = ["activity", "behaviors", "wiring"];
+
+type Props = {
+  brain: string;
+  // Play shows only the live activity; the Brain workspace also explains behaviors and wiring.
+  tabs?: readonly Tab[];
+  className?: string;
+};
+
+export function BrainActivityPanel({ brain, tabs = ALL_TABS, className = "h-49 shrink-0" }: Props) {
   const port = usePort(brainPort);
   const activity = useQuery({ queryKey: ["brain", brain, "activity"], queryFn: () => port.getActivity(brain) });
   const [tab, setTab] = useState<Tab>("activity");
@@ -23,8 +32,12 @@ export function BrainActivityPanel({ brain, className = "h-49 shrink-0" }: { bra
       tabs={
         <>
           <PanelTab label="Brain activity" active={tab === "activity"} onSelect={() => setTab("activity")} />
-          <PanelTab label="Behaviors" active={tab === "behaviors"} onSelect={() => setTab("behaviors")} />
-          <PanelTab label="Wiring" active={tab === "wiring"} onSelect={() => setTab("wiring")} />
+          {tabs.includes("behaviors") ? (
+            <PanelTab label="Behaviors" active={tab === "behaviors"} onSelect={() => setTab("behaviors")} />
+          ) : null}
+          {tabs.includes("wiring") ? (
+            <PanelTab label="Wiring" active={tab === "wiring"} onSelect={() => setTab("wiring")} />
+          ) : null}
         </>
       }
       options={activity.data?.live ? <span className="pr-1 text-ui text-danger">● live</span> : null}

@@ -1,6 +1,7 @@
 // SCR-BRAIN · STA-BRAIN-NETWORK · STA-BRAIN-CONNECTOME
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
@@ -10,7 +11,6 @@ import { guideLabel } from "../../ui/guide-label.ts";
 import { useOpenProjectName } from "../../ui/project-name.ts";
 import { LoadingState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
-import { BrainActivityPanel } from "./brain-activity/brain-activity-panel.tsx";
 import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
 import { BRAIN_VARIANTS, type BrainConfig, type BrainVariant, brainConfig } from "./brain-variants.ts";
 import { LearningPanel } from "./learning/learning-panel.tsx";

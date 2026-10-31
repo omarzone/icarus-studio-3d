@@ -1,11 +1,11 @@
 // TAB-WIRING
 import { useQuery } from "@tanstack/react-query";
-import { Act } from "../../../app/navigation/go-to.tsx";
-import { usePort } from "../../../app/runtime/port.tsx";
-import { brainPort } from "../../../ports/brain-port.ts";
-import { buttonClass } from "../../../ui/button-styles.ts";
-import { QueryView } from "../../../ui/query-view.tsx";
-import { EmptyState } from "../../../ui/states.tsx";
+import { Act } from "../../app/navigation/go-to.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
+import { brainPort } from "../../ports/brain-port.ts";
+import { buttonClass } from "../../ui/button-styles.ts";
+import { QueryView } from "../../ui/query-view.tsx";
+import { EmptyState } from "../../ui/states.tsx";
 
 // How sensory and motor neurons connect to the body, and how many still have nothing to drive.
 export function WiringTab({ brain }: { brain: string }) {

@@ -2,11 +2,11 @@
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
+import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { type PlaySession, playPort } from "../../ports/play-port.ts";
 import { useProjectName } from "../../ui/project-name.ts";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
-import { BrainActivitySlot } from "./brain-activity-slot.tsx";
 import { DecisionsPanel } from "./decisions/decisions-panel.tsx";
 import { EventsPanel } from "./events/events-panel.tsx";
 import { PlayHeader } from "./play-header/play-header.tsx";
@@ -53,7 +53,7 @@ export function PlayScreen() {
           />
           {data?.activity ? (
             <div className="grid h-49 flex-none grid-cols-[1.4fr_1fr] gap-2.5">
-              <BrainActivitySlot project={project.id} />
+              <BrainActivityPanel brain={project.id} tabs={["activity"]} className="min-w-0" />
               <EventsPanel project={project.id} className="min-w-0" />
             </div>
           ) : (

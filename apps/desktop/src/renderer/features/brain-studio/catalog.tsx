@@ -1,5 +1,5 @@
 import type { Catalog } from "../../app/navigation/route-registry.ts";
-import { BrainActivityPanel } from "./brain-activity/brain-activity-panel.tsx";
+import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
 import { BrainScreen } from "./brain-screen.tsx";
 import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
 import { LearningPanel } from "./learning/learning-panel.tsx";

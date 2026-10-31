@@ -1,10 +1,10 @@
 // TAB-BEHAVIORS
 import { useQuery } from "@tanstack/react-query";
-import { Act } from "../../../app/navigation/go-to.tsx";
-import { usePort } from "../../../app/runtime/port.tsx";
-import { brainPort } from "../../../ports/brain-port.ts";
-import { QueryView } from "../../../ui/query-view.tsx";
-import { EmptyState } from "../../../ui/states.tsx";
+import { Act } from "../../app/navigation/go-to.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
+import { brainPort } from "../../ports/brain-port.ts";
+import { QueryView } from "../../ui/query-view.tsx";
+import { EmptyState } from "../../ui/states.tsx";
 
 // Behaviors observed so far, with when they happened; each jumps to its moment.
 export function BehaviorsTab({ brain }: { brain: string }) {

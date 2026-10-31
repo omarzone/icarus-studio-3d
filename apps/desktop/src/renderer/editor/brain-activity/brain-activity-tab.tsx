@@ -1,8 +1,8 @@
 // TAB-BRAIN-ACTIVITY
 import { tokens } from "@icarus/ui-tokens";
 import { useState } from "react";
-import { Act } from "../../../app/navigation/go-to.tsx";
-import type { BrainRegion } from "../../../ports/brain-port.ts";
+import { Act } from "../../app/navigation/go-to.tsx";
+import type { BrainRegion } from "../../ports/brain-port.ts";
 
 const WIDTH = 200;
 const CENTER_Y = 18;
