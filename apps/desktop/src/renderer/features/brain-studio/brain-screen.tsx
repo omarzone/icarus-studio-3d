@@ -7,6 +7,7 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { guidePillLabel, useOpenProjectName } from "../../ui/project-name.ts";
+import { LoadingState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { BrainActivityPanel } from "./brain-activity/brain-activity-panel.tsx";
 import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
@@ -30,6 +31,10 @@ export function BrainScreen() {
   const config = brainConfig(variant, overlay);
   const project = useOpenProjectName(config.project);
   const guide = useGuide(config.scene);
+  // The header's project name and guide pill change label once they load, so the screen waits for them.
+  if (guide.isPending || project === null) {
+    return <LoadingState label="Opening the workspace" />;
+  }
   return (
     <WorkspaceShell
       header={{

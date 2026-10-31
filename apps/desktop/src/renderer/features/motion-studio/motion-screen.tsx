@@ -7,6 +7,7 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { MOTION_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { CHARACTER_WORKSPACES, guidePillLabel, useOpenProjectName } from "../../ui/project-name.ts";
+import { LoadingState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { ClipTimelinePanel } from "./clip-timeline/clip-timeline-panel.tsx";
 import { MotionComparePanel } from "./compare/motion-compare-panel.tsx";
@@ -21,6 +22,10 @@ export function MotionScreen() {
   const config = motionConfig(variant, overlay);
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
+  // The header's project name and guide pill change label once they load, so the screen waits for them.
+  if (guide.isPending || project === null) {
+    return <LoadingState label="Opening the workspace" />;
+  }
   return (
     <WorkspaceShell
       header={{

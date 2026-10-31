@@ -7,10 +7,14 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { CHARACTER_WORKSPACES, guidePillLabel, useOpenProjectName } from "../../ui/project-name.ts";
+import { LoadingState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { BODY_VARIANTS, bodyConfig } from "./body-variants.ts";
 import { CheckFailedBanner } from "./check-failed-banner.tsx";
 import { RigCheckPanel } from "./rig-check/rig-check-panel.tsx";
+
+// The bone inspector is taller than its panel; it scrolls without a gutter, as in the design.
+const INSPECTOR_CLASS = "flex-[1.1] [&>div:last-child]:[scrollbar-width:none]";
 
 const RIG_TABS = [
   { id: "rig", label: "Rig" },
@@ -25,6 +29,10 @@ export function BodyScreen() {
   const config = bodyConfig(variant, overlay);
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
+  // The header's project name and guide pill change label once they load, so the screen waits for them.
+  if (guide.isPending || project === null) {
+    return <LoadingState label="Opening the workspace" />;
+  }
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
   return (
     <WorkspaceShell
@@ -40,7 +48,11 @@ export function BodyScreen() {
       left={
         <>
           <ExplorerPanel scene={config.scene} label={config.explorerLabel} />
-          <InspectorPanel scene={config.scene} addComponentTo={config.rigged ? "POP-ADD-COMPONENT" : undefined} />
+          <InspectorPanel
+            scene={config.scene}
+            addComponentTo={config.rigged ? "POP-ADD-COMPONENT" : undefined}
+            className={INSPECTOR_CLASS}
+          />
         </>
       }
       center={

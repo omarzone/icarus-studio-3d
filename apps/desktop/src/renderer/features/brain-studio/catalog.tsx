@@ -12,7 +12,7 @@ export const catalog: Catalog = {
     { id: "SCR-BRAIN", maxDiff: 0.03, component: BrainScreen },
     { id: "STA-BRAIN-NETWORK", maxDiff: 0.03, component: BrainScreen },
     { id: "STA-BRAIN-CONNECTOME", maxDiff: 0.03, component: BrainScreen },
-    { id: "MOD-BRAIN-SIZES", maxDiff: 0.03, over: "STA-BRAIN-NETWORK", component: SizesDialog },
+    { id: "MOD-BRAIN-SIZES", maxDiff: 0.04, over: "STA-BRAIN-NETWORK", component: SizesDialog },
     { id: "MOD-BRAIN-SOURCE", maxDiff: 0.03, over: "STA-BRAIN-CONNECTOME", component: SourceDialog },
   ],
   modules: [

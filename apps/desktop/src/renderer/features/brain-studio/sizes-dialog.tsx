@@ -23,7 +23,7 @@ export function SizesDialog() {
     client.setQueryData(brainShapeKey(BRAIN), shape);
   };
   return (
-    <Dialog title="Brain sizes Icarus suggests" width="w-190">
+    <Dialog title="Brain sizes Icarus suggests" width="w-201">
       <QueryView query={query}>
         {(data) => (
           <>
@@ -91,7 +91,8 @@ function SizeCard({ size, onUse }: { size: BrainSize; onUse: () => Promise<void>
 // Neurons per layer as columns of dots, every neighbor pair joined by a faint line.
 function MiniNetwork({ layers }: { layers: readonly number[] }) {
   const x = (index: number) => 20 + (index * 180) / Math.max(1, layers.length - 1);
-  const y = (index: number, count: number) => 45 + (index - (count - 1) / 2) * Math.min(7.5, 80 / count);
+  const y = (index: number, count: number) =>
+    45 + (index - (count - 1) / 2) * Math.min(14, 74 / Math.max(1, count - 1));
   return (
     <svg aria-hidden width="100%" height="90" viewBox="0 0 220 90">
       {layers.slice(1).map((count, column) => {

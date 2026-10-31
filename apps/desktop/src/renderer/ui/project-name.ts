@@ -6,10 +6,14 @@ import { projectsPort } from "../ports/projects-port.ts";
 import type { GuideProgress } from "../ports/scene-port.ts";
 
 // Name of the open project: route parameter `project`, else the workspace's own project (gallery, prototype).
-export function useOpenProjectName(fallbackId: string): string {
+// Null while it loads, so headers do not flash a placeholder name.
+export function useOpenProjectName(fallbackId: string): string | null {
   const port = usePort(projectsPort);
   const id = useNavigation((state) => state.params.project) ?? fallbackId;
   const project = useQuery({ queryKey: ["projects", "get", id], queryFn: () => port.getProject(id) });
+  if (project.isPending) {
+    return null;
+  }
   return project.data?.name ?? "Project";
 }
 

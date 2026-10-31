@@ -13,11 +13,12 @@ type Props = {
   children?: ReactNode;
 };
 
-const base = "flex w-full items-start gap-3 rounded-[14px] bg-control px-3.5 py-3 text-left active:opacity-80";
+const base =
+  "flex w-full items-start gap-3 rounded-[14px] bg-control px-3.5 py-3 text-left hover:bg-control-raised active:opacity-80";
 
 // One option of a radio group drawn as a card: radio, title and a plain explanation; the chosen one is outlined.
 export function ChoiceCard({ title, detail, checked, onSelect, to, children }: Props) {
-  const className = `${base} ${checked ? "shadow-[inset_0_0_0_1.5px_var(--ic-fg)]" : "hover:bg-control-raised"}`;
+  const className = `${base} ${checked ? "shadow-[inset_0_0_0_1.5px_var(--ic-fg)]" : ""}`;
   const cta = to ? `${title}\n${detail}` : title;
   const content = (
     <>
