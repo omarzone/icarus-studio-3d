@@ -35,7 +35,9 @@ How every screen is wired ([ADR 003](../../docs/decisions/003-screens-before-log
 - **Pending.** Every port function without logic is `pending({ key, summary, sprint, ids })`, where `sprint` is its roadmap sprint and `ids` the catalog IDs that use it. Run `pnpm -F desktop gen:pending` after changing ports or routes; `PENDING.md` is checked for staleness. No `TODO` comments: a pending action is declared, not commented.
 - **Fixtures.** `ports/<domain>.fixture.ts` holds the sample data from the mockups and an in-memory implementation that behaves (renaming renames). Only the `prototype` side of a port imports a fixture; components never do.
 - **Views are dumb.** A screen splits into a container (ports, queries, navigation) and view components that take plain props. Shared building blocks live in `src/renderer/ui/` (`Dialog`, `Popover`, `Panel`, `QueryView`, states, `buttonClass`).
-- **Checks.** `pnpm test:design` runs parity (`parity.e2e.ts`), every inventory control with its destination (`catalog.e2e.ts`), clicking every destination (`flows.e2e.ts`) and hover and typing on every control (`interaction.e2e.ts`), all over every registered catalog ID.
+- **One module, one folder.** A feature never imports another feature. A panel used by more than one workspace lives in `src/renderer/editor/` (explorer, inspector, viewport, brain activity) and takes props for what differs (for example `tabs`). The copilot chat (`features/copilot/`) is the one exception: every workspace imports it.
+- **Gallery params.** A catalog route can set `params` (for example `{ draftName: "Dance Copy" }`) when its design assumes route parameters; the gallery opens it with them.
+- **Checks.** `pnpm test:design` runs parity (`parity.e2e.ts`), every inventory control with its destination (`catalog.e2e.ts`), clicking every destination (`flows.e2e.ts`) and hover and typing on every control (`interaction.e2e.ts`), all over every registered catalog ID. Flows and screen interaction run in parts (`ROUTE_CHUNKS`, `SCREEN_CHUNKS`) so each fits its time limit; add a part when one nears it.
 
 ## Rules
 
@@ -44,7 +46,7 @@ How every screen is wired ([ADR 003](../../docs/decisions/003-screens-before-log
 - **Coordinate conversion in one place** (`scene/coordinates.ts`): MuJoCo is Z-up with wxyz quaternions; Three.js is Y-up with xyzw.
 - **Rendering is not tied to rollout fps:** interpolate between frames by time inside `useFrame`.
 - **Every metric on screen comes from the engine.** No hardcoded demo values in components. Empty states show an empty state, never fake data.
-- **Interaction states:** every control is a real `button`, `input` or link with `data-cta`, and has the hover, pressed and focus looks from the style guide's "Interaction states". `tests/design/interaction.e2e.ts` hovers every control in the design gallery and types into every field; add new modules to its list.
+- **Interaction states:** every control is a real `button`, `input` or link with `data-cta`, and has the hover, pressed and focus looks from the style guide's "Interaction states". `tests/design/interaction.e2e.ts` hovers every control of every registered route and module and types into every field.
 - **Required states** for every view that queries the engine: loading, empty, error (with a useful message) and engine down.
 - **Presentation-ready:** every screen must look good at 1920×1080 and in presentation mode, with no debug UI visible.
 - **Do not steal focus** in automated tasks: no `win.show()`/`focus()` in tests; validate with headless Playwright or screenshots.
@@ -52,3 +54,6 @@ How every screen is wired ([ADR 003](../../docs/decisions/003-screens-before-log
 ## Traps that already cost us
 
 *(Fill in as we go: symptom → cause → rule.)*
+
+- New screens missing from `PENDING.md` or the catalog checks in Vitest → Vitest's file-system module cache kept an old expansion of the `import.meta.glob` in `route-registry.ts` → desktop Vitest scripts run with `--no-fsModuleCache`; keep it.
+- A design check clicks a control that is gone a moment later → the screen re-rendered after its data loaded → `openRoute` waits until no query is fetching; screens that show the project name render nothing until it loads instead of a placeholder.
