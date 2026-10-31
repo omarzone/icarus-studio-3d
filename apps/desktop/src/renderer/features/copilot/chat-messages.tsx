@@ -37,7 +37,7 @@ export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
     return (
       <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55]">
         <RichTextView text={text} />
-        {checks ? <CheckList items={checks} /> : null}
+        {checks ? <CheckList items={checks} leading="leading-[1.55]" /> : null}
         {actions}
       </div>
     );
@@ -58,11 +58,11 @@ export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
   );
 }
 
-export function CheckList({ items }: { items: readonly CheckItem[] }) {
+export function CheckList({ items, leading }: { items: readonly CheckItem[]; leading?: string }) {
   return (
     <>
       {items.map((item) => (
-        <CheckLine key={item.text} item={item} leading="leading-[1.55]" />
+        <CheckLine key={item.text} item={item} leading={leading} />
       ))}
     </>
   );
