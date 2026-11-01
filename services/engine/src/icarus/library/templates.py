@@ -111,7 +111,7 @@ def _car() -> list[_Part]:
             extra={"distance_ray": {"range": 10, "count": 5}},
         )
     ]
-    for side, y in (("left", 0.95), ("right", -0.95)):
+    for side, y in (("left", 1.05), ("right", -1.05)):
         knuckle = f"steer_{side}"
         parts.append(
             _solid(

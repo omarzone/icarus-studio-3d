@@ -68,10 +68,7 @@ def add_actuator(root: ET.Element, obj: ObjectSpec, project: Project) -> None:
     low, high = joint.span("limits")
     if joint.text("kind") == "hinge":
         low, high = (math.radians(low), math.radians(high)) if (low > -180 or high < 180) else (-math.pi, math.pi)
-    attributes |= {
-        "ctrlrange": _fmt([low, high]),
-        "kp": _fmt([max(force, 1e-6)]),
-        "forcerange": _fmt([-force, force]),
-        "gear": _fmt([gear]),
-    }
+    attributes |= {"ctrlrange": _fmt([low, high]), "kp": _fmt([force]), "dampratio": "1", "gear": _fmt([gear])}
+    if force > 0:
+        attributes["forcerange"] = _fmt([-force, force])
     ET.SubElement(_section(root, "actuator"), "position", attributes)
