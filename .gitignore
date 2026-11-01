@@ -32,6 +32,8 @@ runs/
 # App code folders may share those names.
 !apps/desktop/src/**/projects/
 !apps/desktop/src/**/runs/
+!services/engine/src/icarus/projects/
+!services/engine/tests/projects/
 *.log
 
 # Local working files
