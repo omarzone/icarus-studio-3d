@@ -1,3 +1,8 @@
+import os
+import stat
+
+import pytest
+
 from icarus.contracts.copilot import ModelSettingsPatch
 from icarus.copilot.settings import ModelSettingsStore
 
@@ -48,3 +53,32 @@ def test_environment_variables_fill_what_was_never_saved(tmp_path, monkeypatch):
     assert connection is not None and connection.endpoint == "https://env.example/v1"
     assert connection.model == "env-model"
     assert store.connection("vision") is None
+
+
+def test_a_new_endpoint_without_a_new_key_forgets_the_old_key(tmp_path):
+    store = ModelSettingsStore(tmp_path)
+    store.update(patch(endpoint="https://models.example/v1", api_key=KEY, models={"reasoning": "big-model"}))
+    settings = store.update(patch(endpoint="https://other.example/v1"))
+    assert settings.api_key_hint == ""
+    connection = store.connection("reasoning")
+    assert connection is not None and connection.api_key == ""
+    assert KEY not in (tmp_path / "models.json").read_text(encoding="utf-8")
+    store.update(patch(endpoint="https://third.example/v1", api_key="sk-new-key-12345678"))
+    connection = store.connection("reasoning")
+    assert connection is not None and connection.api_key == "sk-new-key-12345678"
+
+
+def test_the_environment_key_only_goes_to_the_environment_endpoint(tmp_path, monkeypatch):
+    monkeypatch.setenv("ICARUS_MODEL_ENDPOINT", "https://env.example/v1")
+    monkeypatch.setenv("ICARUS_MODEL_API_KEY", KEY)
+    store = ModelSettingsStore(tmp_path)
+    store.update(patch(endpoint="https://user.example/v1", models={"reasoning": "big-model"}))
+    connection = store.connection("reasoning")
+    assert connection is not None and connection.endpoint == "https://user.example/v1" and connection.api_key == ""
+    assert store.settings().api_key_hint == ""
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file permissions")
+def test_the_settings_file_is_readable_only_by_its_owner(tmp_path):
+    ModelSettingsStore(tmp_path).update(patch(endpoint="https://models.example/v1", api_key=KEY))
+    assert stat.S_IMODE((tmp_path / "models.json").stat().st_mode) == 0o600

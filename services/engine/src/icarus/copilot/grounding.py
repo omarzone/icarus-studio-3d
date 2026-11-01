@@ -40,7 +40,20 @@ def _needs_source(cited: _Cited) -> bool:
     return cited.decimals > 0 or "." in cited.text or cited.value >= SMALL_WHOLE
 
 
-def unsupported_numbers(answer: str, sources: Iterable[str]) -> list[str]:
-    """Numbers in an answer, with a decimal point or of 10 or more, that appear in none of the sources."""
-    facts = [cited.value for source in sources for cited in _numbers(source)]
-    return [cited.text for cited in _numbers(answer) if _needs_source(cited) and not _supported(cited, facts)]
+def _facts(sources: Iterable[str]) -> list[float]:
+    return [cited.value for source in sources for cited in _numbers(source)]
+
+
+def unsupported_numbers(answer: str, sources: Iterable[str], percent_sources: Iterable[str] | None = None) -> list[str]:
+    """Numbers in an answer, with a decimal point or of 10 or more, that appear in none of the sources.
+
+    With percent_sources, a percentage is backed only by them (run results, the person's words), never by the
+    library ranges and values in the other sources.
+    """
+    facts = _facts(sources)
+    percent_facts = facts if percent_sources is None else _facts(percent_sources)
+    return [
+        cited.text
+        for cited in _numbers(answer)
+        if _needs_source(cited) and not _supported(cited, percent_facts if cited.percent else facts)
+    ]

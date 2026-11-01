@@ -65,12 +65,18 @@ class ModelSettingsStore:
 
     def _save(self, stored: _Stored) -> None:
         write_atomic(self._path, stored.model_dump_json(indent=2))
+        if os.name != "nt":
+            self._path.chmod(0o600)
 
     def _endpoint(self, stored: _Stored) -> str:
         return (stored.endpoint or os.environ.get(ENDPOINT_ENV, "")).strip().rstrip("/")
 
     def _key(self, stored: _Stored) -> str:
-        return stored.api_key or os.environ.get(API_KEY_ENV, "")
+        if stored.api_key:
+            return stored.api_key
+        # The environment key belongs to the environment endpoint and is never sent to another host.
+        env_endpoint = os.environ.get(ENDPOINT_ENV, "").strip().rstrip("/")
+        return os.environ.get(API_KEY_ENV, "") if env_endpoint and self._endpoint(stored) == env_endpoint else ""
 
     def _model(self, stored: _Stored, capability: Capability) -> str | None:
         return stored.models.get(capability) or os.environ.get(f"ICARUS_MODEL_{capability.upper()}") or None
@@ -116,6 +122,8 @@ class ModelSettingsStore:
             if patch.endpoint is not None and patch.endpoint.strip() != stored.endpoint:
                 stored.endpoint = patch.endpoint.strip()
                 stored.verified = {}
+                if patch.api_key is None:
+                    stored.api_key = ""
             if patch.api_key is not None and patch.api_key.strip() != stored.api_key:
                 stored.api_key = patch.api_key.strip()
                 stored.verified = {}

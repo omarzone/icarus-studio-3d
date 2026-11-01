@@ -1,3 +1,6 @@
+import json
+import threading
+
 import httpx
 import pytest
 
@@ -41,6 +44,37 @@ def test_an_idea_with_a_bad_operation_is_retried_once_then_dropped():
     idea_set, _ = propose_ideas(client, "an obstacle course for a robot")
     assert roles == ["design_ideas", "design_idea_fix"]
     assert len(idea_set.ideas) == 2 and idea_set.ideas[0].recommended
+
+
+def draft(title: str, template: str) -> dict:
+    return {
+        "title": title,
+        "world": "A lot",
+        "body": "A car",
+        "learns": "To park",
+        "template": template,
+        "operations": [],
+    }
+
+
+def test_fix_ups_for_failing_ideas_run_at_the_same_time():
+    both_asked = threading.Barrier(2, timeout=5)
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["response_format"]["json_schema"]["name"] == "design_ideas":
+            content = {"ideas": [draft("First", "nope"), draft("Second", "nope")]}
+        else:
+            try:
+                both_asked.wait()
+            except threading.BrokenBarrierError:
+                return httpx.Response(500, json={"error": {"message": "asked one at a time"}})
+            content = draft("Fixed", "parking_car")
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(content)}}]})
+
+    client = ModelClient(Connection("http://fixtures.invalid/v1", "", "fixtures"), httpx.MockTransport(handle))
+    idea_set, _ = propose_ideas(client, "two broken ideas")
+    assert [idea.recommended for idea in idea_set.ideas] == [True, False]
 
 
 def test_no_valid_idea_is_an_error():

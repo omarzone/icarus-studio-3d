@@ -1,4 +1,6 @@
+import json
 import re
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -6,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from icarus.contracts.copilot import Capability
+from icarus.copilot.response_schema import response_schema
 from icarus.copilot.settings import Connection, ModelSettingsStore, answers_from_fixtures
 
 __all__ = ["Connection", "CopilotError", "ModelClient", "NotConnected", "Reply", "capability_client", "copilot_client"]
@@ -14,6 +17,7 @@ TIMEOUT_SECONDS = 60.0
 NOT_CONNECTED = "Connect a model in Settings › AI models to use the copilot."
 ERROR_TEXT_LIMIT = 300
 _THINK = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+_FORMAT_REFUSAL = re.compile(r"response_format|schema", re.IGNORECASE)
 _FENCE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
 
 type Check[T] = Callable[[T], list[str]]
@@ -27,6 +31,10 @@ class NotConnected(CopilotError):
     pass
 
 
+class _FormatRefused(CopilotError):
+    """The service rejected the requested response format rather than the request itself."""
+
+
 @dataclass(frozen=True)
 class Reply[T]:
     value: T
@@ -36,12 +44,20 @@ class Reply[T]:
 
 
 def _split_thinking(content: str, reasoning: object) -> tuple[str, str | None]:
-    thoughts = [part.strip() for part in _THINK.findall(content)]
-    if isinstance(reasoning, str) and reasoning.strip():
-        thoughts.insert(0, reasoning.strip())
-    answer = _THINK.sub("", content).strip()
+    thoughts = [reasoning] if isinstance(reasoning, str) else []
+    thoughts += _THINK.findall(content)
+    answer = _THINK.sub("", content)
+    if "</think>" in answer:
+        # Some chat templates open the thinking tag in the prompt, so only its end reaches the answer.
+        before, _, answer = answer.rpartition("</think>")
+        thoughts.append(before.replace("<think>", ""))
+    if "<think>" in answer:
+        answer, _, unfinished = answer.partition("<think>")
+        thoughts.append(unfinished)
+    answer = answer.strip()
     fenced = _FENCE.match(answer)
-    return (fenced.group(1) if fenced else answer), ("\n\n".join(thoughts) or None)
+    joined = "\n\n".join(thought.strip() for thought in thoughts if thought.strip())
+    return (fenced.group(1) if fenced else answer), (joined or None)
 
 
 def _schema_problems(error: ValidationError) -> list[str]:
@@ -64,47 +80,81 @@ class ModelClient:
         key = self.connection.api_key
         return text.replace(key, "…") if key else text
 
-    def _post(self, body: dict) -> dict:
+    def _post(self, body: dict, deadline: float | None = None) -> dict:
         headers = {"Authorization": f"Bearer {self.connection.api_key}"} if self.connection.api_key else {}
         url = f"{self.connection.endpoint}/chat/completions"
+        timeout = TIMEOUT_SECONDS if deadline is None else min(TIMEOUT_SECONDS, deadline - time.monotonic())
+        if timeout <= 0:
+            raise CopilotError("The model ran out of time to answer")
         try:
-            with httpx.Client(transport=self._transport, timeout=TIMEOUT_SECONDS) as http:
+            with httpx.Client(transport=self._transport, timeout=timeout) as http:
                 response = http.post(url, json=body, headers=headers)
+        except httpx.TimeoutException as error:
+            raise CopilotError(f"The model took longer than {timeout:.0f} s to answer") from error
         except httpx.HTTPError as error:
             raise CopilotError(self._hide_key(f"Could not reach the model service: {error}")) from error
         if response.status_code >= 400:
             text = self._hide_key(response.text[:ERROR_TEXT_LIMIT])
-            raise CopilotError(f"The model service answered {response.status_code}: {text}")
+            refused = response.status_code == 400 and _FORMAT_REFUSAL.search(response.text)
+            error_type = _FormatRefused if refused else CopilotError
+            raise error_type(f"The model service answered {response.status_code}: {text}")
         try:
             return response.json()
         except ValueError as error:
             raise CopilotError("The model service did not answer with JSON") from error
 
-    def _complete(self, body: dict) -> tuple[str, str | None]:
-        payload = self._post(body)
+    def _message(self, body: dict, deadline: float | None = None) -> dict:
+        payload = self._post(body, deadline)
         try:
             message = payload["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as error:
             raise CopilotError("The model service answered without a message") from error
-        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(message, dict):
+            raise CopilotError("The model service answered without a message")
+        return message
+
+    def _complete(self, body: dict, deadline: float | None) -> tuple[str, str | None]:
+        message = self._message(body, deadline)
+        content = message.get("content")
         if not isinstance(content, str):
             raise CopilotError("The model service answered without text")
-        return _split_thinking(content, message.get("reasoning_content"))
+        return _split_thinking(content, message.get("reasoning_content") or message.get("reasoning"))
 
     def ask[T: BaseModel](
-        self, role: str, output: type[T], system: str, user: str, check: Check[T] | None = None
+        self,
+        role: str,
+        output: type[T],
+        system: str,
+        user: str,
+        check: Check[T] | None = None,
+        deadline: float | None = None,
     ) -> Reply[T]:
-        """A validated output; invalid output or a failed check is retried once with the reasons."""
+        """A validated output; invalid output or a failed check is retried once with the reasons.
+
+        A service that refuses the JSON Schema format is asked once more in JSON mode with the schema in the prompt.
+        """
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        schema = {"name": role, "schema": output.model_json_schema(), "strict": True}
+        schema, strict = response_schema(output)
+        response_format: dict = {
+            "type": "json_schema",
+            "json_schema": {"name": role, "schema": schema, "strict": strict},
+        }
         problems: list[str] = []
         for attempt in range(2):
-            body = {
-                "model": self.connection.model,
-                "messages": messages,
-                "response_format": {"type": "json_schema", "json_schema": schema},
-            }
-            content, thinking = self._complete(body)
+            body = {"model": self.connection.model, "messages": messages, "response_format": response_format}
+            try:
+                content, thinking = self._complete(body, deadline)
+            except _FormatRefused:
+                if response_format["type"] == "json_object":
+                    raise
+                response_format = {"type": "json_object"}
+                described = f"{system}\n\nAnswer with one JSON object that follows this JSON Schema:\n"
+                messages = [
+                    {"role": "system", "content": described + json.dumps(output.model_json_schema())},
+                    *messages[1:],
+                ]
+                body = {"model": self.connection.model, "messages": messages, "response_format": response_format}
+                content, thinking = self._complete(body, deadline)
             try:
                 value = output.model_validate_json(content)
             except ValidationError as error:
@@ -121,13 +171,8 @@ class ModelClient:
         raise CopilotError(f"The model answered twice with output that does not fit: {problems[0]}")
 
     def ping(self) -> None:
-        """A tiny real call that succeeds only when the model answers."""
-        body = {
-            "model": self.connection.model,
-            "messages": [{"role": "user", "content": "Reply with OK."}],
-            "max_tokens": 8,
-        }
-        self._complete(body)
+        """A tiny real call that succeeds when the model answers, even with empty text (reasoning models)."""
+        self._message({"model": self.connection.model, "messages": [{"role": "user", "content": "Reply with OK."}]})
 
 
 def _transport() -> httpx.BaseTransport | None:

@@ -1,5 +1,7 @@
 import secrets
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, wait
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +19,7 @@ from icarus.projects.operations import OperationError, apply_operations, empty_p
 STEPS_PER_SECOND = 2000
 DEFAULT_STEPS: dict[TaskFamily, int] = {"navigation": 1_000_000, "locomotion": 2_000_000, "none": 0}
 PREVIEW_ID = "000000000000"
+IDEAS_BUDGET_SECONDS = 150.0
 
 SYSTEM = """You are the architect of Icarus Studio 3D, where people design a world and a body and train a brain with
 reinforcement learning on MuJoCo. Turn the person's request into exactly three different design ideas.
@@ -84,28 +87,46 @@ def _compile(draft: IdeaDraft, idea_id: str, recommended: bool) -> DesignIdea | 
     )
 
 
+def _fixed(client: ModelClient, system: str, fix: str, deadline: float) -> IdeaDraft | None:
+    try:
+        return client.ask("design_idea_fix", IdeaDraft, system, fix, deadline=deadline).value
+    except CopilotError:
+        return None
+
+
 def propose_ideas(client: ModelClient, prompt: str) -> tuple[IdeaSet, dict[str, IdeaDraft]]:
-    """Up to three ideas that compile and pass the design tests; a failing idea is retried once, then dropped."""
+    """Up to three ideas that compile and pass the design tests; a failing idea is retried once, then dropped.
+
+    Fix-ups run at the same time and the whole request stops waiting once its time budget is spent.
+    """
+    deadline = time.monotonic() + IDEAS_BUDGET_SECONDS
     system = SYSTEM.format(reference=design_reference())
-    reply = client.ask("design_ideas", IdeaDrafts, system, prompt)
-    ideas: list[DesignIdea] = []
-    drafts: dict[str, IdeaDraft] = {}
-    for draft in reply.value.ideas:
-        idea_id = secrets.token_hex(4)
-        result = _compile(draft, idea_id, recommended=not ideas)
-        if isinstance(result, str):
-            fix = FIX.format(title=draft.title, prompt=prompt, problem=result)
-            try:
-                draft = client.ask("design_idea_fix", IdeaDraft, system, fix).value
-            except CopilotError:
-                continue
-            result = _compile(draft, idea_id, recommended=not ideas)
-        if isinstance(result, DesignIdea):
-            ideas.append(result)
-            drafts[idea_id] = draft
-    if not ideas:
+    drafts = list(client.ask("design_ideas", IdeaDrafts, system, prompt, deadline=deadline).value.ideas)
+    ids = [secrets.token_hex(4) for _ in drafts]
+    results = [_compile(draft, idea_id, recommended=False) for draft, idea_id in zip(drafts, ids, strict=True)]
+    failing = {index: result for index, result in enumerate(results) if isinstance(result, str)}
+    if failing:
+        pool = ThreadPoolExecutor(max_workers=len(failing))
+        futures = {
+            index: pool.submit(
+                _fixed, client, system, FIX.format(title=drafts[index].title, prompt=prompt, problem=problem), deadline
+            )
+            for index, problem in failing.items()
+        }
+        done, _ = wait(futures.values(), timeout=max(deadline - time.monotonic(), 0))
+        pool.shutdown(wait=False, cancel_futures=True)
+        for index, future in futures.items():
+            fixed = future.result() if future in done else None
+            if fixed is not None:
+                drafts[index] = fixed
+                results[index] = _compile(fixed, ids[index], recommended=False)
+    valid = [(result, draft) for result, draft in zip(results, drafts, strict=True) if isinstance(result, DesignIdea)]
+    if not valid:
         raise NoValidIdeas("None of the copilot's ideas passed the design tests. Try describing it another way.")
-    return IdeaSet(id=secrets.token_hex(6), prompt=prompt, ideas=ideas), drafts
+    ideas = [idea.model_copy(update={"recommended": index == 0}) for index, (idea, _) in enumerate(valid)]
+    return IdeaSet(id=secrets.token_hex(6), prompt=prompt, ideas=ideas), {
+        idea.id: draft for idea, (_, draft) in zip(ideas, valid, strict=True)
+    }
 
 
 class IdeaBook:

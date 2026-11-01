@@ -78,15 +78,22 @@ def dry_run(project: Project, operations: list[EditOperation]) -> CompiledModel 
 
 @dataclass
 class _Review:
-    """What the last check of a reply found, so the final answer knows which part to drop."""
+    """What the last check of a reply found, so the final answer knows which parts to drop."""
 
     project: Project
     sources: list[str]
+    # Run results and the person's words: the only sources that back a percentage.
+    percent_sources: list[str]
     unsupported: list[str] = field(default_factory=list)
+    proposal_unsupported: list[str] = field(default_factory=list)
     proposal_problem: str | None = None
+    dropped_suggestions: list[str] = field(default_factory=list)
+
+    def _unbacked(self, text: str, sources: list[str]) -> list[str]:
+        return unsupported_numbers(text, sources, self.percent_sources)
 
     def check(self, reply: ChatReply) -> list[str]:
-        self.proposal_problem = None
+        self.proposal_problem, self.proposal_unsupported = None, []
         sources = list(self.sources)
         if reply.proposal is not None:
             result = dry_run(self.project, reply.proposal.operations)
@@ -95,10 +102,15 @@ class _Review:
             else:
                 # Values the copilot proposes in a validated change are backed by that change.
                 sources.append(json.dumps([op.model_dump() for op in reply.proposal.operations]))
-        self.unsupported = unsupported_numbers(reply.answer, sources)
+            described = f"{reply.proposal.summary}\n{reply.proposal.explanation}"
+            self.proposal_unsupported = self._unbacked(described, sources)
+        self.unsupported = self._unbacked(reply.answer, sources)
+        self.dropped_suggestions = [text for text in reply.suggestions if self._unbacked(text, sources)]
         problems = [f"The proposal is not valid: {self.proposal_problem}"] if self.proposal_problem else []
-        if self.unsupported:
-            problems.append(f"These numbers are not in the context or the message: {', '.join(self.unsupported)}")
+        unbacked = [*self.unsupported, *self.proposal_unsupported]
+        unbacked += [number for text in self.dropped_suggestions for number in self._unbacked(text, sources)]
+        if unbacked:
+            problems.append(f"These numbers are not in the context or the conversation: {', '.join(unbacked)}")
         return problems
 
 
@@ -149,15 +161,21 @@ class Copilot:
         state = self._projects.state(project_id)
         client = copilot_client(self._settings)
         context = project_context(state, self._runs, message.selection, message.workspace)
-        system = SYSTEM.format(history=_history(self.conversation(project_id)), context=context)
-        review = _Review(state.project, [context, message.text])
+        history = _history(self.conversation(project_id))
+        system = SYSTEM.format(history=history, context=context)
+        run_facts = json.dumps(json.loads(context)["latest_run"])
+        review = _Review(state.project, [context, message.text, history], [run_facts, message.text, history])
         reply = client.ask("chat_reply", ChatReply, system, message.text, review.check)
         answer, draft = reply.value.answer, reply.value.proposal
-        if review.unsupported:
-            answer, draft = UNSUPPORTED_ANSWER, None
-        elif review.proposal_problem:
+        if review.proposal_problem:
             answer = f"{answer} I could not turn this into a change that passes validation: {review.proposal_problem}"
             draft = None
+        elif review.proposal_unsupported:
+            answer = f"{answer} I left out the change I had in mind: its description cites numbers I could not back."
+            draft = None
+        if review.unsupported:
+            answer = UNSUPPORTED_ANSWER
+        suggestions = [text for text in reply.value.suggestions if text not in review.dropped_suggestions]
         proposal = self._proposal(state.project, state.revision.number, draft) if draft else None
         with self._conversations.editing(project_id) as conversation:
             conversation.messages.append(_message("user", message.text))
@@ -165,10 +183,14 @@ class Copilot:
             conversation.messages.append(_message("copilot", answer, thinking=reply.thinking, proposal_id=proposal_id))
             if proposal:
                 conversation.proposals.append(proposal)
-            conversation.suggestions = reply.value.suggestions
+            conversation.suggestions = suggestions
             autopilot = conversation.autonomy == "autopilot"
         if proposal and autopilot:
-            return self.apply(proposal.id)
+            try:
+                return self.apply(proposal.id)
+            except ProposalOutdated:
+                # The project moved on while the model answered; the proposal stays visible as outdated.
+                pass
         return self.conversation(project_id)
 
     def _proposal(self, project: Project, base: int, draft: ProposalDraft) -> CopilotProposal:
@@ -202,10 +224,16 @@ class Copilot:
         self.conversation(project_id)
         with self._conversations.editing(project_id) as conversation:
             proposal = self._open(conversation, proposal_id)
-            batch = OperationBatch(operations=proposal.operations, author="copilot", summary=proposal.summary)
-            state = self._projects.apply(project_id, batch)
-            proposal.status = "applied"
-            proposal.applied_revision = state.revision.number
+            outdated = proposal.base_revision != self._projects.state(project_id).revision.number
+            if outdated:
+                proposal.status = "outdated"
+            else:
+                batch = OperationBatch(operations=proposal.operations, author="copilot", summary=proposal.summary)
+                state = self._projects.apply(project_id, batch)
+                proposal.status = "applied"
+                proposal.applied_revision = state.revision.number
+        if outdated:
+            raise ProposalOutdated(proposal_id)
         return self.conversation(project_id)
 
     def discard(self, proposal_id: str) -> Conversation:

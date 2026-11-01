@@ -117,8 +117,19 @@ class BuildBoard:
                 raise UnusableBuild(f"{failed.label}: {failed.detail}")
             self._advance(build)
         except (RejectedBatch, UnusableBuild) as error:
-            with self._lock:
-                build.error = str(error)
+            self._fail(build, str(error))
         except Exception as error:  # noqa: BLE001 - the build reports any failure instead of dying silently
-            with self._lock:
-                build.error = f"The build stopped unexpectedly: {error}"
+            self._fail(build, f"The build stopped unexpectedly: {error}")
+
+    def _fail(self, build: _Build, error: str) -> None:
+        """Stop the build and remove its half-built project, so only finished builds become projects."""
+        with self._lock:
+            project_id = build.project_id
+        if project_id:
+            try:
+                self._projects.delete(project_id)
+            except Exception as cleanup:  # noqa: BLE001 - the build error is still reported if cleanup fails
+                error = f"{error} (its unfinished project could not be removed: {cleanup})"
+        with self._lock:
+            build.project_id = None
+            build.error = error

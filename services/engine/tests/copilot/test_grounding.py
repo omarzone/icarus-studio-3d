@@ -29,3 +29,12 @@ def test_numbers_inside_names_are_not_citations():
 def test_negative_numbers_are_checked_by_their_size():
     assert unsupported_numbers("Limits go from -35 to 35 degrees.", ['{"limits":[-35,35]}']) == []
     assert unsupported_numbers("It can go to -40 degrees.", ['{"limits":[-35,35]}']) == ["40"]
+
+
+def test_percentages_need_run_facts_or_the_person_and_not_library_ranges():
+    library = '{"steer_left": {"limits": [-35, 35]}, "latest_run": null}'
+    run = '{"success_rate": 0.4166}'
+    assert unsupported_numbers("It parks 35% of the time.", [library], percent_sources=[]) == ["35%"]
+    assert unsupported_numbers("It parks 42% of the time.", [library], percent_sources=[run]) == []
+    assert unsupported_numbers("Is 35% enough?", [library], percent_sources=["I want 35% success"]) == []
+    assert unsupported_numbers("Steering goes to 35 degrees.", [library], percent_sources=[]) == []

@@ -3,6 +3,8 @@ import time
 import pytest
 
 from icarus.contracts.copilot import BuildIdea, BuildStatus, IdeaSet
+from icarus.contracts.operations import SetProperty
+from icarus.contracts.properties import NumberValue
 from icarus.copilot.architect import IdeaBook, UnknownIdeas, propose_ideas
 from icarus.copilot.builds import BUILD_STEPS, BuildBoard
 from icarus.copilot.client import copilot_client
@@ -49,3 +51,22 @@ def test_an_unknown_idea_is_refused_before_anything_is_built(tmp_path, ideas):
     with pytest.raises(UnknownIdeas):
         board.start(BuildIdea(idea_set="nope", idea="nope"))
     assert not (tmp_path / "projects").exists()
+
+
+def test_a_build_that_fails_after_creating_its_project_leaves_no_project_behind(tmp_path, ideas):
+    book, idea_set = ideas
+    idea = idea_set.ideas[0]
+    _, drafts = book.get(idea_set.id)
+    heavy = SetProperty(
+        op="set_property",
+        object="car",
+        component="physics_body",
+        property="mass",
+        value=NumberValue(type="number", value=50000),
+    )
+    book.add(idea_set, {idea.id: drafts[idea.id].model_copy(update={"operations": [heavy]})})
+    store = ProjectStore(tmp_path / "projects")
+    board = BuildBoard(store, book)
+    status = finished(board, board.start(BuildIdea(idea_set=idea_set.id, idea=idea.id)).build_id)
+    assert status.error and not status.ready and status.project_id is None
+    assert store.list_projects() == []
