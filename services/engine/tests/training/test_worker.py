@@ -12,11 +12,13 @@ from tests.training.conftest import state_of
 TINY = PpoSettings(n_steps=64, batch_size=64, n_epochs=1)
 
 
-def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(tmp_path, parking_state):
+def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(tmp_path, parking_state, monkeypatch):
+    from icarus.training.callback import TrainingCallback
+
     store = RunStore(tmp_path)
     status = store.create(parking_state, StartRun(total_steps=10_000, copies=1), threads=1, evaluation_episodes=1)
     folder = store.folder(status.run_id)
-    folder.request_stop()
+    monkeypatch.setattr(TrainingCallback, "_on_training_start", lambda callback: folder.request_stop())
 
     assert train(folder.path, TINY) == "stopped"
 
@@ -28,6 +30,19 @@ def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(t
     assert all(folder.checkpoint_path(step).is_file() and folder.rollout(step) for step in steps)
     assert final.best_step in steps
     assert any("stop" in line.text.lower() for line in folder.log())
+
+
+def test_a_stop_requested_before_training_starts_ends_the_run_without_training(tmp_path, parking_state):
+    store = RunStore(tmp_path)
+    status = store.create(parking_state, StartRun(total_steps=10_000, copies=1), threads=1, evaluation_episodes=1)
+    folder = store.folder(status.run_id)
+    folder.request_stop()
+
+    assert train(folder.path, TINY) == "stopped"
+
+    final = folder.status()
+    assert final.state == "stopped" and final.step == 0 and final.best_step is None
+    assert folder.checkpoints() == []
 
 
 def test_a_project_that_cannot_train_fails_with_a_plain_reason(tmp_path):

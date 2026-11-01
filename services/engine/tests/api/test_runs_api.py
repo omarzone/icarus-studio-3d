@@ -154,7 +154,7 @@ def test_training_settings_default_persist_and_reject_too_many_threads(tmp_path)
     assert client.put("/settings/training", json={"extra": 1}).status_code == 422
 
 
-@pytest.mark.parametrize("state", ["done", "stopped"])
+@pytest.mark.parametrize("state", ["done", "stopped", "failed"])
 def test_play_drives_the_body_with_the_best_checkpoint_of_the_current_revision(tmp_path, state):
     from stable_baselines3 import PPO
 
@@ -171,15 +171,23 @@ def test_play_drives_the_body_with_the_best_checkpoint_of_the_current_revision(t
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
-@pytest.mark.parametrize("change", ["still training", "newer revision", "unreadable checkpoint"])
+@pytest.mark.parametrize("change", ["still training", "newer revision", "unreadable checkpoint", "never trained"])
 def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, change):
+    from stable_baselines3 import PPO
+
+    from icarus.sim.env import ProjectEnv
+
     app = make_app(tmp_path)
     client = TestClient(app)
     folder = stored_run(app, client)
     project_id = folder.project().id
-    folder.checkpoint_path(0).write_bytes(b"not a checkpoint")
+    best = 0 if change == "never trained" else 25_000
+    if change == "unreadable checkpoint":
+        folder.checkpoint_path(best).write_bytes(b"not a checkpoint")
+    else:
+        PPO("MlpPolicy", ProjectEnv(folder.project()), seed=0, device="cpu").save(folder.checkpoint_path(best))
     state = "running" if change == "still training" else "done"
-    folder.write_status(folder.status().model_copy(update={"state": state, "best_step": 0}))
+    folder.write_status(folder.status().model_copy(update={"state": state, "best_step": best}))
     if change == "newer revision":
         rename = {"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}
         assert client.post(f"/projects/{project_id}/operations", json=rename).status_code == 200
@@ -209,3 +217,20 @@ def test_closing_the_engine_stops_the_run_in_training(tmp_path):
         run_id = client.post(f"/projects/{new_project(client)}/runs", json=START).json()["run_id"]
         wait_for(lambda: client.get(f"/runs/{run_id}").json()["state"] == "running")
     assert app.state.runs.folder(run_id).status().state == "stopped"
+
+
+def test_a_run_serves_the_scene_it_was_trained_in_after_the_project_changes(tmp_path):
+    app = make_app(tmp_path)
+    client = TestClient(app)
+    folder = stored_run(app, client)
+    project_id = folder.project().id
+    before = client.get(f"/projects/{project_id}/scene").json()
+    change = {"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}
+    assert client.post(f"/projects/{project_id}/operations", json=change).status_code == 200
+
+    assert client.get(f"/projects/{project_id}/scene").json()["revision"] == 2
+    scene = client.get(f"/runs/{folder.run_id}/scene")
+    assert scene.status_code == 200
+    assert scene.json() == before and before["revision"] == 1
+    missing = client.get("/runs/run-20260101T000000Z-abcd/scene")
+    assert missing.status_code == 404 and missing.json()["code"] == "not_found"

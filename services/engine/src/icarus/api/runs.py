@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from icarus.contracts.scene import SceneDescription
 from icarus.contracts.training import (
     CheckpointEvent,
     CheckpointInfo,
@@ -21,6 +22,8 @@ from icarus.contracts.training import (
     TrainingSettings,
     TrainingSettingsPatch,
 )
+from icarus.design.compiler import compile_project
+from icarus.design.scene import scene_description
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunFolder, RunStore
 from icarus.training.settings import TrainingSettingsStore
@@ -88,6 +91,13 @@ def get_rollout(request: Request, run_id: str, step: int) -> Rollout:
     if rollout is None:
         raise HTTPException(status_code=404, detail=f"There is no rollout at step {step}")
     return rollout
+
+
+@router.get("/runs/{run_id}/scene")
+def get_run_scene(request: Request, run_id: str) -> SceneDescription:
+    """The scene frozen with the run, so replays never draw against a project edited since."""
+    folder = _runs(request).folder(run_id)
+    return scene_description(compile_project(folder.project()), folder.config().revision_number)
 
 
 class _EventCursor:

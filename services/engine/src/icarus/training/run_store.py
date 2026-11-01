@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from icarus.contracts.project import Project, ProjectState
 from icarus.contracts.training import (
@@ -104,6 +104,17 @@ def _complete_lines(path: Path) -> list[str]:
     return [line for line in _read(path).split("\n")[:-1] if line.strip()]
 
 
+def _records[M: BaseModel](path: Path, model: type[M]) -> list[M]:
+    """Parsed lines of an append-only file, skipping a line a killed writer cut off."""
+    records: list[M] = []
+    for line in _complete_lines(path):
+        try:
+            records.append(model.model_validate_json(line))
+        except ValidationError:
+            continue
+    return records
+
+
 class RunFolder:
     """One run's directory: everything the worker writes and the API reads."""
 
@@ -133,7 +144,7 @@ class RunFolder:
         append_line(self.path / "metrics.jsonl", point.model_dump_json())
 
     def metrics(self) -> list[MetricPoint]:
-        return [MetricPoint.model_validate_json(line) for line in _complete_lines(self.path / "metrics.jsonl")]
+        return _records(self.path / "metrics.jsonl", MetricPoint)
 
     def checkpoint_path(self, step: int) -> Path:
         return self.path / "checkpoints" / f"{step}.zip"
@@ -171,13 +182,21 @@ class RunFolder:
         append_line(self.path / "worker.log", line.model_dump_json())
 
     def log(self) -> list[LogLine]:
-        return [LogLine.model_validate_json(line) for line in _complete_lines(self.path / "worker.log")]
+        return _records(self.path / "worker.log", LogLine)
 
     def request_stop(self) -> None:
         (self.path / "stop.request").touch()
 
     def stop_requested(self) -> bool:
         return (self.path / "stop.request").is_file()
+
+    def write_worker_pid(self, pid: int) -> None:
+        _write(self.path / "worker.pid", str(pid))
+
+    def worker_pid(self) -> int | None:
+        path = self.path / "worker.pid"
+        text = _read(path).strip() if path.is_file() else ""
+        return int(text) if text.isdigit() else None
 
     @property
     def console_path(self) -> Path:
@@ -263,11 +282,14 @@ class RunStore:
             return status
 
     def trained_checkpoint(self, project_id: str, revision: int) -> tuple[RunStatus, Path] | None:
-        """The best checkpoint of the newest finished run of a revision, the brain Play should use."""
+        """The best trained checkpoint of the newest ended run of a revision, the brain Play should use.
+
+        Step 0 is the untrained network, so a run whose best is step 0 has no trained brain.
+        """
         for status in self.list_runs(project_id):
-            if status.revision_number != revision or status.state not in ("done", "stopped"):
+            if status.revision_number != revision or status.state not in TERMINAL_STATES:
                 continue
-            if status.best_step is not None:
+            if status.best_step:
                 path = self.folder(status.run_id).checkpoint_path(status.best_step)
                 if path.is_file():
                     return status, path

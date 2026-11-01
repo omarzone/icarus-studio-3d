@@ -105,3 +105,18 @@ def test_log_lines_round_trip(tmp_path, parking_state):
     for line in lines:
         folder.append_log(line)
     assert folder.log() == lines
+
+
+def test_a_line_cut_off_by_a_killed_writer_is_skipped_and_later_lines_still_read(tmp_path, parking_state):
+    store = RunStore(tmp_path)
+    folder = store.folder(store.create(parking_state, StartRun(total_steps=10_000, copies=1), threads=1).run_id)
+    first, second = metric("eval", 0, 0.0), metric("train", 2048)
+    folder.append_metric(first)
+    folder.append_log(LogLine(elapsed=0.0, level="info", text="Training started"))
+    for name in ("metrics.jsonl", "worker.log"):
+        with (folder.path / name).open("a", encoding="utf-8") as handle:
+            handle.write('{"kind": "tra')
+    folder.append_metric(second)
+    folder.append_log(LogLine(elapsed=1.0, level="warn", text="The worker was ended"))
+    assert folder.metrics() == [first, second]
+    assert [line.text for line in folder.log()] == ["Training started", "The worker was ended"]

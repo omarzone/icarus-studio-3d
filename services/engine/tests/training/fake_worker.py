@@ -7,13 +7,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from icarus.contracts.training import LogLine, MetricPoint, Rollout, TrainingSnapshot
+from icarus.training.lifeline import watch_parent
 from icarus.training.run_store import RunFolder
 
 LIMIT = 120.0
+LINGER = 5.0
 
 
 def main() -> int:
     folder, mode = RunFolder(Path(sys.argv[1])), sys.argv[2]
+    watch_parent(folder, grace=float(sys.argv[3]) if len(sys.argv) > 3 else LIMIT)
     status = folder.stored_status()
     folder.write_status(status.model_copy(update={"state": "running", "step": 0}))
     folder.append_log(LogLine(elapsed=0.0, level="info", text="Fake training started"))
@@ -27,6 +30,12 @@ def main() -> int:
     if mode == "crash":
         print("Fake worker crashed on purpose", file=sys.stderr)
         return 3
+    if mode == "linger":
+        # Ends its run, then takes a while to exit, like a worker closing its environment copies.
+        done = folder.stored_status().model_copy(update={"state": "done", "finished_at": datetime.now(UTC)})
+        folder.write_status(done)
+        time.sleep(LINGER)
+        return 0
     if mode == "ignore":
         child = subprocess.Popen([sys.executable, "-c", f"import time; time.sleep({LIMIT})"])
         (folder.path / "child.pid").write_text(str(child.pid), encoding="utf-8")
