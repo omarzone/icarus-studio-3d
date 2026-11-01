@@ -12,8 +12,8 @@ import {
 // Pure mappings between the Play contract and the Play view types.
 
 const SLOW_SPEED = 0.25;
-// Impulse of one push in newton-seconds, and the wind the Wind tool turns on in m/s.
-const PUSH_IMPULSE = 10;
+// Speed one push gives an object in m/s (the engine sizes the impulse by its mass), and the wind the Wind tool turns on in m/s.
+const PUSH_SPEED = 1.5;
 const WIND_SPEED = 4;
 // Light scales the Light tool cycles through: as designed, dim, bright.
 const LIGHT_LEVELS: readonly number[] = [1, 0.3, 2.5];
@@ -125,7 +125,7 @@ export function playCommand(action: PlayAction, controls: PlayControls): PlayCom
     case "move":
       return { tool: "move", object: action.object, position: action.to };
     case "push":
-      return { tool: "push", object: action.object, impulse: scaled(action.direction, PUSH_IMPULSE) };
+      return { tool: "push", object: action.object, direction: action.direction, speed: PUSH_SPEED };
     case "add-object":
       return { tool: "add_object", piece: action.piece, position: action.at };
     case "touch":

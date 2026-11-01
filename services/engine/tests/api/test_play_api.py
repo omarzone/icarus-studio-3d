@@ -30,14 +30,14 @@ def test_a_play_session_streams_frames_takes_commands_and_survives_bad_ones(tmp_
         times = [next_of(socket, "frame")["frame"]["time"] for _ in range(3)]
         assert times == sorted(times) and times[-1] > times[0]
 
-        socket.send_json({"command": {"tool": "push", "object": "car", "impulse": [900, 0, 0]}})
-        assert next_of(socket, "event")["event"]["text"] == "You pushed Car with 900 N·s"
+        socket.send_json({"command": {"tool": "push", "object": "car", "direction": [1, 0, 0], "speed": 1}})
+        assert next_of(socket, "event")["event"]["text"].startswith("You pushed Car with")
 
         socket.send_json({"command": {"tool": "teleport"}})
         assert next_of(socket, "error")["message"]
         socket.send_text("not json")
         assert next_of(socket, "error")["message"]
-        socket.send_json({"command": {"tool": "push", "object": "nope", "impulse": [1, 0, 0]}})
+        socket.send_json({"command": {"tool": "push", "object": "nope", "direction": [1, 0, 0], "speed": 1}})
         assert "nope" in next_of(socket, "error")["message"]
 
         socket.send_json({"command": {"tool": "add_object", "piece": "box", "position": [4, 0, 0]}})
@@ -53,3 +53,24 @@ def test_an_unknown_project_sends_an_error_and_closes_with_4404(tmp_path):
         with pytest.raises(WebSocketDisconnect) as closed:
             socket.receive_json()
     assert closed.value.code == 4404
+
+
+def test_an_unexpected_failure_in_one_command_is_reported_and_the_session_goes_on(tmp_path, monkeypatch):
+    from icarus.sim.play import PlaySession
+
+    real_apply = PlaySession.apply
+
+    def failing_apply(self, command):
+        if command.tool == "light":
+            raise RuntimeError("boom")
+        return real_apply(self, command)
+
+    monkeypatch.setattr(PlaySession, "apply", failing_apply)
+    client = TestClient(create_app(tmp_path))
+    project_id = client.post("/projects", json={"name": "P", "template": "parking_car"}).json()["project"]["id"]
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        next_of(socket, "ready")
+        socket.send_json({"command": {"tool": "light", "intensity": 2}})
+        assert "boom" in next_of(socket, "error")["message"]
+        first = next_of(socket, "frame")["frame"]["time"]
+        assert next_of(socket, "frame")["frame"]["time"] > first

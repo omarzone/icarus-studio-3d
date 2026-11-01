@@ -593,8 +593,9 @@ export interface PushCommand {
    * @minItems 3
    * @maxItems 3
    */
-  impulse: [number, number, number];
+  direction: [number, number, number];
   object: string;
+  speed: number;
   tool: "push";
 }
 /**

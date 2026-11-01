@@ -4,6 +4,7 @@ import { Canvas, type ThreeEvent, useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type Group, type Mesh, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
+import { isDeliberateClick } from "./pick.ts";
 import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
 import { sceneColors } from "./scene-materials.ts";
 
@@ -64,7 +65,9 @@ function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
       quaternion={toThreeQuaternion(geom.quaternion)}
       onClick={(event) => {
         event.stopPropagation();
-        onSelect(geom.body);
+        if (isDeliberateClick(event.delta)) {
+          onSelect(geom.body);
+        }
       }}
     >
       <GeomShape geom={geom} />
@@ -189,7 +192,9 @@ function LiveGeoms({
             quaternion={toThreeQuaternion(geom.quaternion)}
             onClick={(event) => {
               event.stopPropagation();
-              pick.current(pickOf(geom.shape === "plane" ? null : geom.body, event));
+              if (isDeliberateClick(event.delta)) {
+                pick.current(pickOf(geom.shape === "plane" ? null : geom.body, event));
+              }
             }}
           >
             <GeomShape geom={geom} />
@@ -202,7 +207,9 @@ function LiveGeoms({
           rotation={[-Math.PI / 2, 0, 0]}
           onClick={(event) => {
             event.stopPropagation();
-            pick.current(pickOf(null, event));
+            if (isDeliberateClick(event.delta)) {
+              pick.current(pickOf(null, event));
+            }
           }}
         >
           <planeGeometry args={[400, 400]} />

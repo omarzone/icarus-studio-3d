@@ -99,7 +99,7 @@ describe("play commands", () => {
       ],
       [
         { tool: "push", object: "box_2", direction: [0, 1, 0] },
-        { tool: "push", object: "box_2", impulse: [0, 10, 0] },
+        { tool: "push", object: "box_2", direction: [0, 1, 0], speed: 1.5 },
       ],
       [
         { tool: "add-object", piece: "box", at: [3, 0, 0] },

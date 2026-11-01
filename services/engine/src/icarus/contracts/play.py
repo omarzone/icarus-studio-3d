@@ -4,6 +4,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.scene import Quaternion, SceneDescription, Vector3
 
+# Commands stay inside a world the size of the editor's; anything beyond is a mistake, not physics.
+WORLD_LIMIT = 1000.0
+Bounded = Annotated[float, Field(ge=-WORLD_LIMIT, le=WORLD_LIMIT)]
+Place = tuple[Bounded, Bounded, Bounded]
+Direction = tuple[
+    Annotated[float, Field(ge=-1, le=1)], Annotated[float, Field(ge=-1, le=1)], Annotated[float, Field(ge=-1, le=1)]
+]
+WindSpeed = Annotated[float, Field(ge=-50, le=50)]
+
 
 class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
@@ -13,21 +22,23 @@ class MoveCommand(_Model):
     tool: Literal["move"]
     object: str
     # World position in metres.
-    position: Vector3
+    position: Place
 
 
 class PushCommand(_Model):
     tool: Literal["push"]
     object: str
-    # World impulse in newton-seconds.
-    impulse: Vector3
+    # World direction of the push; the engine normalizes it.
+    direction: Direction
+    # Speed the push gives the object, in m/s; the engine turns it into an impulse with the object's mass.
+    speed: float = Field(gt=0, le=20)
 
 
 class AddObjectCommand(_Model):
     tool: Literal["add_object"]
     # A library piece id.
     piece: str
-    position: Vector3
+    position: Place
 
 
 class LightCommand(_Model):
@@ -38,7 +49,7 @@ class LightCommand(_Model):
 class WindCommand(_Model):
     tool: Literal["wind"]
     # World wind velocity in m/s.
-    velocity: Vector3
+    velocity: tuple[WindSpeed, WindSpeed, WindSpeed]
 
 
 class SpeedCommand(_Model):

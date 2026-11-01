@@ -43,11 +43,12 @@ def test_the_walker_offers_touch(walker):
     assert "touch" in [tool.id for tool in session_of(walker).info().tools]
 
 
-def test_push_changes_velocity_and_says_so(parking):
+def test_a_push_gives_any_body_the_asked_speed_and_reports_the_real_impulse(parking):
     session = session_of(parking)
-    messages = session.apply(PushCommand(tool="push", object="car", impulse=(1800.0, 0.0, 0.0)))
-    assert texts(messages) == ["You pushed Car with 1800 N·s"]
-    assert session.world.data.qvel[0] > 1.5
+    messages = session.apply(PushCommand(tool="push", object="car", direction=(1.0, 0.0, 0.0), speed=1.5))
+    mass = session.world.model.body_subtreemass[session.world.model.body("car").id]
+    assert texts(messages) == [f"You pushed Car with {round(mass * 1.5)} N·s"]
+    assert session.world.data.qvel[0] == pytest.approx(1.5, rel=0.3)
 
 
 def test_reset_restores_time_zero_and_clears_the_return(parking):
@@ -78,7 +79,7 @@ def test_pause_stops_stepping(parking):
 def test_an_unknown_object_gives_an_error_not_an_exception(parking):
     session = session_of(parking)
     for command in (
-        PushCommand(tool="push", object="nope", impulse=(1.0, 0.0, 0.0)),
+        PushCommand(tool="push", object="nope", direction=(1.0, 0.0, 0.0), speed=1.0),
         MoveCommand(tool="move", object="nope", position=(0.0, 0.0, 1.0)),
         TouchCommand(tool="touch", object="nope"),
         AddObjectCommand(tool="add_object", piece="dragon", position=(0.0, 0.0, 0.0)),
@@ -122,7 +123,7 @@ def test_an_added_box_in_front_of_the_car_shortens_a_ray(parking):
 def test_the_car_touching_a_wall_is_an_agent_event(parking):
     session = session_of(parking)
     session.apply(AddObjectCommand(tool="add_object", piece="wall", position=(2.4, 0.0, 0.0)))
-    session.apply(PushCommand(tool="push", object="car", impulse=(2700.0, 0.0, 0.0)))
+    session.apply(PushCommand(tool="push", object="car", direction=(1.0, 0.0, 0.0), speed=3.0))
     events = session.step_realtime(0.4)
     assert "Car touched Wall" in [event.text for event in events]
 
@@ -157,3 +158,17 @@ def test_play_never_changes_the_project(parking):
     session.apply(AddObjectCommand(tool="add_object", piece="box", position=(3.0, 0.0, 0.0)))
     session.step_realtime(0.2)
     assert parking.model_dump() == before
+
+
+def test_commands_out_of_physical_bounds_are_refused_by_the_contract():
+    from pydantic import ValidationError
+
+    from icarus.contracts.play import MoveCommand, WindCommand
+
+    for build in (
+        lambda: PushCommand(tool="push", object="car", direction=(1.0, 0.0, 0.0), speed=1e300),
+        lambda: WindCommand(tool="wind", velocity=(1e300, 0.0, 0.0)),
+        lambda: MoveCommand(tool="move", object="box", position=(0.0, 0.0, 1e9)),
+    ):
+        with pytest.raises(ValidationError):
+            build()

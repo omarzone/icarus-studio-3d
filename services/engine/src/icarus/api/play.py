@@ -68,7 +68,10 @@ async def _run(websocket: WebSocket, session: PlaySession, receiver: asyncio.Tas
     while not receiver.done():
         while not inbox.empty():
             item = inbox.get_nowait()
-            replies = [item] if isinstance(item, PlayErrorMessage) else session.apply(item)
+            try:
+                replies = [item] if isinstance(item, PlayErrorMessage) else session.apply(item)
+            except Exception as error:  # noqa: BLE001 - one failed command never ends the session
+                replies = [_error(f"That did not work: {error}")]
             for reply in replies:
                 await _send(websocket, reply)
         now = loop.time()

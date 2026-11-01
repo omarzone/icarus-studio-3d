@@ -173,8 +173,14 @@ class PlaySession:
                 move_body(world, body_id(world, command.object), command.position)
                 return [self._say(f"You moved {self._name(command.object)}")]
             case PushCommand():
-                impulse = np.array(command.impulse, dtype=float)
-                apply_impulse(world, body_id(world, command.object), impulse)
+                body = body_id(world, command.object)
+                direction = np.array(command.direction, dtype=float)
+                length = float(np.linalg.norm(direction))
+                if length < 1e-9:
+                    raise ToolRejected("A push needs a direction")
+                # Sized by the mass that moves with the part, so a push shows on a car as on a box.
+                impulse = direction / length * command.speed * float(world.model.body_subtreemass[body])
+                apply_impulse(world, body, impulse)
                 magnitude = _amount(float(np.linalg.norm(impulse)))
                 return [self._say(f"You pushed {self._name(command.object)} with {magnitude} N·s")]
             case AddObjectCommand():
