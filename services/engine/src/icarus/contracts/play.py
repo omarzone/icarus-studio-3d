@@ -1,0 +1,173 @@
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from icarus.contracts.scene import Quaternion, SceneDescription, Vector3
+
+
+class _Model(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+
+class MoveCommand(_Model):
+    tool: Literal["move"]
+    object: str
+    # World position in metres.
+    position: Vector3
+
+
+class PushCommand(_Model):
+    tool: Literal["push"]
+    object: str
+    # World impulse in newton-seconds.
+    impulse: Vector3
+
+
+class AddObjectCommand(_Model):
+    tool: Literal["add_object"]
+    # A library piece id.
+    piece: str
+    position: Vector3
+
+
+class LightCommand(_Model):
+    tool: Literal["light"]
+    intensity: float = Field(ge=0, le=5)
+
+
+class WindCommand(_Model):
+    tool: Literal["wind"]
+    # World wind velocity in m/s.
+    velocity: Vector3
+
+
+class SpeedCommand(_Model):
+    tool: Literal["speed"]
+    # Simulated seconds per real second.
+    speed: float = Field(ge=0.1, le=4)
+
+
+class PauseCommand(_Model):
+    tool: Literal["pause"]
+    paused: bool
+
+
+class ResetCommand(_Model):
+    tool: Literal["reset"]
+
+
+class ShuffleCommand(_Model):
+    tool: Literal["shuffle"]
+
+
+class TouchCommand(_Model):
+    tool: Literal["touch"]
+    # The body part that is poked; it must carry a touch sensor.
+    object: str
+
+
+PlayCommand = Annotated[
+    MoveCommand
+    | PushCommand
+    | AddObjectCommand
+    | LightCommand
+    | WindCommand
+    | SpeedCommand
+    | PauseCommand
+    | ResetCommand
+    | ShuffleCommand
+    | TouchCommand,
+    Field(discriminator="tool"),
+]
+
+
+class PlayGeomPose(_Model):
+    name: str
+    position: Vector3
+    quaternion: Quaternion
+
+
+class PlayReading(_Model):
+    """One live sensor reading or brain output, with the range it is shown against."""
+
+    id: str
+    label: str
+    value: float
+    min: float
+    max: float
+    unit: str | None = None
+
+
+class PlayStatus(_Model):
+    title: str
+    detail: str
+
+
+class PlayFrame(_Model):
+    time: float
+    step: int
+    speed: float
+    paused: bool
+    geoms: list[PlayGeomPose]
+    senses: list[PlayReading]
+    actions: list[PlayReading]
+    reward: float
+    episode_return: float
+    status: PlayStatus
+
+
+class PlayEvent(_Model):
+    time: float
+    kind: Literal["user", "agent", "world"]
+    text: str
+
+
+class PlayToolInfo(_Model):
+    id: str
+    label: str
+
+
+class PlaySessionInfo(_Model):
+    project_id: str
+    revision_number: int
+    # Which brain is playing, in words ("Untrained brain: random actions").
+    brain: str
+    tools: list[PlayToolInfo]
+    scene: SceneDescription
+
+
+class PlayReady(_Model):
+    type: Literal["ready"]
+    session: PlaySessionInfo
+
+
+class PlayFrameMessage(_Model):
+    type: Literal["frame"]
+    frame: PlayFrame
+
+
+class PlayEventMessage(_Model):
+    type: Literal["event"]
+    event: PlayEvent
+
+
+class PlayErrorMessage(_Model):
+    type: Literal["error"]
+    message: str
+
+
+# What the engine sends over the Play WebSocket.
+PlayMessage = Annotated[
+    PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage,
+    Field(discriminator="type"),
+]
+
+
+class PlayCommandEnvelope(_Model):
+    """What the desktop sends over the Play WebSocket: one command."""
+
+    command: PlayCommand
+
+
+class PlayMessageEnvelope(_Model):
+    message: PlayMessage

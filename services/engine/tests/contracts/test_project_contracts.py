@@ -90,3 +90,14 @@ def test_rename_carries_an_optional_description():
 def test_revisions_are_not_restored_by_default():
     revision = Revision(number=1, parent=None, author="user", summary="s", operations=[], created_at=datetime.now(UTC))
     assert revision.restored_from is None
+
+
+def test_play_commands_and_messages_parse_by_their_tag():
+    from icarus.contracts.play import PlayCommandEnvelope, PlayMessageEnvelope, PushCommand
+
+    command = PlayCommandEnvelope.model_validate({"command": {"tool": "push", "object": "car", "impulse": [1, 0, 0]}})
+    assert isinstance(command.command, PushCommand)
+    with pytest.raises(ValidationError):
+        PlayCommandEnvelope.model_validate({"command": {"tool": "speed", "speed": 9}})
+    message = PlayMessageEnvelope.model_validate({"message": {"type": "error", "message": "x"}})
+    assert message.message.type == "error"
