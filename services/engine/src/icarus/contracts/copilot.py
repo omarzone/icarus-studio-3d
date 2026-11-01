@@ -61,6 +61,35 @@ class CopilotProposal(_Model):
     applied_revision: int | None = None
 
 
+AttachmentKind = Literal["image", "video", "document", "view"]
+
+# Base64 payloads stay under ~15 MB of file per upload.
+MAX_ATTACHMENT_CHARS = 20_000_000
+
+
+class AttachmentUpload(_Model):
+    """A file the person adds to the chat, or a picture of the scene the app renders for the copilot."""
+
+    name: str = Field(min_length=1, max_length=200)
+    media_type: str = Field(min_length=1, max_length=100)
+    # "view" is a render of the project's scene taken by the app, never a file from the person.
+    kind: AttachmentKind
+    # The file itself, base64.
+    data: str = Field(max_length=MAX_ATTACHMENT_CHARS)
+    # Still frames of a video, base64 JPEG or PNG, taken by the app so the copilot can watch it.
+    frames: list[str] = Field(default=[], max_length=12)
+    # Plain text of a document, read by the app.
+    text: str | None = Field(default=None, max_length=200_000)
+
+
+class AttachmentInfo(_Model):
+    id: str
+    kind: AttachmentKind
+    name: str
+    media_type: str
+    size: int = Field(ge=0)
+
+
 class CopilotMessage(_Model):
     id: str
     role: Literal["user", "copilot"]
@@ -69,6 +98,7 @@ class CopilotMessage(_Model):
     proposal_id: str | None = None
     # How the copilot thought about it, kept apart from the answer.
     thinking: str | None = None
+    attachments: list[AttachmentInfo] = []
 
 
 class Conversation(_Model):
@@ -86,6 +116,10 @@ class SendMessage(_Model):
     selection: str | None = None
     # The workspace the user is in ("World", "Train", …).
     workspace: str | None = Field(default=None, max_length=40)
+    # Uploaded attachments sent with this message, by id.
+    attachments: list[str] = Field(default=[], max_length=10)
+    # Renders of the scene the app took for this message, so the copilot can see what it edits.
+    views: list[str] = Field(default=[], max_length=4)
 
 
 class SetAutonomy(_Model):

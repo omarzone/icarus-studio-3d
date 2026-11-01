@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
 from icarus.contracts.copilot import (
+    AttachmentInfo,
+    AttachmentUpload,
     BuildIdea,
     BuildStatus,
     Conversation,
@@ -65,6 +67,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     BuildStatus,
     ModelSettings,
     ModelSettingsPatch,
+    AttachmentUpload,
+    AttachmentInfo,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

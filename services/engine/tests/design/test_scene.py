@@ -44,8 +44,8 @@ def test_the_scene_shows_where_the_car_starts_and_where_it_must_park(car_scene):
     assert set(zones) == {"spawn_point", "goal_zone"}
     goal = zones["goal_zone"]
     goal_object = objects[goal.object]
-    goal_position = next(c for c in goal_object.components if c.kind == "transform").properties["position"].value
-    radius = next(c for c in goal_object.components if c.kind == "goal_zone").properties["radius"].value
+    goal_position = next(c for c in goal_object.components if c.kind == "transform").properties["position"].model_dump()["value"]
+    radius = next(c for c in goal_object.components if c.kind == "goal_zone").properties["radius"].model_dump()["value"]
     assert goal.shape == "sphere"
     assert goal.position == pytest.approx(goal_position)
     assert goal.size == pytest.approx((2 * radius, 2 * radius, 2 * radius))

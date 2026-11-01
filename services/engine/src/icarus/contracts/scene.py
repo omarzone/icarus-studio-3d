@@ -54,6 +54,19 @@ class SceneZone(BaseModel):
     quaternion: Quaternion
 
 
+class SceneSky(BaseModel):
+    """How the world's sky and air look; the physics never depends on it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top: str
+    horizon: str
+    # How much light the sky adds everywhere, 0 to 2.
+    ambient: float
+    # How thick the haze is, 0 for none.
+    fog: float
+
+
 class SceneDescription(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -62,3 +75,5 @@ class SceneDescription(BaseModel):
     geoms: list[SceneGeom]
     lights: list[SceneLight]
     zones: list[SceneZone] = []
+    # None when the world has no sky object; the viewport then uses its default look.
+    sky: SceneSky | None = None

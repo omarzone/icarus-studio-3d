@@ -186,6 +186,47 @@ export interface ApiError {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AttachmentInfo".
+ */
+export interface AttachmentInfo {
+  id: string;
+  kind: "image" | "video" | "document" | "view";
+  media_type: string;
+  name: string;
+  size: number;
+}
+/**
+ * A file the person adds to the chat, or a picture of the scene the app renders for the copilot.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AttachmentUpload".
+ */
+export interface AttachmentUpload {
+  data: string;
+  /**
+   * @maxItems 12
+   */
+  frames?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string, string];
+  kind: "image" | "video" | "document" | "view";
+  media_type: string;
+  name: string;
+  text?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "BrainSpec".
  */
 export interface BrainSpec {
@@ -323,6 +364,7 @@ export interface Conversation {
  * via the `definition` "CopilotMessage".
  */
 export interface CopilotMessage {
+  attachments?: AttachmentInfo[];
   created_at: string;
   id: string;
   proposal_id?: string | null;
@@ -588,6 +630,7 @@ export interface SceneDescription {
   geoms: SceneGeom[];
   lights: SceneLight[];
   revision: number;
+  sky?: SceneSky | null;
   zones?: SceneZone[];
 }
 /**
@@ -650,6 +693,18 @@ export interface SceneLight {
    * @maxItems 3
    */
   position: [number, number, number];
+}
+/**
+ * How the world's sky and air look; the physics never depends on it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneSky".
+ */
+export interface SceneSky {
+  ambient: number;
+  fog: number;
+  horizon: string;
+  top: string;
 }
 /**
  * A place in the world the task uses: where the agent starts, where it must go, or a marked area.
@@ -1303,8 +1358,27 @@ export interface TrainingSnapshot {
  * via the `definition` "SendMessage".
  */
 export interface SendMessage {
+  /**
+   * @maxItems 10
+   */
+  attachments?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string];
   selection?: string | null;
   text: string;
+  /**
+   * @maxItems 4
+   */
+  views?: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
   workspace?: string | null;
 }
 /**
