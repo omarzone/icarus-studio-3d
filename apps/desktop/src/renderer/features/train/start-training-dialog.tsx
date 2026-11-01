@@ -42,7 +42,8 @@ export function StartTrainingDialog() {
             cta={`Start ${run}`}
             disabled={!plan.data}
             title={plan.data ? undefined : "Available once the cost of the run is known"}
-            onClick={() => start.mutate(project, { onSuccess: runsCache })}
+            // The dialog closes as the run starts, so the list is cached from the promise, not a per-call callback.
+            onClick={() => void start.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("primary", DIALOG_BUTTON)}
           >
             <Play size={10} fill="currentColor" aria-hidden />

@@ -41,7 +41,7 @@ export function StopRunDialog() {
           <GoTo
             to="SCR-RESULTS"
             cta={`Stop ${run}`}
-            onClick={() => stop.mutate(project, { onSuccess: runsCache })}
+            onClick={() => void stop.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("primary", DIALOG_BUTTON)}
           >
             Stop {run}
