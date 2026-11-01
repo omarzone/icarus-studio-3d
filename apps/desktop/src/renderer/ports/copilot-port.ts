@@ -54,6 +54,16 @@ export type AttachmentInput = {
   text?: string;
 };
 
+export type AnswerActionKind = "navigate" | "train" | "apply" | "discard" | "send";
+
+// A button the copilot put under its answer; `target` is a screen id (navigate) or the message to send.
+export type AnswerAction = { label: string; kind: AnswerActionKind; target: string | null };
+
+export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library";
+
+// One thing the copilot did before answering ("Looked at the lot from above").
+export type AgentStep = { tool: AgentTool; summary: string; ok: boolean };
+
 export type ChatMessage =
   | {
       id: string;
@@ -75,6 +85,14 @@ export type ChatMessage =
       checks?: readonly CheckItem[];
       // Inline actions under the answer; the first is the primary one.
       actions?: readonly Suggestion[];
+      // Buttons the copilot offered with the answer; the first is the primary one.
+      answerActions?: readonly AnswerAction[];
+      // What the copilot did to answer, in order.
+      steps?: readonly AgentStep[];
+      // Renders the copilot took with its own camera.
+      views?: readonly ChatAttachment[];
+      // The proposal this answer made, so Apply and Discard act on it.
+      proposal?: { id: string; open: boolean };
     }
   | { id: string; role: "proposal"; proposal: Proposal }
   // Live progress of the project the copilot is building.

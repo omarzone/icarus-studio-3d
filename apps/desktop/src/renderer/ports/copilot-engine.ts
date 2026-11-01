@@ -1,7 +1,7 @@
 import type { AttachmentUpload, Conversation as EngineConversation, SendMessage } from "@icarus/contracts";
 import { type AttachmentApi, attachmentApi } from "../engine-client/attachment-api.ts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
-import { withCopilot } from "./copilot-connection.ts";
+import { withCopilot, withCopilotSend } from "./copilot-connection.ts";
 import type { CopilotPort } from "./copilot-port.ts";
 import {
   attachmentView,
@@ -52,7 +52,7 @@ export function createEngineCopilot(api: CopilotApi = engineApi, files: Attachme
       if (looked.length > 0 && fitsViews(looked)) {
         body.views = looked;
       }
-      return view(api.sendMessage(key, body));
+      return view(withCopilotSend(api.sendMessage(key, body)));
     },
     applyProposal: ({ id }) => view(api.applyProposal(id)),
     discardProposal: ({ id }) => view(api.discardProposal(id)),

@@ -3,6 +3,8 @@ import { Paperclip } from "lucide-react";
 import { type DragEvent, useRef, useState } from "react";
 import type { AutonomyMode, ChatAttachment, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
+import { AgentStepsList } from "./agent-steps-list.tsx";
+import { AnswerActionsBar } from "./answer-actions-bar.tsx";
 import type { ReadFile } from "./attachment-reading.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
@@ -28,6 +30,10 @@ export type ChatTabProps = {
   sending?: SendingMessage | null;
   // Why the copilot could not answer the last message because no model is connected.
   notConnected?: string | null;
+  // The last message was not taken because the copilot is still answering the one before.
+  busy?: boolean;
+  // A proposal answer is on its way, so the buttons under answers wait.
+  acting?: boolean;
   // Resolves true once the copilot has the message.
   onSend: (text: string, attachments?: readonly ChatAttachment[]) => Promise<boolean>;
   // Uploads a file added to the composer.
@@ -100,6 +106,11 @@ export function ChatTab(props: ChatTabProps) {
           </div>
         </div>
       )}
+      {props.busy && !sending ? (
+        <p role="status" className="mx-3 mb-1.5 rounded-control bg-control px-3 py-2 text-ui text-fg-secondary">
+          The copilot is still working on your last message. Send this one again once it answers.
+        </p>
+      ) : null}
       <SuggestionChips suggestions={suggestions} routes={props.suggestionRoutes} onSend={props.onSend} />
       <Composer
         placeholder={props.placeholder}
@@ -127,6 +138,8 @@ function Message({
   message,
   proposalRoutes,
   suggestionRoutes,
+  sending,
+  acting,
   onApply,
   onDiscard,
   onSend,
@@ -144,18 +157,33 @@ function Message({
       );
     case "copilot":
       return (
-        <CopilotBubble
-          title={message.title}
-          text={message.text}
-          markdown={message.markdown}
-          thinking={message.thinking}
-          checks={message.checks}
-          actions={
-            message.actions ? (
-              <ChatActions actions={message.actions} routes={suggestionRoutes} onSend={onSend} />
-            ) : undefined
-          }
-        />
+        <>
+          {message.steps && message.steps.length > 0 ? <AgentStepsList steps={message.steps} /> : null}
+          <CopilotBubble
+            title={message.title}
+            text={message.text}
+            markdown={message.markdown}
+            thinking={message.thinking}
+            checks={message.checks}
+            actions={
+              message.actions ? (
+                <ChatActions actions={message.actions} routes={suggestionRoutes} onSend={onSend} />
+              ) : message.answerActions && message.answerActions.length > 0 ? (
+                <AnswerActionsBar
+                  actions={message.answerActions}
+                  proposal={message.proposal ?? null}
+                  busy={Boolean(sending) || Boolean(acting)}
+                  onSend={(text) => void onSend(text)}
+                  onApply={onApply}
+                  onDiscard={onDiscard}
+                />
+              ) : undefined
+            }
+          />
+          {message.views && message.views.length > 0 ? (
+            <SceneViewsStrip views={message.views} title="What the copilot saw" side="copilot" />
+          ) : null}
+        </>
       );
     case "proposal":
       return (

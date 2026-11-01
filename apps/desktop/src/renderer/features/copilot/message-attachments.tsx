@@ -103,24 +103,31 @@ function Missing({ name }: { name: string }) {
   );
 }
 
-// The renders of the scene the copilot looked at for a message, folded away until asked for.
-export function SceneViewsStrip({ views }: { views: readonly ChatAttachment[] }) {
-  const [open, setOpen] = useState(false);
+type ViewsProps = {
+  views: readonly ChatAttachment[];
+  title?: string;
+  // Under a copilot answer the strip sits on the left and starts open.
+  side?: "user" | "copilot";
+};
+
+// The renders of the scene the copilot looked at for a message; under the person's message folded until asked for.
+export function SceneViewsStrip({ views, title = "The copilot looked at the scene", side = "user" }: ViewsProps) {
+  const [open, setOpen] = useState(side === "copilot");
   const [opened, setOpened] = useState<ChatAttachment | null>(null);
   return (
-    <div className="flex flex-col items-end gap-1.5 self-end">
+    <div className={`flex flex-col gap-1.5 ${side === "user" ? "items-end self-end" : "items-start self-start"}`}>
       <Act
-        cta="The copilot looked at the scene"
+        cta={title}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1 rounded-control px-1 py-0.5 text-meta text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80"
       >
         <Eye size={12} strokeWidth={1.75} aria-hidden />
-        The copilot looked at the scene
+        {title}
         <ChevronDown size={12} strokeWidth={1.75} aria-hidden className={open ? "rotate-180" : ""} />
       </Act>
       {open ? (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {views.map((view) =>
             view.url ? (
               <Act

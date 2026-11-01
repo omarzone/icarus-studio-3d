@@ -1,6 +1,8 @@
 import type {
+  AgentStep,
   AttachmentInfo,
   BuildStatus,
+  ChatAction,
   Conversation,
   CopilotMessage,
   CopilotProposal,
@@ -17,6 +19,8 @@ const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"]
 const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
 const STEP_STATES: readonly string[] = ["done", "running", "todo"];
 const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view"];
+const ACTION_KINDS: readonly string[] = ["navigate", "train", "apply", "discard", "send"];
+const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library"];
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -39,6 +43,26 @@ export function isAttachmentInfo(value: unknown): value is AttachmentInfo {
   );
 }
 
+function isChatAction(value: unknown): value is ChatAction {
+  return (
+    isRecord(value) &&
+    has(value, "label", "string") &&
+    typeof value.kind === "string" &&
+    ACTION_KINDS.includes(value.kind) &&
+    isOptional(value, "target", "string")
+  );
+}
+
+function isAgentStep(value: unknown): value is AgentStep {
+  return (
+    isRecord(value) &&
+    typeof value.tool === "string" &&
+    AGENT_TOOLS.includes(value.tool) &&
+    has(value, "summary", "string") &&
+    (value.ok === undefined || typeof value.ok === "boolean")
+  );
+}
+
 function isMessage(value: unknown): value is CopilotMessage {
   return (
     isRecord(value) &&
@@ -47,7 +71,9 @@ function isMessage(value: unknown): value is CopilotMessage {
     has(value, "text", "string") &&
     isOptional(value, "proposal_id", "string") &&
     isOptional(value, "thinking", "string") &&
-    (value.attachments === undefined || isListOf(value.attachments, isAttachmentInfo))
+    (value.attachments === undefined || isListOf(value.attachments, isAttachmentInfo)) &&
+    (value.actions === undefined || isListOf(value.actions, isChatAction)) &&
+    (value.steps === undefined || isListOf(value.steps, isAgentStep))
   );
 }
 

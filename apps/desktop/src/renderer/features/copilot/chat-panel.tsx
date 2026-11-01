@@ -1,17 +1,19 @@
 // PNL-CHAT
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ellipsis } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useCopilotOutbox } from "../../app/runtime/copilot-outbox.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { sceneKeys } from "../../editor/scene-queries.ts";
-import { CopilotNotConnected } from "../../ports/copilot-connection.ts";
+import { CopilotBusy, CopilotNotConnected } from "../../ports/copilot-connection.ts";
 import { type ChatAttachment, type Conversation, copilotPort } from "../../ports/copilot-port.ts";
 import { workspaceOf } from "../../ports/copilot-views.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { useDockedPanel } from "../../ui/dock-slot.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
 import { EmptyState } from "../../ui/states.tsx";
@@ -49,6 +51,8 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const conversation = useConversationKey(sample);
   const docked = useDockedPanel();
+  // Undocked (Play), the panel's own ⋯ has nothing behind it yet.
+  const notYet = useNotYet();
   return (
     <Panel
       id="PNL-CHAT"
@@ -62,7 +66,12 @@ export function ChatPanel({
       options={
         // Docked, the dock's ⋯ menu stands in for the panel's own.
         docked ? undefined : (
-          <Act cta="Chat options" aria-label="Chat options" className={buttonClass("icon", "size-6!")}>
+          <Act
+            cta="Chat options"
+            aria-label="Chat options"
+            {...notYet?.("Chat options", "Clear the chat or export the conversation")}
+            className={buttonClass("icon", `size-6! ${NOT_YET_CLASS}`)}
+          >
             <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
           </Act>
         )
@@ -139,6 +148,15 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
       setSending(null);
     }
   };
+  // A message asked from elsewhere (the getting-started guide) goes out as if typed here.
+  const outgoing = useCopilotOutbox((state) => state.waiting);
+  const take = useCopilotOutbox((state) => state.take);
+  useEffect(() => {
+    if (outgoing && outgoing.conversation === conversation && !sending) {
+      take(outgoing.id);
+      void sendText(outgoing.text);
+    }
+  });
   const upload = (file: ReadFile) => port.attachFile({ key: conversation, ...file });
   const apply = useEngineAction(port.applyProposal);
   const discard = useEngineAction(port.discardProposal);
@@ -160,6 +178,8 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
           proposalRoutes={proposalRoutes}
           sending={sending}
           notConnected={send.error instanceof CopilotNotConnected ? send.error.message : null}
+          busy={send.error instanceof CopilotBusy}
+          acting={apply.isPending || discard.isPending}
           onSend={sendText}
           onApply={(id) => run(apply, { key: conversation, id })}
           onDiscard={(id) => run(discard, { key: conversation, id })}

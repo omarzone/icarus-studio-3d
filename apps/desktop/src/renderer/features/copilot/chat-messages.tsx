@@ -138,11 +138,11 @@ function ThinkingToggle({ thinking }: { thinking: string }) {
   );
 }
 
-// While the copilot works on an answer.
+// While the copilot works on an answer; its steps arrive with the answer.
 export function ThinkingBubble() {
   return (
     <div role="status" className="self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary">
-      <span className="animate-pulse">Thinking…</span>
+      <span className="animate-pulse">Working…</span>
     </div>
   );
 }

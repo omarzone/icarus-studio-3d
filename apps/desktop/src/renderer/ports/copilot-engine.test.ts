@@ -8,7 +8,7 @@ import type {
 } from "@icarus/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { EngineError } from "../engine-client/request.ts";
-import { CopilotNotConnected } from "./copilot-connection.ts";
+import { CopilotBusy, CopilotNotConnected } from "./copilot-connection.ts";
 import { createEngineCopilot } from "./copilot-engine.ts";
 
 const proposal: CopilotProposal = {
@@ -130,6 +130,12 @@ describe("copilot on the engine", () => {
     const { copilot, api } = engine(conversation([{ ...proposal, status: "applied", applied_revision: 3 }]));
     expect(await copilot.getPreview("park")).toBeNull();
     expect(api.proposalScene).not.toHaveBeenCalled();
+  });
+
+  it("tells the views when the copilot is still answering the previous message", async () => {
+    const { copilot, api } = engine();
+    api.sendMessage.mockRejectedValueOnce(new EngineError("conflict", "The copilot is still answering"));
+    await expect(copilot.sendMessage({ key: "park", text: "and now?" })).rejects.toBeInstanceOf(CopilotBusy);
   });
 
   it("tells the views when no model is connected", async () => {
