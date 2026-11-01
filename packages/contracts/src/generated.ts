@@ -717,6 +717,7 @@ export interface PlayGeomPose {
  */
 export interface PlayStatus {
   detail: string;
+  title: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

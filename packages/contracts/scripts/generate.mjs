@@ -26,19 +26,23 @@ function draft07Tuples(node) {
 
 // Field titles would become type names ("revision" → `Revision`) and collide with models; only models keep names.
 function dropFieldTitles(schema) {
+  // `node` is always a schema; maps of schemas (properties, $defs) are walked by their values.
   const strip = (node, isModel) => {
     if (Array.isArray(node)) {
       node.forEach((item) => strip(item, false));
-    } else if (node && typeof node === "object") {
-      if (!isModel) {
-        delete node.title;
-      }
-      for (const [key, value] of Object.entries(node)) {
-        if (key === "$defs" && value && typeof value === "object") {
-          Object.values(value).forEach((model) => strip(model, true));
-        } else {
-          strip(value, false);
-        }
+      return;
+    }
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    if (!isModel) {
+      delete node.title;
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if ((key === "$defs" || key === "properties") && value && typeof value === "object") {
+        Object.values(value).forEach((child) => strip(child, key === "$defs"));
+      } else if (typeof value === "object") {
+        strip(value, false);
       }
     }
   };
