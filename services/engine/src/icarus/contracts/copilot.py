@@ -90,6 +90,25 @@ class AttachmentInfo(_Model):
     size: int = Field(ge=0)
 
 
+class ChatAction(_Model):
+    """A button under a copilot answer: what it says and what the app does when it is pressed."""
+
+    label: str = Field(min_length=1, max_length=60)
+    # navigate: open a workspace or screen (target is its id); train: start training with the defaults;
+    # apply / discard: act on the proposal of this message; send: send `target` as the person's next message.
+    kind: Literal["navigate", "train", "apply", "discard", "send"]
+    target: str | None = Field(default=None, max_length=400)
+
+
+class AgentStep(_Model):
+    """One thing the copilot did before answering, shown so the person can follow its work."""
+
+    tool: Literal["inspect", "look", "try", "propose", "train", "library"]
+    # What it did, in words ("Looked at the parking spot from the side").
+    summary: str = Field(max_length=200)
+    ok: bool = True
+
+
 class CopilotMessage(_Model):
     id: str
     role: Literal["user", "copilot"]
@@ -99,6 +118,10 @@ class CopilotMessage(_Model):
     # How the copilot thought about it, kept apart from the answer.
     thinking: str | None = None
     attachments: list[AttachmentInfo] = []
+    # Buttons offered under this answer; the first is the main one.
+    actions: list[ChatAction] = []
+    # What the copilot did to reach this answer, in order.
+    steps: list[AgentStep] = []
 
 
 class Conversation(_Model):

@@ -174,6 +174,17 @@ export interface AddObjectCommand {
   tool: "add_object";
 }
 /**
+ * One thing the copilot did before answering, shown so the person can follow its work.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AgentStep".
+ */
+export interface AgentStep {
+  ok?: boolean;
+  summary: string;
+  tool: "inspect" | "look" | "try" | "propose" | "train" | "library";
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ApiError".
  */
@@ -263,6 +274,17 @@ export interface BuildStep {
   id: string;
   label: string;
   status: "done" | "running" | "todo";
+}
+/**
+ * A button under a copilot answer: what it says and what the app does when it is pressed.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ChatAction".
+ */
+export interface ChatAction {
+  kind: "navigate" | "train" | "apply" | "discard" | "send";
+  label: string;
+  target?: string | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -364,11 +386,13 @@ export interface Conversation {
  * via the `definition` "CopilotMessage".
  */
 export interface CopilotMessage {
+  actions?: ChatAction[];
   attachments?: AttachmentInfo[];
   created_at: string;
   id: string;
   proposal_id?: string | null;
   role: "user" | "copilot";
+  steps?: AgentStep[];
   text: string;
   thinking?: string | null;
 }

@@ -8,6 +8,7 @@ import type {
 
 export type {
   AddComponent,
+  AgentStep,
   ApiError,
   AssetValue,
   AttachmentInfo,
@@ -16,6 +17,7 @@ export type {
   BuildIdea,
   BuildStatus,
   BuildStep,
+  ChatAction,
   CheckpointInfo,
   ChoiceValue,
   ColorValue,
