@@ -10,7 +10,7 @@ from icarus.copilot.agent.tools.inspect import compact, known_ids
 from icarus.design.compiler import CompiledModel, compile_project
 from icarus.design.scene import scene_description
 from icarus.projects.document import find_object
-from icarus.sim.views import CameraSpec, RenderUnavailable
+from icarus.sim.views import BlankPicture, CameraSpec, RenderUnavailable
 
 type View = Literal["front", "back", "left", "right", "top", "three_quarter", "onboard"]
 
@@ -187,6 +187,12 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
         png = scope.services.views.render(compiled, camera, zones, timeout=20)
     except RenderUnavailable:
         return Observation(f"No picture could be rendered on this machine. {described}", summary=summary)
+    except BlankPicture:
+        text = (
+            "The picture could not be rendered: it came out blank. Do not describe it or guess why; tell the person "
+            f"the picture failed and describe the scene only from these facts. {described}"
+        )
+        return Observation(text, ok=False, summary="The picture could not be rendered")
     if scope.take_view_slot():
         info = scope.services.attachments.add_bytes(scope.project_id, f"{label[:80]}.png", "image/png", png, "view")
         with scope.guard:

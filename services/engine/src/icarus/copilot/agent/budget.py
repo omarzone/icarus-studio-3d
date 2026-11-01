@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from icarus.copilot.client import Usage
+from icarus.copilot.language import Language, say
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ class TurnBudget:
     # The measured prompt size of the last call and how many messages it had, for the size estimate.
     measured: int | None = None
     measured_messages: int = 0
-    # Set once a limit forces the answer; tools are then off.
+    # The text key of the limit that forced the answer, once one did; tools are then off.
     forced: str | None = None
     nudged_empty: bool = False
     overflow_recovered: bool = False
@@ -64,22 +65,22 @@ class TurnBudget:
             self.prompt_tokens += usage.prompt_tokens
             self.measured, self.measured_messages = usage.prompt_tokens, messages
 
-    def force(self, reason: str) -> None:
-        self.forced = self.forced or reason
+    def force(self, key: str) -> None:
+        self.forced = self.forced or key
 
-    def wrap_up_reason(self) -> str | None:
-        """The first limit reached, worded for the person, or None."""
+    def wrap_up_reason(self, language: Language = "en") -> str | None:
+        """The first limit reached, worded for the person in their language, or None."""
         limits = self.limits
         if self.forced:
-            return self.forced
+            return say(self.forced, language)
         if self.model_calls >= limits.max_model_calls - 1:
-            return f"I reached the limit of {limits.max_model_calls} steps for one message"
+            return say("limit_steps", language, count=limits.max_model_calls)
         if sum(self.tool_calls.values()) >= limits.max_tool_calls:
-            return f"I reached the limit of {limits.max_tool_calls} tool calls for one message"
+            return say("limit_tools", language, count=limits.max_tool_calls)
         if time.monotonic() > self.deadline - 20:
-            return f"I am close to the time limit of {limits.wall_seconds:g} s for one message"
+            return say("limit_time", language, seconds=f"{limits.wall_seconds:g}")
         if self.prompt_tokens >= limits.turn_prompt_tokens:
-            return "I used the reading budget for one message"
+            return say("limit_reading", language)
         return None
 
     def cap_reached(self, tool: str) -> str | None:

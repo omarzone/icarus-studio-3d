@@ -5,9 +5,12 @@ import pytest
 from icarus.copilot.agent.tools.base import ToolServices, TurnScope
 from icarus.copilot.agent.tools.inspect import InspectArgs, ReadRunArgs, inspect_object, read_run
 from icarus.copilot.agent.tools.library import LibraryArgs, library
+from icarus.copilot.agent.tools.look import LookArgs, look
+from icarus.copilot.agent.tools.proposing import ProposeArgs, propose
 from icarus.copilot.agent.tools.trying import TryArgs, try_change
 from icarus.copilot.context import NO_RUN
 from icarus.projects.store import ProjectStore
+from icarus.sim.views import BlankPicture
 from icarus.training.run_store import RunStore
 
 
@@ -48,3 +51,34 @@ def test_a_template_brings_the_operations_that_add_its_body_and_task_to_this_pro
     assert not any(op["op"] == "create_object" and op["object"]["id"] == "ground" for op in operations)
     tried = json.loads(try_change(scope, TryArgs.model_validate({"operations": operations, "look": None})).text)
     assert tried["passed"], tried["checks"]
+
+
+class _BlankViews:
+    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+        raise BlankPicture("every pixel is the same")
+
+
+def test_a_blank_picture_is_a_failed_look_that_tells_the_model_not_to_describe_it(tmp_path):
+    store = ProjectStore(tmp_path / "projects")
+    project_id = store.create("Parking", "parking_car").project.id
+    services = ToolServices(store, RunStore(tmp_path / "runs"), None, None, _BlankViews())  # type: ignore[arg-type]
+    seen = look(TurnScope(project_id, store.state(project_id), "ask", services), LookArgs())
+    assert not seen.ok and seen.image is None
+    assert "could not be rendered" in seen.text and "Do not describe it" in seen.text
+    assert seen.summary == "The picture could not be rendered"
+
+
+def test_a_try_warns_about_lost_posture_terms_and_a_missing_finish_and_the_proposal_carries_it(tmp_path):
+    store = ProjectStore(tmp_path / "projects")
+    project_id = store.create("Race", "walker_robot").project.id
+    services = ToolServices(store, RunStore(tmp_path / "runs"), None, None, None)  # type: ignore[arg-type]
+    scope = TurnScope(project_id, store.state(project_id), "ask", services, request="quiero una carrera")
+    operations: list[dict] = [{"op": "set_task_family", "family": "navigation"}]
+    terms = ("forward_progress", "stay_upright", "energy_cost", "fall_penalty")
+    operations += [{"op": "remove_reward_term", "term": term} for term in terms]
+    operations.append({"op": "set_reward_term", "term": {"term": "reach_goal", "weight": 10, "params": {}}})
+    tried = json.loads(try_change(scope, TryArgs.model_validate({"operations": operations, "look": None})).text)
+    assert tried["passed"] and len(tried["warnings"]) == 2
+    assert "stay_upright and fall_penalty" in tried["warnings"][0] and "goal zone" in tried["warnings"][1]
+    propose(scope, ProposeArgs(try_id="t1", summary="Race", explanation="Switch to a race.", warnings=[]))
+    assert scope.proposal is not None and scope.proposal.warnings == tried["warnings"]

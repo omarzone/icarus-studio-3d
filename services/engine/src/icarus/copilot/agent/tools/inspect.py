@@ -75,6 +75,7 @@ def read_run(scope: TurnScope, args: ReadRunArgs) -> Observation:
     picked: dict[str, Any] = {"name": facts["name"]}
     if "status" in args.sections:
         keys = ("state", "revision", "step", "total_steps", "recommended_steps", "far_below_recommended", "copies")
+        keys += ("control_rate_hz",)
         picked |= {key: facts[key] for key in (*keys, "best_step", "success_rate")}
     if "evaluations" in args.sections:
         picked |= {"evaluations": facts["evaluations"], "latest_evaluation": facts["latest_evaluation"]}
@@ -82,6 +83,7 @@ def read_run(scope: TurnScope, args: ReadRunArgs) -> Observation:
         latest = facts["latest_training"] or facts["latest_evaluation"] or {}
         picked["reward_terms"] = latest.get("reward_terms")
         picked["episode_length"] = latest.get("episode_length")
+        picked["episode_seconds"] = latest.get("episode_seconds")
     if "curve" in args.sections:
         picked["curve"] = _curve(runs.folder(status.run_id).metrics())
     if "failures" in args.sections:

@@ -82,7 +82,7 @@ def say(copilot: Copilot, project_id: str, text: str):
 def test_in_ask_mode_asking_to_train_offers_a_train_button_instead_of_starting(copilot, runs, project_id, trains):
     answer = say(copilot, project_id, "entrénalo")
     assert runs.list_runs(project_id) == []
-    assert [(action.kind, action.label) for action in answer.actions] == [("train", "Train now")]
+    assert [(action.kind, action.label) for action in answer.actions] == [("train", "Entrenar ahora")]
     assert [(step.tool, step.summary) for step in answer.steps] == [("train", "Offered a Train button")]
 
 
@@ -104,7 +104,7 @@ def test_asking_to_train_while_a_run_trains_says_that_one_is_running(
     copilot.set_autonomy(project_id, "autopilot")
     running = supervisor.start(store.state(project_id), StartRun(total_steps=10_000, copies=1), 1, False)
     answer = say(copilot, project_id, "entrénalo otra vez")
-    assert f"{running.name} is already training" in answer.text and answer.actions == []
+    assert f"{running.name} ya está entrenando" in answer.text and answer.actions == []
     assert [run.run_id for run in runs.list_runs(project_id)] == [running.run_id]
 
 
@@ -122,7 +122,7 @@ def test_a_project_without_a_task_is_not_trained_and_the_answer_says_why(copilot
     project_id = store.create("Empty", "empty_world").project.id
     copilot.set_autonomy(project_id, "autopilot")
     answer = say(copilot, project_id, "entrénalo")
-    assert runs.list_runs(project_id) == [] and "did not start training" in answer.text
+    assert runs.list_runs(project_id) == [] and "No empecé a entrenar" in answer.text
 
 
 def test_stopping_with_nothing_training_says_so(copilot, project_id, trains):

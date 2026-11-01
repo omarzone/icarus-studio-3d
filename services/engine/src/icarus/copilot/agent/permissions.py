@@ -14,8 +14,9 @@ AUTONOMY_LINES = {
         "Never say you changed the project: say what you propose and that Apply adds it."
     ),
     "autopilot": (
-        "Autonomy: autopilot — you may apply changes that passed a try (at most 2 per message) and start training "
-        "right after a fix."
+        "Autonomy: autopilot — apply your passing tries yourself (apply, at most 2 per message) and start training "
+        "right after a fix when the person asked you to fix or train; never ask the person to press Apply. A change "
+        "you only proposed is applied by the engine when your turn ends."
     ),
 }
 

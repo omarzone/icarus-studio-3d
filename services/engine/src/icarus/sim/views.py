@@ -25,6 +25,18 @@ class RenderUnavailable(RuntimeError):
     """No offscreen OpenGL context could be created on this machine."""
 
 
+class BlankPicture(RuntimeError):
+    """The render came out as one flat color, so it shows nothing of the scene."""
+
+
+# A frame whose pixels barely vary is a failed render, not a picture of the scene.
+BLANK_SPREAD = 1.0
+
+
+def is_blank(pixels: np.ndarray) -> bool:
+    return float(pixels.std()) < BLANK_SPREAD
+
+
 @dataclass(frozen=True)
 class CameraSpec:
     lookat: tuple[float, float, float]
@@ -85,7 +97,18 @@ def render_view(
     mujoco.mj_forward(compiled.model, data)
     renderer.update_scene(data, _camera(camera))
     _zone_geoms(renderer.scene, zones)
-    return encode_png(renderer.render())
+    pixels = renderer.render()
+    if is_blank(pixels):
+        raise BlankPicture(f"every pixel is close to {pixels.reshape(-1, 3).mean(axis=0).round().tolist()}")
+    return encode_png(pixels)
+
+
+def _release(renderer: mujoco.Renderer) -> None:
+    """Free a renderer inside its own GL context: freed in another one, it deletes that context's buffers."""
+    context = getattr(renderer, "_gl_context", None)
+    if context is not None:
+        context.make_current()
+    renderer.close()
 
 
 class ViewRenderer:
@@ -111,7 +134,7 @@ class ViewRenderer:
         self._renderers[key] = (model, renderer)
         while len(self._renderers) > RENDERERS_KEPT:
             _, (_, oldest) = self._renderers.popitem(last=False)
-            oldest.close()
+            _release(oldest)
         return renderer
 
     def _render(self, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone]) -> bytes:
@@ -128,7 +151,7 @@ class ViewRenderer:
     def close(self) -> None:
         def release() -> None:
             for _, renderer in self._renderers.values():
-                renderer.close()
+                _release(renderer)
             self._renderers.clear()
 
         self._thread.submit(release).result()

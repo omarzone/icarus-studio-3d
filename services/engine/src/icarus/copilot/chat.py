@@ -25,6 +25,7 @@ from icarus.copilot.client import InputRejected, ModelClient, ToolsRefused, capa
 from icarus.copilot.context import project_context
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.grounding import UNSUPPORTED_ANSWER
+from icarus.copilot.language import detect
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.copilot.single_shot import AUTOPILOT, SYSTEM, ChatReply, ProposalDraft, Review, history_text
 from icarus.copilot.turn_media import TurnMedia, turn_media
@@ -63,6 +64,13 @@ def _project_of(proposal_id: str) -> str:
     if not PROJECT_ID.fullmatch(project_id) or not token:
         raise UnknownProposal(proposal_id)
     return project_id
+
+
+def _retire_open(conversation: Conversation) -> None:
+    """A new proposal replaces the one still open from an earlier message; only the newest can be applied."""
+    for proposal in conversation.proposals:
+        if proposal.status == "open":
+            proposal.status = "outdated"
 
 
 class Copilot:
@@ -142,6 +150,8 @@ class Copilot:
                 raise
             return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
         with self._conversations.editing(project_id) as stored:
+            if result.proposals:
+                _retire_open(stored)
             stored.messages += [user_message, result.message]
             stored.proposals += result.proposals
             stored.suggestions = result.suggestions
@@ -195,6 +205,8 @@ class Copilot:
             "copilot", answer, thinking=reply.thinking, proposal_id=proposal.id if proposal else None, actions=actions
         )
         with self._conversations.editing(project_id) as stored:
+            if proposal:
+                _retire_open(stored)
             stored.messages += [user_message, copilot_message]
             stored.proposals += [proposal] if proposal else []
             stored.suggestions = suggestions
@@ -204,11 +216,11 @@ class Copilot:
                 self.apply(proposal.id)
         if training is not None and not offered:
             # After an autopilot change is applied, so a run started now trains the fixed revision.
-            outcome = self._trainer.act(project_id, training)
+            outcome = self._trainer.act(project_id, training, detect(message.text))
             with self._conversations.editing(project_id) as stored:
                 for item in stored.messages:
                     if item.id == copilot_message.id:
-                        item.text = f"{item.text} {outcome}"
+                        item.text = f"{item.text} {outcome.text}"
         return self.conversation(project_id)
 
     def _record(self, project_id: str, user: CopilotMessage, answer: CopilotMessage) -> Conversation:

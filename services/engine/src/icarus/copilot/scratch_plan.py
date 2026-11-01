@@ -50,6 +50,8 @@ class PlanMotor(_Plan):
 class PlanRays(_Plan):
     range: float = Field(ge=0.05, le=50)
     count: int = Field(ge=1, le=32)
+    # Degrees; below zero the rays look down at low obstacles.
+    tilt: float = Field(ge=-60, le=30)
 
 
 class PlanPart(_Plan):
@@ -230,7 +232,7 @@ def _part(part: PlanPart) -> Part:
     if part.motor:
         extra["motor"] = {"kind": part.motor.kind, "max_force": part.motor.max_force}
     if part.rays:
-        extra["distance_ray"] = {"range": part.rays.range, "count": part.rays.count}
+        extra["distance_ray"] = {"range": part.rays.range, "count": part.rays.count, "tilt": part.rays.tilt}
     if part.balance:
         extra["balance"] = {}
     if part.touch:

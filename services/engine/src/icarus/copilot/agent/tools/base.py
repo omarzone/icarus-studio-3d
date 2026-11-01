@@ -10,6 +10,7 @@ from icarus.contracts.operations import EditOperation
 from icarus.contracts.project import ProjectState
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat_training import ChatTrainer
+from icarus.copilot.language import Language
 from icarus.copilot.response_schema import response_schema
 from icarus.design.compiler import CompiledModel
 from icarus.projects.store import ProjectStore
@@ -47,6 +48,8 @@ class TryResult:
     base_revision: int
     problems: list[str]
     compiled: CompiledModel | None
+    # Design problems this change brings that do not fail it; a proposal carries them to the person.
+    warnings: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -71,8 +74,12 @@ class TurnScope:
     autonomy: Autonomy
     services: ToolServices
     tries: dict[str, TryResult] = field(default_factory=dict)
-    # The one open proposal this message carries; a later propose replaces it.
+    # The one open proposal this message carries and the try it came from; a later propose replaces it.
     proposal: CopilotProposal | None = None
+    proposal_try: str | None = None
+    # The person's latest message and its language, for every text the engine writes itself.
+    request: str = ""
+    language: Language = "en"
     applied: list[CopilotProposal] = field(default_factory=list)
     views: list[AttachmentInfo] = field(default_factory=list)
     steps: list[AgentStep] = field(default_factory=list)

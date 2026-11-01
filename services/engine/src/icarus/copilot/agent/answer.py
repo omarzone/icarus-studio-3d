@@ -4,18 +4,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.copilot import ChatAction
 from icarus.copilot.agent.tools.base import TurnScope
-from icarus.copilot.grounding import UNSUPPORTED_ANSWER, unsupported_numbers
+from icarus.copilot.grounding import unsupported_numbers, without_unbacked
+from icarus.copilot.language import claims_change, say
 from icarus.training.run_store import TERMINAL_STATES
 
-# Screens and states a navigate button may open, from docs/design/screens.md.
+# Screens and states a navigate button may open, from docs/design/screens.md; Results joins once it works.
 WORKSPACES = (
     "SCR-WORLD",
     "SCR-BODY",
     "SCR-BRAIN",
     "STA-BRAIN-NETWORK",
     "SCR-TRAIN",
-    "SCR-RESULTS",
-    "STA-RESULTS-FAILURES",
     "SCR-PLAY",
 )
 MAX_ACTIONS = 4
@@ -67,34 +66,54 @@ def action_problem(scope: TurnScope, action: ActionDraft) -> str | None:
     return None
 
 
+def _false_claim(scope: TurnScope, text: str) -> bool:
+    """An answer saying the change was made while it is only proposed and the person still applies it."""
+    return scope.autonomy == "ask" and scope.proposal is not None and claims_change(text)
+
+
 def check(scope: TurnScope, final: FinalAnswer) -> list[str]:
-    """What is wrong with an answer: unbacked numbers and buttons that cannot work."""
+    """What is wrong with an answer: unbacked numbers, a change claimed but only proposed, buttons that cannot work."""
     problems: list[str] = []
     unbacked = [*_unbacked(scope, final.answer)]
     unbacked += [number for text in final.suggestions for number in _unbacked(scope, text)]
     if unbacked:
         problems.append(
-            f"These numbers are not in the context, the tool results or the conversation: {', '.join(unbacked)}"
+            f"These numbers are not in the context, the tool results or the conversation: {', '.join(unbacked)}. "
+            "Rewrite only those sentences with figures from the tool results, the context or the person's words "
+            "(or say the value is not known); keep the rest of your answer and do not shorten it."
+        )
+    if _false_claim(scope, final.answer):
+        problems.append(
+            "Your answer says the change was made, but it is only proposed: the person adds it with Apply. Say what "
+            "you propose and that Apply adds it."
         )
     problems += [problem for action in final.actions if (problem := action_problem(scope, action))]
     return problems
 
 
 def degraded(scope: TurnScope, final: FinalAnswer) -> FinalAnswer:
-    """The answer after its one retry still failed: unbacked parts are replaced or dropped, as every role does."""
-    text = UNSUPPORTED_ANSWER if _unbacked(scope, final.answer) else final.answer
+    """The answer after its one retry still failed: only its unbacked sentences go, and a false claim is corrected."""
+    text = without_unbacked(final.answer, scope.sources, scope.percent_sources) or say("unsupported", scope.language)
+    if _false_claim(scope, text):
+        text = f"{say('proposed_not_applied', scope.language)} {text}"
     suggestions = [item for item in final.suggestions if not _unbacked(scope, item)]
     actions = [action for action in final.actions if action_problem(scope, action) is None]
     return FinalAnswer(answer=text, suggestions=suggestions, actions=actions)
 
 
-def chat_actions(scope: TurnScope, drafts: list[ActionDraft]) -> list[ChatAction]:
-    """The engine's buttons first (the open proposal, a training start held back), then the model's, deduplicated."""
+def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[str]) -> list[ChatAction]:
+    """The engine's buttons first (the open proposal, a training start held back), then one per option the answer
+    lists, then the model's, deduplicated."""
+    language = scope.language
     actions: list[ChatAction] = []
     if scope.proposal is not None:
-        actions += [ChatAction(label="Apply", kind="apply"), ChatAction(label="Discard", kind="discard")]
+        actions += [
+            ChatAction(label=say("apply", language), kind="apply"),
+            ChatAction(label=say("discard", language), kind="discard"),
+        ]
     if scope.train_offered and _trainable(scope):
-        actions.append(ChatAction(label="Train now", kind="train"))
+        actions.append(ChatAction(label=say("train_now", language), kind="train"))
+    actions += [ChatAction(label=option[:60], kind="send", target=option) for option in options]
     actions += [ChatAction(label=draft.label, kind=draft.kind, target=draft.target) for draft in drafts]
     unique: list[ChatAction] = []
     for action in actions:

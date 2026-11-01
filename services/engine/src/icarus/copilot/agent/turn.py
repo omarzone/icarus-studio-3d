@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from icarus.contracts.copilot import Capability, Conversation, CopilotMessage, CopilotProposal, SendMessage
 from icarus.copilot.agent.answer import chat_actions
 from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.ending import finish_autopilot, listed_options, polished
 from icarus.copilot.agent.history import build_history
 from icarus.copilot.agent.loop import merged_steps, run_loop
 from icarus.copilot.agent.prompt import system_prompt
@@ -13,6 +14,7 @@ from icarus.copilot.agent.summary_store import SummaryStore
 from icarus.copilot.agent.tools.base import ToolServices, TurnScope
 from icarus.copilot.client import CopilotError, ModelClient
 from icarus.copilot.context import lean_context
+from icarus.copilot.language import detect, say
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.copilot.turn_media import TurnMedia
 from icarus.projects.document import all_objects
@@ -53,7 +55,8 @@ def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -
     services, project_id = setup.services, conversation.project_id
     state = services.projects.state(project_id)
     context = lean_context(state, services.runs, message.selection, message.workspace, _open_proposal(conversation))
-    scope = TurnScope(project_id, state, conversation.autonomy, services)
+    language = detect(message.text)
+    scope = TurnScope(project_id, state, conversation.autonomy, services, request=message.text, language=language)
     return scope, context
 
 
@@ -91,11 +94,17 @@ def run_turn(setup: TurnSetup, conversation: Conversation, message: SendMessage,
         if not scope.side_effects and not scope.steps:
             raise CopilotError(failure)
         done = " ".join(scope.side_effects)
-        text = f"{done} Then I could not finish: {failure}." if done else f"I could not finish: {failure}."
-        suggestions, drafts = [], []
+        key = "failed_after" if done else "failed"
+        answer, suggestions, drafts = say(key, scope.language, done=done, failure=failure), [], []
     else:
         final = outcome.final
-        text, suggestions, drafts = _text(final.answer, scope.reports), final.suggestions, final.actions
+        answer, suggestions, drafts = final.answer, final.suggestions, final.actions
+    if scope.autonomy == "autopilot":
+        finish_autopilot(scope, message.text)
+    answer = polished(scope, answer)
+    options = listed_options(answer)
+    text = _text(answer, scope.reports)
+    suggestions = [polished(scope, item) for item in suggestions]
     proposals = [*scope.applied, *([scope.proposal] if scope.proposal else [])]
     proposal_id = proposals[-1].id if proposals else None
     thinking = "\n\n".join(outcome.thinking)[:THINKING_LIMIT] or None
@@ -105,7 +114,7 @@ def run_turn(setup: TurnSetup, conversation: Conversation, message: SendMessage,
         thinking=thinking,
         proposal_id=proposal_id,
         attachments=scope.views,
-        actions=chat_actions(scope, drafts),
+        actions=chat_actions(scope, drafts, options),
         steps=merged_steps(scope.steps),
     )
     return TurnResult(reply, proposals, suggestions)

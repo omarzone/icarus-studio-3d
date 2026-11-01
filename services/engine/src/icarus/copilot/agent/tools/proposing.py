@@ -6,6 +6,7 @@ from icarus.contracts.operations import OperationBatch
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TryResult, TurnScope
 from icarus.copilot.candidate import dry_run, new_proposal
 from icarus.copilot.grounding import unsupported_numbers
+from icarus.copilot.language import say
 from icarus.projects.operations import OperationError
 from icarus.projects.store import RejectedBatch
 
@@ -53,18 +54,19 @@ def propose(scope: TurnScope, args: ProposeArgs) -> Observation:
         text = f"These numbers are not in the project, the tool results or the conversation: {', '.join(unbacked)}"
         return Observation(text, ok=False, summary="Could not propose: its description cites unbacked numbers")
     has_runs = bool(scope.services.runs.list_runs(scope.project_id))
+    warnings = [*args.warnings, *(text for text in tried.warnings if text not in args.warnings)]
     proposal = new_proposal(
         scope.state.project,
         tried.base_revision,
         args.summary,
         args.explanation,
         tried.operations,
-        args.warnings,
+        warnings,
         has_runs,
     )
-    scope.proposal = proposal
+    scope.proposal, scope.proposal_try = proposal, args.try_id
     if scope.autonomy == "autopilot":
-        text = "Proposal ready. In autopilot you may apply it with apply and the same try_id."
+        text = "Proposal ready. In autopilot apply it with apply and the same try_id; the engine applies it otherwise."
     else:
         text = "Proposal ready; the person sees it with Apply and Discard buttons and decides."
     return Observation(text, summary=f"Proposed “{args.summary}”"[:200])
@@ -94,9 +96,9 @@ def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
         return Observation(f"The project refused the change: {error}", ok=False, summary="Could not apply the change")
     proposal.status, proposal.applied_revision = "applied", state.revision.number
     scope.applied.append(proposal)
-    scope.state, scope.head_compiled, scope.proposal = state, None, None
+    scope.state, scope.head_compiled, scope.proposal, scope.proposal_try = state, None, None, None
     revision = state.revision.number
-    scope.side_effects.append(f"I applied “{args.summary}” as revision {revision}.")
+    scope.side_effects.append(say("applied", scope.language, summary=args.summary, revision=revision))
     return Observation(
         f"Applied as revision {revision}.", summary=f"Applied “{args.summary}” as revision {revision}"[:200]
     )

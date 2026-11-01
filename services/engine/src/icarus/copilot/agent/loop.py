@@ -22,6 +22,7 @@ from icarus.copilot.agent.tokens import estimate
 from icarus.copilot.agent.tools import REGISTRY
 from icarus.copilot.agent.tools.base import Effect, Observation, Tool, TurnScope, tool_definition
 from icarus.copilot.client import ContextOverflow, CopilotError, InputRejected, ModelClient, ToolCall, schema_problems
+from icarus.copilot.language import say
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def _plan(scope: TurnScope, call: ToolCall, budget: TurnBudget, off: frozenset[s
         return planned
     key = (call.name, " ".join(call.arguments.split()))
     if budget.repeated[key] >= 2:
-        budget.force("I repeated the same step without progress")
+        budget.force("repeated")
         planned.result = _rejected(tool, "You already did this twice; the result has not changed.", "repeated step")
         return planned
     budget.repeated[key] += 1
@@ -270,9 +271,15 @@ def image_bridge(images: list[tuple[str, bytes]], first: int) -> dict:
 
 
 def engine_answer(scope: TurnScope, reason: str) -> FinalAnswer:
-    """The answer the engine writes itself when the model could not finish one."""
-    done = " ".join(scope.side_effects)
-    return FinalAnswer(answer=f"{reason}, so I stopped before I could finish my answer. {done}".strip())
+    """The answer the engine writes itself when the model could not finish one, in the person's language."""
+    parts = [say("stopped", scope.language, reason=reason), *scope.side_effects]
+    if scope.proposal is not None:
+        parts.append(say("proposal_kept", scope.language))
+    return FinalAnswer(answer=" ".join(parts))
+
+
+def _limit(budget: TurnBudget, scope: TurnScope) -> str | None:
+    return budget.wrap_up_reason(scope.language)
 
 
 def merged_steps(steps: list[AgentStep]) -> list[AgentStep]:
@@ -308,6 +315,8 @@ def run_loop(
     outcome = LoopOutcome(None)
     summaries: dict[str, str] = {}
     failures, pictures, noted = 0, 0, False
+    # A last step that only proposed gets one more call, forced to answer, so its summary is not lost.
+    late_proposal = False
     # A turn that ends in plain text is restated once through answer, which carries suggestions and buttons.
     spoken: FinalAnswer | None = None
     restating = False
@@ -318,10 +327,10 @@ def run_loop(
             prune_observations(transcript, summaries)
             budget.measured = None
             if estimate(transcript, tools) > top:
-                budget.force("The work for this message grew too long for the model")
+                budget.force("too_long")
         reason = budget.wrap_up_reason()
         # A change that passed its try but is not proposed yet may still be proposed in the last step.
-        pending = reason is not None and scope.proposal is None and not scope.applied
+        pending = reason is not None and scope.proposal is None and not scope.applied and not late_proposal
         pending = pending and any(tried.passed for tried in scope.tries.values())
         if reason and not noted:
             transcript.append(note(WRAP_UP.format(reason=reason) + (PROPOSE_STILL if pending else "")))
@@ -379,7 +388,7 @@ def run_loop(
                 transcript.append(note(ANSWER_REJECTED.format(problems="\n".join(problems))))
                 continue
             if reason or budget.nudged_empty:
-                outcome.final = engine_answer(scope, reason or "The model answered with nothing")
+                outcome.final = engine_answer(scope, _limit(budget, scope) or say("empty", scope.language))
                 return outcome
             budget.nudged_empty = True
             transcript.append(note(EMPTY_NUDGE))
@@ -410,9 +419,12 @@ def run_loop(
         if batch.images:
             transcript.append(image_bridge(batch.images, pictures + 1))
             pictures += len(batch.images)
+        if reason and pending and not late_proposal:
+            late_proposal = True
+            continue
         if reason:
-            outcome.final = engine_answer(scope, reason)
+            outcome.final = engine_answer(scope, _limit(budget, scope) or reason)
             return outcome
         if failures > 1:
-            outcome.final = engine_answer(scope, "My answer did not fit its format twice")
+            outcome.final = engine_answer(scope, say("format_twice", scope.language))
             return outcome

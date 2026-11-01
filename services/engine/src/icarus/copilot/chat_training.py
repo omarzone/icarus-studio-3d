@@ -1,8 +1,10 @@
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.training import MAX_COPIES, MAX_STEPS, StartRun
+from icarus.copilot.language import Language, count, say
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunStore
 from icarus.training.schedule import RECOMMENDED_STEPS
@@ -20,6 +22,14 @@ class TrainingRequest(BaseModel):
     copies: int | None = Field(default=None, ge=1, le=MAX_COPIES)
 
 
+@dataclass(frozen=True)
+class TrainerReply:
+    # One sentence for the copilot's answer, in the person's language.
+    text: str
+    # Whether a run started or was asked to stop.
+    acted: bool
+
+
 class ChatTrainer:
     """Starts and stops runs for the copilot through the same supervisor and checks as the Train button."""
 
@@ -31,19 +41,19 @@ class ChatTrainer:
         self._supervisor = supervisor
         self._settings = settings
 
-    def act(self, project_id: str, request: TrainingRequest) -> str:
+    def act(self, project_id: str, request: TrainingRequest, language: Language = "en") -> TrainerReply:
         """What happened, in one sentence for the copilot's answer."""
         match request.action:
             case "start":
-                return self._start(project_id, request)
+                return self._start(project_id, request, language)
             case "stop":
-                return self._stop(project_id)
+                return self._stop(project_id, language)
 
-    def _start(self, project_id: str, request: TrainingRequest) -> str:
+    def _start(self, project_id: str, request: TrainingRequest, language: Language) -> TrainerReply:
         state = self._projects.state(project_id)
         project = state.project
         if project.task.family == "none":
-            return "I did not start training: this project has no task to learn yet."
+            return TrainerReply(say("train_no_task", language), False)
         steps = request.total_steps or RECOMMENDED_STEPS[project.task.family]
         copies = request.copies or min(project.brain.copies, MAX_COPIES)
         settings = self._settings.get()
@@ -53,17 +63,20 @@ class ChatTrainer:
             )
         except RunInProgress as running:
             name = self._runs.folder(running.run_id).status().name
-            return f"{name} is already training, so I did not start another run. Ask me to stop it first."
+            return TrainerReply(say("train_busy", language, name=name), False)
         except NotTrainable as error:
-            return f"I did not start training: {error}."
-        return f"I started {status.name}: {status.total_steps:,} steps with {status.copies} copies."
+            return TrainerReply(say("train_refused", language, reason=error), False)
+        steps_text = count(status.total_steps, language)
+        return TrainerReply(
+            say("train_started", language, name=status.name, steps=steps_text, copies=status.copies), True
+        )
 
-    def _stop(self, project_id: str) -> str:
+    def _stop(self, project_id: str, language: Language) -> TrainerReply:
         self._projects.state(project_id)
         training = [status for status in self._runs.list_runs(project_id) if status.state not in TERMINAL_STATES]
         if not training:
-            return "No run of this project is training, so there was nothing to stop."
+            return TrainerReply(say("train_nothing", language), False)
         for status in training:
             self._supervisor.stop(status.run_id)
         names = ", ".join(status.name for status in training)
-        return f"I asked {names} to stop; it keeps its best checkpoint."
+        return TrainerReply(say("train_stopping", language, names=names), True)

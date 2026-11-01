@@ -14,6 +14,7 @@ from icarus.library.rewards import REWARD_TERMS
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
 from icarus.projects.operations import apply_operations, empty_project
+from icarus.sim.model_state import CONTROL_PERIOD
 from icarus.training.run_store import RunStore
 from icarus.training.schedule import RECOMMENDED_STEPS
 
@@ -103,6 +104,7 @@ def _episodes(point: MetricPoint) -> dict[str, Any]:
         "step": point.step,
         "episode_return": point.episode_return,
         "episode_length": point.episode_length,
+        "episode_seconds": None if point.episode_length is None else round(point.episode_length * CONTROL_PERIOD, 2),
         "success_rate": point.success_rate,
         "failure_rate": point.failure_rate,
         "reward_terms": point.reward_terms,
@@ -129,6 +131,8 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
         "recommended_steps": recommended,
         "far_below_recommended": status.total_steps < recommended * FAR_BELOW,
         "copies": status.copies,
+        # One step is one control decision, so steps convert to simulated seconds only through this rate.
+        "control_rate_hz": round(1 / CONTROL_PERIOD),
         "best_step": status.best_step,
         "success_rate": status.success_rate,
         "failure": status.failure.reason if status.failure else None,

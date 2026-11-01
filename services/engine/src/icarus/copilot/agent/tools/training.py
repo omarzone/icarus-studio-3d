@@ -39,13 +39,12 @@ def train(scope: TurnScope, args: TrainArgs) -> Observation:
     if args.action == "status":
         return _status(scope)
     request = TrainingRequest(action=args.action, total_steps=args.total_steps, copies=args.copies)
-    sentence = scope.services.trainer.act(scope.project_id, request)
-    scope.reports.append(sentence)
-    started = sentence.startswith("I started") or sentence.startswith("I asked")
-    if started:
-        scope.side_effects.append(sentence)
+    reply = scope.services.trainer.act(scope.project_id, request, scope.language)
+    scope.reports.append(reply.text)
+    if reply.acted:
+        scope.side_effects.append(reply.text)
     verb = "Started training" if args.action == "start" else "Stopped training"
-    return Observation(sentence, ok=started, summary=verb if started else sentence.rstrip(".")[:200])
+    return Observation(reply.text, ok=reply.acted, summary=verb if reply.acted else reply.text.rstrip(".")[:200])
 
 
 TRAIN = Tool(

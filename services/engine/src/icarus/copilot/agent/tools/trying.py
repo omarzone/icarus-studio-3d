@@ -13,9 +13,12 @@ from icarus.contracts.project import Project
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TryResult, TurnScope
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.agent.tools.look import LookArgs, View, look
+from icarus.copilot.language import implies_destination
 from icarus.copilot.proposal_changes import proposal_changes
 from icarus.copilot.scratch_stages import placement_problem, trainability_problem
 from icarus.design.checks import design_report
+from icarus.design.compiler import CompiledModel, compile_project
+from icarus.design.course import course_report, posture_warning
 from icarus.projects.operations import OperationError, apply_operations
 
 _TASK_OPS = (AddBody, RemoveBody, SetTaskFamily, SetRewardTerm, RemoveRewardTerm)
@@ -67,6 +70,32 @@ def _checks(scope: TurnScope, candidate: Project, operations: list[EditOperation
     return checks, [f"{check['check']}: {check['detail']}" for check in checks if not check["ok"]]
 
 
+DESTINATION_WARNING = (
+    "The person's goal has a destination: add a goal zone at the finish and use the navigation task with "
+    "progress_to_goal and reach_goal"
+)
+
+
+def _design_warnings(scope: TurnScope, project: Project, compiled: CompiledModel) -> tuple[list[str], list[str]]:
+    """Problems a design has on its way (a way around obstacles, rays that miss them, a legged body that may stop
+    caring about falling), and the obstacle ids its rays see from the spawn."""
+    course = course_report(project, compiled)
+    warnings = list(course.warnings)
+    if posture := posture_warning(scope.state.project, project):
+        warnings.append(posture)
+    return warnings, course.seen
+
+
+def _lacks_destination(scope: TurnScope, project: Project) -> bool:
+    """A request with a place to get to, for a design without a finish to reach."""
+    has_goal = any(component.kind == "goal_zone" for obj in project.world.objects for component in obj.components)
+    return (
+        bool(project.bodies)
+        and implies_destination(scope.request)
+        and (not has_goal or project.task.family != "navigation")
+    )
+
+
 def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     try_id = scope.next_try_id()
     project, count = scope.state.project, len(args.operations)
@@ -92,11 +121,25 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
         checks += more
     if compiled is None and not problems:
         problems = ["the design does not compile"]
-    scope.tries[try_id] = TryResult(try_id, args.operations, scope.state.revision.number, problems, compiled)
+    warnings: list[str] = []
+    result_extra: dict = {}
+    if compiled is not None and not problems:
+        found, seen = _design_warnings(scope, candidate, compiled)
+        head = scope.head_compiled = scope.head_compiled or compile_project(project)
+        before = set(_design_warnings(scope, project, head)[0])
+        warnings = [text for text in found if text not in before]
+        # The request is this turn's, so a missing finish is said on every try until the design has one.
+        warnings += [DESTINATION_WARNING] if _lacks_destination(scope, candidate) else []
+        result_extra = {"warnings": warnings, "warnings_already_there": [text for text in found if text in before]}
+        result_extra["rays_see"] = seen
+    base = scope.state.revision.number
+    scope.tries[try_id] = TryResult(try_id, args.operations, base, problems, compiled, tuple(warnings))
     changes = [change.model_dump(exclude_none=True) for change in proposal_changes(project, args.operations)]
-    result = {"try_id": try_id, "passed": not problems, "changes": changes, "checks": checks}
+    result = {"try_id": try_id, "passed": not problems, "changes": changes, "checks": checks, **result_extra}
     failed = next((check["check"] for check in checks if not check["ok"]), None)
     summary = f"Tried {count} {noun}: {failed} check failed" if failed else f"Tried {count} {noun}: all checks passed"
+    if warnings:
+        summary += f", {len(warnings)} warning{'s' if len(warnings) > 1 else ''}"
     observation = Observation(compact(result), ok=not problems, summary=summary)
     if problems or args.look is None:
         return observation

@@ -131,7 +131,11 @@ _KINDS = [
         "Distance ray",
         "ray",
         "Senses",
-        [number("range", "Range", "m", 0.05, 50, 5), count("count", "Rays", 1, 32, 5)],
+        [
+            number("range", "Range", "m", 0.05, 50, 5),
+            count("count", "Rays", 1, 32, 5),
+            number("tilt", "Tilt", "°", -60, 30, 0, hint="Below zero the rays look down, to see low obstacles"),
+        ],
         unique=True,
     ),
     _kind(

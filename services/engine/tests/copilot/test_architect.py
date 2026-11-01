@@ -6,9 +6,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from icarus.copilot.architect import CREATE_OBJECT_EXAMPLE, NoValidIdeas, propose_ideas
+from icarus.contracts.operations import SetBrain
+from icarus.copilot.architect import CREATE_OBJECT_EXAMPLE, NoValidIdeas, estimate_minutes, propose_ideas
 from icarus.copilot.client import Connection, ModelClient
 from icarus.copilot.fixture_provider import fixture_transport
+from icarus.design.compiler import compile_project
 from icarus.library.templates import template_operations
 from icarus.projects.operations import apply_operations, empty_project
 
@@ -36,7 +38,7 @@ def test_a_prompt_gives_three_compiled_ideas_with_real_scenes():
     assert [idea.recommended for idea in idea_set.ideas] == [True, False, False]
     for idea in idea_set.ideas:
         assert idea.template == "parking_car" and idea.family == "navigation"
-        assert idea.estimate_minutes == pytest.approx(1_000_000 / 2000 / 60)
+        assert idea.estimate_minutes >= 1_000_000 / 2000 / 60 - 1e-9
         assert {"car", "goal"} <= {geom.body for geom in idea.scene.geoms} | {body.name for body in idea.scene.bodies}
         assert set(drafts) >= {idea.id}
     walled = next(idea for idea in idea_set.ideas if "wall" in idea.world.lower())
@@ -206,3 +208,18 @@ def test_the_architect_may_choose_the_empty_world_and_is_told_what_cannot_be_bui
     propose_ideas(answering([draft("Lot", "parking_car")], draft("Lot", "parking_car"), systems), "park")
     system = " ".join(systems[0].split())
     assert '"empty_world"' in system and "outline" in system
+
+
+def _built(template: str, copies: int | None = None):
+    operations = template_operations(template)
+    if copies is not None:
+        operations.append(SetBrain(op="set_brain", copies=copies))
+    project = apply_operations(empty_project("000000000000", template), operations)
+    return project, compile_project(project)
+
+
+def test_training_estimates_depend_on_the_task_the_body_and_the_copies():
+    car, walker, humanoid = (estimate_minutes(*_built(name)) for name in ("parking_car", "walker_robot", "humanoid"))
+    assert car == pytest.approx(1_000_000 / 2000 / 60)
+    assert car < walker < humanoid
+    assert estimate_minutes(*_built("walker_robot", copies=4)) > walker

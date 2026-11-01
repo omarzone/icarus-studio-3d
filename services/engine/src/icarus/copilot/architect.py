@@ -9,12 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.copilot import DesignIdea, IdeaSet
 from icarus.contracts.operations import CreateObject, EditOperation
-from icarus.contracts.specs import TaskFamily
+from icarus.contracts.project import Project
 from icarus.copilot.client import CopilotError, ModelClient
 from icarus.copilot.context import design_reference
 from icarus.copilot.scratch_design import design_from_scratch
 from icarus.copilot.scratch_stages import ScratchDesign, StageFailed
 from icarus.design.checks import design_report
+from icarus.design.compiler import CompiledModel
 from icarus.design.scene import scene_description
 from icarus.library.pieces import PIECES
 from icarus.library.templates import TEMPLATES, UnknownTemplate, template_operations
@@ -27,6 +28,9 @@ IDEAS_BUDGET_SECONDS = 150.0
 IDEAS_WANTED = 3
 REASON_LIMIT = 300
 UNFINISHED = "It was still being designed when time ran out"
+# The parking car STEPS_PER_SECOND was measured on: its copies and its degrees of freedom.
+MEASURED_COPIES = 16
+MEASURED_DOFS = 12
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +59,10 @@ world, body and learns texts describe only what can be built from the library, n
 tasks exist: reaching a goal zone (navigation) and moving forward without falling (locomotion); nothing rewards
 moving another object to a place. When the request needs something the library cannot do (flying, swimming,
 delivering an object to a zone), say so plainly in the idea texts and offer the closest real option instead.
+When the request implies a destination (a race, a finish line, parking, an obstacle course), the idea needs a
+goal zone at the finish and the navigation task. Obstacles meant to be jumped or to block the way span the whole
+lane, leaving no gap wider than the body to walk around. A body that must react to obstacles needs a distance_ray
+that sees them from the start: tilt it down (negative tilt) for obstacles lower than the part that carries it.
 Write the idea texts in the person's language.
 Library reference (JSON):
 {reference}"""
@@ -107,8 +115,12 @@ class NoValidIdeas(CopilotError):
         self.reasons = reasons
 
 
-def estimate_minutes(family: TaskFamily) -> float:
-    return RECOMMENDED_STEPS[family] / STEPS_PER_SECOND / 60
+def estimate_minutes(project: Project, compiled: CompiledModel) -> float:
+    """Rough minutes for the recommended budget: the measured speed of the 16-copy parking car, slower with fewer
+    copies and with more joints to simulate; only the car's speed was measured, so other bodies are extrapolated."""
+    copies = min(project.brain.copies, MEASURED_COPIES)
+    speed = STEPS_PER_SECOND * (copies / MEASURED_COPIES) ** 0.5 * min(1.0, MEASURED_DOFS / max(compiled.model.nv, 1))
+    return RECOMMENDED_STEPS[project.task.family] / speed / 60
 
 
 def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
@@ -138,7 +150,7 @@ def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
         learns=draft.learns,
         template=draft.template,
         family=family,
-        estimate_minutes=estimate_minutes(family),
+        estimate_minutes=estimate_minutes(project, compiled),
         recommended=False,
         scene=scene_description(compiled, 1),
     )

@@ -33,7 +33,8 @@
       "motor": null,
       "rays": {
        "range": 6,
-       "count": 5
+       "count": 5,
+       "tilt": 0
       },
       "balance": false,
       "touch": false

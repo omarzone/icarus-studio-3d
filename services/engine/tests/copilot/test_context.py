@@ -91,6 +91,7 @@ def test_the_latest_run_brings_reward_terms_episode_length_and_its_budget(tmp_pa
     assert run["latest_evaluation"]["episode_length"] == 600
     assert run["latest_training"]["episode_length"] == 410 and run["latest_training"]["step"] == 26_000
     assert run["recommended_steps"] == 1_000_000 and run["far_below_recommended"] is True
+    assert run["control_rate_hz"] == 20 and run["latest_training"]["episode_seconds"] == 20.5
 
 
 def test_bodies_bring_their_size_for_clearance_checks(tmp_path):

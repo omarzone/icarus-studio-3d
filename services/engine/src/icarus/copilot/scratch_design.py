@@ -40,7 +40,9 @@ torso is tall, unless the request is a balancer. Parts of the body must not over
 its own parent. The lowest point of the body rests on the ground (about z = 0): the root part's z equals the
 distance from its center down to the bottom of its wheels or feet. Masses: a 1 m robot weighs 10 to 60 kg, a wheel
 0.5 to 5 kg. Senses: rays (distance rays fanned forward, for navigation among obstacles), balance (a gyro and
-accelerometer on the root, for legs and balancers) and touch (on feet).
+accelerometer on the root, for legs and balancers) and touch (on feet). When the world has obstacles the body must
+react to, give it rays that see them from the start: tilt them down (negative tilt, in degrees) when the obstacles
+are lower than the part that carries the rays, so the rays meet them before the ground.
 
 Task: navigation trains the body to reach the goal (the world must have a goal at least 4 m from the start, on
 open ground); locomotion trains it to move forward along +x without falling. Only these two exist: nothing

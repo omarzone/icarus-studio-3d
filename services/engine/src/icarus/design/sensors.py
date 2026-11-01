@@ -24,10 +24,11 @@ def add_sensors(body: ET.Element, root: ET.Element, obj: ObjectSpec) -> None:
     ray = view(obj, "distance_ray")
     if ray:
         rays = ray.count("count")
+        tilt = math.radians(ray.number("tilt"))
         for index in range(rays):
             angle = 0.0 if rays == 1 else math.radians(-RAY_FAN_DEG + 2 * RAY_FAN_DEG * index / (rays - 1))
             site = f"{obj.id}:ray{index}"
-            zaxis = (math.cos(angle), math.sin(angle), 0.0)
+            zaxis = (math.cos(tilt) * math.cos(angle), math.cos(tilt) * math.sin(angle), math.sin(tilt))
             ET.SubElement(body, "site", {"name": site, "zaxis": _fmt(zaxis), "size": "0.01", "group": "4"})
             ET.SubElement(
                 _section(root, "sensor"),
