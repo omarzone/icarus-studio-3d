@@ -38,6 +38,7 @@ def get_project(request: Request, project_id: str) -> ProjectState:
 def delete_project(request: Request, project_id: str) -> Response:
     _store(request).delete(project_id)
     request.app.state.attachments.forget(project_id)
+    request.app.state.copilot.forget(project_id)
     return Response(status_code=204)
 
 

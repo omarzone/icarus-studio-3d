@@ -1,0 +1,25 @@
+{
+  "match": [
+    "what does this do",
+    "what is this",
+    "explain this"
+  ],
+  "replies": [
+    {
+      "reasoning": "The selection is Front left steering: a hinge limited to -35..35 degrees with a position motor of up to 2000 N.",
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "This is the front left steering. Its hinge joint turns the wheel around the vertical axis, between -35 and 35 degrees, and a position motor with up to 2000 N of force holds the angle the brain asks for.",
+            "suggestions": [
+              "Allow sharper steering?",
+              "What does the rear motor do?"
+            ],
+            "actions": []
+          }
+        }
+      ]
+    }
+  ]
+}

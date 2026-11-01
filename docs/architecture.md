@@ -281,7 +281,8 @@ Copilot roles, all producing typed outputs and, when they change a project, `Edi
 
 Rules for every role:
 
-- Outputs are requested with a JSON Schema derived from the target model, validated with Pydantic, retried once with the validation error, and otherwise surfaced as a readable error.
+- Roles that return one structured output request it with a JSON Schema derived from the target model, validate it with Pydantic, retry once with the validation error, and otherwise surface a readable error.
+- The chat copilot is an agent loop (`copilot/agent/`, ADR 006): each step is one model call with native tools (`inspect_object`, `read_run`, `library`, `look`, `try`, `propose`, `apply`, `train`) whose arguments are validated with Pydantic; a rejected call goes back to the model as the tool result. `try` applies operations to a copy and runs the design, placement and trainability checks; `look` renders the compiled scene offscreen with MuJoCo (`sim/views.py`) with the task's zones drawn. The turn ends on the `answer` tool, grounded like every other output, or on a forced answer when a budget (steps, tool calls, time, tokens) runs out. The autonomy mode, not the prompt, decides what may write: in ask mode the copilot proposes and offers a Train button; in autopilot it may apply and train. Steps, renders and buttons are stored on the copilot message. Older messages are folded into a rolling summary when the history outgrows its share of the model's context window.
 - Model reasoning is separated from the final answer in the client and can be shown as "how the copilot thought about it".
 - Any number the copilot cites about a run must exist in that run's data; otherwise the output is rejected.
 - No model output changes a project except through validated edit operations, and nothing a model returns is executed.

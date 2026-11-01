@@ -1,0 +1,56 @@
+{
+  "match": [
+    "heavier"
+  ],
+  "replies": [
+    {
+      "tool_calls": [
+        {
+          "name": "try",
+          "arguments": {
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "car",
+                "component": "physics_body",
+                "property": "mass",
+                "value": {
+                  "type": "number",
+                  "value": 50000
+                }
+              }
+            ],
+            "look": null
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "propose",
+          "arguments": {
+            "try_id": "t1",
+            "summary": "Make the car heavier",
+            "explanation": "Raises the car's mass.",
+            "warnings": []
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "A much heavier car would take longer to stop, but that mass is beyond what the library allows, so I did not propose it.",
+            "suggestions": [
+              "How heavy can the car be?"
+            ],
+            "actions": []
+          }
+        }
+      ]
+    }
+  ]
+}

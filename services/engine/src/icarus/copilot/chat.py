@@ -1,90 +1,45 @@
 import contextlib
 import json
-import secrets
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+import threading
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from icarus.contracts.copilot import Autonomy, Conversation, CopilotMessage, CopilotProposal, SendMessage
-from icarus.contracts.operations import EditOperation, OperationBatch
+from icarus.contracts.copilot import (
+    Autonomy,
+    Capability,
+    ChatAction,
+    Conversation,
+    CopilotMessage,
+    CopilotProposal,
+    SendMessage,
+)
+from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
+from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.summary_store import SummaryStore
+from icarus.copilot.agent.tools.base import ToolServices
+from icarus.copilot.agent.turn import TurnSetup, new_message, run_turn
 from icarus.copilot.attachments import AttachmentStore
-from icarus.copilot.chat_training import ChatTrainer, TrainingRequest
-from icarus.copilot.client import InputRejected, ModelClient, capability_client, copilot_client
+from icarus.copilot.candidate import dry_run, new_proposal
+from icarus.copilot.chat_training import ChatTrainer
+from icarus.copilot.client import InputRejected, ModelClient, ToolsRefused, capability_client, copilot_client
 from icarus.copilot.context import project_context
 from icarus.copilot.conversation_store import ConversationStore
-from icarus.copilot.grounding import UNSUPPORTED_ANSWER, unsupported_numbers
-from icarus.copilot.proposal_changes import proposal_changes
+from icarus.copilot.grounding import UNSUPPORTED_ANSWER
 from icarus.copilot.settings import ModelSettingsStore
+from icarus.copilot.single_shot import AUTOPILOT, SYSTEM, ChatReply, ProposalDraft, Review, history_text
 from icarus.copilot.turn_media import TurnMedia, turn_media
-from icarus.design.checks import design_report
-from icarus.design.compiler import CompiledModel
 from icarus.design.scene import scene_description
-from icarus.projects.operations import OperationError, apply_operations
 from icarus.projects.store import PROJECT_ID, ProjectStore
+from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore
 
-HISTORY_MESSAGES = 12
+__all__ = ["ChatReply", "Copilot", "CopilotBusy", "ProposalClosed", "ProposalOutdated", "UnknownProposal", "dry_run"]
 
-SYSTEM = """You are the copilot of Icarus Studio 3D, inside one project: a world, bodies, a task and a brain trained
-with reinforcement learning on MuJoCo. Answer the person briefly and concretely, in the language of the person's
-message. Match their level: plain everyday words and no jargon for casual messages, technical terms for technical ones.
-When they ask for a change, propose it as edit operations on objects, components and properties that exist in the
-project, using only library component kinds and values inside their ranges. When you place or move objects near the
-goal or a body, compare the gaps with the body's "size" (length, width, height in metres) in the context and add a
-short warning to the proposal's "warnings" when the body cannot fit or pass. When they ask what something does,
-explain it from the library schema and its current values.
-When they ask to vary something between training copies or on every try (positions, turning, colors, friction of a
-world object), add or set the "randomize" component (Randomize per copy) on that world object; never on body parts.
-The "sky" component on a world object (preset, top and horizon colors, ambient light, fog) controls how the sky, light
-and haze look; change the look with set_property on it. Its top and horizon colors apply only with preset "custom",
-so "blue sky" means preset "day", or preset "custom" with a blue top color.
-Pictures: views are renders of the current scene taken by the app; use them to check layout, colors and proportions
-before proposing. Other pictures, video frames and documents are the person's references. Numbers in their documents
-count as sources.
-Only cite numbers that appear in the context below or in their message, rounded to 2 or 3 significant figures.
-Training: you can start or stop training yourself with the "training" field. Set it only when the person's latest
-message asks to train, start, stop or pause training{autopilot}. Otherwise leave it null and never offer to start
-training on your own. Never tell the person to press Train. The engine adds what happened to your answer, so do not
-claim a run started or stopped.
-Diagnosis: base every explanation of learning on "latest_run". When it says "No training has run for this project
-yet", answer that no training has run yet and offer to start one, without guessing causes. When a run exists, use its
-evaluations, "latest_evaluation" and "latest_training" (reward_terms, episode_length, success and failure rates) and
-compare its total_steps with recommended_steps; when "far_below_recommended" is true, say the run is too short to
-judge.
-Suggest up to three short follow-up questions.
-Autonomy: {autonomy}
-Conversation so far:
-{history}
-Project context (JSON):
-{context}"""
-
-AUTOPILOT = ", or right after a change you propose to fix why it does not learn"
 CANNOT_SEE = (
     "I can't read pictures with the current model connection. Set a Vision model in Settings › AI models, "
     "or tell me in words what you need."
 )
-
-
-class _Output(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
-class ProposalDraft(_Output):
-    summary: str = Field(min_length=1, max_length=200)
-    explanation: str = Field(min_length=1, max_length=2000)
-    operations: list[EditOperation] = Field(min_length=1, max_length=50)
-    # Problems the copilot sees in its own change, such as a gap narrower than the body.
-    warnings: list[str] = Field(default_factory=list, max_length=3)
-
-
-class ChatReply(_Output):
-    answer: str = Field(min_length=1, max_length=4000)
-    proposal: ProposalDraft | None
-    suggestions: list[str] = Field(max_length=3)
-    training: TrainingRequest | None = None
+BUSY = "The copilot is still answering the previous message."
 
 
 class UnknownProposal(LookupError):
@@ -99,60 +54,8 @@ class ProposalClosed(Exception):
     pass
 
 
-def dry_run(project: Project, operations: list[EditOperation]) -> CompiledModel | str:
-    """The compiled project with the operations applied to a copy, or why they do not pass validation."""
-    try:
-        candidate = apply_operations(project, operations)
-    except OperationError as error:
-        return str(error)
-    report, compiled = design_report(candidate)
-    if not report.ok or compiled is None:
-        return "; ".join(check.detail for check in report.checks if check.status == "fail")
-    return compiled
-
-
-@dataclass
-class _Review:
-    """What the last check of a reply found, so the final answer knows which parts to drop."""
-
-    project: Project
-    sources: list[str]
-    # Run results and the person's words: the only sources that back a percentage.
-    percent_sources: list[str]
-    unsupported: list[str] = field(default_factory=list)
-    proposal_unsupported: list[str] = field(default_factory=list)
-    proposal_problem: str | None = None
-    dropped_suggestions: list[str] = field(default_factory=list)
-
-    def _unbacked(self, text: str, sources: list[str]) -> list[str]:
-        return unsupported_numbers(text, sources, self.percent_sources)
-
-    def check(self, reply: ChatReply) -> list[str]:
-        self.proposal_problem, self.proposal_unsupported = None, []
-        sources = list(self.sources)
-        if reply.proposal is not None:
-            result = dry_run(self.project, reply.proposal.operations)
-            if isinstance(result, str):
-                self.proposal_problem = result
-            else:
-                # Values the copilot proposes in a validated change are backed by that change.
-                sources.append(json.dumps([op.model_dump() for op in reply.proposal.operations]))
-            described = "\n".join([reply.proposal.summary, reply.proposal.explanation, *reply.proposal.warnings])
-            self.proposal_unsupported = self._unbacked(described, sources)
-        self.unsupported = self._unbacked(reply.answer, sources)
-        self.dropped_suggestions = [text for text in reply.suggestions if self._unbacked(text, sources)]
-        problems = [f"The proposal is not valid: {self.proposal_problem}"] if self.proposal_problem else []
-        unbacked = [*self.unsupported, *self.proposal_unsupported]
-        unbacked += [number for text in self.dropped_suggestions for number in self._unbacked(text, sources)]
-        if unbacked:
-            problems.append(f"These numbers are not in the context or the conversation: {', '.join(unbacked)}")
-        return problems
-
-
-def _message(role: str, text: str, **fields: object) -> CopilotMessage:
-    return CopilotMessage.model_validate(
-        {"id": secrets.token_hex(6), "role": role, "text": text, "created_at": datetime.now(UTC), **fields}
-    )
+class CopilotBusy(Exception):
+    """A message arrived while the copilot was still answering another one in the same project."""
 
 
 def _project_of(proposal_id: str) -> str:
@@ -162,17 +65,8 @@ def _project_of(proposal_id: str) -> str:
     return project_id
 
 
-def _attached(message: CopilotMessage) -> str:
-    return f" [attached: {', '.join(item.name for item in message.attachments)}]" if message.attachments else ""
-
-
-def _history(conversation: Conversation) -> str:
-    recent = conversation.messages[-HISTORY_MESSAGES:]
-    return "\n".join(f"{message.role}: {message.text}{_attached(message)}" for message in recent) or "(none)"
-
-
 class Copilot:
-    """The chat role: answers, proposals validated by a dry run, and applying them through the project store."""
+    """The chat role: an agent turn per message, proposals validated by a try, applied through the project store."""
 
     def __init__(
         self,
@@ -182,6 +76,8 @@ class Copilot:
         settings: ModelSettingsStore,
         trainer: ChatTrainer,
         attachments: AttachmentStore,
+        views: ViewRenderer | None = None,
+        limits: AgentLimits | None = None,
     ) -> None:
         self._projects = projects
         self._runs = runs
@@ -189,6 +85,11 @@ class Copilot:
         self._settings = settings
         self._trainer = trainer
         self._attachments = attachments
+        self._services = ToolServices(projects, runs, trainer, attachments, views or ViewRenderer())
+        self._summaries = SummaryStore(conversations.folder)
+        self._limits = limits or AgentLimits()
+        self._busy: dict[str, threading.Lock] = {}
+        self._guard = threading.Lock()
 
     def conversation(self, project_id: str) -> Conversation:
         head = self._projects.state(project_id).revision.number
@@ -204,30 +105,75 @@ class Copilot:
             conversation.autonomy = autonomy
         return self.conversation(project_id)
 
-    def _client(self, media: TurnMedia) -> tuple[ModelClient, bool]:
+    def forget(self, project_id: str) -> None:
+        self._summaries.forget(project_id)
+
+    def _client(self, media: TurnMedia) -> tuple[ModelClient, Capability, bool]:
         """The vision client for a turn with pictures when one is set, else the reasoning one; and whether it sees."""
         vision = capability_client(self._settings, "vision") if media.pictures else None
-        return (vision, True) if vision else (copilot_client(self._settings), False)
+        return (vision, "vision", True) if vision else (copilot_client(self._settings), "reasoning", False)
 
     def send(self, project_id: str, message: SendMessage) -> Conversation:
-        state = self._projects.state(project_id)
+        self._projects.state(project_id)
+        with self._guard:
+            lock = self._busy.setdefault(project_id, threading.Lock())
+        if not lock.acquire(blocking=False):
+            raise CopilotBusy(BUSY)
+        try:
+            return self._send(project_id, message)
+        finally:
+            lock.release()
+
+    def _send(self, project_id: str, message: SendMessage) -> Conversation:
         media = turn_media(self._attachments, project_id, message)
-        client, sees = self._client(media)
+        client, capability, sees = self._client(media)
+        conversation = self.conversation(project_id)
+        user_message = new_message("user", message.text, attachments=media.infos)
+        if self._settings.refuses_tools(capability):
+            return self._single_shot(project_id, message, media, client, sees, user_message)
+        setup = TurnSetup(self._services, self._settings, self._summaries, client, capability, self._limits)
+        try:
+            result = run_turn(setup, conversation, message, media)
+        except ToolsRefused:
+            self._settings.record_tools_refused(capability)
+            return self._single_shot(project_id, message, media, client, sees, user_message)
+        except InputRejected:
+            if not media.pictures or sees:
+                raise
+            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
+        with self._conversations.editing(project_id) as stored:
+            stored.messages += [user_message, result.message]
+            stored.proposals += result.proposals
+            stored.suggestions = result.suggestions
+        return self.conversation(project_id)
+
+    def _single_shot(
+        self,
+        project_id: str,
+        message: SendMessage,
+        media: TurnMedia,
+        client: ModelClient,
+        sees: bool,
+        user_message: CopilotMessage,
+    ) -> Conversation:
+        """One structured reply for services that refuse native tools; same validation, no steps."""
+        state = self._projects.state(project_id)
         context = project_context(state, self._runs, message.selection, message.workspace)
         conversation = self.conversation(project_id)
-        history = _history(conversation)
-        autopilot = AUTOPILOT if conversation.autonomy == "autopilot" else ""
-        system = SYSTEM.format(autopilot=autopilot, autonomy=conversation.autonomy, history=history, context=context)
+        history = history_text(conversation)
+        autopilot = conversation.autonomy == "autopilot"
+        system = SYSTEM.format(
+            autopilot=AUTOPILOT if autopilot else "", autonomy=conversation.autonomy, history=history, context=context
+        )
         run_facts = json.dumps(json.loads(context)["latest_run"])
         heard = [message.text, history, *media.documents]
-        review = _Review(state.project, [context, *heard], [run_facts, *heard])
-        user_message = _message("user", message.text, attachments=media.infos)
+        review = Review(state.project, [context, *heard], [run_facts, *heard])
         try:
             reply = client.ask("chat_reply", ChatReply, system, media.user_content(message.text), review.check)
         except InputRejected:
             if not media.pictures or sees:
                 raise
-            return self._record(project_id, user_message, _message("copilot", CANNOT_SEE))
+            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
         answer, draft = reply.value.answer, reply.value.proposal
         if review.proposal_problem:
             answer = f"{answer} I could not turn this into a change that passes validation: {review.proposal_problem}"
@@ -239,24 +185,28 @@ class Copilot:
             answer = UNSUPPORTED_ANSWER
         suggestions = [text for text in reply.value.suggestions if text not in review.dropped_suggestions]
         proposal = self._proposal(state.project, state.revision.number, draft) if draft else None
-        proposal_id = proposal.id if proposal else None
-        copilot_message = _message("copilot", answer, thinking=reply.thinking, proposal_id=proposal_id)
-        with self._conversations.editing(project_id) as conversation:
-            conversation.messages.append(user_message)
-            conversation.messages.append(copilot_message)
-            if proposal:
-                conversation.proposals.append(proposal)
-            conversation.suggestions = suggestions
-            autopilot = conversation.autonomy == "autopilot"
+        training = reply.value.training
+        offered = training is not None and training.action == "start" and not autopilot
+        actions = (
+            [ChatAction(label="Apply", kind="apply"), ChatAction(label="Discard", kind="discard")] if proposal else []
+        )
+        actions += [ChatAction(label="Train now", kind="train")] if offered else []
+        copilot_message = new_message(
+            "copilot", answer, thinking=reply.thinking, proposal_id=proposal.id if proposal else None, actions=actions
+        )
+        with self._conversations.editing(project_id) as stored:
+            stored.messages += [user_message, copilot_message]
+            stored.proposals += [proposal] if proposal else []
+            stored.suggestions = suggestions
         if proposal and autopilot:
             # The project may have moved on while the model answered; the proposal then stays visible as outdated.
             with contextlib.suppress(ProposalOutdated):
                 self.apply(proposal.id)
-        if reply.value.training is not None:
+        if training is not None and not offered:
             # After an autopilot change is applied, so a run started now trains the fixed revision.
-            outcome = self._trainer.act(project_id, reply.value.training)
-            with self._conversations.editing(project_id) as conversation:
-                for item in conversation.messages:
+            outcome = self._trainer.act(project_id, training)
+            with self._conversations.editing(project_id) as stored:
+                for item in stored.messages:
                     if item.id == copilot_message.id:
                         item.text = f"{item.text} {outcome}"
         return self.conversation(project_id)
@@ -268,20 +218,8 @@ class Copilot:
         return self.conversation(project_id)
 
     def _proposal(self, project: Project, base: int, draft: ProposalDraft) -> CopilotProposal:
-        warnings = list(draft.warnings)
-        if self._runs.list_runs(project.id):
-            warnings.append("Earlier runs keep their results; train again to see the effect of this change.")
-        return CopilotProposal(
-            id=f"{project.id}-{secrets.token_hex(4)}",
-            project_id=project.id,
-            base_revision=base,
-            summary=draft.summary,
-            explanation=draft.explanation,
-            operations=draft.operations,
-            changes=proposal_changes(project, draft.operations),
-            warnings=warnings,
-            status="open",
-        )
+        has_runs = bool(self._runs.list_runs(project.id))
+        return new_proposal(project, base, draft.summary, draft.explanation, draft.operations, draft.warnings, has_runs)
 
     def _open(self, conversation: Conversation, proposal_id: str) -> CopilotProposal:
         proposal = next((item for item in conversation.proposals if item.id == proposal_id), None)

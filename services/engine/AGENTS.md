@@ -43,7 +43,7 @@ Add dependencies with `uv add`, never `pip install`. Justify any new dependency 
 - **Device:** CPU by default with an explicit `device="cpu"` in PPO. Use a GPU only when detected, and never let results depend on it.
 - **Parallelism:** `SubprocVecEnv` with `n_envs` from the brain spec, capped below the machine's logical core count.
 - **Reward:** composed only from library reward terms. Changing a term's implementation bumps its version; older runs are no longer comparable.
-- **Copilot:** always request `response_format` with the target Pydantic model's JSON Schema. Validate, retry **once** passing the error, then return a readable error. Split model reasoning from the final answer in the client, not in each caller. Numbers cited about a run must exist in that run's data.
+- **Copilot:** agent steps use native tool calls whose arguments are validated with Pydantic; roles that return one structured output keep `response_format` with the target model's JSON Schema. Validate, retry **once** passing the error, then return a readable error. Split model reasoning from the final answer in the client, not in each caller. Numbers cited about a run must exist in that run's data.
 - **Windows:** `if __name__ == "__main__":` is mandatory in entrypoints that use `SubprocVecEnv` (spawn start method). Use `pathlib` for paths.
 - **Headless:** never open the MuJoCo viewer in tests or in the worker; use offscreen rendering.
 

@@ -1,0 +1,107 @@
+{
+  "match": [
+    "night",
+    "dark"
+  ],
+  "replies": [
+    {
+      "reasoning": "Night is a lighting change: dim the Sun, tint it blue, darken the ground. Physics stays the same.",
+      "tool_calls": [
+        {
+          "name": "inspect_object",
+          "arguments": {
+            "object": "sun"
+          }
+        },
+        {
+          "name": "library",
+          "arguments": {
+            "kind": "light",
+            "query": null
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "try",
+          "arguments": {
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "intensity",
+                "value": {
+                  "type": "slider",
+                  "value": 0.25
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#9fb4ff"
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "ground",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#22252b"
+                }
+              }
+            ],
+            "look": {
+              "target": null,
+              "view": "three_quarter",
+              "distance_m": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "propose",
+          "arguments": {
+            "try_id": "t1",
+            "summary": "Make it night",
+            "explanation": "Dims the Sun to a quarter of its brightness, tints it moonlight blue and darkens the ground. Light does not affect the physics, so training results stay comparable.",
+            "warnings": []
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "I can make it night: the sun dims to moonlight with a cool blue tint, and the ground gets darker so the lot reads as night. Nothing physical changes, so the car drives exactly as before. Here is how it looks.",
+            "suggestions": [
+              "Add posts around the parking spot?",
+              "How does the car see the spot?",
+              "Train it again?"
+            ],
+            "actions": [
+              {
+                "label": "Open Train",
+                "kind": "navigate",
+                "target": "SCR-TRAIN"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -118,10 +118,11 @@ def test_video_frames_are_sent_as_pictures_up_to_the_turn_limit(copilot, attachm
 def test_a_document_reaches_the_prompt_and_backs_the_numbers_it_holds(
     copilot, store, attachments, project_id, requests, monkeypatch, tmp_path
 ):
-    folder = tmp_path / "fixtures" / "chat_reply"
+    folder = tmp_path / "fixtures" / "agent"
     folder.mkdir(parents=True)
-    reply = {"answer": "Your notes say the lot is 37.5 m long.", "proposal": None, "suggestions": []}
-    (folder / "default.json").write_text(json.dumps({"replies": [{"content": reply}]}))
+    reply = {"answer": "Your notes say the lot is 37.5 m long.", "suggestions": [], "actions": []}
+    answer = {"tool_calls": [{"name": "answer", "arguments": reply}]}
+    (folder / "default.json").write_text(json.dumps({"replies": [answer]}))
     monkeypatch.setenv("ICARUS_COPILOT_FIXTURES", str(tmp_path / "fixtures"))
     text = "The lot is 37.5 m long."
     document = add(attachments, project_id, name="lot.md", media_type="text/markdown", kind="document", text=text)

@@ -13,12 +13,12 @@ class ConversationStore:
     """Each project's conversation and proposals, kept beside the projects and never inside a project document."""
 
     def __init__(self, projects_root: Path) -> None:
-        self._root = projects_root / FOLDER
+        self.folder = projects_root / FOLDER
         self._locks: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
 
     def _path(self, project_id: str) -> Path:
-        return self._root / f"{project_id}.json"
+        return self.folder / f"{project_id}.json"
 
     def _read(self, project_id: str) -> Conversation:
         path = self._path(project_id)

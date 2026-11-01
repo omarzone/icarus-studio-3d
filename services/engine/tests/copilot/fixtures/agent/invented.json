@@ -1,0 +1,32 @@
+{
+  "match": [
+    "how well",
+    "success rate"
+  ],
+  "replies": [
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "The car parks 87% of the time and averages 12.4 s per episode.",
+            "suggestions": [],
+            "actions": []
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "It parks about 87.5% of the time.",
+            "suggestions": [],
+            "actions": []
+          }
+        }
+      ]
+    }
+  ]
+}

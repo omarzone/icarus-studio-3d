@@ -16,7 +16,7 @@ from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.copilot.architect import IdeaBook, NoValidIdeas, UnknownIdeas
 from icarus.copilot.attachments import AttachmentRejected, AttachmentStore, UnknownAttachment
 from icarus.copilot.builds import BuildBoard, UnknownBuild
-from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
+from icarus.copilot.chat import Copilot, CopilotBusy, ProposalClosed, ProposalOutdated, UnknownProposal
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import CopilotError, NotConnected
 from icarus.copilot.conversation_store import ConversationStore
@@ -31,6 +31,7 @@ from icarus.projects.store import (
     UnknownProject,
     UnknownRevision,
 )
+from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore, UnknownRun, runs_dir
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
 from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor
@@ -121,6 +122,8 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
         case ProposalOutdated():
             message = "The project changed since this proposal was made. Ask the copilot again."
             return _error(409, ApiError(code="outdated", message=message))
+        case CopilotBusy():
+            return _error(409, ApiError(code="conflict", message=str(exc)))
         case ProposalClosed():
             return _error(409, ApiError(code="conflict", message=f"This proposal was already {exc.args[0]}"))
         case UnknownIdeas():
@@ -171,6 +174,7 @@ def create_app(
         app.state.model_settings,
         trainer,
         app.state.attachments,
+        ViewRenderer(),
     )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
@@ -209,6 +213,7 @@ def create_app(
         UnknownProposal,
         ProposalOutdated,
         ProposalClosed,
+        CopilotBusy,
         UnknownIdeas,
         UnknownBuild,
         UnknownAttachment,

@@ -120,9 +120,30 @@ class AttachmentStore:
         if None in frame_types:
             raise AttachmentRejected("Every frame must be a PNG, JPEG, WebP or GIF picture")
         text = _document_text(upload, media_type, content) if upload.kind == "document" else None
+        return self._store(project_id, upload.kind, upload.name, media_type, content, frames, text)
+
+    def add_bytes(
+        self, project_id: str, name: str, media_type: str, data: bytes, kind: AttachmentKind
+    ) -> AttachmentInfo:
+        """A file the engine made itself, such as a render the copilot looked at."""
+        if not _fits(kind, media_type) or (kind in ("image", "view") and picture_type(data) is None):
+            raise AttachmentRejected(f"A {kind} cannot be this {media_type} file")
+        return self._store(project_id, kind, name, media_type, data, [], None)
+
+    def _store(
+        self,
+        project_id: str,
+        kind: AttachmentKind,
+        name: str,
+        media_type: str,
+        content: bytes,
+        frames: list[bytes],
+        text: str | None,
+    ) -> AttachmentInfo:
+        frame_types = [picture_type(frame) for frame in frames]
         token = secrets.token_hex(5)
         info = AttachmentInfo(
-            id=f"{project_id}-{token}", kind=upload.kind, name=upload.name, media_type=media_type, size=len(content)
+            id=f"{project_id}-{token}", kind=kind, name=name, media_type=media_type, size=len(content)
         )
         record = _Record(info=info, frames=[media for media in frame_types if media], has_text=text is not None)
         project_folder = self._root / project_id

@@ -1,0 +1,111 @@
+import json
+import secrets
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+from icarus.contracts.copilot import Capability, Conversation, CopilotMessage, CopilotProposal, SendMessage
+from icarus.copilot.agent.answer import chat_actions
+from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.history import build_history
+from icarus.copilot.agent.loop import merged_steps, run_loop
+from icarus.copilot.agent.prompt import system_prompt
+from icarus.copilot.agent.summary_store import SummaryStore
+from icarus.copilot.agent.tools.base import ToolServices, TurnScope
+from icarus.copilot.client import CopilotError, ModelClient
+from icarus.copilot.context import lean_context
+from icarus.copilot.settings import ModelSettingsStore
+from icarus.copilot.turn_media import TurnMedia
+from icarus.projects.document import all_objects
+
+THINKING_LIMIT = 8_000
+
+
+def new_message(role: str, text: str, **fields: object) -> CopilotMessage:
+    return CopilotMessage.model_validate(
+        {"id": secrets.token_hex(6), "role": role, "text": text, "created_at": datetime.now(UTC), **fields}
+    )
+
+
+@dataclass(frozen=True)
+class TurnResult:
+    message: CopilotMessage
+    # Proposals this message made: those applied in autopilot, then the open one.
+    proposals: list[CopilotProposal]
+    suggestions: list[str]
+
+
+@dataclass(frozen=True)
+class TurnSetup:
+    services: ToolServices
+    settings: ModelSettingsStore
+    summaries: SummaryStore
+    client: ModelClient
+    capability: Capability
+    limits: AgentLimits
+
+
+def _open_proposal(conversation: Conversation) -> str | None:
+    found = next((item for item in reversed(conversation.proposals) if item.status == "open"), None)
+    return f"{found.id}: {found.summary}" if found else None
+
+
+def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -> tuple[TurnScope, str]:
+    services, project_id = setup.services, conversation.project_id
+    state = services.projects.state(project_id)
+    context = lean_context(state, services.runs, message.selection, message.workspace, _open_proposal(conversation))
+    scope = TurnScope(project_id, state, conversation.autonomy, services)
+    return scope, context
+
+
+def _text(answer: str, reports: list[str]) -> str:
+    """The model's answer plus what the engine did that the answer does not already say."""
+    added = [report for report in reports if report not in answer]
+    return " ".join([answer, *added])
+
+
+def run_turn(setup: TurnSetup, conversation: Conversation, message: SendMessage, media: TurnMedia) -> TurnResult:
+    """One agent turn: the prompt, the loop, and its outcome mapped onto the copilot message."""
+    scope, context = _scope(setup, conversation, message)
+    window = setup.settings.context_tokens(setup.capability) or setup.limits.context_tokens
+    live = {body.id for body in scope.state.project.bodies} | {obj.id for obj in all_objects(scope.state.project)}
+    live |= {status.name for status in setup.services.runs.list_runs(scope.project_id)}
+    history = build_history(conversation, setup.summaries, setup.client, setup.limits, window, live)
+    run_headline = json.dumps(json.loads(context)["latest_run"])
+    heard = [message.text, *history.sources, *media.documents]
+    scope.sources += [context, *heard]
+    scope.percent_sources += [run_headline, *heard]
+    system = system_prompt(scope.autonomy, context, history.summary)
+    messages = [{"role": "system", "content": system}, *history.messages]
+    messages.append({"role": "user", "content": media.user_content(message.text)})
+    outcome = run_loop(
+        setup.client,
+        scope,
+        messages,
+        setup.limits,
+        window,
+        on_overflow=lambda tokens: setup.settings.learn_context(setup.capability, tokens),
+    )
+    if outcome.final is None:
+        failure = outcome.failure or "The model did not answer"
+        # Nothing was done, so there is nothing to keep: the person gets the error and may send again.
+        if not scope.side_effects and not scope.steps:
+            raise CopilotError(failure)
+        done = " ".join(scope.side_effects)
+        text = f"{done} Then I could not finish: {failure}." if done else f"I could not finish: {failure}."
+        suggestions, drafts = [], []
+    else:
+        final = outcome.final
+        text, suggestions, drafts = _text(final.answer, scope.reports), final.suggestions, final.actions
+    proposals = [*scope.applied, *([scope.proposal] if scope.proposal else [])]
+    proposal_id = proposals[-1].id if proposals else None
+    thinking = "\n\n".join(outcome.thinking)[:THINKING_LIMIT] or None
+    reply = new_message(
+        "copilot",
+        text,
+        thinking=thinking,
+        proposal_id=proposal_id,
+        attachments=scope.views,
+        actions=chat_actions(scope, drafts),
+        steps=merged_steps(scope.steps),
+    )
+    return TurnResult(reply, proposals, suggestions)

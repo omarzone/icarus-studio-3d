@@ -1,0 +1,78 @@
+{
+  "match": [
+    "switch to night"
+  ],
+  "replies": [
+    {
+      "tool_calls": [
+        {
+          "name": "try",
+          "arguments": {
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "intensity",
+                "value": {
+                  "type": "slider",
+                  "value": 0.25
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#9fb4ff"
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "ground",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#22252b"
+                }
+              }
+            ],
+            "look": null
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "apply",
+          "arguments": {
+            "try_id": "t1",
+            "summary": "Make it night"
+          }
+        }
+      ]
+    },
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "It is night now: the sun is dimmed and tinted blue and the ground is darker.",
+            "suggestions": [],
+            "actions": [
+              {
+                "label": "Train again",
+                "kind": "train",
+                "target": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
