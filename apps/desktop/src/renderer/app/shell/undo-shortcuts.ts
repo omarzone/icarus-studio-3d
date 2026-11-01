@@ -39,7 +39,13 @@ export function useUndoShortcuts(): void {
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      const action = shortcutAction({ ...event, key: event.key, typing: isTyping(event.target) });
+      const action = shortcutAction({
+        key: event.key,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        typing: isTyping(event.target),
+      });
       if (!action) {
         return;
       }

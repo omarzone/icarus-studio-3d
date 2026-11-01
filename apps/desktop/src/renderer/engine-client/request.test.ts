@@ -67,8 +67,15 @@ describe("request", () => {
 });
 
 describe("engine url", () => {
-  it("is unavailable while the engine starts", async () => {
-    const url = createEngineUrl(bridge({ kind: "starting" }).fake);
+  it("waits while the engine starts, then uses its address", async () => {
+    const { fake, emit } = bridge({ kind: "starting" });
+    const pending = createEngineUrl(fake).current();
+    emit({ kind: "ready", url: "http://127.0.0.1:9002", version: "0.1.0" });
+    await expect(pending).resolves.toBe("http://127.0.0.1:9002");
+  });
+
+  it("fails at once when the engine is down", async () => {
+    const url = createEngineUrl(bridge({ kind: "down", reason: "crashed", lastLog: [] }).fake);
     await expect(url.current()).rejects.toBeInstanceOf(EngineUnavailable);
   });
 

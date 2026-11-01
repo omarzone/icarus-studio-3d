@@ -21,16 +21,23 @@ export function useAnchoredStyle(
       setStyle(HIDDEN);
       return;
     }
-    const box = target.getBoundingClientRect();
-    const width = surface.offsetWidth;
-    const height = surface.offsetHeight;
-    const preferred = align === "end" ? box.right - width : box.left;
-    const left = Math.min(Math.max(EDGE, preferred), view.innerWidth - width - EDGE);
-    const fitsBelow = box.bottom + GAP + height <= view.innerHeight - EDGE;
-    const fitsAbove = box.top - GAP - height >= EDGE;
-    const top =
-      fitsBelow || !fitsAbove ? Math.min(box.bottom + GAP, view.innerHeight - height - EDGE) : box.top - GAP - height;
-    setStyle({ top: Math.max(EDGE, top), left, minWidth: align === "start" ? box.width : undefined });
+    const place = () => {
+      const box = target.getBoundingClientRect();
+      const width = surface.offsetWidth;
+      const height = surface.offsetHeight;
+      const preferred = align === "end" ? box.right - width : box.left;
+      const left = Math.min(Math.max(EDGE, preferred), view.innerWidth - width - EDGE);
+      const fitsBelow = box.bottom + GAP + height <= view.innerHeight - EDGE;
+      const fitsAbove = box.top - GAP - height >= EDGE;
+      const top =
+        fitsBelow || !fitsAbove ? Math.min(box.bottom + GAP, view.innerHeight - height - EDGE) : box.top - GAP - height;
+      setStyle({ top: Math.max(EDGE, top), left, minWidth: align === "start" ? box.width : undefined });
+    };
+    place();
+    // Content that loads after opening changes the surface's size; place it again so it stays inside the window.
+    const watcher = new view.ResizeObserver(place);
+    watcher.observe(surface);
+    return () => watcher.disconnect();
   }, [open, anchor, floating, align]);
   return style;
 }
