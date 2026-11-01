@@ -7,6 +7,7 @@ import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { type Conversation, copilotPort } from "../../ports/copilot-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
+import { useDockedPanel } from "../../ui/dock-slot.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
 import { ChatTab } from "./chat-tab.tsx";
@@ -57,6 +58,7 @@ export function ChatPanel({
   const discard = useEngineAction(port.discardProposal);
   const autonomy = useEngineAction(port.setAutonomy);
   const attach = useEngineAction(port.attachFile);
+  const docked = useDockedPanel();
   return (
     <Panel
       id="PNL-CHAT"
@@ -68,9 +70,12 @@ export function ChatPanel({
         </>
       }
       options={
-        <Act cta="Chat options" aria-label="Chat options" className={buttonClass("icon", "size-6!")}>
-          <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
-        </Act>
+        // Docked, the dock's ⋯ menu stands in for the panel's own.
+        docked ? undefined : (
+          <Act cta="Chat options" aria-label="Chat options" className={buttonClass("icon", "size-6!")}>
+            <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
+          </Act>
+        )
       }
     >
       <QueryView query={query}>

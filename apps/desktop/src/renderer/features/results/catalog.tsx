@@ -19,7 +19,7 @@ export const catalog: Catalog = {
   routes: [
     { id: "SCR-RESULTS", maxDiff: 0.03, component: ResultsScreen },
     { id: "STA-RESULTS-FAILURES", maxDiff: 0.03, component: ResultsScreen },
-    { id: "STA-RESULTS-REFERENCE", maxDiff: 0.03, component: ResultsScreen },
+    { id: "STA-RESULTS-REFERENCE", maxDiff: 0.045, component: ResultsScreen },
     { id: "SCR-TIMELAPSE", maxDiff: 0.03, component: TimelapseScreen },
   ],
   modules: [

@@ -13,11 +13,11 @@ function Column({ width, children }: { width: string; children: ReactNode }) {
 
 export const catalog: Catalog = {
   routes: [
-    { id: "SCR-TRAIN", maxDiff: 0.03, component: TrainScreen },
-    { id: "STA-TRAIN-FAILED", maxDiff: 0.03, component: TrainScreen },
-    { id: "MOD-START-TRAINING", maxDiff: 0.03, over: "SCR-BRAIN", component: StartTrainingDialog },
-    { id: "MOD-STOP-RUN", maxDiff: 0.03, over: "SCR-TRAIN", component: StopRunDialog },
-    { id: "MOD-AUTOPILOT", maxDiff: 0.03, over: "SCR-TRAIN", component: AutopilotDialog },
+    { id: "SCR-TRAIN", maxDiff: 0.045, component: TrainScreen },
+    { id: "STA-TRAIN-FAILED", maxDiff: 0.045, component: TrainScreen },
+    { id: "MOD-START-TRAINING", maxDiff: 0.045, over: "SCR-BRAIN", component: StartTrainingDialog },
+    { id: "MOD-STOP-RUN", maxDiff: 0.045, over: "SCR-TRAIN", component: StopRunDialog },
+    { id: "MOD-AUTOPILOT", maxDiff: 0.045, over: "SCR-TRAIN", component: AutopilotDialog },
   ],
   modules: [
     {

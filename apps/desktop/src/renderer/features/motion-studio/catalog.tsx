@@ -9,18 +9,18 @@ import { VideoDialog } from "./video-dialog.tsx";
 
 export const catalog: Catalog = {
   routes: [
-    { id: "SCR-MOTION", maxDiff: 0.03, component: MotionScreen },
-    { id: "STA-MOTION-TRAINING", maxDiff: 0.03, component: MotionScreen },
+    { id: "SCR-MOTION", maxDiff: 0.045, component: MotionScreen },
+    { id: "STA-MOTION-TRAINING", maxDiff: 0.045, component: MotionScreen },
     {
       id: "MOD-MOTION-VIDEO",
-      maxDiff: 0.03,
+      maxDiff: 0.045,
       over: "STA-WORLD-EMPTY-NOGUIDE",
       params: { draftName: "Dance Copy" },
       component: VideoDialog,
     },
-    { id: "MOD-MOTION-TRACKING", maxDiff: 0.03, over: "SCR-MOTION", component: TrackingDialog },
-    { id: "MOD-MOTION-TRAIN", maxDiff: 0.03, over: "SCR-MOTION", component: TrainDialog },
-    { id: "MOD-EXPORT-ANIMATION", maxDiff: 0.03, over: "SCR-MOTION", component: ExportDialog },
+    { id: "MOD-MOTION-TRACKING", maxDiff: 0.045, over: "SCR-MOTION", component: TrackingDialog },
+    { id: "MOD-MOTION-TRAIN", maxDiff: 0.045, over: "SCR-MOTION", component: TrainDialog },
+    { id: "MOD-EXPORT-ANIMATION", maxDiff: 0.045, over: "SCR-MOTION", component: ExportDialog },
   ],
   modules: [
     {

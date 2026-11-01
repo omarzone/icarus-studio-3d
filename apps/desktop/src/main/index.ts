@@ -32,6 +32,21 @@ function createWindow(): BrowserWindow {
   if (!headless) {
     win.once("ready-to-show", () => win.show());
   }
+  // Panels popped out of the dock open the app's blank popout page; nothing else may open a window.
+  win.webContents.setWindowOpenHandler(({ url }) =>
+    isPopoutPage(url, win.webContents.getURL())
+      ? {
+          action: "allow",
+          overrideBrowserWindowOptions: {
+            show: !headless,
+            backgroundColor: tokens.color.bg.app,
+            autoHideMenuBar: true,
+            minWidth: 320,
+            minHeight: 240,
+          },
+        }
+      : { action: "deny" },
+  );
   const prototype = process.argv.includes("--prototype");
   const query = process.env.ICARUS_DESIGN_GALLERY === "1" || prototype ? { gallery: "1" } : undefined;
   // The prototype runs every screen on fixture data so flows can be tried before their logic exists.
@@ -47,6 +62,12 @@ function createWindow(): BrowserWindow {
     void win.loadFile(join(import.meta.dirname, "../renderer/index.html"), { query, hash });
   }
   return win;
+}
+
+function isPopoutPage(url: string, appUrl: string): boolean {
+  const target = new URL(url);
+  const page = new URL(appUrl);
+  return target.origin === page.origin && target.pathname.endsWith("/popout.html");
 }
 
 void app.whenReady().then(() => {

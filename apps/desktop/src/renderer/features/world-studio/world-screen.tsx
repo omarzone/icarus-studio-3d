@@ -4,7 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
@@ -36,7 +37,7 @@ export function WorldScreen() {
   const guide = useGuide(config.scene);
   const go = useNavigation((state) => state.go);
   return (
-    <WorkspaceShell
+    <DockWorkspaceShell
       header={{
         project,
         active: "World",
@@ -45,31 +46,53 @@ export function WorldScreen() {
         playEnabled: config.playEnabled,
         primary: { label: "Train", to: "MOD-START-TRAINING", disabled: !config.trainEnabled },
       }}
-      left={
-        <>
-          <ExplorerPanel scene={config.scene} onAction={() => go("SCR-IDEAS")} />
-          <InspectorPanel scene={config.scene} addComponentTo="POP-ADD-COMPONENT" panelRoutes={PANEL_ROUTES} />
-        </>
-      }
-      center={
-        <>
-          <ViewportPanel
-            label="The project's world"
-            toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
-            tint={variant === "proposal" ? "proposal" : undefined}
-            overlays={<WorldOverlays variant={variant} config={config} />}
+      layoutKey="world"
+      panels={{
+        explorer: {
+          title: "Explorer",
+          home: HOME.left,
+          render: () => <ExplorerPanel scene={config.scene} onAction={() => go("SCR-IDEAS")} />,
+        },
+        inspector: {
+          title: "Inspector",
+          home: HOME.below("explorer", 392),
+          optionsLabel: "Inspector options",
+          render: () => (
+            <InspectorPanel scene={config.scene} addComponentTo="POP-ADD-COMPONENT" panelRoutes={PANEL_ROUTES} />
+          ),
+        },
+        viewport: {
+          title: "Viewport",
+          minimumWidth: 360,
+          minimumHeight: 200,
+          render: () => (
+            <ViewportPanel
+              label="The project's world"
+              toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
+              tint={variant === "proposal" ? "proposal" : undefined}
+              overlays={<WorldOverlays variant={variant} config={config} />}
+            />
+          ),
+        },
+        ...(config.importLabel
+          ? {
+              library: {
+                title: "Library",
+                home: HOME.below("viewport", 168),
+                minimumHeight: 120,
+                render: () => <LibraryPanel scene={config.scene} importLabel={config.importLabel ?? ""} />,
+              },
+            }
+          : {}),
+        chat: copilotPanel(() => (
+          <ChatPanel
+            conversation={config.conversation}
+            placeholder={config.placeholder}
+            suggestionRoutes={config.suggestionRoutes}
+            proposalRoutes={config.proposalRoutes}
           />
-          {config.importLabel ? <LibraryPanel scene={config.scene} importLabel={config.importLabel} /> : null}
-        </>
-      }
-      chat={
-        <ChatPanel
-          conversation={config.conversation}
-          placeholder={config.placeholder}
-          suggestionRoutes={config.suggestionRoutes}
-          proposalRoutes={config.proposalRoutes}
-        />
-      }
+        )),
+      }}
     />
   );
 }

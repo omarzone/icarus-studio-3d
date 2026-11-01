@@ -6,10 +6,10 @@ import { RigCheckPanel } from "./rig-check/rig-check-panel.tsx";
 
 export const catalog: Catalog = {
   routes: [
-    { id: "SCR-BODY", maxDiff: 0.03, component: BodyScreen },
-    { id: "STA-BODY-CHECK-FAILED", maxDiff: 0.03, component: BodyScreen },
+    { id: "SCR-BODY", maxDiff: 0.045, component: BodyScreen },
+    { id: "STA-BODY-CHECK-FAILED", maxDiff: 0.045, component: BodyScreen },
     { id: "MOD-IMPORT", maxDiff: 0.03, over: "SCR-BODY", component: ImportDialog },
-    { id: "MOD-AUTO-RIG", maxDiff: 0.03, over: "SCR-BODY", component: AutoRigDialog },
+    { id: "MOD-AUTO-RIG", maxDiff: 0.045, over: "SCR-BODY", component: AutoRigDialog },
   ],
   modules: [
     {

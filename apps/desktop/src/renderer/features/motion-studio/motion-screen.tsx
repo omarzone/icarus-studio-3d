@@ -1,6 +1,7 @@
 // SCR-MOTION · STA-MOTION-TRAINING
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
@@ -28,7 +29,7 @@ export function MotionScreen() {
     return <LoadingState label="Opening the workspace" />;
   }
   return (
-    <WorkspaceShell
+    <DockWorkspaceShell
       header={{
         project,
         active: "Motion",
@@ -38,31 +39,46 @@ export function MotionScreen() {
         playTo: "SCR-MOTION",
         primary: config.primary,
       }}
-      left={
-        <>
-          <ExplorerPanel scene={config.scene} label="Clip" />
-          <InspectorPanel scene={config.scene} />
-        </>
-      }
-      center={
-        <>
-          <section className="shrink-0 overflow-hidden rounded-card border border-line bg-panel">
-            <Toolbar groups={MOTION_TOOLS} selected="Retarget" overrides={config.toolOverrides} />
-          </section>
-          <MotionComparePanel
-            clip={config.clip}
-            floating={variant === "training" ? <TrainingStatusCard clip={config.clip} /> : null}
+      layoutKey="motion"
+      panels={{
+        explorer: { title: "Clip", home: HOME.left, render: () => <ExplorerPanel scene={config.scene} label="Clip" /> },
+        inspector: {
+          title: "Inspector",
+          optionsLabel: "Inspector options",
+          home: HOME.below("explorer", 432),
+          render: () => <InspectorPanel scene={config.scene} />,
+        },
+        compare: {
+          title: "Compare",
+          minimumWidth: 360,
+          minimumHeight: 200,
+          render: () => (
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="shrink-0 border-b border-line-subtle">
+                <Toolbar groups={MOTION_TOOLS} selected="Retarget" overrides={config.toolOverrides} />
+              </div>
+              <div className="min-h-0 flex-1">
+                <MotionComparePanel
+                  clip={config.clip}
+                  floating={variant === "training" ? <TrainingStatusCard clip={config.clip} /> : null}
+                />
+              </div>
+            </div>
+          ),
+        },
+        timeline: {
+          title: "Timeline",
+          home: HOME.below("compare", 168),
+          render: () => <ClipTimelinePanel clip={config.clip} />,
+        },
+        chat: copilotPanel(() => (
+          <ChatPanel
+            conversation={config.conversation}
+            placeholder="Describe the motion…"
+            suggestionRoutes={config.suggestionRoutes}
           />
-          <ClipTimelinePanel clip={config.clip} />
-        </>
-      }
-      chat={
-        <ChatPanel
-          conversation={config.conversation}
-          placeholder="Describe the motion…"
-          suggestionRoutes={config.suggestionRoutes}
-        />
-      }
+        )),
+      }}
     />
   );
 }

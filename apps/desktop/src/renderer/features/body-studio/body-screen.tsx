@@ -1,6 +1,7 @@
 // SCR-BODY · STA-BODY-CHECK-FAILED
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
@@ -36,7 +37,7 @@ export function BodyScreen() {
   }
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
   return (
-    <WorkspaceShell
+    <DockWorkspaceShell
       header={{
         project,
         active: "Body",
@@ -46,38 +47,58 @@ export function BodyScreen() {
         playTo: "SCR-MOTION",
         primary: { label: "Train", to: "MOD-START-TRAINING" },
       }}
-      left={
-        <>
-          <ExplorerPanel scene={config.scene} label={config.explorerLabel} />
-          <InspectorPanel
-            scene={config.scene}
-            addComponentTo={config.rigged ? "POP-ADD-COMPONENT" : undefined}
-            className={INSPECTOR_CLASS}
-          />
-        </>
-      }
-      center={
-        config.rigged ? (
-          <>
-            <ViewportPanel
-              label="The body seen through, with its bones, joints and colliders"
-              tabs={RIG_TABS}
-              toolbar={toolbar}
-              overlays={variant === "check-failed" ? <CheckFailedBanner body={config.body} /> : null}
+      layoutKey="body"
+      panels={{
+        explorer: {
+          title: config.explorerLabel ?? "Explorer",
+          home: HOME.left,
+          render: () => <ExplorerPanel scene={config.scene} label={config.explorerLabel} />,
+        },
+        inspector: {
+          title: "Inspector",
+          optionsLabel: "Inspector options",
+          home: HOME.below("explorer", 432),
+          render: () => (
+            <InspectorPanel
+              scene={config.scene}
+              addComponentTo={config.rigged ? "POP-ADD-COMPONENT" : undefined}
+              className={INSPECTOR_CLASS}
             />
-            <RigCheckPanel body={config.body} />
-          </>
-        ) : (
-          <ViewportPanel label="The project's world before a body is imported" toolbar={toolbar} />
-        )
-      }
-      chat={
-        <ChatPanel
-          conversation={config.conversation}
-          placeholder={config.placeholder}
-          suggestionRoutes={config.suggestionRoutes}
-        />
-      }
+          ),
+        },
+        viewport: {
+          title: "Viewport",
+          minimumWidth: 360,
+          minimumHeight: 200,
+          render: () =>
+            config.rigged ? (
+              <ViewportPanel
+                label="The body seen through, with its bones, joints and colliders"
+                tabs={RIG_TABS}
+                toolbar={toolbar}
+                overlays={variant === "check-failed" ? <CheckFailedBanner body={config.body} /> : null}
+              />
+            ) : (
+              <ViewportPanel label="The project's world before a body is imported" toolbar={toolbar} />
+            ),
+        },
+        ...((config.rigged
+          ? {
+              checks: {
+                title: "Checks",
+                home: HOME.below("viewport", 168),
+                render: () => <RigCheckPanel body={config.body} />,
+              },
+            }
+          : {}) satisfies DockPanels),
+        chat: copilotPanel(() => (
+          <ChatPanel
+            conversation={config.conversation}
+            placeholder={config.placeholder}
+            suggestionRoutes={config.suggestionRoutes}
+          />
+        )),
+      }}
     />
   );
 }

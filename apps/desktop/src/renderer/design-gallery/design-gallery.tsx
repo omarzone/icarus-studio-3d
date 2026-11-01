@@ -7,6 +7,7 @@ import { catalog } from "../app/navigation/route-registry.ts";
 import { Router } from "../app/navigation/router.tsx";
 import { useNotices } from "../app/runtime/notices.ts";
 import { resetPrototypes } from "../app/runtime/port.tsx";
+import { DockMemory } from "../app/shell/dock/dock-layout.ts";
 
 export const GALLERY_PREFIX = "#/__design/";
 export const PROTOTYPE_PREFIX = "#/__prototype/";
@@ -57,14 +58,16 @@ export function DesignGallery({ id }: { id: string }) {
   return (
     <div data-design-root className="relative h-[900px] w-[1440px] overflow-hidden bg-app text-fg">
       <AppProviders mode="prototype" initial={target ?? HOME}>
-        <TestHooks />
-        {module ? (
-          <module.component />
-        ) : target ? (
-          <Router />
-        ) : (
-          <p className="p-4 text-body">No gallery entry for {id}</p>
-        )}
+        <DockMemory.Provider value={false}>
+          <TestHooks />
+          {module ? (
+            <module.component />
+          ) : target ? (
+            <Router />
+          ) : (
+            <p className="p-4 text-body">No gallery entry for {id}</p>
+          )}
+        </DockMemory.Provider>
       </AppProviders>
     </div>
   );
