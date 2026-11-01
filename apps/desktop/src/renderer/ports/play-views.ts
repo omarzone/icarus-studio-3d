@@ -114,12 +114,6 @@ export function playSession({ info, frame, events, selectedTool }: SessionParts)
 // The world settings the toggling tools change; the next command depends on them.
 export type PlayControls = { speed: number; light: number; wind: boolean };
 
-const scaled = ([x, y, z]: readonly number[], by: number): [number, number, number] => [
-  (x ?? 0) * by,
-  (y ?? 0) * by,
-  (z ?? 0) * by,
-];
-
 export function playCommand(action: PlayAction, controls: PlayControls): PlayCommand {
   switch (action.tool) {
     case "move":

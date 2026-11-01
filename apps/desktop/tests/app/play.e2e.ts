@@ -41,20 +41,6 @@ test("sprint 4 demo: play the parking car, add a box in front, push it, reset", 
     if (!view) {
       throw new Error("no Play viewport");
     }
-    // Turning the camera with a tool selected must not use the tool.
-    const from = project([-3, 0, 4], view);
-    await page.mouse.move(from.x, from.y);
-    await page.waitForTimeout(200);
-    await page.mouse.down();
-    await page.mouse.move(from.x + 120, from.y + 10, { steps: 8 });
-    await page.mouse.up();
-    await page.waitForTimeout(1500);
-    await expect(page.getByText(/You added/)).toHaveCount(0);
-    await page.mouse.move(from.x, from.y);
-    await page.mouse.down();
-    await page.mouse.move(from.x - 120, from.y - 10, { steps: 8 });
-    await page.mouse.up();
-
     const ahead = project([3.5, 0, 0], view);
     await clickWorld(page, ahead);
     await expect(page.getByText(/You added Box/).first()).toBeVisible({ timeout: 15_000 });
@@ -64,6 +50,18 @@ test("sprint 4 demo: play the parking car, add a box in front, push it, reset", 
     const box = project([3.75, 0.25, 0], view);
     await clickWorld(page, box);
     await expect(page.getByText(/You pushed/).first()).toBeVisible({ timeout: 15_000 });
+
+    await page.locator('[data-cta="add-object"]').first().click();
+    // Turning the camera with a tool selected must not use the tool.
+    const added = await page.getByText(/You added/).count();
+    const from = project([-3, 0, 4], view);
+    await page.mouse.move(from.x, from.y);
+    await page.waitForTimeout(200);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 120, from.y + 10, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(1500);
+    await expect(page.getByText(/You added/)).toHaveCount(added);
 
     await page.locator('[data-cta="reset"]').first().click();
     await expect(page.getByText("Episode reset").first()).toBeVisible({ timeout: 15_000 });
