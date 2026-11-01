@@ -10,6 +10,7 @@ const IDEAS: readonly Idea[] = [
     learns: "Drive into the free spot without touching",
     estimate: "about 40 min",
     recommended: true,
+    scene: null,
   },
   {
     id: "street",
@@ -19,6 +20,7 @@ const IDEAS: readonly Idea[] = [
     learns: "Reverse into a gap between cars",
     estimate: "about 1 h 10 min",
     recommended: false,
+    scene: null,
   },
   {
     id: "camera",
@@ -28,16 +30,21 @@ const IDEAS: readonly Idea[] = [
     learns: "Back into the spot using the camera",
     estimate: "about 55 min",
     recommended: false,
+    scene: null,
   },
 ];
 
+const SET: IdeaSet = {
+  id: "parking",
+  ideas: IDEAS,
+  mix: { worldFrom: "Street", bodyFrom: "Reverse with a camera" },
+};
+
 export function createIdeasFixture(): IdeasPort {
   return {
-    getIdeas: async (): Promise<IdeaSet> => ({
-      ideas: IDEAS,
-      mix: { worldFrom: "Street", bodyFrom: "Reverse with a camera" },
-    }),
-    useIdea: async () => undefined,
+    generateIdeas: async () => SET,
+    getIdeas: async () => SET,
+    useIdea: async () => ({ build: "park-pilot-building" }),
     tweakIdea: async () => undefined,
     mixAndBuild: async () => undefined,
   };

@@ -1,6 +1,11 @@
-import type { TrainingSettings as EngineTrainingSettings, TrainingSettingsPatch } from "@icarus/contracts";
+import type {
+  ModelSettings as EngineModelSettings,
+  TrainingSettings as EngineTrainingSettings,
+  ModelSettingsPatch,
+  TrainingSettingsPatch,
+} from "@icarus/contracts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
-import type { SettingsPort, TrainingSettings } from "./settings-port.ts";
+import type { ModelConnection, ModelSettings, SettingsPort, TrainingSettings } from "./settings-port.ts";
 
 // Training and hardware settings on the engine: threads and the graphics card are saved there; folders are read only.
 
@@ -49,5 +54,47 @@ export function createEngineTrainingSettings(
       const saved = Object.keys(change).length > 0 ? await api.saveTrainingSettings(change) : current;
       return view(saved, await version());
     },
+  };
+}
+
+// AI model connections on the engine: one endpoint and key, one model name per capability; the key never comes back.
+
+type ModelsApi = Pick<EngineApi, "modelSettings" | "saveModelSettings" | "testModelSettings">;
+
+function modelsView(settings: EngineModelSettings): ModelSettings {
+  return {
+    endpoint: settings.endpoint,
+    apiKeyHint: settings.api_key_hint,
+    connections: settings.connections.map(
+      (connection): ModelConnection => ({
+        capability: connection.capability,
+        model: connection.model,
+        required: connection.required,
+        connected: connection.connected,
+        ...(connection.detail ? { detail: connection.detail } : {}),
+      }),
+    ),
+  };
+}
+
+export function createEngineModelSettings(
+  api: ModelsApi = engineApi,
+): Pick<SettingsPort, "getModelSettings" | "saveModelSettings" | "testModelConnection"> {
+  return {
+    getModelSettings: async () => modelsView(await api.modelSettings()),
+    saveModelSettings: async ({ endpoint, apiKey, models }) => {
+      const patch: ModelSettingsPatch = { endpoint: endpoint.trim() };
+      if (apiKey.trim() !== "") {
+        patch.api_key = apiKey.trim();
+      }
+      const named = Object.entries(models).flatMap(([capability, name]) =>
+        name && name.trim() !== "" ? [[capability, name.trim()] as const] : [],
+      );
+      if (named.length > 0) {
+        patch.models = Object.fromEntries(named);
+      }
+      return modelsView(await api.saveModelSettings(patch));
+    },
+    testModelConnection: async () => modelsView(await api.testModelSettings()),
   };
 }

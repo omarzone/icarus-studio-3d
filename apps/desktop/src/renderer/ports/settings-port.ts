@@ -2,7 +2,7 @@ import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AvatarTone } from "../ui/avatar.tsx";
 import { createSettingsFixture } from "./settings.fixture.ts";
-import { createEngineTrainingSettings } from "./settings-engine.ts";
+import { createEngineModelSettings, createEngineTrainingSettings } from "./settings-engine.ts";
 
 export type ModelCapability = "reasoning" | "vision" | "image" | "pose";
 
@@ -12,6 +12,8 @@ export type ModelConnection = {
   model: string | null;
   required: boolean;
   connected: boolean;
+  // Why it is not connected, in words.
+  detail?: string;
 };
 
 export type ModelSettings = {
@@ -43,7 +45,12 @@ export type NotificationSettings = Record<NotificationOption, boolean>;
 
 export type SettingsPort = {
   getModelSettings: () => Promise<ModelSettings>;
-  saveModelSettings: (input: { endpoint: string; apiKey: string }) => Promise<ModelSettings>;
+  // An empty key keeps the stored one; empty model names are left as they are.
+  saveModelSettings: (input: {
+    endpoint: string;
+    apiKey: string;
+    models: Partial<Record<ModelCapability, string>>;
+  }) => Promise<ModelSettings>;
   testModelConnection: () => Promise<ModelSettings>;
   getPrivacy: () => Promise<PrivacySettings>;
   setPrivacy: (input: { option: PrivacyOption; value: boolean }) => Promise<PrivacySettings>;
@@ -59,24 +66,7 @@ export type SettingsPort = {
 
 export const settingsPort = definePort<SettingsPort>({
   app: {
-    getModelSettings: pending({
-      key: "settings.models",
-      summary: "AI model connections",
-      sprint: 6,
-      ids: ["SCR-SETTINGS-MODELS"],
-    }),
-    saveModelSettings: pending({
-      key: "settings.models-save",
-      summary: "Saving AI model connections",
-      sprint: 6,
-      ids: ["SCR-SETTINGS-MODELS"],
-    }),
-    testModelConnection: pending({
-      key: "settings.models-test",
-      summary: "Testing an AI model connection",
-      sprint: 6,
-      ids: ["SCR-SETTINGS-MODELS"],
-    }),
+    ...createEngineModelSettings(),
     getPrivacy: pending({
       key: "settings.privacy",
       summary: "Privacy settings",

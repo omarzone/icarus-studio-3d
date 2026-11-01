@@ -7,6 +7,8 @@ const BUILDS: Readonly<Record<string, BuildProgress>> = {
     progress: 0.62,
     activity: "Running physics checks on 16 lots…",
     ready: false,
+    projectId: null,
+    error: null,
     steps: [
       { id: "understand", label: "Understand the idea", status: "done" },
       { id: "world", label: "Build the world · parking lot", status: "done" },

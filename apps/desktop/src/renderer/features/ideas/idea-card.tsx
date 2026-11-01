@@ -1,4 +1,5 @@
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { ScenePreview } from "../../editor/viewport/scene-preview.tsx";
 import type { Idea } from "../../ports/ideas-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 
@@ -12,6 +13,7 @@ export function IdeaCard({ idea, onUse, onTweak }: Props) {
       className="relative flex min-h-0 flex-col overflow-hidden rounded-[18px] bg-control"
     >
       <div role="img" aria-label={`Preview of ${idea.title}`} className="relative h-85 shrink-0 bg-panel">
+        {idea.scene ? <ScenePreview description={idea.scene} /> : null}
         {idea.recommended ? (
           <span className="absolute top-2.5 left-2.5 rounded-full bg-selected px-2.5 py-1 text-meta font-semibold text-on-selected">
             Recommended

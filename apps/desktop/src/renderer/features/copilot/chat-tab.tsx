@@ -2,7 +2,7 @@
 import type { AutonomyMode, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
-import { CopilotBubble, UserBubble } from "./chat-messages.tsx";
+import { CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
 import { Composer } from "./composer.tsx";
 import { PlanCard } from "./plan-card.tsx";
 import { ProposalCard, type ProposalRoutes } from "./proposal-card.tsx";
@@ -14,6 +14,8 @@ export type ChatTabProps = {
   placeholder: string;
   suggestionRoutes: SuggestionRoutes;
   proposalRoutes?: ProposalRoutes;
+  // Text of the message on its way to the copilot, shown until the answer arrives.
+  sending?: string | null;
   onSend: (text: string) => void;
   onApply: (id: string) => void;
   onDiscard: (id: string) => void;
@@ -31,6 +33,12 @@ export function ChatTab(props: ChatTabProps) {
           {conversation.messages.map((message) => (
             <Message key={message.id} message={message} {...props} />
           ))}
+          {props.sending ? (
+            <>
+              <UserBubble text={props.sending} />
+              <ThinkingBubble />
+            </>
+          ) : null}
         </div>
       </div>
       <SuggestionChips suggestions={conversation.suggestions} routes={props.suggestionRoutes} onSend={props.onSend} />
@@ -62,6 +70,7 @@ function Message({
         <CopilotBubble
           title={message.title}
           text={message.text}
+          thinking={message.thinking}
           checks={message.checks}
           actions={
             message.actions ? (

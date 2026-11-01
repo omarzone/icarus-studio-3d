@@ -1,4 +1,5 @@
 // PNL-VIEWPORT
+import type { SceneGeom } from "@icarus/contracts";
 import { Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
@@ -27,6 +28,8 @@ export type ViewportPanelProps = {
   // Cards, pills and buttons floating over the view; they position themselves (see viewport-overlays.tsx).
   overlays?: ReactNode;
   tint?: "proposal";
+  // Geoms of a copilot proposal drawn in blue over the scene before it is applied.
+  ghosts?: readonly SceneGeom[];
   // Project whose compiled scene the view draws; workspaces without an engine scene leave it out.
   scene?: string;
   // The live world the "play" tab draws.
@@ -52,13 +55,14 @@ export function ViewportPanel({
   toolbar,
   overlays,
   tint,
+  ghosts,
   scene,
   play,
   training,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
-  const surface = { label, tint, overlays, scene };
+  const surface = { label, tint, overlays, scene, ghosts };
   return (
     <Panel
       id="PNL-VIEWPORT"

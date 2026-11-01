@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { CopilotNotConnected } from "../../ports/copilot-connection.ts";
 import { useNotices } from "./notices.ts";
 import { NotAvailableYet } from "./pending.ts";
 
@@ -9,7 +10,9 @@ export function EngineQueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            retry: (count, error) => !(error instanceof NotAvailableYet) && count < 2,
+            // Asking again cannot help a pending action or a copilot without a model.
+            retry: (count, error) =>
+              !(error instanceof NotAvailableYet || error instanceof CopilotNotConnected) && count < 2,
             refetchOnWindowFocus: false,
           },
         },

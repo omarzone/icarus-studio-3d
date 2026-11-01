@@ -1,12 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { usePort } from "../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type BuildStep, buildProgressPort } from "../../ports/build-progress-port.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 
-export function useBuildProgress(scene: string) {
+const POLL_MS = 500;
+
+// Progress of a build (a build id in the app, a sample scene in the prototype), read again every half second
+// in the app while it runs.
+export function useBuildProgress(build: string | null) {
   const port = usePort(buildProgressPort);
-  return useQuery({ queryKey: ["build-progress", scene], queryFn: () => port.getBuild(scene) });
+  const mode = useRuntimeMode();
+  return useQuery({
+    queryKey: ["build-progress", build ?? ""],
+    queryFn: () => port.getBuild(build ?? ""),
+    enabled: build !== null,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return mode === "app" && (!data || (!data.ready && !data.error)) ? POLL_MS : false;
+    },
+  });
 }
 
 // Chat card while the copilot builds a project: progress bar and the steps, done, running and to do.

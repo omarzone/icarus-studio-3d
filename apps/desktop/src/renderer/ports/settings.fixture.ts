@@ -52,8 +52,12 @@ export function createSettingsFixture(): SettingsPort {
   let notifications = NOTIFICATIONS;
   return {
     getModelSettings: async () => models,
-    saveModelSettings: async ({ endpoint, apiKey }) => {
-      models = { ...models, endpoint, apiKeyHint: apiKey === "" ? models.apiKeyHint : apiKey.slice(-4) };
+    saveModelSettings: async ({ endpoint, apiKey, models: names }) => {
+      const connections = models.connections.map((connection) => ({
+        ...connection,
+        model: names[connection.capability] || connection.model,
+      }));
+      models = { connections, endpoint, apiKeyHint: apiKey === "" ? models.apiKeyHint : apiKey.slice(-4) };
       return models;
     },
     testModelConnection: async () => models,
