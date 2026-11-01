@@ -4,6 +4,8 @@ import { allObjects } from "./scene-views.ts";
 
 // Pieces sit this far from the spawn point along x, so they never land on the agent.
 const PLACE_OFFSET = 3;
+// Each further copy of a piece sits this far along y from the previous one.
+const COPY_SPACING = 2;
 
 export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, search: string): LibraryItem[] {
   // Community pieces arrive with the community; imported files with import.
@@ -29,8 +31,10 @@ export function placePiece(project: Project, catalog: LibraryCatalog, pieceId: s
   }
   const taken = new Set(allObjects(project).map((obj) => obj.id));
   let id = piece.object.id;
+  let copies = 0;
   for (let n = 2; taken.has(id); n++) {
     id = `${piece.object.id}_${n}`;
+    copies++;
   }
   const [x, y] = spawnPosition(project);
   const components = piece.object.components.map((component) => {
@@ -38,7 +42,7 @@ export function placePiece(project: Project, catalog: LibraryCatalog, pieceId: s
     if (component.kind !== "transform" || position?.type !== "vector") {
       return component;
     }
-    const value: [number, number, number] = [x + PLACE_OFFSET, y, position.value[2]];
+    const value: [number, number, number] = [x + PLACE_OFFSET, y + copies * COPY_SPACING, position.value[2]];
     const placed = { type: "vector" as const, value };
     return { ...component, properties: { ...component.properties, position: placed } };
   });

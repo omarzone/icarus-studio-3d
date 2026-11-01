@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type PointerEvent, useRef } from "react";
+import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
 import { Act } from "../../../app/navigation/go-to.tsx";
 import type { ControlTone } from "./value-field.tsx";
 
@@ -61,23 +61,33 @@ type SliderProps = Omit<ThumbProps, "onRatio"> & { onChange: (ratio: number) => 
 // Slider from the inspector: 4 px track, white fill and thumb; click or drag anywhere on it.
 export function SliderTrack({ label, ratio, tone, valueText, onChange, step }: SliderProps) {
   const track = useRef<HTMLDivElement>(null);
-  const drag = (event: PointerEvent<HTMLDivElement>) => {
+  // While dragging, the slider shows where the pointer is; the value is committed once, on release.
+  const [dragging, setDragging] = useState<number | null>(null);
+  const follow = (event: PointerEvent<HTMLDivElement>) => {
     if (track.current && event.buttons === 1) {
-      onChange(ratioAt(track.current, event));
+      setDragging(ratioAt(track.current, event));
     }
   };
+  const shown = dragging ?? ratio;
   return (
     <div
       ref={track}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId);
-        drag(event);
+        follow(event);
       }}
-      onPointerMove={drag}
+      onPointerMove={follow}
+      onPointerUp={() => {
+        if (dragging !== null) {
+          onChange(dragging);
+        }
+        setDragging(null);
+      }}
+      onPointerCancel={() => setDragging(null)}
       className="relative h-1 min-w-0 flex-1 rounded-bar bg-control-raised"
     >
-      <span className={`block h-1 rounded-bar ${fill[tone]}`} style={{ width: percent(ratio) }} />
-      <Thumb label={label} ratio={ratio} tone={tone} valueText={valueText} onRatio={onChange} step={step} />
+      <span className={`block h-1 rounded-bar ${fill[tone]}`} style={{ width: percent(shown) }} />
+      <Thumb label={label} ratio={shown} tone={tone} valueText={valueText} onRatio={onChange} step={step} />
     </div>
   );
 }

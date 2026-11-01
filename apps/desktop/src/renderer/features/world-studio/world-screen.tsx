@@ -1,7 +1,7 @@
 // SCR-WORLD · STA-WORLD-EMPTY · STA-WORLD-EMPTY-NOGUIDE · STA-WORLD-BUILDING · STA-WORLD-PROPOSAL
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
@@ -19,6 +19,8 @@ import {
 } from "../../editor/viewport/viewport-overlays.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { copilotPort } from "../../ports/copilot-port.ts";
+import { buttonClass } from "../../ui/button-styles.ts";
+import { ErrorState, LoadingState } from "../../ui/states.tsx";
 import { useBuildProgress } from "../copilot/build-progress-card.tsx";
 import { ChatPanel, copilotKey } from "../copilot/chat-panel.tsx";
 import { GuideCard, guideLabel, ShowGuidePill } from "./guide-card.tsx";
@@ -34,9 +36,25 @@ export function WorldScreen() {
   const screen = useNavigation((state) => state.screen);
   const variant = WORLD_VARIANTS[screen] ?? "world";
   const config = WORLD_CONFIGS[variant];
-  const scene = useWorldScene(config.scene);
-  // The app shows nothing until a project opened from a template exists.
-  return scene === null ? null : <WorldWorkspace variant={variant} config={config} scene={scene} />;
+  const world = useWorldScene(config.scene);
+  switch (world.kind) {
+    case "ready":
+      return <WorldWorkspace variant={variant} config={config} scene={world.scene} />;
+    case "creating":
+      return <LoadingState label="Creating your project" />;
+    case "failed":
+      return (
+        <ErrorState
+          title="The project could not be created"
+          detail={world.reason}
+          action={
+            <Act cta="Try again" onClick={world.retry} className={buttonClass("primary")}>
+              Try again
+            </Act>
+          }
+        />
+      );
+  }
 }
 
 function WorldWorkspace({ variant, config, scene }: { variant: WorldVariant; config: WorldConfig; scene: string }) {

@@ -10,6 +10,7 @@ type ScrubHandlers = {
 // Dragging a numeric property's name left or right changes it, like in Blender; Shift for fine steps.
 export function useScrub(property: Property, onChange: (value: PropertyValue) => void): ScrubHandlers {
   const start = useRef<{ x: number; value: number } | null>(null);
+  const next = useRef<number | null>(null);
   if (
     property.state === "locked" ||
     (property.type !== "slider" && property.type !== "number" && property.type !== "count")
@@ -30,13 +31,15 @@ export function useScrub(property: Property, onChange: (value: PropertyValue) =>
       }
       const pixels = event.shiftKey ? 20 : 4;
       const steps = Math.round((event.clientX - start.current.x) / pixels);
-      const next = clamp(Number((start.current.value + steps * step).toFixed(6)));
-      if (next !== property.value) {
-        onChange({ ...property, value: next });
-      }
+      next.current = clamp(Number((start.current.value + steps * step).toFixed(6)));
     },
+    // One edit per scrub, sent when the pointer is released.
     onPointerUp: () => {
+      if (next.current !== null && next.current !== property.value) {
+        onChange({ ...property, value: next.current });
+      }
       start.current = null;
+      next.current = null;
     },
   };
 }

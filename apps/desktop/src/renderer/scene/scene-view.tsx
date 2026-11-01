@@ -1,7 +1,7 @@
 import type { SceneDescription, SceneGeom } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 import type { Group } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { sceneColors } from "./scene-materials.ts";
@@ -62,7 +62,7 @@ function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
 // Draws the engine's compiled scene; it never moves anything itself, a drag only reports the move.
 export default function SceneView({ description, selected, onSelect, onMove }: SceneViewProps) {
   const colors = useMemo(sceneColors, []);
-  const dragged = useRef<Group>(null);
+  const [dragged, setDragged] = useState<Group | null>(null);
   const picked = description.geoms.filter((geom) => geom.body === selected);
   const body = description.bodies.find((item) => item.name === selected);
   const anchor = body ? toThreePosition(body.position) : null;
@@ -89,30 +89,34 @@ export default function SceneView({ description, selected, onSelect, onMove }: S
         <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} />
       ))}
       {selected && anchor && picked.length > 0 ? (
-        <TransformControls
-          mode="translate"
-          onMouseUp={() => {
-            const group = dragged.current;
-            if (!group) {
-              return;
-            }
-            const delta = fromThreePosition([
-              group.position.x - anchor[0],
-              group.position.y - anchor[1],
-              group.position.z - anchor[2],
-            ]);
-            group.position.set(anchor[0], anchor[1], anchor[2]);
-            if (delta.some((value) => Math.abs(value) > 1e-6)) {
-              onMove(selected, delta);
-            }
-          }}
-        >
-          <group ref={dragged} position={anchor}>
+        <>
+          <group ref={setDragged} position={anchor}>
             {picked.map((geom) => (
               <Geom key={geom.name} geom={geom} selected onSelect={onSelect} origin={anchor} />
             ))}
           </group>
-        </TransformControls>
+          {/* Attached to the group above (not a wrapper of its own), so the drag moves what is read on release. */}
+          <TransformControls
+            object={dragged ?? undefined}
+            mode="translate"
+            onMouseUp={() => {
+              const group = dragged;
+              if (!group) {
+                return;
+              }
+              const delta = fromThreePosition([
+                group.position.x - anchor[0],
+                group.position.y - anchor[1],
+                group.position.z - anchor[2],
+              ]);
+              // Back to where the engine has it; the engine's answer moves it for real.
+              group.position.set(anchor[0], anchor[1], anchor[2]);
+              if (delta.some((value) => Math.abs(value) > 1e-6)) {
+                onMove(selected, delta);
+              }
+            }}
+          />
+        </>
       ) : null}
       <OrbitControls makeDefault />
       <GizmoHelper alignment="top-right" margin={[72, 72]}>

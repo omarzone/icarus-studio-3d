@@ -89,8 +89,31 @@ export function isLibraryCatalog(value: unknown): value is LibraryCatalog {
   );
 }
 
+function isTriple(value: unknown, length: number): boolean {
+  return Array.isArray(value) && value.length === length && value.every((item) => typeof item === "number");
+}
+
+function isGeom(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    has(value, "name", "string") &&
+    has(value, "body", "string") &&
+    has(value, "shape", "string") &&
+    has(value, "color", "string") &&
+    isTriple(value.size, 3) &&
+    isTriple(value.position, 3) &&
+    isTriple(value.quaternion, 4)
+  );
+}
+
 export function isSceneDescription(value: unknown): value is SceneDescription {
-  return has(value, "bodies", "array") && has(value, "geoms", "array") && has(value, "lights", "array");
+  return (
+    isRecord(value) &&
+    has(value, "bodies", "array") &&
+    has(value, "lights", "array") &&
+    Array.isArray(value.geoms) &&
+    value.geoms.every(isGeom)
+  );
 }
 
 export function isNothing(value: unknown): value is undefined {

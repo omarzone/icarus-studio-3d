@@ -89,3 +89,22 @@ describe("engine url", () => {
     await expect(url.current()).rejects.toBeInstanceOf(EngineUnavailable);
   });
 });
+
+describe("scene checks", () => {
+  it("refuses a scene whose geoms miss what the viewport draws", async () => {
+    const { isSceneDescription } = await import("./response-checks.ts");
+    const geom = {
+      name: "car",
+      body: "car",
+      shape: "box",
+      size: [1, 1, 1],
+      position: [0, 0, 0],
+      quaternion: [1, 0, 0, 0],
+      color: "#ffffff",
+    };
+    expect(isSceneDescription({ revision: 1, bodies: [], lights: [], geoms: [geom] })).toBe(true);
+    expect(isSceneDescription({ revision: 1, bodies: [], lights: [], geoms: [{ ...geom, size: undefined }] })).toBe(
+      false,
+    );
+  });
+});

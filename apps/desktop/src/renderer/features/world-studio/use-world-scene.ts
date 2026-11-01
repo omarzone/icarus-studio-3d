@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { projectsPort } from "../../ports/projects-port.ts";
 
@@ -11,29 +11,52 @@ function nameOf(template: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+export type WorldScene =
+  | { kind: "ready"; scene: string }
+  | { kind: "creating" }
+  | { kind: "failed"; reason: string; retry: () => void };
+
 // The scene the World workspace edits: the open project in the app, the sample scene in the prototype.
 // Opened from a template without a project, the app creates the project first and keeps the same screen.
-export function useWorldScene(sample: string): string | null {
+export function useWorldScene(sample: string): WorldScene {
   const mode = useRuntimeMode();
   const project = useNavigation((state) => state.params.project);
   const template = useNavigation((state) => state.params.template) ?? DEFAULT_TEMPLATE;
   const replaceParams = useNavigation((state) => state.replaceParams);
   const port = usePort(projectsPort);
-  const create = useEngineAction(port.createProject);
-  const started = useRef(false);
+  const create = useMutation({ mutationFn: port.createProject });
+  const mounted = useRef(true);
   const needsProject = mode === "app" && !project;
+  const start = useCallback(() => {
+    // Only the screen that asked takes the new project; leaving first keeps it in the projects list.
+    void create
+      .mutateAsync({ template, name: nameOf(template) })
+      .then((created) => {
+        if (mounted.current) {
+          replaceParams({ project: created.id });
+        }
+      })
+      .catch(() => undefined);
+  }, [create, template, replaceParams]);
+  const asked = useRef(false);
   useEffect(() => {
-    if (!needsProject || started.current) {
-      return;
+    mounted.current = true;
+    if (needsProject && !asked.current) {
+      asked.current = true;
+      start();
     }
-    started.current = true;
-    create.mutate(
-      { template, name: nameOf(template) },
-      { onSuccess: (created) => replaceParams({ project: created.id }) },
-    );
-  }, [needsProject, template, create, replaceParams]);
+    return () => {
+      mounted.current = false;
+    };
+  }, [needsProject, start]);
   if (mode === "prototype") {
-    return sample;
+    return { kind: "ready", scene: sample };
   }
-  return project ?? null;
+  if (project) {
+    return { kind: "ready", scene: project };
+  }
+  if (create.isError) {
+    return { kind: "failed", reason: create.error.message, retry: start };
+  }
+  return { kind: "creating" };
 }

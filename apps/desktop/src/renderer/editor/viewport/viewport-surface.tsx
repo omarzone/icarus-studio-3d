@@ -2,6 +2,8 @@ import { lazy, type ReactNode, Suspense } from "react";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { scenePort } from "../../ports/scene-port.ts";
+import { RenderBoundary } from "../../ui/render-boundary.tsx";
+import { ErrorState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneDescription, useSceneTree } from "../scene-queries.ts";
 
 // The 3D renderer is heavy, so it loads the first time a view has a scene to draw.
@@ -41,18 +43,28 @@ function EngineScene({ scene }: { scene: string }) {
   }
   return (
     <div className="absolute inset-0">
-      <Suspense fallback={null}>
-        <SceneView
-          description={description.data}
-          selected={tree.data?.selected ?? null}
-          onSelect={(id) => {
-            if (id) {
-              select.mutate({ scene, id }, { onSuccess: cache.tree });
-            }
-          }}
-          onMove={(id, delta) => move.mutate({ scene, id, delta }, { onSuccess: cache.inspection })}
-        />
-      </Suspense>
+      <RenderBoundary
+        fallback={(reason) => (
+          <ErrorState
+            title="The 3D view could not start"
+            body="The explorer and inspector still work."
+            detail={reason}
+          />
+        )}
+      >
+        <Suspense fallback={null}>
+          <SceneView
+            description={description.data}
+            selected={tree.data?.selected ?? null}
+            onSelect={(id) => {
+              if (id) {
+                select.mutate({ scene, id }, { onSuccess: cache.tree });
+              }
+            }}
+            onMove={(id, delta) => move.mutate({ scene, id, delta }, { onSuccess: cache.inspection })}
+          />
+        </Suspense>
+      </RenderBoundary>
     </div>
   );
 }
