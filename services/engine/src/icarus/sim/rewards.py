@@ -1,0 +1,102 @@
+import math
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+
+Vector3 = tuple[float, float, float]
+
+
+@dataclass(frozen=True)
+class RewardState:
+    """What the reward terms read about the agent at one control step, in world coordinates."""
+
+    position: Vector3
+    # The agent's forward (local x) axis projected on the ground plane.
+    forward: tuple[float, float]
+    # The z component of the agent's local up axis: 1 upright, 0 on its side, -1 upside down.
+    up: float
+    goal: Vector3 | None
+    goal_radius: float
+    colliding: bool
+    fallen: bool
+    # Sum of squared controls normalized to -1..1.
+    effort: float
+
+
+def _goal_distance(state: RewardState) -> float:
+    if state.goal is None:
+        return 0.0
+    return math.hypot(state.goal[0] - state.position[0], state.goal[1] - state.position[1])
+
+
+def inside_goal(state: RewardState) -> bool:
+    return state.goal is not None and _goal_distance(state) <= state.goal_radius
+
+
+def reach_goal(before: RewardState, after: RewardState) -> float:
+    return float(inside_goal(after) and not inside_goal(before))
+
+
+def progress_to_goal(before: RewardState, after: RewardState) -> float:
+    return _goal_distance(before) - _goal_distance(after) if after.goal is not None else 0.0
+
+
+def heading_alignment(before: RewardState, after: RewardState) -> float:
+    distance = _goal_distance(after)
+    if after.goal is None or distance < 1e-9:
+        return 0.0
+    to_goal = ((after.goal[0] - after.position[0]) / distance, (after.goal[1] - after.position[1]) / distance)
+    norm = math.hypot(*after.forward)
+    if norm < 1e-9:
+        return 0.0
+    return (after.forward[0] * to_goal[0] + after.forward[1] * to_goal[1]) / norm
+
+
+def collision_penalty(before: RewardState, after: RewardState) -> float:
+    return float(after.colliding and not before.colliding)
+
+
+def time_penalty(before: RewardState, after: RewardState) -> float:
+    return 1.0
+
+
+def forward_progress(before: RewardState, after: RewardState) -> float:
+    return after.position[0] - before.position[0]
+
+
+def stay_upright(before: RewardState, after: RewardState) -> float:
+    return after.up
+
+
+def energy_cost(before: RewardState, after: RewardState) -> float:
+    return after.effort
+
+
+def fall_penalty(before: RewardState, after: RewardState) -> float:
+    return float(after.fallen and not before.fallen)
+
+
+# Each term returns an unweighted amount; the sign of a penalty comes from its (negative) weight.
+TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
+    "reach_goal": reach_goal,
+    "progress_to_goal": progress_to_goal,
+    "heading_alignment": heading_alignment,
+    "collision_penalty": collision_penalty,
+    "time_penalty": time_penalty,
+    "forward_progress": forward_progress,
+    "stay_upright": stay_upright,
+    "energy_cost": energy_cost,
+    "fall_penalty": fall_penalty,
+}
+
+
+def compose(
+    terms: Sequence[str], weights: Sequence[float], before: RewardState, after: RewardState
+) -> tuple[float, dict[str, float]]:
+    """The weighted reward of one transition and each term's weighted part."""
+    parts: dict[str, float] = {}
+    for term, weight in zip(terms, weights, strict=True):
+        function = TERM_FUNCTIONS.get(term)
+        if function is None:
+            raise ValueError(f"There is no reward term {term!r}")
+        parts[term] = weight * function(before, after)
+    return sum(parts.values()), parts
