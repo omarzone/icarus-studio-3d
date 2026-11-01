@@ -103,6 +103,7 @@ _KINDS = [
             choice("kind", "Kind", ["hinge", "slide", "ball", "fixed"], "hinge"),
             vector("axis", "Axis", None, -1, 1, (0, 1, 0)),
             span("limits", "Limits", "deg or m", -180, 180, (-90, 90)),
+            vector("anchor", "Anchor", "m", -10, 10, (0, 0, 0), hint="Where the joint sits, from the object's center"),
             number("damping", "Damping", "N·s/m", 0, 100, 0.5, expert=True),
             reference("connects_to", "Connects to", "Object it hinges on; empty means its parent"),
         ],
