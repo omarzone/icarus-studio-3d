@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
-from icarus.contracts.operations import EditOperation, SetProperty
-from icarus.contracts.project import BrainSpec, Project, TaskSpec, WorldSpec
+from icarus.contracts.operations import EditOperation, RenameProject, SetProperty
+from icarus.contracts.project import BrainSpec, Project, Revision, TaskSpec, WorldSpec
 from icarus.contracts.properties import NumberValue, PropertyValue
 
 OPERATION = TypeAdapter(EditOperation)
@@ -71,3 +73,20 @@ def test_invalid_documents_are_rejected(build):
 def test_malformed_property_values_are_rejected(value):
     with pytest.raises(ValidationError):
         VALUE.validate_python(value)
+
+
+def test_older_documents_get_an_empty_description():
+    data = sample_project().model_dump()
+    del data["description"]
+    assert Project.model_validate(data).description == ""
+
+
+def test_rename_carries_an_optional_description():
+    operation = OPERATION.validate_python({"op": "rename_project", "name": "Lot", "description": "A parking lot"})
+    assert isinstance(operation, RenameProject)
+    assert operation.description == "A parking lot"
+
+
+def test_revisions_are_not_restored_by_default():
+    revision = Revision(number=1, parent=None, author="user", summary="s", operations=[], created_at=datetime.now(UTC))
+    assert revision.restored_from is None

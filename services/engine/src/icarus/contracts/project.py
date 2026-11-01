@@ -13,6 +13,7 @@ class Project(BaseModel):
 
     id: str
     name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=300)
     schema_version: Literal[1]
     world: WorldSpec
     bodies: list[BodySpec]
@@ -29,6 +30,8 @@ class Revision(BaseModel):
     summary: str
     operations: list[EditOperation]
     created_at: datetime
+    # The revision whose document this one brings back, when it is a restore.
+    restored_from: int | None = None
 
 
 class ProjectSummary(BaseModel):
@@ -36,6 +39,7 @@ class ProjectSummary(BaseModel):
 
     id: str
     name: str
+    description: str = ""
     revision: int
     updated_at: datetime
 
@@ -50,6 +54,12 @@ class ProjectState(BaseModel):
     can_redo: bool
 
 
+class DuplicateProject(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=80)
+
+
 class CreateProject(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -61,6 +71,7 @@ __all__ = [
     "BodySpec",
     "BrainSpec",
     "CreateProject",
+    "DuplicateProject",
     "Project",
     "ProjectState",
     "ProjectSummary",

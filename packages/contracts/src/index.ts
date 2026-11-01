@@ -1,1 +1,51 @@
-export type { ApiError, HealthStatus } from "./generated.ts";
+import type { OperationBatch, Properties } from "./generated.ts";
+
+export type {
+  AddComponent,
+  ApiError,
+  AssetValue,
+  BodySpec,
+  ChoiceValue,
+  ColorValue,
+  ComponentKindSpec,
+  ComponentSpec,
+  CountValue,
+  CreateObject,
+  CreateProject,
+  DesignCheck,
+  DesignReport,
+  DuplicateProject,
+  HealthStatus,
+  LibraryCatalog,
+  ListValue,
+  NumberValue,
+  ObjectSpec,
+  OperationBatch,
+  PanelValue,
+  PieceInfo,
+  Project,
+  ProjectState,
+  ProjectSummary,
+  PropertyOption,
+  PropertySchema,
+  RangeValue,
+  ReadonlyValue,
+  RenameProject,
+  Revision,
+  SceneBody,
+  SceneDescription,
+  SceneGeom,
+  SceneLight,
+  SetBrain,
+  SetProperty,
+  SliderValue,
+  SwitchValue,
+  TemplateInfo,
+  ValidationErrorBody,
+  ValidationIssue,
+  VectorValue,
+} from "./generated.ts";
+
+// Unions the generator inlines, named once from the generated types.
+export type PropertyValue = Properties[string];
+export type EditOperation = OperationBatch["operations"][number];

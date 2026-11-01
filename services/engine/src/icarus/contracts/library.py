@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.properties import PropertySchema
 from icarus.contracts.specs import TaskFamily
 
@@ -42,6 +43,18 @@ class TemplateInfo(BaseModel):
     family: TaskFamily
 
 
+class PieceInfo(BaseModel):
+    """A ready-made object from the library that can be placed in a world."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    icon: str
+    description: str
+    object: ObjectSpec
+
+
 class LibraryCatalog(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -49,3 +62,4 @@ class LibraryCatalog(BaseModel):
     components: list[ComponentKindSpec]
     reward_terms: list[RewardTermInfo]
     templates: list[TemplateInfo]
+    pieces: list[PieceInfo] = []
