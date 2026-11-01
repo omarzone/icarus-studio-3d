@@ -1,4 +1,11 @@
-import type { Conversation, CopilotProposal, SceneDescription, SceneGeom, SendMessage } from "@icarus/contracts";
+import type {
+  AttachmentUpload,
+  Conversation,
+  CopilotProposal,
+  SceneDescription,
+  SceneGeom,
+  SendMessage,
+} from "@icarus/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { EngineError } from "../engine-client/request.ts";
 import { CopilotNotConnected } from "./copilot-connection.ts";
@@ -58,6 +65,51 @@ describe("copilot on the engine", () => {
     const { copilot, sent } = engine();
     await copilot.sendMessage({ key: "park", text: "make it night", selection: "car", workspace: "World" });
     expect(sent).toEqual([{ id: "park", body: { text: "make it night", selection: "car", workspace: "World" } }]);
+  });
+
+  it("sends the ids of the files and scene renders that go with the message", async () => {
+    const { copilot, sent } = engine();
+    await copilot.sendMessage({ key: "park", text: "like this", attachments: ["a1"], views: ["v1", "v2"] });
+    expect(sent).toEqual([{ id: "park", body: { text: "like this", attachments: ["a1"], views: ["v1", "v2"] } }]);
+  });
+
+  it("uploads a file to the project's conversation and hands back where the engine serves it", async () => {
+    const uploads: { id: string; body: AttachmentUpload }[] = [];
+    const attachments = {
+      uploadAttachment: vi.fn(async (id: string, body: AttachmentUpload) => {
+        uploads.push({ id, body });
+        return { id: "a1", kind: body.kind, name: body.name, media_type: body.media_type, size: 4 };
+      }),
+      attachmentLinks: vi.fn(async () => ({
+        content: (id: string) => `http://engine/attachments/${id}/content`,
+        frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+      })),
+      attachmentText: vi.fn(async () => "notes"),
+    };
+    const copilot = createEngineCopilot(engine().api, attachments);
+    const attached = await copilot.attachFile({
+      key: "park",
+      kind: "video",
+      name: "run.mp4",
+      mediaType: "video/mp4",
+      data: "AAAA",
+      frames: ["f1", "f2"],
+    });
+    expect(uploads).toEqual([
+      {
+        id: "park",
+        body: { kind: "video", name: "run.mp4", media_type: "video/mp4", data: "AAAA", frames: ["f1", "f2"] },
+      },
+    ]);
+    expect(attached).toEqual({
+      id: "a1",
+      kind: "video",
+      name: "run.mp4",
+      mediaType: "video/mp4",
+      size: 4,
+      url: "http://engine/attachments/a1/content",
+      poster: "http://engine/attachments/a1/frames/0",
+    });
   });
 
   it("sends the autonomy mode the user picked", async () => {

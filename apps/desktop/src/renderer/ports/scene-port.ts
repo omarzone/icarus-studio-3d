@@ -1,7 +1,7 @@
 import type { SceneDescription } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
-import { engineApi } from "../engine-client/engine-api.ts";
+import { copiesApi, engineApi } from "../engine-client/engine-api.ts";
 import { createSceneFixture } from "./scene.fixture.ts";
 import { createEngineScenePort } from "./scene-engine.ts";
 
@@ -151,7 +151,8 @@ export type PropertyEdit = { scene: string; section: string; property: string; v
 export type ComponentKind = { id: string; label: string; icon: SceneIcon };
 export type ComponentGroup = { label: string; kinds: readonly ComponentKind[] };
 
-export type Variation = { id: string; label: string; enabled: boolean; detail: string };
+// `objects` names the world objects that vary, or would once it is on; samples without it list none.
+export type Variation = { id: string; label: string; enabled: boolean; detail: string; objects?: readonly string[] };
 
 export type TrainingCopies = {
   copies: number;
@@ -180,6 +181,8 @@ export type ScenePort = {
   getTrainingCopies: (scene: string) => Promise<TrainingCopies>;
   setTrainingCopies: (input: { scene: string; copies: number; layout: string }) => Promise<TrainingCopies>;
   toggleVariation: (input: { scene: string; id: string }) => Promise<TrainingCopies>;
+  // Each training copy's first episode, as training starts it; empty where there is no engine scene (prototype).
+  getCopyScenes: (input: { scene: string; count?: number }) => Promise<SceneDescription[]>;
   getGuide: (scene: string) => Promise<GuideProgress>;
   getPropertyReference: () => Promise<PropertyReference>;
   // The compiled scene the viewport draws; null where there is no engine scene (prototype).
@@ -190,19 +193,12 @@ export type ScenePort = {
 
 export const scenePort = definePort<ScenePort>({
   app: {
-    ...createEngineScenePort(engineApi),
+    ...createEngineScenePort({ ...engineApi, ...copiesApi }),
     acceptProposedValue: pending({
       key: "scene.acceptProposedValue",
       summary: "Accepting a value the copilot proposed",
       sprint: 6,
       ids: ["REF-PROPERTY-TYPES"],
-    }),
-    // Variations per copy arrive with randomized training.
-    toggleVariation: pending({
-      key: "scene.toggleVariation",
-      summary: "Changing what varies between copies",
-      sprint: 5,
-      ids: ["POP-TRAINING-COPIES"],
     }),
   },
   prototype: createSceneFixture,

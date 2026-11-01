@@ -62,6 +62,7 @@ describe("copilot conversation views", () => {
       id: "m2",
       role: "copilot",
       text: [{ text: "Here is a darker lot." }],
+      markdown: "Here is a darker lot.",
       thinking: "The light component has an intensity.",
     });
     expect(view.autonomy).toBe("ask");
@@ -72,6 +73,66 @@ describe("copilot conversation views", () => {
       { text: "Add rain", intent: "ask" },
       { text: "Why is it dark?", intent: "ask" },
     ]);
+  });
+
+  it("shows the files a message carries apart from the scene renders taken for it, served by the engine", () => {
+    const links = {
+      content: (id: string) => `http://engine/attachments/${id}/content`,
+      frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+    };
+    const engine: Conversation = {
+      ...conversation([]),
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          text: "like this",
+          created_at: "2026-11-01T10:00:00Z",
+          attachments: [
+            { id: "a1", kind: "image", name: "lot.png", media_type: "image/png", size: 10 },
+            { id: "a2", kind: "video", name: "run.mp4", media_type: "video/mp4", size: 20 },
+            { id: "v1", kind: "view", name: "Three-quarter view", media_type: "image/jpeg", size: 30 },
+          ],
+        },
+      ],
+    };
+    const [message] = conversationView(engine, links).messages;
+    expect(message).toEqual({
+      id: "m1",
+      role: "user",
+      text: "like this",
+      attachments: [
+        {
+          id: "a1",
+          kind: "image",
+          name: "lot.png",
+          mediaType: "image/png",
+          size: 10,
+          url: "http://engine/attachments/a1/content",
+          poster: null,
+        },
+        {
+          id: "a2",
+          kind: "video",
+          name: "run.mp4",
+          mediaType: "video/mp4",
+          size: 20,
+          url: "http://engine/attachments/a2/content",
+          poster: "http://engine/attachments/a2/frames/0",
+        },
+      ],
+      views: [
+        {
+          id: "v1",
+          kind: "view",
+          name: "Three-quarter view",
+          mediaType: "image/jpeg",
+          size: 30,
+          url: "http://engine/attachments/v1/content",
+          poster: null,
+        },
+      ],
+    });
   });
 
   it("leaves out a proposal the conversation no longer has", () => {

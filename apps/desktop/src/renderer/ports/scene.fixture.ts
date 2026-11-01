@@ -116,6 +116,7 @@ export function createSceneFixture(): ScenePort {
       save(scene, { ...document, copies: next });
       return next;
     },
+    getCopyScenes: async () => [],
     toggleVariation: async ({ scene, id }) => {
       const document = find(scene);
       const current = document.copies ?? NO_COPIES;

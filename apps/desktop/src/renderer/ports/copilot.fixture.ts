@@ -1,5 +1,5 @@
 import { BUILD_CONVERSATIONS } from "./build-conversations.fixture.ts";
-import type { ChatMessage, Conversation, CopilotPort, ProposalStatus } from "./copilot-port.ts";
+import type { ChatAttachment, ChatMessage, Conversation, CopilotPort, ProposalStatus } from "./copilot-port.ts";
 import { STUDIO_CONVERSATIONS } from "./copilot-studios.fixture.ts";
 import { TRAINING_CONVERSATIONS } from "./training-conversations.fixture.ts";
 
@@ -151,6 +151,8 @@ const EMPTY: Conversation = { autonomy: "ask", suggestions: [], messages: [] };
 // In-memory conversations that behave: sending adds the message, applying or discarding settles the proposal.
 export function createCopilotFixture(): CopilotPort {
   const conversations = new Map<string, Conversation>(Object.entries(CONVERSATIONS));
+  // Attached files stay in memory with their text, shown from data URLs.
+  const files = new Map<string, { attachment: ChatAttachment; text: string }>();
   let nextId = 1;
   const find = (key: string) => conversations.get(key) ?? EMPTY;
   const save = (key: string, conversation: Conversation) => {
@@ -177,9 +179,18 @@ export function createCopilotFixture(): CopilotPort {
   };
   return {
     getConversation: async (key) => find(key),
-    sendMessage: async ({ key, text }) => {
+    sendMessage: async ({ key, text, attachments = [], views = [] }) => {
       const conversation = find(key);
-      const sent: ChatMessage = { id: `sent-${nextId++}`, role: "user", text };
+      const pick = (ids: readonly string[]) => ids.flatMap((id) => files.get(id)?.attachment ?? []);
+      const attached = pick(attachments);
+      const looked = pick(views);
+      const sent: ChatMessage = {
+        id: `sent-${nextId++}`,
+        role: "user",
+        text,
+        ...(attached.length > 0 ? { attachments: attached } : {}),
+        ...(looked.length > 0 ? { views: looked } : {}),
+      };
       const reply: ChatMessage = {
         id: `reply-${nextId++}`,
         role: "copilot",
@@ -190,7 +201,21 @@ export function createCopilotFixture(): CopilotPort {
     applyProposal: async ({ key, id }) => settle(key, id, "applied"),
     discardProposal: async ({ key, id }) => settle(key, id, "discarded"),
     setAutonomy: async ({ key, mode }) => save(key, { ...find(key), autonomy: mode }),
-    attachFile: async () => undefined,
+    attachFile: async ({ kind, name, mediaType, data, frames = [], text = "" }) => {
+      const pictured = kind === "image" || kind === "view" || kind === "video";
+      const attachment: ChatAttachment = {
+        id: `file-${nextId++}`,
+        kind,
+        name,
+        mediaType,
+        size: Math.floor((data.length * 3) / 4),
+        url: pictured ? `data:${mediaType};base64,${data}` : null,
+        poster: frames[0] ? `data:image/jpeg;base64,${frames[0]}` : null,
+      };
+      files.set(attachment.id, { attachment, text });
+      return attachment;
+    },
+    readAttachmentText: async (id) => files.get(id)?.text ?? "",
     // Sample proposals have no compiled scene, so the preview draws no geoms.
     getPreview: async (key) => {
       const open = find(key).messages.find(

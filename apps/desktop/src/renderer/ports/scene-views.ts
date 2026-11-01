@@ -254,3 +254,15 @@ export function componentGroups(catalog: LibraryCatalog): ComponentGroup[] {
 }
 
 export { allObjects, findObject };
+
+// A component id not taken on the object: the kind itself, else the kind with the next free number.
+export function nextComponentId(taken: readonly string[], kind: string): string {
+  if (!taken.includes(kind)) {
+    return kind;
+  }
+  let n = 2;
+  while (taken.includes(`${kind}_${n}`)) {
+    n++;
+  }
+  return `${kind}_${n}`;
+}

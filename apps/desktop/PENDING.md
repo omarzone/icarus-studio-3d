@@ -8,14 +8,12 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `scene.toggleVariation` | Changing what varies between copies | `POP-TRAINING-COPIES` |
 | `settings.restart-engine` | Restarting the engine from settings | `SCR-SETTINGS-TRAINING` |
 
 ## Sprint 6
 
 | Action | What it does | Used in |
 |---|---|---|
-| `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
 | `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
 | `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
 | `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |

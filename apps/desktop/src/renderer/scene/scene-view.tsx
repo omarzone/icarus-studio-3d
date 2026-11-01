@@ -1,7 +1,7 @@
 import type { SceneDescription, SceneGeom } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { type KeyboardEvent, useContext, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { type CameraView, CameraViewContext } from "./camera-mode.ts";
 import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
@@ -18,6 +18,8 @@ import {
   sceneColors,
   sceneLight,
 } from "./scene-materials.ts";
+import { SKY_RADIUS, type SkyLook, skyLook } from "./scene-sky.ts";
+import { createSkyDome } from "./sky-dome.ts";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
 export type { ScenePick } from "./live-geoms.tsx";
@@ -149,6 +151,26 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
   );
 }
 
+// The world's sky: a gradient dome, its ambient light and its haze; without one, the flat panel color of the editor.
+function Sky({ look, scale, background }: { look: SkyLook | null; scale: number; background: string }) {
+  const dome = useMemo(() => (look ? createSkyDome(look, SKY_RADIUS * scale) : null), [look, scale]);
+  useEffect(
+    () => () => {
+      dome?.geometry.dispose();
+      dome?.material.dispose();
+    },
+    [dome],
+  );
+  return (
+    <>
+      <color attach="background" args={[look?.horizon ?? background]} />
+      <ambientLight intensity={look?.ambient ?? AMBIENT_INTENSITY} />
+      {dome ? <primitive object={dome} /> : null}
+      {look?.fog ? <fogExp2 attach="fog" args={[look.fog.color, look.fog.density]} /> : null}
+    </>
+  );
+}
+
 function frameOnKey(view: CameraView | null) {
   return (event: KeyboardEvent<HTMLDivElement>) => {
     if (view && (event.key === "f" || event.key === "F") && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -165,6 +187,7 @@ export default function SceneView(props: SceneViewProps) {
   const view = useContext(CameraViewContext);
   const scale = Math.max(1, framing / CAMERA_FRAMES);
   const track = useRef<PoseTrack | null>(null);
+  const look = useMemo(() => skyLook(description.sky, scale), [description.sky, scale]);
   // One object per scale, so a re-render never puts the camera back where it started.
   const start = useMemo(
     () => ({
@@ -184,8 +207,7 @@ export default function SceneView(props: SceneViewProps) {
       onKeyDown={frameOnKey(view)}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
-      <color attach="background" args={[colors.background]} />
-      <ambientLight intensity={AMBIENT_INTENSITY} />
+      <Sky look={look} scale={scale} background={colors.background} />
       {description.lights.map((light) => (
         <directionalLight key={light.name} {...sceneLight(light)} />
       ))}

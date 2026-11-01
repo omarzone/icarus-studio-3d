@@ -1,21 +1,28 @@
 import type { EditOperation, LibraryCatalog, Project, PropertySchema } from "@icarus/contracts";
-import type { EngineApi } from "../engine-client/engine-api.ts";
-import type { GuideProgress, PropertyReference, PropertyType, ScenePort } from "./scene-port.ts";
-import { componentGroups, findObject, inspection, sceneTree, toContractValue, toViewValue } from "./scene-views.ts";
+import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
+import { trainingVariations, variationOperations } from "./copy-variations.ts";
+import type { GuideProgress, PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
+import {
+  componentGroups,
+  findObject,
+  inspection,
+  nextComponentId,
+  sceneTree,
+  toContractValue,
+  toViewValue,
+} from "./scene-views.ts";
 
-type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene">;
+export { nextComponentId } from "./scene-views.ts";
 
-export type EngineScenePort = Omit<ScenePort, "acceptProposedValue" | "toggleVariation">;
+type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene"> & CopiesApi;
 
-export function nextComponentId(taken: readonly string[], kind: string): string {
-  if (!taken.includes(kind)) {
-    return kind;
-  }
-  let n = 2;
-  while (taken.includes(`${kind}_${n}`)) {
-    n++;
-  }
-  return `${kind}_${n}`;
+export type EngineScenePort = Omit<ScenePort, "acceptProposedValue">;
+
+// Copies are laid out in a grid, as Live training shows them.
+const LAYOUTS = ["Grid"];
+
+function trainingCopies(project: Project): TrainingCopies {
+  return { copies: project.brain.copies, layout: "Grid", layouts: LAYOUTS, variations: trainingVariations(project) };
 }
 
 type Vec3 = [number, number, number];
@@ -154,14 +161,22 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       const operation: EditOperation = { op: "add_component", object: obj.id, component: { id, kind, properties } };
       return edit(scene, [operation], `Added ${spec.label} to ${obj.name}`);
     },
-    getTrainingCopies: async (scene) => {
-      const { project } = await load(scene);
-      return { copies: project.brain.copies, layout: "Grid", layouts: ["Grid"], variations: [] };
-    },
+    getTrainingCopies: async (scene) => trainingCopies((await load(scene)).project),
     setTrainingCopies: async ({ scene, copies }) => {
       const state = await api.applyOperations(scene, [{ op: "set_brain", copies }], `${copies} training copies`);
-      return { copies: state.project.brain.copies, layout: "Grid", layouts: ["Grid"], variations: [] };
+      return trainingCopies(state.project);
     },
+    toggleVariation: async ({ scene, id }) => {
+      const { project, catalog: lib } = await load(scene);
+      const operations = variationOperations(project, lib, id);
+      if (operations.length === 0) {
+        throw new Error("Nothing in this world can vary that way");
+      }
+      const label = trainingVariations(project).find((item) => item.id === id);
+      const summary = `${label?.enabled ? "Stopped varying" : "Varied"} ${label?.label.toLowerCase() ?? id} between copies`;
+      return trainingCopies((await api.applyOperations(scene, operations, summary)).project);
+    },
+    getCopyScenes: ({ scene, count }) => api.copyScenes(scene, count),
     getGuide: async (scene) => guide((await load(scene)).project),
     getSceneDescription: (scene) => api.scene(scene),
     moveObject: async ({ scene, id, delta }) => {

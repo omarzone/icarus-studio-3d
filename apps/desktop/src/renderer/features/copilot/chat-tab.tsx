@@ -1,67 +1,125 @@
 // TAB-CHAT
-import type { AutonomyMode, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
+import { Paperclip } from "lucide-react";
+import { type DragEvent, useRef, useState } from "react";
+import type { AutonomyMode, ChatAttachment, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
+import type { ReadFile } from "./attachment-reading.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
 import { CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
 import { Composer } from "./composer.tsx";
+import { MessageAttachments, SceneViewsStrip } from "./message-attachments.tsx";
 import { PlanCard } from "./plan-card.tsx";
 import { ProposalCard, type ProposalRoutes } from "./proposal-card.tsx";
 import { MilestoneDivider, RunProgressCard } from "./run-progress-card.tsx";
 import { SuggestionChips, type SuggestionRoutes } from "./suggestion-chips.tsx";
+import { visibleSuggestions } from "./suggestion-visibility.ts";
+import { useComposerAttachments } from "./use-composer-attachments.ts";
+import { useStickToBottom } from "./use-stick-to-bottom.ts";
+
+// The message on its way to the copilot, shown until the answer arrives.
+export type SendingMessage = { text: string; attachments: readonly ChatAttachment[] };
 
 export type ChatTabProps = {
   conversation: Conversation;
   placeholder: string;
   suggestionRoutes: SuggestionRoutes;
   proposalRoutes?: ProposalRoutes;
-  // Text of the message on its way to the copilot, shown until the answer arrives.
-  sending?: string | null;
+  sending?: SendingMessage | null;
   // Why the copilot could not answer the last message because no model is connected.
   notConnected?: string | null;
   // Resolves true once the copilot has the message.
-  onSend: (text: string) => Promise<boolean>;
+  onSend: (text: string, attachments?: readonly ChatAttachment[]) => Promise<boolean>;
+  // Uploads a file added to the composer.
+  onUpload: (file: ReadFile) => Promise<ChatAttachment>;
   onApply: (id: string) => void;
   onDiscard: (id: string) => void;
-  onAttach: () => void;
   onAutonomy: (mode: AutonomyMode) => void;
 };
 
-// The conversation sticks to the bottom under a fade, then suggestion chips and the composer.
+const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
+
+// The conversation sticks to the bottom under a fade, then suggestion chips and the composer. Files dropped
+// anywhere on the chat, pasted or picked wait in the composer until the message goes.
 export function ChatTab(props: ChatTabProps) {
-  const { conversation } = props;
+  const { conversation, sending } = props;
+  const attachments = useComposerAttachments(props.onUpload);
+  const list = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  useStickToBottom(list, `${conversation.messages.length}:${sending?.text ?? ""}`, Boolean(sending));
+  const suggestions = visibleSuggestions(conversation, Boolean(sending));
   return (
-    <div className="flex h-full flex-col">
+    <section
+      aria-label="Copilot chat"
+      className="relative flex h-full min-w-0 flex-col"
+      onDragEnter={(event) => {
+        if (hasFiles(event)) {
+          event.preventDefault();
+          setDragging(true);
+        }
+      }}
+      onDragOver={(event) => {
+        if (hasFiles(event)) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget instanceof Node ? event.relatedTarget : null)) {
+          setDragging(false);
+        }
+      }}
+      onDrop={(event) => {
+        if (hasFiles(event)) {
+          event.preventDefault();
+          setDragging(false);
+          attachments.add([...event.dataTransfer.files]);
+        }
+      }}
+    >
       {props.notConnected ? (
         <div className="min-h-0 flex-1">
           <CopilotNotConnectedState detail={props.notConnected} />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-3 pt-2 [mask-image:linear-gradient(to_bottom,transparent_0,black_56px)]">
-          <div className="mt-auto flex flex-col gap-3.5">
+        <div
+          ref={list}
+          className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 pt-2 [mask-image:linear-gradient(to_bottom,transparent_0,black_56px)]"
+        >
+          <div className="mt-auto flex min-w-0 flex-col gap-3.5">
             {conversation.messages.map((message) => (
               <Message key={message.id} message={message} {...props} />
             ))}
-            {props.sending ? (
+            {sending ? (
               <>
-                <UserBubble text={props.sending} />
+                {sending.attachments.length > 0 ? <MessageAttachments attachments={sending.attachments} /> : null}
+                <UserBubble text={sending.text} />
                 <ThinkingBubble />
               </>
             ) : null}
           </div>
         </div>
       )}
-      <SuggestionChips suggestions={conversation.suggestions} routes={props.suggestionRoutes} onSend={props.onSend} />
+      <SuggestionChips suggestions={suggestions} routes={props.suggestionRoutes} onSend={props.onSend} />
       <Composer
         placeholder={props.placeholder}
         autonomy={conversation.autonomy}
         autonomyNote={conversation.autonomyNote}
-        sending={Boolean(props.sending)}
+        sending={Boolean(sending)}
+        attachments={attachments}
         onSend={props.onSend}
-        onAttach={props.onAttach}
         onAutonomy={props.onAutonomy}
       />
-    </div>
+      {dragging ? (
+        <div className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-card border-[1.5px] border-dashed border-line-dashed bg-overlay">
+          <span className="flex flex-col items-center gap-2 text-center text-body text-fg-secondary">
+            <Paperclip size={22} strokeWidth={1.75} aria-hidden className="text-fg-tertiary" />
+            Drop images, videos or documents to attach them
+            <span className="text-meta text-fg-tertiary">Up to 15 MB each</span>
+          </span>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -75,12 +133,21 @@ function Message({
 }: ChatTabProps & { message: ChatMessage }) {
   switch (message.role) {
     case "user":
-      return <UserBubble text={message.text} />;
+      return (
+        <>
+          {message.attachments && message.attachments.length > 0 ? (
+            <MessageAttachments attachments={message.attachments} />
+          ) : null}
+          <UserBubble text={message.text} />
+          {message.views && message.views.length > 0 ? <SceneViewsStrip views={message.views} /> : null}
+        </>
+      );
     case "copilot":
       return (
         <CopilotBubble
           title={message.title}
           text={message.text}
+          markdown={message.markdown}
           thinking={message.thinking}
           checks={message.checks}
           actions={

@@ -11,6 +11,7 @@ import { OverlayBottomLeft, OverlayTop, PreviewPill } from "../../editor/viewpor
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { useConversationKey, useProposalPreview } from "../copilot/conversation-key.ts";
+import { useCopiesPreview } from "./copies-preview-store.ts";
 import { GuideCard, guideLabel, ShowGuidePill } from "./guide-card.tsx";
 import { LibraryPanel } from "./library/library-panel.tsx";
 import { useProjectName } from "./use-project-name.ts";
@@ -35,6 +36,9 @@ export function WorldWorkspace({
   const go = useNavigation((state) => state.go);
   const preview = useProposalPreview(useConversationKey(config.conversation));
   const previewing = variant === "proposal" || Boolean(preview.data);
+  const copiesScene = useCopiesPreview((state) => state.scene);
+  const hideCopies = useCopiesPreview((state) => state.hide);
+  const copiesPreview = copiesScene === scene ? { onExit: hideCopies } : undefined;
   return (
     <DockWorkspaceShell
       header={{
@@ -69,6 +73,7 @@ export function WorldWorkspace({
               toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
               tint={previewing ? "proposal" : undefined}
               ghosts={preview.data?.geoms}
+              copiesPreview={copiesPreview}
               overlays={overlays ?? <WorldOverlays variant={variant} config={config} scene={scene} />}
             />
           ),

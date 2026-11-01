@@ -1,4 +1,5 @@
 import type {
+  AttachmentInfo,
   BuildStatus,
   Conversation,
   CopilotMessage,
@@ -15,6 +16,7 @@ import { has, isListOf, isRecord, isSceneDescription } from "./response-checks.t
 const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"];
 const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
 const STEP_STATES: readonly string[] = ["done", "running", "todo"];
+const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view"];
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -25,6 +27,18 @@ function isOptional(value: Record<string, unknown>, key: string, kind: "string" 
   return field === undefined || field === null || typeof field === kind;
 }
 
+export function isAttachmentInfo(value: unknown): value is AttachmentInfo {
+  return (
+    isRecord(value) &&
+    has(value, "id", "string") &&
+    typeof value.kind === "string" &&
+    ATTACHMENT_KINDS.includes(value.kind) &&
+    has(value, "name", "string") &&
+    has(value, "media_type", "string") &&
+    has(value, "size", "number")
+  );
+}
+
 function isMessage(value: unknown): value is CopilotMessage {
   return (
     isRecord(value) &&
@@ -32,7 +46,8 @@ function isMessage(value: unknown): value is CopilotMessage {
     (value.role === "user" || value.role === "copilot") &&
     has(value, "text", "string") &&
     isOptional(value, "proposal_id", "string") &&
-    isOptional(value, "thinking", "string")
+    isOptional(value, "thinking", "string") &&
+    (value.attachments === undefined || isListOf(value.attachments, isAttachmentInfo))
   );
 }
 

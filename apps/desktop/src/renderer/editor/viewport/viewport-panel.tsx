@@ -39,6 +39,8 @@ export type ViewportPanelProps = {
   play?: PlayView;
   // The training run the "live-training" and "replay" tabs draw.
   training?: TrainingView;
+  // The scene tab shows the training copies side by side instead of the editable scene.
+  copiesPreview?: { onExit: () => void };
   className?: string;
 };
 
@@ -79,6 +81,7 @@ export function ViewportPanel({
   scene,
   play,
   training,
+  copiesPreview,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
@@ -138,7 +141,7 @@ export function ViewportPanel({
         <div className="flex h-full flex-col">
           {toolbar}
           {active === "scene" ? (
-            <SceneTab {...surface} />
+            <SceneTab {...surface} copiesPreview={copiesPreview} />
           ) : active === "game-view" ? (
             <GameViewTab {...surface} />
           ) : active === "play" ? (

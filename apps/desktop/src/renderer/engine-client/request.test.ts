@@ -124,4 +124,13 @@ describe("scene checks", () => {
     expect(isSceneDescription({ ...scene, zones: [{ ...zone, kind: "portal" }] })).toBe(false);
     expect(isSceneDescription({ ...scene, zones: [{ ...zone, position: [1, 2] }] })).toBe(false);
   });
+
+  it("takes a scene with or without a sky, and refuses a sky without its colors", async () => {
+    const { isSceneDescription } = await import("./response-checks.ts");
+    const scene = { revision: 1, bodies: [], lights: [], geoms: [] };
+    const sky = { top: "#5F8FC4", horizon: "#E4ECEF", ambient: 1, fog: 0.2 };
+    expect(isSceneDescription({ ...scene, sky: null })).toBe(true);
+    expect(isSceneDescription({ ...scene, sky })).toBe(true);
+    expect(isSceneDescription({ ...scene, sky: { ...sky, top: undefined } })).toBe(false);
+  });
 });

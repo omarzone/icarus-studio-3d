@@ -8,6 +8,7 @@ import {
   Color,
   CylinderGeometry,
   DirectionalLight,
+  FogExp2,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -18,10 +19,14 @@ import {
 import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomShape } from "./geom-shape.ts";
 import { AMBIENT_INTENSITY, floorDepth, GEOM_ROUGHNESS, sceneColors, sceneLight } from "./scene-materials.ts";
-import { sceneBounds, thumbnailCamera } from "./thumbnail-framing.ts";
+import { skyLook } from "./scene-sky.ts";
+import { createSkyDome } from "./sky-dome.ts";
+import { sceneBounds, thumbnailCamera, topCamera } from "./thumbnail-framing.ts";
 
 const WIDTH = 720;
 const HEIGHT = 360;
+// Share of the camera's far distance the sky dome reaches, so the dome is never clipped.
+const DOME_REACH = 0.9;
 
 // One WebGL context for every card: browsers allow only a handful, and a page can show many cards.
 let shared: WebGLRenderer | null = null;
@@ -60,10 +65,34 @@ function geometry(geom: SceneGeom): BufferGeometry {
 
 // Draws the engine's compiled scene at its initial pose from a fixed three-quarter view, as a PNG data URL.
 export function renderSceneThumbnail(description: SceneDescription): string {
+  return renderSceneView(description, { view: "three-quarter", width: WIDTH, height: HEIGHT, type: "image/png" });
+}
+
+export type SceneViewOptions = {
+  view: "three-quarter" | "top";
+  width: number;
+  height: number;
+  type: "image/png" | "image/jpeg";
+};
+
+// The same still picture from a chosen side and size, as a data URL (the copilot's look at the scene).
+export function renderSceneView(description: SceneDescription, options: SceneViewOptions): string {
+  const { width, height } = options;
   const colors = sceneColors();
+  const look = skyLook(description.sky);
   const scene = new Scene();
-  scene.background = new Color(colors.background);
-  scene.add(new AmbientLight(0xffffff, AMBIENT_INTENSITY));
+  scene.background = new Color(look?.horizon ?? colors.background);
+  scene.add(new AmbientLight(0xffffff, look?.ambient ?? AMBIENT_INTENSITY));
+  const frame = options.view === "top" ? topCamera : thumbnailCamera;
+  const framing = frame(sceneBounds(description.geoms), width / height);
+  const dome = look ? createSkyDome(look, framing.far * DOME_REACH) : null;
+  if (dome) {
+    dome.position.set(...framing.target);
+    scene.add(dome);
+  }
+  if (look?.fog) {
+    scene.fog = new FogExp2(look.fog.color, look.fog.density);
+  }
   for (const light of description.lights) {
     const { position, intensity } = sceneLight(light);
     const directional = new DirectionalLight(0xffffff, intensity);
@@ -80,15 +109,17 @@ export function renderSceneThumbnail(description: SceneDescription): string {
     scene.add(mesh);
     return mesh;
   });
-  const framing = thumbnailCamera(sceneBounds(description.geoms), WIDTH / HEIGHT);
-  const camera = new PerspectiveCamera(framing.fov, WIDTH / HEIGHT, framing.near, framing.far);
+  const camera = new PerspectiveCamera(framing.fov, width / height, framing.near, framing.far);
   camera.position.set(...framing.position);
   camera.lookAt(...framing.target);
   try {
     const gl = renderer();
+    gl.setSize(width, height, false);
     gl.render(scene, camera);
-    return gl.domElement.toDataURL("image/png");
+    return gl.domElement.toDataURL(options.type, 0.85);
   } finally {
+    dome?.geometry.dispose();
+    dome?.material.dispose();
     for (const mesh of meshes) {
       mesh.geometry.dispose();
       mesh.material.dispose();

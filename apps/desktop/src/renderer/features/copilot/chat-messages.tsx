@@ -2,6 +2,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { CheckItem, RichText } from "../../ports/copilot-port.ts";
+import { MessageMarkdown } from "./message-markdown.tsx";
 
 export function RichTextView({ text }: { text: RichText }) {
   return (
@@ -24,7 +25,7 @@ export function RichTextView({ text }: { text: RichText }) {
 // User bubble: right-aligned, white, radius 20 20 6 20, max 82%.
 export function UserBubble({ text }: { text: string }) {
   return (
-    <div className="max-w-[calc(82%+28px)] self-end rounded-[20px_20px_6px_20px] bg-selected px-3.5 py-2.5 text-body leading-[1.45] text-on-selected">
+    <div className="max-w-[calc(82%+28px)] self-end rounded-[20px_20px_6px_20px] bg-selected px-3.5 py-2.5 text-body leading-[1.45] whitespace-pre-wrap wrap-break-word text-on-selected">
       {text}
     </div>
   );
@@ -33,6 +34,8 @@ export function UserBubble({ text }: { text: string }) {
 type CopilotProps = {
   title?: string;
   text: RichText;
+  // The answer in markdown, drawn instead of the rich text when present.
+  markdown?: string;
   checks?: readonly CheckItem[];
   // Inline actions drawn at the end of the bubble.
   actions?: ReactNode;
@@ -41,7 +44,18 @@ type CopilotProps = {
 };
 
 // Copilot bubble: grey, no avatar; a sentence, then a check list when the answer is structured.
-export function CopilotBubble({ title, text, checks, actions, thinking }: CopilotProps) {
+export function CopilotBubble({ title, text, markdown, checks, actions, thinking }: CopilotProps) {
+  if (markdown !== undefined) {
+    return (
+      <div className="flex max-w-[calc(92%+28px)] min-w-0 flex-col gap-2.5 self-start rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55]">
+        {title ? <span className="font-semibold">{title}</span> : null}
+        <MessageMarkdown source={markdown} />
+        {checks && checks.length > 0 ? <CheckList items={checks} leading="leading-[1.55]" /> : null}
+        {actions}
+        {thinking ? <ThinkingToggle thinking={thinking} /> : null}
+      </div>
+    );
+  }
   if (thinking) {
     return (
       <div className="flex max-w-[calc(92%+28px)] flex-col gap-2 rounded-bubble bg-control px-3.5 py-2.75 text-body leading-normal">
@@ -97,7 +111,7 @@ export function CheckLine({ item, leading = "leading-tight" }: { item: CheckItem
           !
         </span>
       )}
-      <span>{item.text}</span>
+      <span className="min-w-0 wrap-break-word">{item.text}</span>
     </span>
   );
 }
@@ -115,7 +129,11 @@ function ThinkingToggle({ thinking }: { thinking: string }) {
         {open ? "Hide thinking" : "Show thinking"}
         <ChevronDown size={12} strokeWidth={1.75} aria-hidden className={open ? "rotate-180" : ""} />
       </Act>
-      {open ? <p className="text-ui leading-normal whitespace-pre-wrap text-fg-tertiary">{thinking}</p> : null}
+      {open ? (
+        <p className="border-l-2 border-line-strong pl-2.5 text-ui leading-normal whitespace-pre-wrap wrap-break-word text-fg-tertiary">
+          {thinking}
+        </p>
+      ) : null}
     </>
   );
 }

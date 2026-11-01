@@ -7,6 +7,7 @@ export const sceneKeys = {
   tree: (scene: string) => ["scene", scene, "tree"] as const,
   inspection: (scene: string) => ["scene", scene, "inspection"] as const,
   copies: (scene: string) => ["scene", scene, "copies"] as const,
+  copyScenes: (scene: string) => ["scene", scene, "copy-scenes"] as const,
   guide: (scene: string) => ["scene", scene, "guide"] as const,
   description: (scene: string) => ["scene", scene, "description"] as const,
   componentKinds: ["scene", "component-kinds"] as const,
@@ -31,6 +32,12 @@ export function useGuide(scene: string) {
 export function useSceneDescription(scene: string) {
   const port = usePort(scenePort);
   return useQuery({ queryKey: sceneKeys.description(scene), queryFn: () => port.getSceneDescription(scene) });
+}
+
+// Each training copy's first episode; re-read after every edit like the rest of the scene.
+export function useCopyScenes(scene: string) {
+  const port = usePort(scenePort);
+  return useQuery({ queryKey: sceneKeys.copyScenes(scene), queryFn: () => port.getCopyScenes({ scene }) });
 }
 
 // Writes what an edit returned into the cache so every panel shows it at once.

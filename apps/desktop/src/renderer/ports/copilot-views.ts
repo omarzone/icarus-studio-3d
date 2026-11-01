@@ -1,10 +1,12 @@
 import type {
+  AttachmentInfo,
   CopilotProposal,
   Conversation as EngineConversation,
   ProposalChange as EngineProposalChange,
   SceneGeom,
 } from "@icarus/contracts";
-import type { ChatMessage, Conversation, Proposal, ProposalChange, RichText } from "./copilot-port.ts";
+import type { AttachmentLinks } from "../engine-client/attachment-api.ts";
+import type { ChatAttachment, ChatMessage, Conversation, Proposal, ProposalChange, RichText } from "./copilot-port.ts";
 
 // Pure mappings from the engine's conversation documents onto the chat's view types.
 
@@ -48,16 +50,47 @@ export function proposalView(proposal: CopilotProposal): Proposal {
   };
 }
 
-export function conversationView(conversation: EngineConversation): Conversation {
+export function attachmentView(info: AttachmentInfo, links: AttachmentLinks | null): ChatAttachment {
+  return {
+    id: info.id,
+    kind: info.kind,
+    name: info.name,
+    mediaType: info.media_type,
+    size: info.size,
+    url: links ? links.content(info.id) : null,
+    poster: links && info.kind === "video" ? links.frame(info.id, 0) : null,
+  };
+}
+
+export function hasAttachments(conversation: EngineConversation): boolean {
+  return conversation.messages.some((message) => (message.attachments ?? []).length > 0);
+}
+
+// Files the person sent, and apart from them the renders of the scene the app took for the copilot.
+function userMessage(message: EngineConversation["messages"][number], links: AttachmentLinks | null): ChatMessage {
+  const all = (message.attachments ?? []).map((info) => attachmentView(info, links));
+  const files = all.filter((item) => item.kind !== "view");
+  const views = all.filter((item) => item.kind === "view");
+  return {
+    id: message.id,
+    role: "user",
+    text: message.text,
+    ...(files.length > 0 ? { attachments: files } : {}),
+    ...(views.length > 0 ? { views } : {}),
+  };
+}
+
+export function conversationView(conversation: EngineConversation, links: AttachmentLinks | null = null): Conversation {
   const proposals = new Map(conversation.proposals.map((proposal) => [proposal.id, proposal]));
   const messages = conversation.messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user") {
-      return [{ id: message.id, role: "user", text: message.text }];
+      return [userMessage(message, links)];
     }
     const answer: ChatMessage = {
       id: message.id,
       role: "copilot",
       text: [{ text: message.text }],
+      markdown: message.text,
       ...(message.thinking ? { thinking: message.thinking } : {}),
     };
     const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;

@@ -128,6 +128,17 @@ function isZone(value: unknown): boolean {
   );
 }
 
+function isSky(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (has(value, "top", "string") &&
+      has(value, "horizon", "string") &&
+      has(value, "ambient", "number") &&
+      has(value, "fog", "number"))
+  );
+}
+
 export function isSceneDescription(value: unknown): value is SceneDescription {
   return (
     isRecord(value) &&
@@ -135,8 +146,13 @@ export function isSceneDescription(value: unknown): value is SceneDescription {
     has(value, "lights", "array") &&
     Array.isArray(value.geoms) &&
     value.geoms.every(isGeom) &&
-    (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone)))
+    (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone))) &&
+    isSky(value.sky)
   );
+}
+
+export function isSceneDescriptions(value: unknown): value is SceneDescription[] {
+  return isListOf(value, isSceneDescription);
 }
 
 function isReading(value: unknown): value is PlayReading {
