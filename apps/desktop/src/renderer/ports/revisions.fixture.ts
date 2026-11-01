@@ -35,5 +35,8 @@ export function createRevisionsFixture(): RevisionsPort {
       byProject.set(projectId, [restored, ...revisions.map((item) => ({ ...item, current: false }))]);
       return restored;
     },
+    // The sample history is fixed; undo and redo have nothing to walk in the prototype.
+    undo: async () => undefined,
+    redo: async () => undefined,
   };
 }

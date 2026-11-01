@@ -1,6 +1,7 @@
 import type { ScreenId } from "../app/navigation/catalog-id.ts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
+import { projectView } from "./project-views.ts";
 import { createProjectsFixture } from "./projects.fixture.ts";
 
 // View types the screens need; the engine implementation maps @icarus/contracts types onto them.
@@ -34,31 +35,37 @@ export type ProjectsPort = {
   duplicateProject: (input: { id: string; name: string; include: readonly string[] }) => Promise<ProjectSummary>;
   deleteProject: (id: string) => Promise<void>;
   getFootprint: (id: string) => Promise<ProjectFootprint>;
+  createProject: (input: { template: string; name: string }) => Promise<ProjectSummary>;
 };
 
 export const projectsPort = definePort<ProjectsPort>({
   app: {
-    listProjects: pending({ key: "projects.list", summary: "Your projects list", sprint: 2, ids: ["SCR-PROJECTS"] }),
-    getProject: pending({ key: "projects.get", summary: "Opening a project", sprint: 2, ids: ["SCR-WORLD"] }),
-    renameProject: pending({ key: "projects.rename", summary: "Renaming a project", sprint: 2, ids: ["MOD-RENAME"] }),
-    duplicateProject: pending({
-      key: "projects.duplicate",
-      summary: "Duplicating a project",
-      sprint: 2,
-      ids: ["MOD-DUPLICATE"],
-    }),
-    deleteProject: pending({
-      key: "projects.delete",
-      summary: "Deleting a project",
-      sprint: 2,
-      ids: ["MOD-DELETE-PROJECT"],
-    }),
-    getFootprint: pending({
-      key: "projects.footprint",
-      summary: "What a project keeps on this computer",
-      sprint: 2,
-      ids: ["MOD-DUPLICATE", "MOD-DELETE-PROJECT"],
-    }),
+    listProjects: async () => (await engineApi.listProjects()).map(projectView),
+    getProject: async (id) => {
+      const state = await engineApi.project(id);
+      return projectView({ ...state.project, revision: state.revision.number });
+    },
+    renameProject: async ({ id, name, description }) => {
+      const state = await engineApi.applyOperations(
+        id,
+        [{ op: "rename_project", name, description }],
+        `Renamed to ${name}`,
+      );
+      return projectView({ ...state.project, revision: state.revision.number });
+    },
+    // Runs are not copied yet: there are none until training lands.
+    duplicateProject: async ({ id, name }) => {
+      const state = await engineApi.duplicateProject(id, name);
+      return projectView({ ...state.project, revision: state.revision.number });
+    },
+    deleteProject: async (id) => {
+      await engineApi.deleteProject(id);
+    },
+    getFootprint: async () => ({ trainingRuns: 0, runsBytes: 0 }),
+    createProject: async ({ template, name }) => {
+      const state = await engineApi.createProject(name, template);
+      return projectView({ ...state.project, revision: state.revision.number });
+    },
   },
   prototype: createProjectsFixture,
 });
