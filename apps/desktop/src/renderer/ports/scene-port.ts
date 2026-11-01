@@ -184,6 +184,8 @@ export type ScenePort = {
   getPropertyReference: () => Promise<PropertyReference>;
   // The compiled scene the viewport draws; null where there is no engine scene (prototype).
   getSceneDescription: (scene: string) => Promise<SceneDescription | null>;
+  // Moves an object by a delta in world axes (metres, MuJoCo frame), as a gizmo drag ends.
+  moveObject: (input: { scene: string; id: string; delta: [number, number, number] }) => Promise<Inspection>;
 };
 
 export const scenePort = definePort<ScenePort>({
@@ -202,7 +204,6 @@ export const scenePort = definePort<ScenePort>({
       sprint: 5,
       ids: ["POP-TRAINING-COPIES"],
     }),
-    getSceneDescription: (scene) => engineApi.scene(scene),
   },
   prototype: createSceneFixture,
 });

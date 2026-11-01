@@ -1,4 +1,11 @@
-import type { ReactNode } from "react";
+import { lazy, type ReactNode, Suspense } from "react";
+import { useEngineAction } from "../../app/runtime/engine-query.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
+import { scenePort } from "../../ports/scene-port.ts";
+import { useSceneCache, useSceneDescription, useSceneTree } from "../scene-queries.ts";
+
+// The 3D renderer is heavy, so it loads the first time a view has a scene to draw.
+const SceneView = lazy(() => import("../../scene/scene-view.tsx"));
 
 export type ViewportSurfaceProps = {
   // What the view shows, for assistive technology; the 3D renderer draws inside this surface.
@@ -6,16 +13,46 @@ export type ViewportSurfaceProps = {
   // Tints the view while it previews a change that is not applied yet.
   tint?: "proposal";
   overlays?: ReactNode;
+  scene?: string;
 };
 
-// The 3D area: a plain surface until the scene renderer draws engine states into it. Never draws a fake scene.
-export function ViewportSurface({ label, tint, overlays }: ViewportSurfaceProps) {
+// The 3D area: it draws the engine's compiled scene when there is one, and never a fake scene.
+export function ViewportSurface({ label, tint, overlays, scene }: ViewportSurfaceProps) {
   return (
     <div role="img" aria-label={label} className="relative min-h-0 flex-1 bg-panel">
+      {scene ? <EngineScene scene={scene} /> : null}
       {tint === "proposal" ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-proposal-tint" />
       ) : null}
       {overlays}
+    </div>
+  );
+}
+
+function EngineScene({ scene }: { scene: string }) {
+  const port = usePort(scenePort);
+  const description = useSceneDescription(scene);
+  const tree = useSceneTree(scene);
+  const cache = useSceneCache(scene);
+  const select = useEngineAction(port.selectObject);
+  const move = useEngineAction(port.moveObject);
+  if (!description.data) {
+    return null;
+  }
+  return (
+    <div className="absolute inset-0">
+      <Suspense fallback={null}>
+        <SceneView
+          description={description.data}
+          selected={tree.data?.selected ?? null}
+          onSelect={(id) => {
+            if (id) {
+              select.mutate({ scene, id }, { onSuccess: cache.tree });
+            }
+          }}
+          onMove={(id, delta) => move.mutate({ scene, id, delta }, { onSuccess: cache.inspection })}
+        />
+      </Suspense>
     </div>
   );
 }

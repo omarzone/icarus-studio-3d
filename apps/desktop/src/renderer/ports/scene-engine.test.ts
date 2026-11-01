@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { EngineApi } from "../engine-client/engine-api.ts";
 import { EngineRejected } from "../engine-client/request.ts";
 import { isLibraryCatalog, isProject } from "../engine-client/response-checks.ts";
-import { createEngineScenePort, nextComponentId } from "./scene-engine.ts";
+import { createEngineScenePort, nextComponentId, worldToParent } from "./scene-engine.ts";
 import parking from "./testdata/parking-car.json";
 
 const { project, catalog } = (() => {
@@ -33,8 +33,9 @@ function stateOf(doc: Project, number = 1): ProjectState {
 
 function fakeApi(apply: (operations: EditOperation[]) => Promise<ProjectState>) {
   const applyOperations = vi.fn((_id: string, operations: EditOperation[]) => apply(operations));
-  const api: Pick<EngineApi, "project" | "library" | "applyOperations"> = {
+  const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene"> = {
     project: async () => stateOf(project),
+    scene: async () => ({ revision: 1, bodies: [], geoms: [], lights: [] }),
     library: async (): Promise<LibraryCatalog> => catalog,
     applyOperations,
   };
@@ -92,4 +93,13 @@ describe("engine scene port", () => {
 it("names a new component after its kind, numbering repeats", () => {
   expect(nextComponentId(["transform", "mesh"], "touch")).toBe("touch");
   expect(nextComponentId(["touch", "touch_2"], "touch")).toBe("touch_3");
+});
+
+it("moves an object by a world delta expressed in its parent's frame", () => {
+  // Parent turned 90° about z: a world +x move is a local −y move.
+  const half = Math.SQRT1_2;
+  const local = worldToParent([1, 0, 0], [half, 0, 0, half]);
+  expect(local[0]).toBeCloseTo(0, 6);
+  expect(local[1]).toBeCloseTo(-1, 6);
+  expect(local[2]).toBeCloseTo(0, 6);
 });

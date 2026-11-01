@@ -3,9 +3,9 @@ import type { EngineApi } from "../engine-client/engine-api.ts";
 import type { GuideProgress, PropertyReference, PropertyType, ScenePort } from "./scene-port.ts";
 import { componentGroups, findObject, inspection, sceneTree, toContractValue, toViewValue } from "./scene-views.ts";
 
-type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations">;
+type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene">;
 
-export type EngineScenePort = Omit<ScenePort, "acceptProposedValue" | "toggleVariation" | "getSceneDescription">;
+export type EngineScenePort = Omit<ScenePort, "acceptProposedValue" | "toggleVariation">;
 
 export function nextComponentId(taken: readonly string[], kind: string): string {
   if (!taken.includes(kind)) {
@@ -16,6 +16,18 @@ export function nextComponentId(taken: readonly string[], kind: string): string 
     n++;
   }
   return `${kind}_${n}`;
+}
+
+type Vec3 = [number, number, number];
+
+// Rotates a world vector into a parent frame whose world rotation is the quaternion wxyz.
+export function worldToParent([x, y, z]: Vec3, [w, qx, qy, qz]: readonly [number, number, number, number]): Vec3 {
+  // Inverse rotation: the conjugate quaternion applied to the vector.
+  const [cx, cy, cz] = [-qx, -qy, -qz];
+  const tx = 2 * (cy * z - cz * y);
+  const ty = 2 * (cz * x - cx * z);
+  const tz = 2 * (cx * y - cy * x);
+  return [x + w * tx + (cy * tz - cz * ty), y + w * ty + (cz * tx - cx * tz), z + w * tz + (cx * ty - cy * tx)];
 }
 
 function guide(project: Project): GuideProgress {
@@ -151,6 +163,27 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       return { copies: state.project.brain.copies, layout: "Grid", layouts: ["Grid"], variations: [] };
     },
     getGuide: async (scene) => guide((await load(scene)).project),
+    getSceneDescription: (scene) => api.scene(scene),
+    moveObject: async ({ scene, id, delta }) => {
+      const [{ project }, description] = await Promise.all([load(scene), api.scene(scene)]);
+      const obj = findObject(project, id);
+      const transform = obj?.components.find((component) => component.kind === "transform");
+      const position = transform?.properties.position;
+      if (!obj || !transform || position?.type !== "vector") {
+        throw new Error("Only objects with a Transform can be moved");
+      }
+      const parent = description.bodies.find((body) => body.name === obj.parent);
+      const local = parent ? worldToParent(delta, parent.quaternion) : delta;
+      const value: Vec3 = [position.value[0] + local[0], position.value[1] + local[1], position.value[2] + local[2]];
+      const operation: EditOperation = {
+        op: "set_property",
+        object: obj.id,
+        component: transform.id,
+        property: "position",
+        value: { type: "vector", value },
+      };
+      return edit(scene, [operation], `Moved ${obj.name}`);
+    },
     getPropertyReference: async () => reference(await library()),
   };
 }

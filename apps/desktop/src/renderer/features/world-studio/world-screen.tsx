@@ -73,6 +73,7 @@ function WorldWorkspace({ variant, config, scene }: { variant: WorldVariant; con
           render: () => (
             <ViewportPanel
               label="The project's world"
+              scene={scene}
               toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
               tint={variant === "proposal" ? "proposal" : undefined}
               overlays={<WorldOverlays variant={variant} config={config} scene={scene} />}
