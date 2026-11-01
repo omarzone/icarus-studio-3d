@@ -206,7 +206,7 @@ When a project starts from a sentence, the Architect first returns three `Design
 ### Design compilation and tests
 
 - `design/compiler.py` turns `WorldSpec` + `BodySpec` into an MJCF model, computing inertias from part geometry and mass.
-- `design/tests.py` runs fast physics checks on every candidate revision: it compiles, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
+- `design/checks.py` runs fast physics checks on every candidate revision: it compiles, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
 - Failures become a `DesignReport` with readable reasons. The copilot receives the report and repairs the design through new operations, up to a fixed number of attempts.
 
 ### Simulation
@@ -414,7 +414,8 @@ A contract change lands first and alone; other zones consume it afterwards. Para
 Decisions are recorded as ADRs in `docs/decisions/` once data settles them.
 
 1. Default training budgets per task family, from measured learning curves on CPU.
-2. Edit operation granularity and how copilot revisions group operations.
-3. Pose extraction pipeline and retargeting approach for motion clips.
-4. Animation export formats and the runtime target for hardware export.
-5. Community service stack, hosting and bundle format versioning.
+2. Pose extraction pipeline and retargeting approach for motion clips.
+3. Animation export formats and the runtime target for hardware export.
+4. Community service stack, hosting and bundle format versioning.
+
+Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)).
