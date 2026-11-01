@@ -107,4 +107,21 @@ describe("scene checks", () => {
       false,
     );
   });
+
+  it("refuses a scene whose zones miss where to draw them", async () => {
+    const { isSceneDescription } = await import("./response-checks.ts");
+    const zone = {
+      name: "goal:goal_zone",
+      object: "goal",
+      kind: "goal_zone",
+      shape: "sphere",
+      size: [3, 3, 3],
+      position: [12, 0, 0],
+      quaternion: [1, 0, 0, 0],
+    };
+    const scene = { revision: 1, bodies: [], lights: [], geoms: [] };
+    expect(isSceneDescription({ ...scene, zones: [zone] })).toBe(true);
+    expect(isSceneDescription({ ...scene, zones: [{ ...zone, kind: "portal" }] })).toBe(false);
+    expect(isSceneDescription({ ...scene, zones: [{ ...zone, position: [1, 2] }] })).toBe(false);
+  });
 });

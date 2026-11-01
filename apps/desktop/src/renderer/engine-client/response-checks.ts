@@ -112,13 +112,30 @@ function isGeom(value: unknown): boolean {
   );
 }
 
+const ZONE_KINDS: readonly unknown[] = ["spawn_point", "goal_zone", "zone"];
+const ZONE_SHAPES: readonly unknown[] = ["sphere", "box"];
+
+function isZone(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    has(value, "name", "string") &&
+    has(value, "object", "string") &&
+    ZONE_KINDS.includes(value.kind) &&
+    ZONE_SHAPES.includes(value.shape) &&
+    isTriple(value.size, 3) &&
+    isTriple(value.position, 3) &&
+    isTriple(value.quaternion, 4)
+  );
+}
+
 export function isSceneDescription(value: unknown): value is SceneDescription {
   return (
     isRecord(value) &&
     has(value, "bodies", "array") &&
     has(value, "lights", "array") &&
     Array.isArray(value.geoms) &&
-    value.geoms.every(isGeom)
+    value.geoms.every(isGeom) &&
+    (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone)))
   );
 }
 

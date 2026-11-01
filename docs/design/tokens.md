@@ -120,6 +120,7 @@ Exported from the same module as `scene.*`, as numbers for Three.js.
 | `scene.sensor.ray` | `#E9EEF5` at 0.7 | Sensor rays |
 | `scene.sensor.hit` | `#FF5C5C` | Ray hitting something close |
 | `scene.proposal` | `color.proposal` at 0.45 | Ghosted proposed objects |
+| `scene.zone` | `color.ok` at 0.3 (goal, areas) · `color.fg.secondary` ring (spawn) | Task zones painted on the ground |
 | `scene.fog` | per world | Matches the sky horizon |
 
 ## Typography

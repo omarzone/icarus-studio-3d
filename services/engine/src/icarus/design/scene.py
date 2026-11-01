@@ -3,7 +3,7 @@ from typing import Literal
 import mujoco
 import numpy as np
 
-from icarus.contracts.scene import SceneBody, SceneDescription, SceneGeom, SceneLight
+from icarus.contracts.scene import SceneBody, SceneDescription, SceneGeom, SceneLight, SceneZone
 from icarus.design.compiler import CompiledModel
 
 Shape = Literal["plane", "box", "sphere", "capsule", "cylinder"]
@@ -39,6 +39,34 @@ def _extents(shape: Shape, size) -> tuple[float, float, float]:
             return (2 * size[0], 2 * size[0], 2 * size[1])
         case "plane":
             return (2 * size[0], 2 * size[1], 0.0)
+
+
+_ZONE_KINDS = ("spawn_point", "goal_zone", "zone")
+
+
+def _zones(model: mujoco.MjModel, data: mujoco.MjData) -> list[SceneZone]:
+    """The task's places, compiled as invisible sites named "<object>:<kind>"."""
+    zones: list[SceneZone] = []
+    for index in range(model.nsite):
+        name = model.site(index).name
+        owner, _, kind = name.rpartition(":")
+        if kind not in _ZONE_KINDS:
+            continue
+        shape: Literal["sphere", "box"] = "box" if model.site_type[index] == mujoco.mjtGeom.mjGEOM_BOX else "sphere"
+        quaternion = np.zeros(4)
+        mujoco.mju_mat2Quat(quaternion, data.site_xmat[index])
+        zones.append(
+            SceneZone(
+                name=name,
+                object=owner,
+                kind=kind,
+                shape=shape,
+                size=_extents(shape, model.site_size[index]),
+                position=_vector(data.site_xpos[index]),
+                quaternion=_quat(quaternion),
+            )
+        )
+    return zones
 
 
 def _hex(rgba) -> str:
@@ -86,7 +114,7 @@ def scene_description(compiled: CompiledModel, revision: int) -> SceneDescriptio
         )
         for index in range(model.nlight)
     ]
-    return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights)
+    return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights, zones=_zones(model, data))
 
 
 def object_extents(compiled: CompiledModel, object_ids: list[str]) -> tuple[float, float, float] | None:

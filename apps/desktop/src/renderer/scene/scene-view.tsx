@@ -15,6 +15,7 @@ import {
   sceneColors,
   sceneLight,
 } from "./scene-materials.ts";
+import { ZoneMarkers } from "./zone-markers.tsx";
 
 type Vec3 = [number, number, number];
 
@@ -289,6 +290,10 @@ export default function SceneView(props: SceneViewProps) {
       ) : (
         <EditGeoms {...props} />
       )}
+      <ZoneMarkers
+        zones={description.zones ?? []}
+        colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal }}
+      />
       {props.ghosts && props.ghosts.length > 0 ? <GhostGeoms geoms={props.ghosts} color={colors.proposal} /> : null}
       <OrbitControls makeDefault />
       {props.mode === "play" ? null : (
