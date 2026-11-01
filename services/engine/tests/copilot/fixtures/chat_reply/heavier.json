@@ -1,0 +1,31 @@
+{
+  "match": [
+    "heavier"
+  ],
+  "replies": [
+    {
+      "content": {
+        "answer": "A much heavier car would take longer to stop, which makes parking harder.",
+        "proposal": {
+          "summary": "Make the car heavier",
+          "explanation": "Raises the car's mass so it carries more momentum.",
+          "operations": [
+            {
+              "op": "set_property",
+              "object": "car",
+              "component": "physics_body",
+              "property": "mass",
+              "value": {
+                "type": "number",
+                "value": 50000
+              }
+            }
+          ]
+        },
+        "suggestions": [
+          "How heavy can the car be?"
+        ]
+      }
+    }
+  ]
+}

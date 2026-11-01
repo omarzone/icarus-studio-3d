@@ -1,0 +1,278 @@
+{
+  "match": [
+    "obstacle"
+  ],
+  "replies": [
+    {
+      "content": {
+        "ideas": [
+          {
+            "title": "Walker on a ramp",
+            "world": "Flat ground with a gentle ramp ahead",
+            "body": "A torso on two jointed legs",
+            "learns": "To walk forward and climb the ramp without falling",
+            "template": "walker_robot",
+            "operations": [
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "ramp",
+                  "name": "Ramp",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            3,
+                            0,
+                            0.25
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            -15,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            2,
+                            1.5,
+                            0.1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#6b7280"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "title": "Car with a trailer",
+            "world": "An open lot",
+            "body": "A car towing a trailer",
+            "learns": "To reverse the trailer into the spot",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "trailer",
+                "component": "physics_body",
+                "property": "mass",
+                "value": {
+                  "type": "number",
+                  "value": 300
+                }
+              }
+            ]
+          },
+          {
+            "title": "Slalom to the spot",
+            "world": "A lot with a line of posts to steer around",
+            "body": "The small car with front steering",
+            "learns": "To slalom between the posts and park",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "post_1",
+                  "name": "Post 1",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            4,
+                            1,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "cylinder"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.2,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#f0a63a"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "post_2",
+                  "name": "Post 2",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            8,
+                            -1,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "cylinder"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.2,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#f0a63a"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

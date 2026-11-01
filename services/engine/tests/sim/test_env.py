@@ -36,8 +36,50 @@ def test_a_different_seed_with_randomization_changes_friction(parking):
 
 
 def test_navigation_observes_the_goal_in_the_agent_frame(parking):
-    observation, _ = ProjectEnv(parking).reset(seed=0)
-    np.testing.assert_allclose(observation[-3:], [12.0, 0.0, -0.5], atol=1e-6)
+    env = ProjectEnv(parking)
+    observation, _ = env.reset(seed=0)
+    car, goal = car_start(env)[:2], np.array([12.0, 0.0])
+    assert np.linalg.norm(observation[-3:-1]) == pytest.approx(np.linalg.norm(goal - car), abs=1e-6)
+    assert observation[-1] == pytest.approx(-0.5, abs=1e-6)
+
+
+def car_start(env: ProjectEnv) -> np.ndarray:
+    """Across, along and heading in degrees of the car right after reset."""
+    data, car = env.world.data, env.world.agent
+    assert car is not None
+    forward = data.xmat[car].reshape(3, 3)[:, 0]
+    return np.array([data.xpos[car, 0], data.xpos[car, 1], np.degrees(np.arctan2(forward[1], forward[0]))])
+
+
+def test_navigation_starts_at_a_seeded_random_pose_behind_the_spawn(parking):
+    env = ProjectEnv(parking)
+    starts = []
+    for seed in range(40):
+        env.reset(seed=seed)
+        starts.append(car_start(env))
+    x, y, heading = np.array(starts).T
+    assert np.all((x >= -2 - 1e-9) & (x <= 1e-9)) and np.all(np.abs(y) <= 1.5 + 1e-9)
+    assert np.all(np.abs(heading) <= 35 + 1e-6)
+    assert np.ptp(x) > 1 and np.ptp(y) > 2 and np.ptp(heading) > 40
+
+
+def test_the_same_seed_gives_the_same_start_and_a_different_seed_another(parking):
+    env = ProjectEnv(parking)
+    env.reset(seed=5)
+    first = car_start(env)
+    env.reset(seed=6)
+    other = car_start(env)
+    env.reset(seed=5)
+    np.testing.assert_array_equal(first, car_start(env))
+    assert not np.allclose(first, other)
+
+
+def test_locomotion_still_starts_at_the_spawn(walker):
+    env = ProjectEnv(walker)
+    env.reset(seed=1)
+    first = env.world.data.qpos.copy()
+    env.reset(seed=2)
+    np.testing.assert_array_equal(first, env.world.data.qpos)
 
 
 def test_a_project_without_a_task_family_is_rejected():

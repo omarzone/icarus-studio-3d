@@ -1,0 +1,25 @@
+{
+  "replies": [
+    {
+      "content": {
+        "title": "Car with a trailer",
+        "world": "An open lot",
+        "body": "A car towing a trailer",
+        "learns": "To reverse the trailer into the spot",
+        "template": "parking_car",
+        "operations": [
+          {
+            "op": "set_property",
+            "object": "trailer",
+            "component": "physics_body",
+            "property": "mass",
+            "value": {
+              "type": "number",
+              "value": 300
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

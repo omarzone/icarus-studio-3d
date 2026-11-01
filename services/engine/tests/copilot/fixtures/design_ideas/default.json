@@ -1,0 +1,46 @@
+{
+  "replies": [
+    {
+      "reasoning": "The request does not name a body, so offer one of each kind the library can build.",
+      "content": {
+        "ideas": [
+          {
+            "title": "First steps",
+            "world": "Flat ground",
+            "body": "A torso on two jointed legs",
+            "learns": "To walk forward without falling",
+            "template": "walker_robot",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "torso",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#4f9cac"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Humanoid stroll",
+            "world": "Flat ground",
+            "body": "A humanoid with twelve motors and balance and foot sensors",
+            "learns": "To keep its balance and walk forward",
+            "template": "humanoid",
+            "operations": []
+          },
+          {
+            "title": "Park the car",
+            "world": "An open lot with one parking spot",
+            "body": "A car with front steering and rear-wheel drive",
+            "learns": "To drive to the spot and stop inside it",
+            "template": "parking_car",
+            "operations": []
+          }
+        ]
+      }
+    }
+  ]
+}

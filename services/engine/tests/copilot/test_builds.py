@@ -1,0 +1,51 @@
+import time
+
+import pytest
+
+from icarus.contracts.copilot import BuildIdea, BuildStatus, IdeaSet
+from icarus.copilot.architect import IdeaBook, UnknownIdeas, propose_ideas
+from icarus.copilot.builds import BUILD_STEPS, BuildBoard
+from icarus.copilot.client import copilot_client
+from icarus.copilot.settings import ModelSettingsStore
+from icarus.projects.store import ProjectStore
+
+
+def finished(board: BuildBoard, build_id: str) -> BuildStatus:
+    for _ in range(400):
+        status = board.status(build_id)
+        if status.ready or status.error:
+            return status
+        time.sleep(0.05)
+    raise AssertionError("The build did not finish")
+
+
+@pytest.fixture
+def ideas(tmp_path) -> tuple[IdeaBook, IdeaSet]:
+    book = IdeaBook()
+    idea_set, drafts = propose_ideas(copilot_client(ModelSettingsStore(tmp_path)), "a little car that learns to park")
+    book.add(idea_set, drafts)
+    return book, idea_set
+
+
+def test_a_build_creates_a_project_whose_head_is_a_tested_copilot_revision(tmp_path, ideas):
+    book, idea_set = ideas
+    store = ProjectStore(tmp_path / "projects")
+    idea = idea_set.ideas[0]
+    board = BuildBoard(store, book)
+    started = board.start(BuildIdea(idea_set=idea_set.id, idea=idea.id))
+    assert [step.label for step in started.steps] == [label for _, label in BUILD_STEPS]
+    status = finished(board, started.build_id)
+    assert status.error is None and status.ready and status.progress == 1
+    assert all(step.status == "done" for step in status.steps)
+    assert status.project_id is not None
+    state = store.state(status.project_id)
+    assert state.revision.author == "copilot" and state.revision.number == 2
+    assert state.report.ok and state.project.name == idea.title
+    assert {obj.id for obj in state.project.world.objects} >= {"bay_wall_left", "bay_wall_right", "bay_wall_back"}
+
+
+def test_an_unknown_idea_is_refused_before_anything_is_built(tmp_path, ideas):
+    board = BuildBoard(ProjectStore(tmp_path / "projects"), ideas[0])
+    with pytest.raises(UnknownIdeas):
+        board.start(BuildIdea(idea_set="nope", idea="nope"))
+    assert not (tmp_path / "projects").exists()
