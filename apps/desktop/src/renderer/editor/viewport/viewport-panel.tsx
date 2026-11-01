@@ -3,7 +3,10 @@ import type { SceneGeom } from "@icarus/contracts";
 import { Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
+import { type CameraMode, CameraViewContext, defaultCameraMode } from "../../scene/camera-mode.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
+import { CameraMenu } from "./camera-menu.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
 import { LiveTrainingTab, type TrainingView } from "./live-training-tab.tsx";
 import { PlayTab, type PlayView } from "./play-tab.tsx";
@@ -45,6 +48,23 @@ export const DEFAULT_VIEWPORT_TABS: readonly ViewportTab[] = [
 ];
 
 const DEFAULT_OPTIONS = ["Lit", "Perspective"] as const;
+// The view option the camera menu takes the place of.
+const CAMERA_OPTION = "Perspective";
+
+// Whether the tab draws an engine scene the camera can move around.
+function drawsScene(tab: string, props: Pick<ViewportPanelProps, "scene" | "play" | "training">): boolean {
+  switch (tab) {
+    case "scene":
+      return props.scene !== undefined;
+    case "play":
+      return props.play !== undefined;
+    case "live-training":
+    case "replay":
+      return props.training !== undefined;
+    default:
+      return false;
+  }
+}
 
 export function ViewportPanel({
   label,
@@ -62,6 +82,21 @@ export function ViewportPanel({
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
+  // Each tab keeps the camera mode chosen in it; `frame` asks the camera to frame everything again.
+  const [modes, setModes] = useState<Readonly<Record<string, CameraMode>>>({});
+  const [frame, setFrame] = useState(0);
+  // The prototype keeps its fixed camera and plain label, as in the design.
+  const cameraReady = useRuntimeMode() === "app" && drawsScene(active, { scene, play, training });
+  const mode = modes[active] ?? defaultCameraMode(active);
+  const setMode = (next: CameraMode) => setModes((current) => ({ ...current, [active]: next }));
+  const frameAll = () => {
+    if (mode === "follow" || mode === "onboard") {
+      setMode("free");
+    }
+    setFrame((count) => count + 1);
+  };
+  const camera = cameraReady ? { mode, frame, onFrameAll: frameAll } : null;
+  const options = cameraReady ? viewOptions.filter((option) => option !== CAMERA_OPTION) : viewOptions;
   const surface = { label, tint, overlays, scene, ghosts };
   return (
     <Panel
@@ -85,7 +120,7 @@ export function ViewportPanel({
       options={
         <>
           {note ? <span className="mr-1 text-ui text-fg-tertiary">{note}</span> : null}
-          {viewOptions.map((option) => (
+          {options.map((option) => (
             <Act
               key={option}
               cta={option}
@@ -95,25 +130,28 @@ export function ViewportPanel({
               {option}
             </Act>
           ))}
+          {camera ? <CameraMenu mode={mode} onMode={setMode} onFrameAll={frameAll} /> : null}
         </>
       }
     >
-      <div className="flex h-full flex-col">
-        {toolbar}
-        {active === "scene" ? (
-          <SceneTab {...surface} />
-        ) : active === "game-view" ? (
-          <GameViewTab {...surface} />
-        ) : active === "play" ? (
-          <PlayTab {...surface} play={play} />
-        ) : active === "live-training" ? (
-          <LiveTrainingTab {...surface} training={training} />
-        ) : active === "replay" ? (
-          <ReplayTab {...surface} training={training} />
-        ) : (
-          <ViewportSurface {...surface} />
-        )}
-      </div>
+      <CameraViewContext value={camera}>
+        <div className="flex h-full flex-col">
+          {toolbar}
+          {active === "scene" ? (
+            <SceneTab {...surface} />
+          ) : active === "game-view" ? (
+            <GameViewTab {...surface} />
+          ) : active === "play" ? (
+            <PlayTab {...surface} play={play} />
+          ) : active === "live-training" ? (
+            <LiveTrainingTab {...surface} training={training} />
+          ) : active === "replay" ? (
+            <ReplayTab {...surface} training={training} />
+          ) : (
+            <ViewportSurface {...surface} />
+          )}
+        </div>
+      </CameraViewContext>
     </Panel>
   );
 }

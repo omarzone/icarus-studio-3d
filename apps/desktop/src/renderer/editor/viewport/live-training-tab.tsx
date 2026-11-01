@@ -2,7 +2,7 @@
 import { lazy, Suspense, useMemo } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { LiveCopies } from "../../ports/training-port.ts";
-import { copyGrid } from "../../scene/copy-grid.ts";
+import { copyGrid, isFirstCopy } from "../../scene/copy-grid.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
@@ -85,6 +85,7 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
             poses={poses}
             onPick={ignorePick}
             framing={grid.extent}
+            follows={isFirstCopy}
           />
         </Suspense>
       </RenderBoundary>

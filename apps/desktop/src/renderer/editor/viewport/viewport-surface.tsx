@@ -60,6 +60,7 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
       >
         <Suspense fallback={null}>
           <SceneView
+            key={scene}
             description={description.data}
             ghosts={ghosts}
             selected={tree.data?.selected ?? null}

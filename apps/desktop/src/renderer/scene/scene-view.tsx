@@ -1,12 +1,15 @@
 import type { SceneDescription, SceneGeom } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
-import { Canvas, type ThreeEvent, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { type Group, type Mesh, Quaternion } from "three";
+import { Canvas } from "@react-three/fiber";
+import { type KeyboardEvent, useContext, useMemo, useRef, useState } from "react";
+import type { Group } from "three";
+import { type CameraView, CameraViewContext } from "./camera-mode.ts";
+import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
-import { geomShape } from "./geom-shape.ts";
+import { GeomShape } from "./geom-geometry.tsx";
+import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import { isDeliberateClick } from "./pick.ts";
-import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
+import type { Poses, PoseTrack } from "./pose-track.ts";
 import {
   AMBIENT_INTENSITY,
   floorDepth,
@@ -17,10 +20,9 @@ import {
 } from "./scene-materials.ts";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
-type Vec3 = [number, number, number];
+export type { ScenePick } from "./live-geoms.tsx";
 
-// A click in a Play view: the object hit (null for the ground), where, and the horizontal look direction (MuJoCo axes).
-export type ScenePick = { object: string | null; point: Vec3; direction: Vec3 };
+type Vec3 = [number, number, number];
 
 type EditProps = {
   mode?: "edit";
@@ -39,28 +41,17 @@ type PlayProps = {
 
 // Width in metres the camera starts out framing (every copy of a training run); the default frames one world.
 // `ghosts` are geoms of a copilot proposal that is not applied yet, drawn see-through in the proposal color.
+// Inside a viewport that asks for a camera (CameraViewContext) the camera frames the scene and follows the chosen
+// mode, looking for the agent among the geoms `follows` accepts; elsewhere it keeps a fixed three-quarter start.
 export type SceneViewProps = {
   description: SceneDescription;
   framing?: number;
   ghosts?: readonly SceneGeom[];
+  follows?: (geom: SceneGeom) => boolean;
 } & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
 const CAMERA_FRAMES = 12;
-
-function GeomShape({ geom }: { geom: SceneGeom }) {
-  const shape = geomShape(geom);
-  switch (shape.kind) {
-    case "box":
-      return <boxGeometry args={shape.args} />;
-    case "sphere":
-      return <sphereGeometry args={shape.args} />;
-    case "cylinder":
-      return <cylinderGeometry args={shape.args} />;
-    case "capsule":
-      return <capsuleGeometry args={shape.args} />;
-  }
-}
 
 type GeomProps = {
   geom: SceneGeom;
@@ -158,119 +149,39 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
   );
 }
 
-function pickOf(object: string | null, event: ThreeEvent<MouseEvent>): ScenePick {
-  const [dx, dy] = fromThreePosition([event.ray.direction.x, event.ray.direction.y, event.ray.direction.z]);
-  const length = Math.hypot(dx, dy);
-  return {
-    object,
-    point: fromThreePosition([event.point.x, event.point.y, event.point.z]),
-    direction: length > 1e-6 ? [dx / length, dy / length, 0] : [1, 0, 0],
+function frameOnKey(view: CameraView | null) {
+  return (event: KeyboardEvent<HTMLDivElement>) => {
+    if (view && (event.key === "f" || event.key === "F") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      view.onFrameAll();
+    }
   };
-}
-
-const from = new Quaternion();
-const to = new Quaternion();
-
-// Geoms placed by the engine's frames, eased from one frame to the next; clicks report picks instead of selecting.
-function LiveGeoms({
-  geoms,
-  poses,
-  onPick,
-}: {
-  geoms: readonly SceneGeom[];
-  poses: Poses;
-  onPick: PlayProps["onPick"];
-}) {
-  const meshes = useRef(new Map<string, Mesh>());
-  const track = useRef<PoseTrack | null>(null);
-  const pick = useRef(onPick);
-  useEffect(() => {
-    pick.current = onPick;
-  }, [onPick]);
-  useEffect(() => {
-    track.current = nextTrack(track.current, poses, performance.now());
-  }, [poses]);
-  useFrame(() => {
-    const current = track.current;
-    if (!current) {
-      return;
-    }
-    const t = trackProgress(current, performance.now());
-    for (const [name, mesh] of meshes.current) {
-      const target = current.to.get(name);
-      if (!target) {
-        continue;
-      }
-      const start = current.from.get(name) ?? target;
-      const [x, y, z] = toThreePosition(lerpPosition(start.position, target.position, t));
-      mesh.position.set(x, y, z);
-      from.set(...toThreeQuaternion(start.quaternion));
-      to.set(...toThreeQuaternion(target.quaternion));
-      mesh.quaternion.slerpQuaternions(from, to, t);
-    }
-  });
-  // Built once per scene, so a new frame never re-renders the meshes; useFrame moves them.
-  return useMemo(
-    () => (
-      <>
-        {geoms.map((geom) => (
-          // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element; the Play tool bar is the accessible control.
-          <mesh
-            key={geom.name}
-            ref={(mesh) => {
-              if (mesh) {
-                meshes.current.set(geom.name, mesh);
-              } else {
-                meshes.current.delete(geom.name);
-              }
-            }}
-            position={toThreePosition(geom.position)}
-            quaternion={toThreeQuaternion(geom.quaternion)}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (isDeliberateClick(event.delta)) {
-                pick.current(pickOf(geom.shape === "plane" ? null : geom.body, event));
-              }
-            }}
-          >
-            <GeomShape geom={geom} />
-            <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
-          </mesh>
-        ))}
-        {/* Catches clicks on the ground beyond the floor geoms. */}
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element. */}
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (isDeliberateClick(event.delta)) {
-              pick.current(pickOf(null, event));
-            }
-          }}
-        >
-          <planeGeometry args={[400, 400]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-      </>
-    ),
-    [geoms],
-  );
 }
 
 // Draws the engine's compiled scene; it never moves anything itself, a drag or a pick only reports what was done.
 export default function SceneView(props: SceneViewProps) {
   const colors = useMemo(sceneColors, []);
-  const { description, framing = CAMERA_FRAMES } = props;
+  const { description, framing = CAMERA_FRAMES, follows } = props;
+  const view = useContext(CameraViewContext);
   const scale = Math.max(1, framing / CAMERA_FRAMES);
+  const track = useRef<PoseTrack | null>(null);
+  // One object per scale, so a re-render never puts the camera back where it started.
+  const start = useMemo(
+    () => ({
+      position: [CAMERA[0] * scale, CAMERA[1] * scale, CAMERA[2] * scale] satisfies Vec3,
+      fov: VIEW_FOV,
+      near: 0.1,
+      far: 500 * scale,
+    }),
+    [scale],
+  );
   return (
     <Canvas
-      camera={{
-        position: [CAMERA[0] * scale, CAMERA[1] * scale, CAMERA[2] * scale],
-        fov: 45,
-        near: 0.1,
-        far: 500 * scale,
-      }}
+      camera={start}
       dpr={[1, 2]}
+      tabIndex={view ? 0 : undefined}
+      aria-label={view ? "3D view, press F to frame everything" : undefined}
+      onKeyDown={frameOnKey(view)}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
       <color attach="background" args={[colors.background]} />
@@ -286,7 +197,7 @@ export default function SceneView(props: SceneViewProps) {
         position={[0, 0.001, 0]}
       />
       {props.mode === "play" ? (
-        <LiveGeoms geoms={description.geoms} poses={props.poses} onPick={props.onPick} />
+        <LiveGeoms geoms={description.geoms} poses={props.poses} track={track} onPick={props.onPick} />
       ) : (
         <EditGeoms {...props} />
       )}
@@ -295,7 +206,18 @@ export default function SceneView(props: SceneViewProps) {
         colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal }}
       />
       {props.ghosts && props.ghosts.length > 0 ? <GhostGeoms geoms={props.ghosts} color={colors.proposal} /> : null}
-      <OrbitControls makeDefault />
+      {view ? (
+        <CameraRig
+          description={description}
+          mode={view.mode}
+          frame={view.frame}
+          track={props.mode === "play" ? track : null}
+          include={follows}
+          far={start.far}
+        />
+      ) : (
+        <OrbitControls makeDefault />
+      )}
       {props.mode === "play" ? null : (
         <GizmoHelper alignment="top-right" margin={[72, 72]}>
           <GizmoViewcube />

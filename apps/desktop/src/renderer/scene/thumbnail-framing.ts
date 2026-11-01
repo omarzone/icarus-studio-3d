@@ -1,4 +1,4 @@
-import type { SceneGeom } from "@icarus/contracts";
+import type { SceneGeom, SceneZone } from "@icarus/contracts";
 import { toThreePosition, type Vector3 } from "./coordinates.ts";
 
 // A sphere around what a scene shows, in MuJoCo world axes.
@@ -18,6 +18,8 @@ const FOV = 35;
 const MARGIN = 1.15;
 // The editor viewport's three-quarter direction, in MuJoCo axes (Three's [7, 6, 9]).
 const DIRECTION: Vector3 = [7, -9, 6];
+// Straight down in MuJoCo axes, tilted toward -y so screen "up" is the world's +y.
+const TOP: Vector3 = [0, -0.001, 1];
 const EMPTY: SceneBounds = { center: [0, 0, 0], radius: 4 };
 
 // Half the extent of a geom's farthest point from its center; sizes are full extents (box) or diameter and length.
@@ -35,19 +37,27 @@ function reach({ shape, size: [x, y, z] }: SceneGeom): number {
   }
 }
 
+type Sphere = { position: readonly [number, number, number]; reach: number };
+
 // Ground planes are left out: they span the whole world and would shrink the subject to a dot.
-export function sceneBounds(geoms: readonly SceneGeom[]): SceneBounds | null {
-  const solid = geoms.filter((geom) => geom.shape !== "plane");
-  if (solid.length === 0) {
+// Task zones count, so a goal far from the agent is still in the picture.
+export function sceneBounds(geoms: readonly SceneGeom[], zones: readonly SceneZone[] = []): SceneBounds | null {
+  const spheres: Sphere[] = [
+    ...geoms.filter((geom) => geom.shape !== "plane").map((geom) => ({ position: geom.position, reach: reach(geom) })),
+    ...zones.map((zone) => ({
+      position: zone.position,
+      reach: zone.shape === "box" ? Math.hypot(...zone.size) / 2 : zone.size[0] / 2,
+    })),
+  ];
+  if (spheres.length === 0) {
     return null;
   }
   const low = [Infinity, Infinity, Infinity];
   const high = [-Infinity, -Infinity, -Infinity];
-  for (const geom of solid) {
-    const r = reach(geom);
+  for (const { position, reach: r } of spheres) {
     for (const axis of [0, 1, 2] as const) {
-      low[axis] = Math.min(low[axis] ?? Infinity, geom.position[axis] - r);
-      high[axis] = Math.max(high[axis] ?? -Infinity, geom.position[axis] + r);
+      low[axis] = Math.min(low[axis] ?? Infinity, position[axis] - r);
+      high[axis] = Math.max(high[axis] ?? -Infinity, position[axis] + r);
     }
   }
   const [lx = 0, ly = 0, lz = 0] = low;
@@ -58,23 +68,37 @@ export function sceneBounds(geoms: readonly SceneGeom[]): SceneBounds | null {
   };
 }
 
-// A fixed three-quarter view far enough back that the bounding sphere fits the narrower side of the picture.
-export function thumbnailCamera(bounds: SceneBounds | null, aspect: number): ThumbnailCamera {
-  const { center, radius } = bounds ?? EMPTY;
-  const vertical = (FOV * Math.PI) / 180;
+// How far back a camera with this vertical field of view must be for the sphere to fit the narrower side.
+function fitDistance(radius: number, aspect: number, fov: number): number {
+  const vertical = (fov * Math.PI) / 180;
   const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
-  const away = (radius * MARGIN) / Math.sin(Math.min(vertical, horizontal) / 2);
-  const length = Math.hypot(...DIRECTION);
+  return (radius * MARGIN) / Math.sin(Math.min(vertical, horizontal) / 2);
+}
+
+function cameraAt(direction: Vector3, bounds: SceneBounds | null, aspect: number, fov: number): ThumbnailCamera {
+  const { center, radius } = bounds ?? EMPTY;
+  const away = fitDistance(radius, aspect, fov);
+  const length = Math.hypot(...direction);
   const eye: Vector3 = [
-    center[0] + (DIRECTION[0] / length) * away,
-    center[1] + (DIRECTION[1] / length) * away,
-    center[2] + (DIRECTION[2] / length) * away,
+    center[0] + (direction[0] / length) * away,
+    center[1] + (direction[1] / length) * away,
+    center[2] + (direction[2] / length) * away,
   ];
   return {
     position: toThreePosition(eye),
     target: toThreePosition(center),
-    fov: FOV,
+    fov,
     near: Math.max((away - radius) / 10, 0.01),
     far: away + radius * 20,
   };
+}
+
+// A fixed three-quarter view far enough back that the bounding sphere fits the narrower side of the picture.
+export function thumbnailCamera(bounds: SceneBounds | null, aspect: number, fov = FOV): ThumbnailCamera {
+  return cameraAt(DIRECTION, bounds, aspect, fov);
+}
+
+// Straight down on the scene; a hair off vertical so orbiting from it has a defined "up".
+export function topCamera(bounds: SceneBounds | null, aspect: number, fov = FOV): ThumbnailCamera {
+  return cameraAt(TOP, bounds, aspect, fov);
 }

@@ -1,7 +1,7 @@
-import type { SceneGeom } from "@icarus/contracts";
+import type { SceneGeom, SceneZone } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
 import { toThreePosition } from "./coordinates.ts";
-import { sceneBounds, thumbnailCamera } from "./thumbnail-framing.ts";
+import { sceneBounds, thumbnailCamera, topCamera } from "./thumbnail-framing.ts";
 
 const IDENTITY: [number, number, number, number] = [1, 0, 0, 0];
 
@@ -49,6 +49,38 @@ describe("scene bounds", () => {
     expect(withFloor).toEqual(sceneBounds([box]));
   });
 
+  it("reaches out to the task zones, so a goal far from the agent is in the picture", () => {
+    const goal: SceneZone = {
+      name: "lot:goal_zone",
+      object: "lot",
+      kind: "goal_zone",
+      shape: "sphere",
+      position: [12, 0, 0],
+      size: [2, 2, 2],
+      quaternion: IDENTITY,
+    };
+    const bounds = sceneBounds([box], [goal]);
+    expect(bounds).not.toBeNull();
+    if (!bounds) {
+      return;
+    }
+    expect(distance([13, 0, 0], bounds.center)).toBeLessThanOrEqual(bounds.radius + 1e-9);
+    expect(distance([-1, -0.5, 0], bounds.center)).toBeLessThanOrEqual(bounds.radius + 1e-9);
+  });
+
+  it("frames the zones on their own when the world has only ground", () => {
+    const spawn: SceneZone = {
+      name: "lot:spawn_point",
+      object: "lot",
+      kind: "spawn_point",
+      shape: "box",
+      position: [0, 4, 0],
+      size: [1, 1, 1],
+      quaternion: IDENTITY,
+    };
+    expect(sceneBounds([geom("plane", [0, 0, 0], [40, 40, 0.1])], [spawn])?.center).toEqual([0, 4, 0]);
+  });
+
   it("has no bounds when only planes are left", () => {
     expect(sceneBounds([geom("plane", [0, 0, 0], [40, 40, 0.1])])).toBeNull();
   });
@@ -89,5 +121,25 @@ describe("thumbnail camera", () => {
 
   it("frames the area around the origin when there is nothing but ground", () => {
     expect(distance(thumbnailCamera(null, 2).target, [0, 0, 0])).toBe(0);
+  });
+});
+
+describe("top camera", () => {
+  const bounds = { center: [2, -3, 0] as [number, number, number], radius: 6 };
+
+  it("looks straight down on the center of the scene", () => {
+    const { position, target } = topCamera(bounds, 1.6, 45);
+    expect(target).toEqual(toThreePosition(bounds.center));
+    const height = position[1] - target[1];
+    expect(height).toBeGreaterThan(0);
+    expect(Math.hypot(position[0] - target[0], position[2] - target[2]) / height).toBeLessThan(0.01);
+  });
+
+  it("is high enough that the whole scene fits the narrower side", () => {
+    const camera = topCamera(bounds, 0.8, 45);
+    const away = distance(camera.position, camera.target);
+    const vertical = (45 * Math.PI) / 180;
+    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * 0.8);
+    expect(away * Math.sin(Math.min(vertical, horizontal) / 2)).toBeGreaterThanOrEqual(bounds.radius);
   });
 });

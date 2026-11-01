@@ -1,6 +1,6 @@
 import type { SceneDescription, SceneGeom } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { copyGrid } from "./copy-grid.ts";
+import { copyGrid, isFirstCopy } from "./copy-grid.ts";
 import type { Pose } from "./pose-track.ts";
 
 const geom = (
@@ -57,5 +57,10 @@ describe("copyGrid", () => {
     const grid = copyGrid(scene, 2);
     expect(grid.description.geoms.some((item) => item.shape === "plane")).toBe(false);
     expect(grid.description.geoms).toHaveLength(4);
+  });
+
+  it("marks exactly one copy's geoms as the one the camera follows", () => {
+    const followed = copyGrid(scene, 4).description.geoms.filter(isFirstCopy);
+    expect(followed.map((item) => item.body)).toEqual(["car", "wall"]);
   });
 });

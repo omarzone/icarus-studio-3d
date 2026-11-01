@@ -34,7 +34,10 @@ const shifted = ([x, y, z]: readonly number[], [dx, dy]: readonly number[]): Vec
   z ?? 0,
 ];
 
-// Geom names become "<copy>:<geom>"; floors are left out when there are several copies, the grid is the ground.
+// Geom names become "<copy>:<geom>"; the camera follows the agent of the first copy.
+export const isFirstCopy = (geom: SceneGeom): boolean => geom.name.startsWith("0:");
+
+// Floors are left out when there are several copies, the grid is the ground.
 export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
   const several = count > 1;
   const geoms = several ? scene.geoms.filter((geom) => geom.shape !== "plane") : scene.geoms;
