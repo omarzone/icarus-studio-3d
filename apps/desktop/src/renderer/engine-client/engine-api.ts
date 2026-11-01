@@ -63,6 +63,7 @@ export const engineApi = {
   stopRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/stop`, post(), isRunStatus),
   metrics: (runId: string): Promise<MetricPoint[]> => request(`${run(runId)}/metrics`, {}, isMetricPoints),
   checkpoints: (runId: string): Promise<CheckpointInfo[]> => request(`${run(runId)}/checkpoints`, {}, isCheckpoints),
+  runScene: (runId: string): Promise<SceneDescription> => request(`${run(runId)}/scene`, {}, isSceneDescription),
   rollout: (runId: string, step: number): Promise<Rollout> => request(`${run(runId)}/rollouts/${step}`, {}, isRollout),
   trainingSettings: (): Promise<TrainingSettings> => request("/settings/training", {}, isTrainingSettings),
   saveTrainingSettings: (patch: TrainingSettingsPatch): Promise<TrainingSettings> =>

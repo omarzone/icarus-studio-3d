@@ -174,11 +174,18 @@ export function stopSummary(run: RunStatus, checkpoints: readonly CheckpointInfo
   return { run: lower(run.name), intro: `${where} ${result}`, keeps };
 }
 
+// Only a best checkpoint past step 0 holds a trained brain worth promising.
+function keptBrain(best: number | null | undefined): string {
+  return typeof best === "number" && best > 0
+    ? `Its best brain (checkpoint ${compactNumber(best)}) is kept and can be used in Play.`
+    : "No checkpoint was saved, so there is no brain to keep.";
+}
+
 export function failureView(run: RunStatus, runs: readonly RunStatus[]): RunFailure {
   const good = runs.find((other) => other.state === "done" || other.state === "stopped");
   return {
     title: `${run.name} stopped at ${compactNumber(run.step)} steps`,
-    reason: run.failure?.reason ?? "The run stopped without a reason.",
+    reason: `${run.failure?.reason ?? "The run stopped without a reason."} ${keptBrain(run.best_step)}`,
     details: run.failure?.details ?? [],
     lastGoodRun: good ? lower(good.name) : "results",
   };

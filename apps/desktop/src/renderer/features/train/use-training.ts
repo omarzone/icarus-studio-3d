@@ -1,24 +1,51 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { trainingViewKeys } from "../../editor/training-queries.ts";
+import { trainingViewKeys, useRunList, useSelectedRun } from "../../editor/training-queries.ts";
 import { type RunList, type TrainingChange, trainingPort } from "../../ports/training-port.ts";
 
 export const trainingKeys = {
-  runs: (project: string) => ["training", project, "runs"] as const,
-  liveView: (project: string) => ["training", project, "live-view"] as const,
-  metrics: (project: string) => ["training", project, "metrics"] as const,
-  console: (project: string) => ["training", project, "console"] as const,
+  runs: trainingViewKeys.runs,
+  liveView: (project: string, run: string) => ["training", project, "live-view", run] as const,
+  metrics: (project: string, run: string) => ["training", project, "metrics", run] as const,
+  console: (project: string, run: string) => ["training", project, "console", run] as const,
   plan: (project: string) => ["training", project, "plan"] as const,
   stop: (project: string) => ["training", project, "stop"] as const,
   autopilot: (project: string) => ["training", project, "autopilot"] as const,
   failure: (project: string) => ["training", project, "failure"] as const,
 };
 
-export function useRuns(project: string) {
+export const useRuns = useRunList;
+
+export function useRunMetrics(project: string) {
   const port = usePort(trainingPort);
-  return useQuery({ queryKey: trainingKeys.runs(project), queryFn: () => port.listRuns(project) });
+  const run = useSelectedRun(project);
+  return useQuery({
+    queryKey: trainingKeys.metrics(project, run ?? ""),
+    queryFn: run === undefined ? skipToken : () => port.getMetrics(project),
+  });
+}
+
+export function useRunConsole(project: string, enabled: boolean) {
+  const port = usePort(trainingPort);
+  const run = useSelectedRun(project);
+  return useQuery({
+    queryKey: trainingKeys.console(project, run ?? ""),
+    queryFn: run === undefined ? skipToken : () => port.getConsole(project),
+    enabled,
+  });
+}
+
+export function useLiveView(project: string) {
+  const port = usePort(trainingPort);
+  const run = useSelectedRun(project);
+  return useQuery({
+    queryKey: trainingKeys.liveView(project, run ?? ""),
+    queryFn: run === undefined ? skipToken : () => port.getLiveView(project),
+    // Without a run there is no card; the live view says so.
+    retry: false,
+  });
 }
 
 // Whether a run of the project is training now, so the header offers Stop instead of Train.
@@ -32,18 +59,18 @@ export function useRunsCache(project: string) {
   return (runs: RunList) => client.setQueryData(trainingKeys.runs(project), runs);
 }
 
-function changedKey(project: string, change: TrainingChange) {
+function changedKey(project: string, run: string, change: TrainingChange) {
   switch (change) {
     case "runs":
       return trainingKeys.runs(project);
     case "metrics":
-      return trainingKeys.metrics(project);
+      return trainingKeys.metrics(project, run);
     case "checkpoints":
-      return trainingViewKeys.checkpoints(project);
+      return trainingViewKeys.checkpoints(project, run);
     case "console":
-      return trainingKeys.console(project);
+      return trainingKeys.console(project, run);
     case "live-view":
-      return trainingKeys.liveView(project);
+      return trainingKeys.liveView(project, run);
   }
 }
 
@@ -56,12 +83,13 @@ export function useTrainingStream(project: string): { reconnect: () => void } {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     // Read again on reconnect and when the selection changes.
-    void [selected, attempt];
+    void attempt;
+    const run = selected ?? "";
     return port.watch(project, {
       onLive: (live) => client.setQueryData(trainingViewKeys.live(project), live),
       onChange: (changes) => {
         for (const change of new Set(changes)) {
-          void client.invalidateQueries({ queryKey: changedKey(project, change), exact: true });
+          void client.invalidateQueries({ queryKey: changedKey(project, run, change), exact: true });
         }
       },
       onFailed: () => go("STA-TRAIN-FAILED"),

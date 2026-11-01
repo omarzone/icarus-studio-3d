@@ -30,7 +30,7 @@ type TrainingApi = Pick<
   | "rollout"
   | "project"
   | "library"
-  | "scene"
+  | "runScene"
   | "trainingSettings"
 >;
 
@@ -45,7 +45,19 @@ export function createEngineTrainingPort(
   const selected = new Map<string, string>();
   const choices = new Map<string, PlanChoice>();
   const logs = new Map<string, LogLine[]>();
+  const scenes = new Map<string, Promise<SceneDescription>>();
   let labels: Promise<Map<string, string>> | null = null;
+
+  // A run trains in its frozen revision, so its episodes are drawn in that scene, not the edited project.
+  const runScene = (runId: string) => {
+    let scene = scenes.get(runId);
+    if (!scene) {
+      scene = api.runScene(runId);
+      scenes.set(runId, scene);
+      scene.catch(() => scenes.delete(runId));
+    }
+    return scene;
+  };
 
   const termLabels = () => {
     labels ??= api.library().then(
@@ -146,7 +158,7 @@ export function createEngineTrainingPort(
     },
     getReplay: async ({ project, step }) => {
       const run = await requireRun(project);
-      const [rollout, scene] = await Promise.all([api.rollout(run.run_id, step), api.scene(project)]);
+      const [rollout, scene] = await Promise.all([api.rollout(run.run_id, step), runScene(run.run_id)]);
       const first = rollout.frames[0]?.time ?? 0;
       return {
         scene,
@@ -188,7 +200,6 @@ export function createEngineTrainingPort(
               ? { kind: "message", ...ended(run) }
               : { kind: "message", title: `${run.name} is starting`, body: "The copies appear once they are running." },
           );
-          let scene: Promise<SceneDescription> | null = null;
           connection = open(run.run_id, {
             onStatus: (status) => {
               if (!isFinal(status)) {
@@ -209,8 +220,7 @@ export function createEngineTrainingPort(
             onMetric: () => listener.onChange(["metrics"]),
             onCheckpoint: () => listener.onChange(["checkpoints", "live-view"]),
             onSnapshot: (snapshot) => {
-              scene ??= api.scene(project);
-              scene.then(
+              runScene(run.run_id).then(
                 (description) =>
                   show({
                     kind: "live",

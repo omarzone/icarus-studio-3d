@@ -8,6 +8,12 @@ import { createEngineTrainingPort } from "./training-engine.ts";
 import type { LiveCopies, TrainingChange, TrainingListener } from "./training-port.ts";
 
 const scene: SceneDescription = { revision: 3, bodies: [], lights: [], geoms: [] };
+const frozen = (runId: string): SceneDescription => ({
+  revision: runId === "a" ? 1 : 2,
+  bodies: [],
+  lights: [],
+  geoms: [],
+});
 
 const { state, catalog } = (() => {
   const document = {
@@ -58,6 +64,7 @@ function engine(initial: RunStatus[]) {
     project: vi.fn(async () => state),
     library: vi.fn(async () => catalog),
     scene: vi.fn(async () => scene),
+    runScene: vi.fn(async (runId: string) => frozen(runId)),
     trainingSettings: vi.fn(async () => ({
       threads: 6,
       max_threads: 8,
@@ -135,10 +142,17 @@ describe("training on the engine", () => {
     await expect(port.getFailure("p")).rejects.toThrow("No run of this project stopped by itself");
   });
 
-  it("replays a checkpoint's recorded episode with the project scene", async () => {
-    const port = createEngineTrainingPort(engine([status()]).api, streams().open);
+  it("replays a checkpoint's recorded episode in the scene the run trained in, not the edited project", async () => {
+    const { api } = engine([status({ run_id: "b" }), status({ run_id: "a", state: "done" })]);
+    const port = createEngineTrainingPort(api, streams().open);
     const replay = await port.getReplay({ project: "p", step: 25_000 });
-    expect(replay).toMatchObject({ scene, label: "Checkpoint 25k", outcome: "Time ran out", duration: 4 });
+    expect(replay).toMatchObject({ scene: frozen("b"), label: "Checkpoint 25k", outcome: "Time ran out", duration: 4 });
+    await port.getReplay({ project: "p", step: 0 });
+    await port.selectRun({ project: "p", id: "a" });
+    expect((await port.getReplay({ project: "p", step: 0 })).scene).toEqual(frozen("a"));
+    expect(api.rollout).toHaveBeenLastCalledWith("a", 0);
+    expect(api.runScene.mock.calls).toEqual([["b"], ["a"]]);
+    expect(api.scene).not.toHaveBeenCalled();
     expect(replay.frames).toHaveLength(2);
     expect((await port.getCheckpoints("p")).map((mark) => mark.label)).toEqual(["Checkpoint 0", "Checkpoint 25k"]);
   });
@@ -161,7 +175,11 @@ describe("training on the engine", () => {
       geoms: ["chassis"],
       copies: [{ positions: [[1, 2, 0.2]], quaternions: [[1, 0, 0, 0]] }],
     });
-    await vi.waitFor(() => expect(lives.at(-1)).toMatchObject({ kind: "live", step: "32.8k steps", scene }));
+    await vi.waitFor(() =>
+      expect(lives.at(-1)).toMatchObject({ kind: "live", step: "32.8k steps", scene: frozen("run-3") }),
+    );
+    expect(api.runScene).toHaveBeenCalledWith("run-3");
+    expect(api.scene).not.toHaveBeenCalled();
     stream.handlers.onLog({ elapsed: 3, level: "info", text: "checkpoint 0 saved" });
     stream.handlers.onMetric(trainPoint(32_768));
     stream.handlers.onCheckpoint(checkpoint(0, 0));

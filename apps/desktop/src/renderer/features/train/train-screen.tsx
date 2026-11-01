@@ -1,7 +1,5 @@
 // SCR-TRAIN · STA-TRAIN-FAILED
-import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
@@ -9,7 +7,6 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { TRAIN_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
-import { trainingPort } from "../../ports/training-port.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { PlaybackBar } from "../../ui/playback-bar.tsx";
 import { useProjectName } from "../../ui/project-name.ts";
@@ -18,7 +15,7 @@ import { MetricsPanel } from "./metrics/metrics-panel.tsx";
 import { RunFailedCard } from "./run-failed-card.tsx";
 import { RunsPanel } from "./runs/runs-panel.tsx";
 import { TRAIN_CONFIG, TRAIN_VARIANTS } from "./train-variants.ts";
-import { trainingKeys, useIsTraining, useTrainingStream } from "./use-training.ts";
+import { useIsTraining, useLiveView, useTrainingStream } from "./use-training.ts";
 
 const TOOL_ROUTES = { Train: "MOD-START-TRAINING", Stop: "MOD-STOP-RUN" } as const;
 const VIEWS = [
@@ -87,13 +84,7 @@ export function TrainScreen() {
 }
 
 function LiveOverlays({ project }: { project: string }) {
-  const port = usePort(trainingPort);
-  const view = useQuery({
-    queryKey: trainingKeys.liveView(project),
-    queryFn: () => port.getLiveView(project),
-    // Without a run there is no card; the live view says so.
-    retry: false,
-  });
+  const view = useLiveView(project);
   const data = view.data;
   if (!data) {
     return null;

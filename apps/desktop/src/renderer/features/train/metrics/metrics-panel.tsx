@@ -1,26 +1,18 @@
 // PNL-METRICS
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { usePort } from "../../../app/runtime/port.tsx";
-import { trainingPort } from "../../../ports/training-port.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { EmptyState } from "../../../ui/states.tsx";
-import { trainingKeys } from "../use-training.ts";
+import { useRunConsole, useRunMetrics } from "../use-training.ts";
 import { ConsoleTab } from "./console-tab.tsx";
 import { MetricsTab } from "./metrics-tab.tsx";
 
 type Tab = "metrics" | "console";
 
 export function MetricsPanel({ project, className = "h-52.5 flex-none" }: { project: string; className?: string }) {
-  const port = usePort(trainingPort);
   const [tab, setTab] = useState<Tab>("metrics");
-  const metrics = useQuery({ queryKey: trainingKeys.metrics(project), queryFn: () => port.getMetrics(project) });
-  const log = useQuery({
-    queryKey: trainingKeys.console(project),
-    queryFn: () => port.getConsole(project),
-    enabled: tab === "console",
-  });
+  const metrics = useRunMetrics(project);
+  const log = useRunConsole(project, tab === "console");
   return (
     <Panel
       id="PNL-METRICS"

@@ -33,7 +33,7 @@ export function StopRunDialog() {
           </CloseOverlay>
           <CloseOverlay
             cta="Pause"
-            onClick={() => pause.mutate(project, { onSuccess: runsCache })}
+            onClick={() => void pause.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("secondary", DIALOG_BUTTON)}
           >
             Pause

@@ -155,11 +155,25 @@ describe("stop and failure", () => {
     const earlier = [status({ run_id: "run-3", name: "Run 3", state: "done" })];
     expect(failureView(failed, [failed, ...earlier])).toEqual({
       title: "Run 4 stopped at 41.2k steps",
-      reason: "The physics went unstable.",
+      reason: "The physics went unstable. No checkpoint was saved, so there is no brain to keep.",
       details: ["worker exit: unstable simulation"],
       lastGoodRun: "run 3",
     });
     expect(failureView({ ...failed, failure: null }, [failed]).lastGoodRun).toBe("results");
-    expect(failureView({ ...failed, failure: null }, [failed]).reason).toBe("The run stopped without a reason.");
+    expect(failureView({ ...failed, failure: null }, [failed]).reason).toBe(
+      "The run stopped without a reason. No checkpoint was saved, so there is no brain to keep.",
+    );
+  });
+
+  it("promises a kept brain only when the failed run saved a best checkpoint past step 0", () => {
+    const failed = status({ state: "failed", failure: { reason: "The worker quit.", details: [] } });
+    expect(failureView({ ...failed, best_step: 25_000 }, [failed]).reason).toBe(
+      "The worker quit. Its best brain (checkpoint 25k) is kept and can be used in Play.",
+    );
+    for (const best_step of [0, null, undefined]) {
+      expect(failureView({ ...failed, best_step }, [failed]).reason).toBe(
+        "The worker quit. No checkpoint was saved, so there is no brain to keep.",
+      );
+    }
   });
 });
