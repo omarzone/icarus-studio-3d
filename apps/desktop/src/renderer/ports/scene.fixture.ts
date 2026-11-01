@@ -128,5 +128,6 @@ export function createSceneFixture(): ScenePort {
     },
     getGuide: async (scene) => find(scene).guide,
     getPropertyReference: async () => PROPERTY_REFERENCE,
+    getSceneDescription: async () => null,
   };
 }

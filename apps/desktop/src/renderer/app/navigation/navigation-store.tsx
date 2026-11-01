@@ -16,6 +16,8 @@ export type NavigationState = NavigationLocation & {
   close: () => void;
   back: () => void;
   reset: (location: NavigationLocation) => void;
+  // Same screen, new parameters, no history step (a created project replacing its template).
+  replaceParams: (params: RouteParams) => void;
 };
 
 export function createNavigationStore(initial: NavigationLocation): StoreApi<NavigationState> {
@@ -38,6 +40,7 @@ export function createNavigationStore(initial: NavigationLocation): StoreApi<Nav
         return previous ? { ...previous, history: state.history.slice(0, -1) } : { overlay: null };
       }),
     reset: (location) => set({ ...location, history: [] }),
+    replaceParams: (params) => set({ params }),
   }));
 }
 
