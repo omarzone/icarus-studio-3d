@@ -133,7 +133,10 @@ class ModelClient:
 
         A service that refuses the JSON Schema format is asked once more in JSON mode with the schema in the prompt.
         """
-        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        # Some services accept response_format without enforcing it, so the model also reads the schema.
+        described = f"{system}\n\nAnswer with one JSON object that follows this JSON Schema:\n"
+        described += json.dumps(output.model_json_schema())
+        messages = [{"role": "system", "content": described}, {"role": "user", "content": user}]
         schema, strict = response_schema(output)
         response_format: dict = {
             "type": "json_schema",
@@ -148,11 +151,6 @@ class ModelClient:
                 if response_format["type"] == "json_object":
                     raise
                 response_format = {"type": "json_object"}
-                described = f"{system}\n\nAnswer with one JSON object that follows this JSON Schema:\n"
-                messages = [
-                    {"role": "system", "content": described + json.dumps(output.model_json_schema())},
-                    *messages[1:],
-                ]
                 body = {"model": self.connection.model, "messages": messages, "response_format": response_format}
                 content, thinking = self._complete(body, deadline)
             try:

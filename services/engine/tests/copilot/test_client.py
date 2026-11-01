@@ -46,11 +46,19 @@ def test_the_request_is_constrained_by_the_output_schema():
     assert request["headers"]["authorization"] == f"Bearer {KEY}"
     body = request["body"]
     assert body["model"] == "big-model"
-    assert body["messages"] == [{"role": "system", "content": "You judge."}, {"role": "user", "content": "Is it good?"}]
+    assert body["messages"][1] == {"role": "user", "content": "Is it good?"}
+    assert body["messages"][0]["content"].startswith("You judge.")
     assert body["response_format"] == {
         "type": "json_schema",
         "json_schema": {"name": "verdict", "schema": response_schema(Verdict)[0], "strict": True},
     }
+
+
+def test_the_schema_is_also_written_in_the_instructions_for_services_that_do_not_enforce_it():
+    client, requests = scripted([{"content": '{"answer": "yes", "score": 3}'}])
+    client.ask("verdict", Verdict, "You judge.", "Is it good?")
+    system = requests[0]["body"]["messages"][0]["content"]
+    assert json.dumps(Verdict.model_json_schema()) in system
 
 
 def test_invalid_output_is_retried_once_with_the_error():
