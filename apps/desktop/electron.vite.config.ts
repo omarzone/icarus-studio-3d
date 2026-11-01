@@ -5,7 +5,7 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import type { Plugin } from "vite";
 
 const CSP =
-  "default-src 'self'; connect-src 'self' http://127.0.0.1:*; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:";
+  "default-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:";
 
 // Strict CSP in builds only: in development the React refresh preamble is an inline script.
 const productionCsp: Plugin = {
