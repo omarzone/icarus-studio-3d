@@ -38,6 +38,22 @@ class SceneLight(BaseModel):
     intensity: float
 
 
+class SceneZone(BaseModel):
+    """A place in the world the task uses: where the agent starts, where it must go, or a marked area."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    # The object that carries the zone.
+    object: str
+    kind: Literal["spawn_point", "goal_zone", "zone"]
+    shape: Literal["sphere", "box"]
+    # Full extents in metres.
+    size: Vector3
+    position: Vector3
+    quaternion: Quaternion
+
+
 class SceneDescription(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -45,3 +61,4 @@ class SceneDescription(BaseModel):
     bodies: list[SceneBody]
     geoms: list[SceneGeom]
     lights: list[SceneLight]
+    zones: list[SceneZone] = []

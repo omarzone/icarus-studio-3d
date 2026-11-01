@@ -74,6 +74,7 @@ export type {
   SceneDescription,
   SceneGeom,
   SceneLight,
+  SceneZone,
   SendMessage,
   SetAutonomy,
   SetBrain,

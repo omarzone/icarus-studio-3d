@@ -588,6 +588,7 @@ export interface SceneDescription {
   geoms: SceneGeom[];
   lights: SceneLight[];
   revision: number;
+  zones?: SceneZone[];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -649,6 +650,33 @@ export interface SceneLight {
    * @maxItems 3
    */
   position: [number, number, number];
+}
+/**
+ * A place in the world the task uses: where the agent starts, where it must go, or a marked area.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneZone".
+ */
+export interface SceneZone {
+  kind: "spawn_point" | "goal_zone" | "zone";
+  name: string;
+  object: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+  shape: "sphere" | "box";
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
