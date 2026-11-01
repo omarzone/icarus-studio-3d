@@ -195,6 +195,36 @@ export interface BrainSpec {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BuildIdea".
+ */
+export interface BuildIdea {
+  idea: string;
+  idea_set: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BuildStatus".
+ */
+export interface BuildStatus {
+  activity: string;
+  build_id: string;
+  error?: string | null;
+  progress: number;
+  project_id: string | null;
+  ready: boolean;
+  steps: BuildStep[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BuildStep".
+ */
+export interface BuildStep {
+  id: string;
+  label: string;
+  status: "done" | "running" | "todo";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "CheckpointEvent".
  */
 export interface CheckpointEvent {
@@ -279,191 +309,39 @@ export interface PropertyOption {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "CopyPoses".
+ * via the `definition` "Conversation".
  */
-export interface CopyPoses {
-  positions: [number, number, number][];
-  quaternions: [number, number, number, number][];
+export interface Conversation {
+  autonomy: "ask" | "autopilot";
+  messages: CopilotMessage[];
+  project_id: string;
+  proposals: CopilotProposal[];
+  suggestions: string[];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "CreateObject".
+ * via the `definition` "CopilotMessage".
  */
-export interface CreateObject {
-  object: ObjectSpec;
-  op: "create_object";
-  target: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "CreateProject".
- */
-export interface CreateProject {
-  name: string;
-  template: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "DeleteObject".
- */
-export interface DeleteObject {
-  object: string;
-  op: "delete_object";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "DesignCheck".
- */
-export interface DesignCheck {
-  detail: string;
-  id: "structure" | "compiles" | "settles" | "actuators" | "sensors";
-  label: string;
-  status: "pass" | "fail" | "skip";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "DesignReport".
- */
-export interface DesignReport {
-  checks: DesignCheck[];
-  duration_ms: number;
-  ok: boolean;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "DuplicateProject".
- */
-export interface DuplicateProject {
-  name: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "HealthStatus".
- */
-export interface HealthStatus {
-  api_version: number;
-  status: "ok";
-  version: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LibraryCatalog".
- */
-export interface LibraryCatalog {
-  components: ComponentKindSpec[];
-  pieces?: PieceInfo[];
-  reward_terms: RewardTermInfo[];
-  templates: TemplateInfo[];
-  version: string;
-}
-/**
- * A ready-made object from the library that can be placed in a world.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "PieceInfo".
- */
-export interface PieceInfo {
-  description: string;
-  icon: string;
+export interface CopilotMessage {
+  created_at: string;
   id: string;
-  label: string;
-  object: ObjectSpec;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "RewardTermInfo".
- */
-export interface RewardTermInfo {
-  default_weight: number;
-  description: string;
-  family: "none" | "navigation" | "locomotion";
-  label: string;
-  term: string;
-  version: number;
-  weight_max: number;
-  weight_min: number;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "TemplateInfo".
- */
-export interface TemplateInfo {
-  description: string;
-  family: "none" | "navigation" | "locomotion";
-  id: string;
-  label: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LightCommand".
- */
-export interface LightCommand {
-  intensity: number;
-  tool: "light";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogEvent".
- */
-export interface LogEvent {
-  line: LogLine;
-  type: "log";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogLine".
- */
-export interface LogLine {
-  elapsed: number;
-  level: "info" | "warn" | "error";
+  proposal_id?: string | null;
+  role: "user" | "copilot";
   text: string;
+  thinking?: string | null;
 }
 /**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricEvent".
- */
-export interface MetricEvent {
-  metric: MetricPoint;
-  type: "metric";
-}
-/**
- * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
+ * Operations the copilot proposes, already validated and compiled against the revision they start from.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricPoint".
+ * via the `definition` "CopilotProposal".
  */
-export interface MetricPoint {
-  elapsed: number;
-  episode_length: number;
-  episode_return: number;
-  failure_rate?: number | null;
-  kind: "train" | "eval";
-  reward_terms: {
-    [k: string]: number;
-  };
-  step: number;
-  steps_per_second?: number | null;
-  success_rate?: number | null;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MoveCommand".
- */
-export interface MoveCommand {
-  object: string;
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  position: [number, number, number];
-  tool: "move";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "OperationBatch".
- */
-export interface OperationBatch {
-  author?: "user" | "copilot";
+export interface CopilotProposal {
+  applied_revision?: number | null;
+  base_revision: number;
+  changes: ProposalChange[];
+  explanation: string;
+  id: string;
   /**
    * @minItems 1
    * @maxItems 500
@@ -502,7 +380,36 @@ export interface OperationBatch {
       | SetBrain
     )[]
   ];
+  project_id: string;
+  status: "open" | "applied" | "discarded" | "outdated";
   summary: string;
+  warnings: string[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProposalChange".
+ */
+export interface ProposalChange {
+  after: string;
+  before?: string | null;
+  label: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CreateObject".
+ */
+export interface CreateObject {
+  object: ObjectSpec;
+  op: "create_object";
+  target: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DeleteObject".
+ */
+export interface DeleteObject {
+  object: string;
+  op: "delete_object";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -627,6 +534,352 @@ export interface SetBrain {
   op: "set_brain";
   seed?: number | null;
   template?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CopyPoses".
+ */
+export interface CopyPoses {
+  positions: [number, number, number][];
+  quaternions: [number, number, number, number][];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CreateProject".
+ */
+export interface CreateProject {
+  name: string;
+  template: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DesignCheck".
+ */
+export interface DesignCheck {
+  detail: string;
+  id: "structure" | "compiles" | "settles" | "actuators" | "sensors";
+  label: string;
+  status: "pass" | "fail" | "skip";
+}
+/**
+ * One alternative the copilot proposes before building, compiled so its preview is real.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DesignIdea".
+ */
+export interface DesignIdea {
+  body: string;
+  estimate_minutes: number;
+  family: "none" | "navigation" | "locomotion";
+  id: string;
+  learns: string;
+  recommended: boolean;
+  scene: SceneDescription;
+  template: string;
+  title: string;
+  world: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneDescription".
+ */
+export interface SceneDescription {
+  bodies: SceneBody[];
+  geoms: SceneGeom[];
+  lights: SceneLight[];
+  revision: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneBody".
+ */
+export interface SceneBody {
+  name: string;
+  parent: string | null;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneGeom".
+ */
+export interface SceneGeom {
+  body: string;
+  color: string;
+  name: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+  shape: "plane" | "box" | "sphere" | "capsule" | "cylinder";
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneLight".
+ */
+export interface SceneLight {
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  direction: [number, number, number];
+  intensity: number;
+  name: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DesignReport".
+ */
+export interface DesignReport {
+  checks: DesignCheck[];
+  duration_ms: number;
+  ok: boolean;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DuplicateProject".
+ */
+export interface DuplicateProject {
+  name: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HealthStatus".
+ */
+export interface HealthStatus {
+  api_version: number;
+  status: "ok";
+  version: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "IdeaRequest".
+ */
+export interface IdeaRequest {
+  prompt: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "IdeaSet".
+ */
+export interface IdeaSet {
+  id: string;
+  ideas: DesignIdea[];
+  prompt: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LibraryCatalog".
+ */
+export interface LibraryCatalog {
+  components: ComponentKindSpec[];
+  pieces?: PieceInfo[];
+  reward_terms: RewardTermInfo[];
+  templates: TemplateInfo[];
+  version: string;
+}
+/**
+ * A ready-made object from the library that can be placed in a world.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PieceInfo".
+ */
+export interface PieceInfo {
+  description: string;
+  icon: string;
+  id: string;
+  label: string;
+  object: ObjectSpec;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RewardTermInfo".
+ */
+export interface RewardTermInfo {
+  default_weight: number;
+  description: string;
+  family: "none" | "navigation" | "locomotion";
+  label: string;
+  term: string;
+  version: number;
+  weight_max: number;
+  weight_min: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TemplateInfo".
+ */
+export interface TemplateInfo {
+  description: string;
+  family: "none" | "navigation" | "locomotion";
+  id: string;
+  label: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LightCommand".
+ */
+export interface LightCommand {
+  intensity: number;
+  tool: "light";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogEvent".
+ */
+export interface LogEvent {
+  line: LogLine;
+  type: "log";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogLine".
+ */
+export interface LogLine {
+  elapsed: number;
+  level: "info" | "warn" | "error";
+  text: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricEvent".
+ */
+export interface MetricEvent {
+  metric: MetricPoint;
+  type: "metric";
+}
+/**
+ * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricPoint".
+ */
+export interface MetricPoint {
+  elapsed: number;
+  episode_length: number;
+  episode_return: number;
+  failure_rate?: number | null;
+  kind: "train" | "eval";
+  reward_terms: {
+    [k: string]: number;
+  };
+  step: number;
+  steps_per_second?: number | null;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ModelConnection".
+ */
+export interface ModelConnection {
+  capability: "reasoning" | "vision" | "image" | "pose";
+  connected: boolean;
+  detail?: string | null;
+  model: string | null;
+  required: boolean;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ModelSettings".
+ */
+export interface ModelSettings {
+  api_key_hint: string;
+  connections: ModelConnection[];
+  endpoint: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ModelSettingsPatch".
+ */
+export interface ModelSettingsPatch {
+  api_key?: string | null;
+  endpoint?: string | null;
+  models?: {
+    [k: string]: string;
+  } | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MoveCommand".
+ */
+export interface MoveCommand {
+  object: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  tool: "move";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "OperationBatch".
+ */
+export interface OperationBatch {
+  author?: "user" | "copilot";
+  /**
+   * @minItems 1
+   * @maxItems 500
+   */
+  operations: [
+    (
+      | CreateObject
+      | DeleteObject
+      | RenameObject
+      | ReparentObject
+      | AddComponent
+      | RemoveComponent
+      | SetProperty
+      | AddBody
+      | RemoveBody
+      | RenameProject
+      | SetTaskFamily
+      | SetRewardTerm
+      | RemoveRewardTerm
+      | SetBrain
+    ),
+    ...(
+      | CreateObject
+      | DeleteObject
+      | RenameObject
+      | ReparentObject
+      | AddComponent
+      | RemoveComponent
+      | SetProperty
+      | AddBody
+      | RemoveBody
+      | RenameProject
+      | SetTaskFamily
+      | SetRewardTerm
+      | RemoveRewardTerm
+      | SetBrain
+    )[]
+  ];
+  summary: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -827,77 +1080,6 @@ export interface PlaySessionInfo {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SceneDescription".
- */
-export interface SceneDescription {
-  bodies: SceneBody[];
-  geoms: SceneGeom[];
-  lights: SceneLight[];
-  revision: number;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SceneBody".
- */
-export interface SceneBody {
-  name: string;
-  parent: string | null;
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  position: [number, number, number];
-  /**
-   * @minItems 4
-   * @maxItems 4
-   */
-  quaternion: [number, number, number, number];
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SceneGeom".
- */
-export interface SceneGeom {
-  body: string;
-  color: string;
-  name: string;
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  position: [number, number, number];
-  /**
-   * @minItems 4
-   * @maxItems 4
-   */
-  quaternion: [number, number, number, number];
-  shape: "plane" | "box" | "sphere" | "capsule" | "cylinder";
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  size: [number, number, number];
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SceneLight".
- */
-export interface SceneLight {
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  direction: [number, number, number];
-  intensity: number;
-  name: string;
-  /**
-   * @minItems 3
-   * @maxItems 3
-   */
-  position: [number, number, number];
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "PlayToolInfo".
  */
 export interface PlayToolInfo {
@@ -1087,6 +1269,22 @@ export interface TrainingSnapshot {
   copies: CopyPoses[];
   geoms: string[];
   step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SendMessage".
+ */
+export interface SendMessage {
+  selection?: string | null;
+  text: string;
+  workspace?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SetAutonomy".
+ */
+export interface SetAutonomy {
+  autonomy: "ask" | "autopilot";
 }
 /**
  * What the desktop or the copilot asks for when it starts training the current revision.
