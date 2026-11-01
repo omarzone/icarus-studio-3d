@@ -9,14 +9,20 @@ import { useSceneCache } from "../../editor/scene-queries.ts";
 import { scenePort } from "../../ports/scene-port.ts";
 import { useAnchoredStyle } from "../../ui/anchored.ts";
 import { useDismiss } from "../../ui/dismiss.ts";
+import { useProjectKey } from "../../ui/project-name.ts";
 
-// Scene the gallery opens the picker on when no route parameter names one.
+// Scene the gallery opens the picker on when no route parameter names one; the app falls back to the open project.
 const EXAMPLE_SCENE = "park-pilot";
 const ANCHOR = '[data-route-screen] [data-cta="add-component"]:not([inert] *)';
 
 // The Add component picker, floating next to the inspector's "+ Add component" button.
 export function AddComponentPopover() {
-  const scene = useNavigation((state) => state.params.addTo) ?? EXAMPLE_SCENE;
+  const fallback = useProjectKey(EXAMPLE_SCENE);
+  const scene = useNavigation((state) => state.params.addTo) ?? fallback;
+  return scene === null ? null : <AddComponentPicker scene={scene} />;
+}
+
+function AddComponentPicker({ scene }: { scene: string }) {
   const close = useCloseOverlay();
   const port = usePort(scenePort);
   const cache = useSceneCache(scene);

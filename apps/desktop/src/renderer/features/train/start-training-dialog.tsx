@@ -8,7 +8,8 @@ import { usePort } from "../../app/runtime/port.tsx";
 import { type StartPlan, trainingPort } from "../../ports/training-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { useProjectName } from "../../ui/project-name.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useOpenProjectId } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -19,7 +20,14 @@ const DIALOG_BUTTON = "h-8.5! px-4! text-body!";
 
 // Confirms a training run with a clear cost: steps, parallel copies, estimated time and threads.
 export function StartTrainingDialog() {
-  const project = useProjectName(TRAIN_CONFIG.project).id;
+  return (
+    <ProjectDialogGate projectKey={useOpenProjectId(TRAIN_CONFIG.project)} title="Start training">
+      {(project) => <StartTraining project={project} />}
+    </ProjectDialogGate>
+  );
+}
+
+function StartTraining({ project }: { project: string }) {
   const port = usePort(trainingPort);
   const client = useQueryClient();
   const plan = useQuery({ queryKey: trainingKeys.plan(project), queryFn: () => port.getStartPlan(project) });

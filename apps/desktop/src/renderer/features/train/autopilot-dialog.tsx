@@ -6,14 +6,22 @@ import { usePort } from "../../app/runtime/port.tsx";
 import { type AutopilotSettings, trainingPort } from "../../ports/training-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { useProjectName } from "../../ui/project-name.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useOpenProjectId } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { TRAIN_CONFIG } from "./train-variants.ts";
 import { trainingKeys } from "./use-training.ts";
 
 // How much the copilot may change on its own during training: off, ask first, or fix within a limit.
 export function AutopilotDialog() {
-  const project = useProjectName(TRAIN_CONFIG.project).id;
+  return (
+    <ProjectDialogGate projectKey={useOpenProjectId(TRAIN_CONFIG.project)} title="Autopilot">
+      {(project) => <Autopilot project={project} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Autopilot({ project }: { project: string }) {
   const port = usePort(trainingPort);
   const client = useQueryClient();
   const settings = useQuery({ queryKey: trainingKeys.autopilot(project), queryFn: () => port.getAutopilot(project) });

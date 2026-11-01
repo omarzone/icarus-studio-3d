@@ -46,3 +46,10 @@ export function NotAvailableYetState({ action }: { action: PendingAction }) {
     </div>
   );
 }
+
+// A workspace opened in the app before any project is: it never falls back to sample data.
+export function NoProjectState() {
+  return (
+    <EmptyState title="No project open yet" body="Open a project or start one from an idea to use this workspace." />
+  );
+}

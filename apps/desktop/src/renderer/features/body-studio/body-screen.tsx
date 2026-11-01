@@ -8,10 +8,10 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { guideLabel } from "../../ui/guide-label.ts";
-import { CHARACTER_WORKSPACES, useOpenProjectName } from "../../ui/project-name.ts";
-import { LoadingState } from "../../ui/states.tsx";
+import { CHARACTER_WORKSPACES, useOpenProjectName, useProjectKey } from "../../ui/project-name.ts";
+import { LoadingState, NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
-import { BODY_VARIANTS, bodyConfig } from "./body-variants.ts";
+import { BODY_VARIANTS, type BodyConfig, type BodyVariant, bodyConfig } from "./body-variants.ts";
 import { CheckFailedBanner } from "./check-failed-banner.tsx";
 import { RigCheckPanel } from "./rig-check/rig-check-panel.tsx";
 
@@ -28,7 +28,16 @@ export function BodyScreen() {
   const screen = useNavigation((state) => state.screen);
   const overlay = useNavigation((state) => state.overlay);
   const variant = BODY_VARIANTS[screen] ?? "rig";
-  const config = bodyConfig(variant, overlay);
+  const sample = bodyConfig(variant, overlay);
+  const scene = useProjectKey(sample.scene);
+  const body = useProjectKey(sample.body);
+  if (scene === null || body === null) {
+    return <NoProjectState />;
+  }
+  return <BodyWorkspace variant={variant} config={{ ...sample, scene, body }} />;
+}
+
+function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: BodyConfig }) {
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
   // The header's project name and guide pill change label once they load, so the screen waits for them.

@@ -9,22 +9,33 @@ import { ActionButton } from "../../ui/action-button.tsx";
 import { ChoiceCard } from "../../ui/choice-card.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 
+// Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
 
 type Field = "source" | "person" | "target";
 
 // Bring a reference video for a character to copy: who to copy, onto which body, and which part of the clip.
 export function VideoDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(CLIP)} title="Copy motion from a video">
+      {(clip) => <Video clip={clip} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Video({ clip }: { clip: string }) {
   const port = usePort(motionPort);
   const client = useQueryClient();
-  const key = ["motion", CLIP, "video"] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => port.getVideoSource(CLIP) });
+  const key = ["motion", clip, "video"] as const;
+  const query = useQuery({ queryKey: key, queryFn: () => port.getVideoSource(clip) });
   const choose = useEngineAction(port.setVideoChoice);
   const onChoose = (field: Field, id: string) =>
-    choose.mutate({ clip: CLIP, field, id }, { onSuccess: (next: VideoSource) => client.setQueryData(key, next) });
+    choose.mutate({ clip, field, id }, { onSuccess: (next: VideoSource) => client.setQueryData(key, next) });
   return (
     <Dialog
       title="Copy motion from a video"
@@ -38,7 +49,7 @@ export function VideoDialog() {
           <ActionButton
             cta="Track the motion"
             to="MOD-MOTION-TRACKING"
-            run={() => port.trackMotion(CLIP)}
+            run={() => port.trackMotion(clip)}
             className={dialogButtonClass("primary")}
           >
             Track the motion

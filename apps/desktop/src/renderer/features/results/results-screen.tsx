@@ -4,7 +4,8 @@ import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-l
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
-import { useProjectName } from "../../ui/project-name.ts";
+import { useProjectKey, useProjectName } from "../../ui/project-name.ts";
+import { NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { FailuresPanel } from "./failures/failures-panel.tsx";
 import { LearnedPanel } from "./learned/learned-panel.tsx";
@@ -22,7 +23,18 @@ export function ResultsScreen() {
   const variant = RESULTS_VARIANTS[screen] ?? "compare";
   const config = RESULTS_CONFIGS[variant];
   const project = useProjectName(config.project);
-  const guide = useGuide(config.scene);
+  const scene = useProjectKey(config.scene);
+  if (project.id === null || scene === null) {
+    return <NoProjectState />;
+  }
+  return <ResultsWorkspace variant={variant} project={{ id: project.id, name: project.name }} scene={scene} />;
+}
+
+type WorkspaceProps = { variant: ResultsVariant; project: { id: string; name: string }; scene: string };
+
+function ResultsWorkspace({ variant, project, scene }: WorkspaceProps) {
+  const config = RESULTS_CONFIGS[variant];
+  const guide = useGuide(scene);
   return (
     <DockWorkspaceShell
       header={{

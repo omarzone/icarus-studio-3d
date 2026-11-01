@@ -6,19 +6,30 @@ import { bodyPort, type ImportPreview } from "../../ports/body-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import { StatusPill } from "../../ui/status-pill.tsx";
 import { CheckLine } from "../copilot/chat-messages.tsx";
 
+// Sample body of the gallery and prototype; the app uses the open project's.
 const BODY = "dance-copy";
 
 // Bring a model, environment or robot description in, as a static mesh or rigged for physics. Opens over any screen.
 export function ImportDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(BODY)} title="Import">
+      {(body) => <Import body={body} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Import({ body }: { body: string }) {
   const port = usePort(bodyPort);
   const client = useQueryClient();
-  const key = ["body", BODY, "import"] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => port.getImport(BODY) });
+  const key = ["body", body, "import"] as const;
+  const query = useQuery({ queryKey: key, queryFn: () => port.getImport(body) });
   const setKind = useEngineAction(port.setImportKind);
   return (
     <Dialog title="Import" width="w-155">
@@ -26,11 +37,9 @@ export function ImportDialog() {
         {(preview) => (
           <ImportBody
             preview={preview}
-            onKind={(kind) =>
-              setKind.mutate({ body: BODY, kind }, { onSuccess: (next) => client.setQueryData(key, next) })
-            }
-            onStatic={() => port.importStatic(BODY)}
-            onRig={() => port.importAndRig(BODY)}
+            onKind={(kind) => setKind.mutate({ body, kind }, { onSuccess: (next) => client.setQueryData(key, next) })}
+            onStatic={() => port.importStatic(body)}
+            onRig={() => port.importAndRig(body)}
           />
         )}
       </QueryView>

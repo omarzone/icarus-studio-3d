@@ -12,7 +12,7 @@ export const TRAIN_VARIANTS: Readonly<Partial<Record<ScreenId, TrainVariant>>> =
 export const TRAIN_CONFIG = {
   // Example project shown when no project is open (gallery, prototype start).
   project: "park-pilot",
-  // Scene key of the selected run in the inspector.
+  // Sample scene of the inspector in the prototype; the app shows the open project.
   scene: "park-pilot-run",
   conversation: "park-pilot-train",
   suggestionRoutes: {

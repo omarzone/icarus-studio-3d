@@ -9,8 +9,8 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { guideLabel } from "../../ui/guide-label.ts";
-import { useOpenProjectName } from "../../ui/project-name.ts";
-import { LoadingState } from "../../ui/states.tsx";
+import { useOpenProjectName, useProjectKey } from "../../ui/project-name.ts";
+import { LoadingState, NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
 import { BRAIN_VARIANTS, type BrainConfig, type BrainVariant, brainConfig } from "./brain-variants.ts";
@@ -30,7 +30,16 @@ export function BrainScreen() {
   const screen = useNavigation((state) => state.screen);
   const overlay = useNavigation((state) => state.overlay);
   const variant = BRAIN_VARIANTS[screen] ?? "learned";
-  const config = brainConfig(variant, overlay);
+  const sample = brainConfig(variant, overlay);
+  const scene = useProjectKey(sample.scene);
+  const brain = useProjectKey(sample.brain);
+  if (scene === null || brain === null) {
+    return <NoProjectState />;
+  }
+  return <BrainWorkspace variant={variant} config={{ ...sample, scene, brain }} />;
+}
+
+function BrainWorkspace({ variant, config }: Props) {
   const project = useOpenProjectName(config.project);
   const guide = useGuide(config.scene);
   // The header's project name and guide pill change label once they load, so the screen waits for them.
