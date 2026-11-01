@@ -95,7 +95,7 @@ def test_revisions_are_not_restored_by_default():
 def test_play_commands_and_messages_parse_by_their_tag():
     from icarus.contracts.play import PlayCommandEnvelope, PlayMessageEnvelope, PushCommand
 
-    command = PlayCommandEnvelope.model_validate({"command": {"tool": "push", "object": "car", "impulse": [1, 0, 0]}})
+    command = PlayCommandEnvelope.model_validate({"command": {"tool": "push", "object": "car", "direction": [1, 0, 0], "speed": 1}})
     assert isinstance(command.command, PushCommand)
     with pytest.raises(ValidationError):
         PlayCommandEnvelope.model_validate({"command": {"tool": "speed", "speed": 9}})
