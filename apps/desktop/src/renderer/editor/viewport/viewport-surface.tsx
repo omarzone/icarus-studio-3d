@@ -16,13 +16,16 @@ export type ViewportSurfaceProps = {
   tint?: "proposal";
   overlays?: ReactNode;
   scene?: string;
+  // A 3D view drawn instead of the project scene (the live world in Play).
+  children?: ReactNode;
 };
 
 // The 3D area: it draws the engine's compiled scene when there is one, and never a fake scene.
-export function ViewportSurface({ label, tint, overlays, scene }: ViewportSurfaceProps) {
+export function ViewportSurface({ label, tint, overlays, scene, children }: ViewportSurfaceProps) {
   return (
     <div role="img" aria-label={label} className="relative min-h-0 flex-1 bg-panel">
       {scene ? <EngineScene scene={scene} /> : null}
+      {children}
       {tint === "proposal" ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-proposal-tint" />
       ) : null}

@@ -113,6 +113,19 @@ export function createPlayFixture(): PlayPort {
   };
   return {
     getSession: async (project) => find(project),
+    // Emits the sample session once; the sample world does not move.
+    connect: (project, listener) => {
+      let connected = true;
+      void Promise.resolve().then(() => {
+        if (connected) {
+          listener.onUpdate(find(project), { scene: null, poses: new Map(), paused: false, speed: 1 });
+        }
+      });
+      return () => {
+        connected = false;
+      };
+    },
+    send: async () => undefined,
     selectTool: async ({ project, tool: id }) => save(project, { ...find(project), selectedTool: id }),
     setSpeed: async ({ project, speed }) => save(project, { ...find(project), speed }),
   };

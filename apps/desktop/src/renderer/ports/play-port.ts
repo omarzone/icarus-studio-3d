@@ -1,6 +1,7 @@
-import { pending } from "../app/runtime/pending.ts";
+import type { PlayGeomPose, SceneDescription } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createPlayFixture } from "./play.fixture.ts";
+import { createEnginePlayPort } from "./play-engine.ts";
 
 // Play mode: the current brain running live in its world. Nothing done here changes the project.
 
@@ -37,6 +38,8 @@ export type PlaySession = {
   tools: readonly PlayTool[];
   selectedTool: PlayToolId;
   speed: string;
+  // Whether the live world is paused; only a live session knows it.
+  paused?: boolean;
   // What the agent is doing right now, in one bold and one plain line.
   status: { title: string; detail: string };
   // Hint near the cursor while placing an object ("Click to place: Sugar").
@@ -51,24 +54,71 @@ export type PlaySession = {
   events: readonly PlayEvent[];
 };
 
+type Vec3 = [number, number, number];
+
+export type PlayPose = Pick<PlayGeomPose, "position" | "quaternion">;
+
+// What the Play viewport draws: the compiled world and where every geom is now, in MuJoCo axes by geom name.
+export type PlayLive = {
+  scene: SceneDescription | null;
+  poses: ReadonlyMap<string, PlayPose>;
+  paused: boolean;
+  speed: number;
+};
+
+// What the user did with a Play tool; points and directions are in MuJoCo world axes.
+export type PlayAction =
+  | { tool: "move"; object: string; to: Vec3 }
+  | { tool: "push"; object: string; direction: Vec3 }
+  | { tool: "add-object"; piece: string; at: Vec3 }
+  | { tool: "touch"; object: string }
+  | { tool: "light" }
+  | { tool: "wind" }
+  | { tool: "slow" }
+  | { tool: "reset" }
+  | { tool: "shuffle" }
+  | { tool: "pause"; paused: boolean };
+
+export type PlayListener = {
+  onUpdate: (session: PlaySession, live: PlayLive) => void;
+  // The session ended or could not start; Reconnect connects again.
+  onClosed: (reason: string) => void;
+  // The engine refused a command; the session goes on.
+  onError: (message: string) => void;
+};
+
 export type PlayPort = {
   getSession: (project: string) => Promise<PlaySession>;
   selectTool: (input: { project: string; tool: PlayToolId }) => Promise<PlaySession>;
   setSpeed: (input: { project: string; speed: string }) => Promise<PlaySession>;
+  // Streams the live session while Play is open; the returned function disconnects.
+  connect: (project: string, listener: PlayListener) => () => void;
+  send: (input: { project: string; action: PlayAction }) => Promise<void>;
 };
 
-const playIds = ["SCR-PLAY", "SCR-PLAY.b"] as const;
-
 export const playPort = definePort<PlayPort>({
-  app: {
-    getSession: pending({
-      key: "play.session",
-      summary: "Playing with the brain live in its world",
-      sprint: 4,
-      ids: [...playIds],
-    }),
-    selectTool: pending({ key: "play.tool", summary: "Using a Play tool in the world", sprint: 4, ids: [...playIds] }),
-    setSpeed: pending({ key: "play.speed", summary: "Changing the Play speed", sprint: 4, ids: [...playIds] }),
-  },
+  app: createEnginePlayPort(),
   prototype: createPlayFixture,
 });
+
+// The library piece Add object places.
+export const PLACED_PIECE = { id: "box", label: "Box" } as const;
+
+// Tools that act the moment they are picked; the others act on a click in the world.
+export function actsAtOnce(tool: PlayToolId): boolean {
+  switch (tool) {
+    case "light":
+    case "wind":
+    case "slow":
+    case "reset":
+    case "shuffle":
+      return true;
+    case "move":
+    case "push":
+    case "add-object":
+    case "touch":
+    case "shadow":
+    case "scent":
+      return false;
+  }
+}
