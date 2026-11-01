@@ -143,7 +143,7 @@ Right column, always present in workspaces. Folder: `features/copilot/`. Used in
 
 ### `PNL-IDEAS` Ideas
 
-Center panel of `SCR-IDEAS`. Folder: `features/copilot/ideas/`. Used in: `SCR-IDEAS`.
+Center panel of `SCR-IDEAS`. Folder: `features/ideas/`. Used in: `SCR-IDEAS`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -194,7 +194,7 @@ Left column in the network view. Folder: `features/brain-studio/brain-shape/`. U
 
 ### `PNL-BRAIN-ACTIVITY` Brain activity
 
-Center, bottom panel for connectome brains, and in Play. Folder: `features/brain-studio/brain-activity/`. Used in: `MOD-BRAIN-SOURCE`, `SCR-PLAY`, `STA-BRAIN-CONNECTOME`.
+Center, bottom panel for connectome brains, and in Play. Folder: `editor/brain-activity/`. Used in: `MOD-BRAIN-SOURCE`, `SCR-PLAY`, `STA-BRAIN-CONNECTOME`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -205,7 +205,7 @@ Center, bottom panel for connectome brains, and in Play. Folder: `features/brain
 
 ### `PNL-RUNS` Runs
 
-Left column, top, in Train. Folder: `features/timeline/runs/`. Used in: `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`.
+Left column, top, in Train. Folder: `features/train/runs/`. Used in: `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -214,7 +214,7 @@ Left column, top, in Train. Folder: `features/timeline/runs/`. Used in: `MOD-AUT
 
 ### `PNL-METRICS` Metrics
 
-Center, bottom panel in Train. Folder: `features/timeline/metrics/`. Used in: `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`.
+Center, bottom panel in Train. Folder: `features/train/metrics/`. Used in: `MOD-AUTOPILOT`, `MOD-STOP-RUN`, `SCR-TRAIN`, `STA-TRAIN-FAILED`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -224,7 +224,7 @@ Center, bottom panel in Train. Folder: `features/timeline/metrics/`. Used in: `M
 
 ### `PNL-RESULT-RUNS` Result runs
 
-Left column, top, in Results. Folder: `features/timeline/result-runs/`. Used in: `SCR-RESULTS`.
+Left column, top, in Results. Folder: `features/results/result-runs/`. Used in: `SCR-RESULTS`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -234,7 +234,7 @@ Left column, top, in Results. Folder: `features/timeline/result-runs/`. Used in:
 
 ### `PNL-SUMMARY` Summary
 
-Left column, bottom, in Results. Folder: `features/timeline/summary/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE`.
+Left column, bottom, in Results. Folder: `features/results/summary/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -244,7 +244,7 @@ Left column, bottom, in Results. Folder: `features/timeline/summary/`. Used in: 
 
 ### `PNL-RESULTS-VIEW` Results view
 
-Center panel in Results. Folder: `features/timeline/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`.
+Center panel in Results. Folder: `features/results/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -255,7 +255,7 @@ Center panel in Results. Folder: `features/timeline/results-view/`. Used in: `SC
 
 ### `PNL-LEARNED` How it learned
 
-Center, bottom strip in Results. Folder: `features/timeline/learned/`. Used in: `SCR-RESULTS`.
+Center, bottom strip in Results. Folder: `features/results/learned/`. Used in: `SCR-RESULTS`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -264,7 +264,7 @@ Center, bottom strip in Results. Folder: `features/timeline/learned/`. Used in: 
 
 ### `PNL-FAILURES` Failures
 
-Left column, top, in `STA-RESULTS-FAILURES`. Folder: `features/timeline/failures/`. Used in: `STA-RESULTS-FAILURES`.
+Left column, top, in `STA-RESULTS-FAILURES`. Folder: `features/results/failures/`. Used in: `STA-RESULTS-FAILURES`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -295,7 +295,7 @@ Center, bottom panel in Motion. Folder: `features/motion-studio/clip-timeline/`.
 
 ### `PNL-BUILD-TARGETS` Build targets
 
-Left column in Build. Folder: `features/build/targets/`. Used in: `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`.
+Left column in Build. Folder: `features/build-studio/targets/`. Used in: `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -304,7 +304,7 @@ Left column in Build. Folder: `features/build/targets/`. Used in: `MOD-EXPORT-BR
 
 ### `PNL-BUILD-TARGET-VIEW` Build target view
 
-Center panel in Build. Its title is the selected target. Folder: `features/build/target-view/`. Used in: `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`.
+Center panel in Build. Its title is the selected target. Folder: `features/build-studio/target-view/`. Used in: `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -350,7 +350,7 @@ Center, bottom, in Play. Folder: `features/play/events/`. Used in: `SCR-PLAY`.
 
 ### `PNL-REFERENCE-TESTS` Behavior tests
 
-Left column in `STA-RESULTS-REFERENCE`. Folder: `features/timeline/reference-tests/`. Used in: `STA-RESULTS-REFERENCE`.
+Left column in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-tests/`. Used in: `STA-RESULTS-REFERENCE`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -360,7 +360,7 @@ Left column in `STA-RESULTS-REFERENCE`. Folder: `features/timeline/reference-tes
 
 ### `PNL-REFERENCE-VIEW` Reference view
 
-Center panel in `STA-RESULTS-REFERENCE`. One tab per behavior test. Folder: `features/timeline/reference-view/`. Used in: `STA-RESULTS-REFERENCE`.
+Center panel in `STA-RESULTS-REFERENCE`. One tab per behavior test. Folder: `features/results/reference-view/`. Used in: `STA-RESULTS-REFERENCE`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -369,7 +369,7 @@ Center panel in `STA-RESULTS-REFERENCE`. One tab per behavior test. Folder: `fea
 
 ### `PNL-REFERENCE-MATCH` Behavior match
 
-Center, bottom, in `STA-RESULTS-REFERENCE`. Folder: `features/timeline/reference-match/`. Used in: `STA-RESULTS-REFERENCE`.
+Center, bottom, in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-match/`. Used in: `STA-RESULTS-REFERENCE`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|

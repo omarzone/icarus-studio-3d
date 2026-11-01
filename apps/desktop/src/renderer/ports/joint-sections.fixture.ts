@@ -1,0 +1,123 @@
+import type { InspectorSection } from "./scene-port.ts";
+
+// Components of an imported robot joint from the design, used only by the prototype, the design gallery and tests.
+export const JOINT_SECTIONS: readonly InspectorSection[] = [
+  {
+    id: "transform",
+    title: "Transform",
+    icon: "transform",
+    properties: [
+      { id: "position", label: "Position", state: "default", type: "vector", value: [0.42, 1.1, 0] },
+      { id: "rotation", label: "Rotation", state: "default", type: "vector", value: [0, 90, 0], unit: "°" },
+      { id: "scale", label: "Scale", state: "default", type: "vector", value: [1, 1, 1] },
+    ],
+  },
+  {
+    id: "physics",
+    title: "Physics body",
+    icon: "physics",
+    properties: [
+      {
+        id: "body",
+        label: "Body",
+        state: "default",
+        type: "choice",
+        value: "Moving",
+        options: ["Static", "Moving", "Driven"],
+      },
+      { id: "mass", label: "Mass", state: "default", type: "number", value: 0.8, unit: "kg", auto: true },
+      { id: "friction", label: "Friction", state: "default", type: "slider", value: 0.6, min: 0, max: 2, step: 0.1 },
+    ],
+  },
+  {
+    id: "joint",
+    title: "Joint",
+    icon: "joint",
+    properties: [
+      {
+        id: "type",
+        label: "Type",
+        state: "default",
+        type: "list",
+        value: "Hinge",
+        options: [
+          { value: "Hinge", label: "Hinge", icon: "joint" },
+          { value: "Slide", label: "Slide", icon: "lines" },
+          { value: "Ball", label: "Ball", icon: "target" },
+        ],
+      },
+      {
+        id: "range",
+        label: "Range",
+        state: "default",
+        type: "range",
+        low: -90,
+        high: 120,
+        min: -135,
+        max: 180,
+        unit: "°",
+      },
+      { id: "damping", label: "Damping", state: "default", type: "slider", value: 0.2, min: 0, max: 1, step: 0.1 },
+    ],
+  },
+  {
+    id: "motor",
+    title: "Motor",
+    icon: "motor",
+    note: "driven by the brain",
+    properties: [
+      {
+        id: "strength",
+        label: "Strength",
+        state: "default",
+        type: "slider",
+        value: 12,
+        min: 0,
+        max: 30,
+        step: 1,
+        unit: "N·m",
+      },
+      {
+        id: "speed",
+        label: "Max speed",
+        state: "default",
+        type: "slider",
+        value: 3,
+        min: 0,
+        max: 8.5,
+        step: 1,
+        unit: "rad/s",
+      },
+    ],
+  },
+  {
+    id: "randomize",
+    title: "Randomize per copy",
+    icon: "shuffle",
+    note: "2 values",
+    collapsed: true,
+    properties: [
+      {
+        id: "mass-spread",
+        label: "Mass",
+        state: "default",
+        type: "range",
+        low: 0.7,
+        high: 0.9,
+        min: 0.5,
+        max: 1.2,
+        unit: "kg",
+      },
+      {
+        id: "friction-spread",
+        label: "Friction",
+        state: "default",
+        type: "range",
+        low: 0.5,
+        high: 0.7,
+        min: 0,
+        max: 2,
+      },
+    ],
+  },
+];

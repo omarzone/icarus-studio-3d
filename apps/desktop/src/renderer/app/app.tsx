@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { EngineStatus } from "../../shared/engine-bridge.ts";
-import { LauncherShell } from "./shell/launcher-shell.tsx";
+import { AppProviders, HOME } from "./app-providers.tsx";
+import { Router } from "./navigation/router.tsx";
 import { EngineDown } from "./system/engine-down.tsx";
 
 export function App() {
@@ -22,10 +23,8 @@ export function App() {
     );
   }
   return (
-    <LauncherShell>
-      <p className="text-body text-fg-tertiary">
-        {status.kind === "ready" ? `Engine ${status.version} is running.` : "Starting the engine…"}
-      </p>
-    </LauncherShell>
+    <AppProviders mode="app" initial={HOME}>
+      <Router />
+    </AppProviders>
   );
 }

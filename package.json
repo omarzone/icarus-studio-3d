@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm -F desktop dev",
+    "prototype": "pnpm -F desktop prototype",
     "lint": "biome check .",
     "test": "pnpm -r --if-present test",
     "check:max-lines": "pnpm -F max-lines report",

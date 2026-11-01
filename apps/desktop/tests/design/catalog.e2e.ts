@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import implemented from "./implemented.json" with { type: "json" };
-import { launchApp } from "./launch.ts";
+import { galleryCatalog, launchGallery, openRoute } from "./launch.ts";
 
 type Anchor = { label: string; goesTo: string | null; kind: string };
 const inventory: Record<string, { anchors: Anchor[] }> = JSON.parse(
@@ -15,21 +14,22 @@ const slug = (label: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-test("every control in the catalog exists and leads where the design says", async () => {
-  const { app, page } = await launchApp({ ICARUS_DESIGN_GALLERY: "1", ICARUS_ENGINE_URL: "http://127.0.0.1:9" });
-  for (const { id } of implemented) {
-    await page.evaluate((hash) => {
-      location.hash = hash;
-      location.reload();
-    }, `#/__design/${id}`);
-    await page.waitForSelector("[data-design-root]");
+test("every control in the design exists and declares where it leads", async () => {
+  test.setTimeout(900_000);
+  const { app, page } = await launchGallery();
+  const { routes } = await galleryCatalog(page);
+  const missing: string[] = [];
+  for (const { id } of routes) {
+    await openRoute(page, id);
     for (const anchor of inventory[id]?.anchors ?? []) {
-      const control = page.locator(`[data-cta="${slug(anchor.label)}"]`).first();
-      await expect(control, `${id}: missing "${anchor.label}"`).toHaveCount(1);
-      if (anchor.goesTo) {
-        await expect(control, `${id}: "${anchor.label}" destination`).toHaveAttribute("data-goes-to", anchor.goesTo);
+      const selector = anchor.goesTo
+        ? `[data-cta="${slug(anchor.label)}"][data-goes-to="${anchor.goesTo}"]`
+        : `[data-cta="${slug(anchor.label)}"]`;
+      if ((await page.locator(selector).count()) === 0) {
+        missing.push(`${id}: "${anchor.label.replaceAll("\n", " ")}" → ${anchor.goesTo ?? "acts in place"}`);
       }
     }
   }
   await app.close();
+  expect(missing).toEqual([]);
 });
