@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronRight, Lock, Minus, Plus } from "lucide-react";
+import { ChevronRight, Lock, Minus, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import type { RouteId } from "../../../app/navigation/catalog-id.ts";
 import { Act, GoTo } from "../../../app/navigation/go-to.tsx";
 import { formatNumber, formatPropertyValue, formatTime } from "../../../ports/property-format.ts";
 import type { ListOption, Property, PropertyPanel, PropertyValue, Swatch } from "../../../ports/scene-port.ts";
+import { Select } from "../../../ui/select.tsx";
 import { SCENE_ICONS } from "../../scene-icons.ts";
 import { RangeTrack, SliderTrack } from "./slider-track.tsx";
 import { SwitchToggle } from "./switch-toggle.tsx";
@@ -314,35 +315,25 @@ function ListControl({
   tone: ControlTone;
   onPick: (value: string) => void;
 }) {
-  const current = options.find((option) => option.value === value);
-  const Icon = current?.icon ? SCENE_ICONS[current.icon] : null;
   return (
-    <span className={`relative flex ${fieldClass} items-center`}>
-      <span className="pointer-events-none absolute left-2 flex items-center">
-        {Icon ? <Icon size={13} strokeWidth={1.75} aria-hidden /> : null}
-        {current?.swatch ? <SwatchMark swatch={current.swatch} /> : null}
-      </span>
-      <select
-        aria-label={label}
-        value={value}
-        onChange={(event) => onPick(event.currentTarget.value)}
-        className={`h-full w-full cursor-default appearance-none rounded-control bg-transparent pr-6 text-meta outline-none [&_option]:bg-panel ${
-          Icon || current?.swatch ? "pl-7" : "pl-2"
-        } ${toneText[tone]}`}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        size={12}
-        strokeWidth={1.75}
-        className="pointer-events-none absolute right-2 text-fg-tertiary"
-        aria-hidden
-      />
-    </span>
+    <Select
+      label={label}
+      value={value}
+      onChange={onPick}
+      options={options.map((option) => {
+        const Icon = option.icon ? SCENE_ICONS[option.icon] : null;
+        return {
+          value: option.value,
+          label: option.label,
+          leading: Icon ? (
+            <Icon size={13} strokeWidth={1.75} className="shrink-0" aria-hidden />
+          ) : option.swatch ? (
+            <SwatchMark swatch={option.swatch} />
+          ) : undefined,
+        };
+      })}
+      className={`${fieldClass} w-full px-2 text-meta ${toneText[tone]}`}
+    />
   );
 }
 

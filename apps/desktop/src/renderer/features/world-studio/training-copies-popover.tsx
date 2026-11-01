@@ -11,6 +11,7 @@ import { scenePort, type TrainingCopies, type Variation } from "../../ports/scen
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Popover } from "../../ui/popover.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
+import { Select } from "../../ui/select.tsx";
 import { WORLD_CONFIGS } from "./world-variants.ts";
 
 // How many copies train in parallel and what changes between them, over the World workspace.
@@ -55,20 +56,16 @@ export function TrainingCopiesPopover() {
                     className="h-9 rounded-button bg-control px-3 text-ui hover:bg-control-raised focus:bg-control-raised"
                   />
                 </div>
-                <label className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5">
                   <span className="text-ui text-fg-secondary">Layout</span>
-                  <select
+                  <Select
+                    label="Layout"
                     value={data.layout}
-                    onChange={(event) =>
-                      set.mutate({ scene, copies: data.copies, layout: event.currentTarget.value }, update)
-                    }
-                    className="h-9 cursor-default appearance-none rounded-button bg-control px-3 text-body outline-none hover:bg-control-raised [&_option]:bg-panel"
-                  >
-                    {data.layouts.map((layout) => (
-                      <option key={layout}>{layout}</option>
-                    ))}
-                  </select>
-                </label>
+                    options={data.layouts.map((layout) => ({ value: layout, label: layout }))}
+                    onChange={(layout) => set.mutate({ scene, copies: data.copies, layout }, update)}
+                    className="h-9 rounded-button bg-control px-3 text-body hover:bg-control-raised"
+                  />
+                </div>
               </div>
               <p className="text-ui leading-normal text-fg-secondary">
                 Every copy is a little different, so the brain does not memorize one lot.

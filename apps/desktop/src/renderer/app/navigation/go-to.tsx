@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ComponentPropsWithRef } from "react";
 import { ctaSlug, type RouteId } from "./catalog-id.ts";
 import { type RouteParams, useNavigation } from "./navigation-store.tsx";
 
@@ -25,7 +25,7 @@ export function GoTo({ to, cta, params, onClick, ...rest }: Props) {
   );
 }
 
-type ActProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & { cta: string };
+type ActProps = Omit<ComponentPropsWithRef<"button">, "type"> & { cta: string };
 
 // A control that acts in place (no navigation).
 export function Act({ cta, ...rest }: ActProps) {
