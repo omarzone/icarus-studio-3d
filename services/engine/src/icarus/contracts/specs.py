@@ -23,7 +23,7 @@ class BodySpec(BaseModel):
 
 
 class RewardTermSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     term: str
     weight: float

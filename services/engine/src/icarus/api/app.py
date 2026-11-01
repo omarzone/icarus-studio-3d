@@ -39,8 +39,24 @@ async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     return _error(exc.status_code, ApiError(code=_CODES.get(exc.status_code, "error"), message=message))
 
 
+def _operation_issue(body: object, loc: tuple, message: str) -> ValidationIssue:
+    """Point a rejected operation value at the project property it was meant for."""
+    if len(loc) > 3 and loc[:2] == ("body", "operations") and isinstance(body, dict):
+        operations = body.get("operations")
+        index = loc[2]
+        if isinstance(operations, list) and isinstance(index, int) and index < len(operations):
+            operation = operations[index]
+            if isinstance(operation, dict) and operation.get("op") == "set_property":
+                fields = (operation.get("object"), operation.get("component"), operation.get("property"))
+                if all(isinstance(field, str) for field in fields):
+                    return ValidationIssue(path="objects.{}.components.{}.{}".format(*fields), message=message)
+    return ValidationIssue(path=".".join(str(part) for part in loc), message=message)
+
+
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
+    if request.url.path.endswith("/operations"):
+        return _rejected([_operation_issue(exc.body, tuple(e["loc"]), str(e["msg"])) for e in exc.errors()])
     details = {".".join(str(p) for p in e["loc"]): str(e["msg"]) for e in exc.errors()}
     return _error(422, ApiError(code="invalid", message="The request is not valid", details=details))
 

@@ -131,7 +131,10 @@ def design_report(project: Project) -> tuple[DesignReport, CompiledModel | None]
     add("compiles", "pass", f"{compiled.model.nbody - 1} parts, {compiled.model.njnt} joints")
     names = {obj.id: obj.name for obj in all_objects(project)}
     for check, run in PHYSICS:
-        status, detail = run(compiled, names)
+        try:
+            status, detail = run(compiled, names)
+        except (mujoco.FatalError, ValueError) as error:
+            status, detail = "fail", f"The physics engine stopped: {str(error).strip().splitlines()[0]}"
         add(check, status, detail)
         if status == "fail":
             return finish(compiled)

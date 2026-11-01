@@ -35,6 +35,7 @@ runs/
 !services/engine/src/icarus/projects/
 !services/engine/tests/projects/
 *.log
+MUJOCO_LOG.TXT
 
 # Local working files
 .local/

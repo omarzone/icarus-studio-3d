@@ -1,10 +1,13 @@
 import re
 import shutil
+import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ValidationIssue
@@ -62,6 +65,17 @@ class ProjectStore:
 
     def __init__(self, root: Path) -> None:
         self.root = root
+        self._locks: dict[str, threading.Lock] = {}
+        self._locks_guard = threading.Lock()
+
+    @contextmanager
+    def _locked(self, project_id: str) -> Iterator[Path]:
+        """One request at a time per project, so concurrent edits never share a revision number."""
+        directory = self._dir(project_id)
+        with self._locks_guard:
+            lock = self._locks.setdefault(project_id, threading.Lock())
+        with lock:
+            yield directory
 
     def _dir(self, project_id: str) -> Path:
         if not PROJECT_ID.fullmatch(project_id):
@@ -119,7 +133,10 @@ class ProjectStore:
     def list_projects(self) -> list[ProjectSummary]:
         summaries: list[ProjectSummary] = []
         for directory in self.root.glob("*/head.json"):
-            state = self._state(directory.parent, self._head(directory.parent))
+            try:
+                state = self._state(directory.parent, self._head(directory.parent))
+            except (OSError, ValidationError):
+                continue
             summaries.append(
                 ProjectSummary(
                     id=state.project.id,
@@ -140,39 +157,41 @@ class ProjectStore:
         return self._commit(directory, project, report, batch, None)
 
     def state(self, project_id: str) -> ProjectState:
-        directory = self._dir(project_id)
-        return self._state(directory, self._head(directory))
+        with self._locked(project_id) as directory:
+            return self._state(directory, self._head(directory))
 
     def apply(self, project_id: str, batch: OperationBatch) -> ProjectState:
-        directory = self._dir(project_id)
-        head = self._head(directory)
-        current = self._snapshot(directory, head.current)
-        project, report = self._candidate(current.project, batch.operations)
-        return self._commit(directory, project, report, batch, head.current)
+        with self._locked(project_id) as directory:
+            head = self._head(directory)
+            current = self._snapshot(directory, head.current)
+            project, report = self._candidate(current.project, batch.operations)
+            return self._commit(directory, project, report, batch, head.current)
 
     def revisions(self, project_id: str) -> list[Revision]:
-        log = self._dir(project_id) / "revisions.jsonl"
-        lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
-        return [Revision.model_validate_json(line) for line in lines if line.strip()]
+        with self._locked(project_id) as directory:
+            log = directory / "revisions.jsonl"
+            lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
+            return [Revision.model_validate_json(line) for line in lines if line.strip()]
 
     def undo(self, project_id: str) -> ProjectState:
-        directory = self._dir(project_id)
-        head = self._head(directory)
-        parent = self._snapshot(directory, head.current).revision.parent
-        if parent is None:
-            raise NothingToUndo(project_id)
-        moved = _Head(current=parent, redo=[*head.redo, head.current])
-        write_atomic(directory / "head.json", moved.model_dump_json())
-        return self._state(directory, moved)
+        with self._locked(project_id) as directory:
+            head = self._head(directory)
+            parent = self._snapshot(directory, head.current).revision.parent
+            if parent is None:
+                raise NothingToUndo(project_id)
+            moved = _Head(current=parent, redo=[*head.redo, head.current])
+            write_atomic(directory / "head.json", moved.model_dump_json())
+            return self._state(directory, moved)
 
     def redo(self, project_id: str) -> ProjectState:
-        directory = self._dir(project_id)
-        head = self._head(directory)
-        if not head.redo:
-            raise NothingToRedo(project_id)
-        moved = _Head(current=head.redo[-1], redo=head.redo[:-1])
-        write_atomic(directory / "head.json", moved.model_dump_json())
-        return self._state(directory, moved)
+        with self._locked(project_id) as directory:
+            head = self._head(directory)
+            if not head.redo:
+                raise NothingToRedo(project_id)
+            moved = _Head(current=head.redo[-1], redo=head.redo[:-1])
+            write_atomic(directory / "head.json", moved.model_dump_json())
+            return self._state(directory, moved)
 
     def delete(self, project_id: str) -> None:
-        shutil.rmtree(self._dir(project_id))
+        with self._locked(project_id) as directory:
+            shutil.rmtree(directory)

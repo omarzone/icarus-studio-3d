@@ -87,6 +87,9 @@ def _reward_issues(project: Project) -> list[ValidationIssue]:
         elif not info.weight_min <= term.weight <= info.weight_max:
             bounds = f"between {info.weight_min:g} and {info.weight_max:g}"
             issues.append(ValidationIssue(path=path, message=f"{info.label} weight must be {bounds}"))
+        for param in term.params:
+            message = f"{info.label if info else term.term} has no setting {param!r}"
+            issues.append(ValidationIssue(path=f"{path}.params.{param}", message=message))
     return issues
 
 
