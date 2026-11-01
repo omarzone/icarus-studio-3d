@@ -29,7 +29,9 @@ function dropFieldTitles(schema) {
   // `node` is always a schema; maps of schemas (properties, $defs) are walked by their values.
   const strip = (node, isModel) => {
     if (Array.isArray(node)) {
-      node.forEach((item) => strip(item, false));
+      for (const item of node) {
+        strip(item, false);
+      }
       return;
     }
     if (!node || typeof node !== "object") {
@@ -40,7 +42,9 @@ function dropFieldTitles(schema) {
     }
     for (const [key, value] of Object.entries(node)) {
       if ((key === "$defs" || key === "properties") && value && typeof value === "object") {
-        Object.values(value).forEach((child) => strip(child, key === "$defs"));
+        for (const child of Object.values(value)) {
+          strip(child, key === "$defs");
+        }
       } else if (typeof value === "object") {
         strip(value, false);
       }
