@@ -1,6 +1,8 @@
+import type { SceneDescription } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createTrainingFixture } from "./training.fixture.ts";
+import { createEngineTrainingPort } from "./training-engine.ts";
 
 // Training runs of a project: live progress, metrics, starting, pausing and stopping, and the autopilot.
 
@@ -50,12 +52,12 @@ export type LiveMetrics = {
 
 export type ConsoleLine = { time: string; text: string; level: "info" | "warn" | "error" };
 
-// What the live view shows over the parallel copies: the current checkpoint and the latest episode.
+// What the live view shows over the parallel copies: the current checkpoint and, when recorded, the latest episode.
 export type LiveView = {
   caption: string;
   checkpoint: string;
   result: string;
-  episode: { at: string; length: string; played: number; failureAt?: number };
+  episode?: { at: string; length: string; played: number; failureAt?: number };
   speed: string;
 };
 
@@ -84,6 +86,41 @@ export type AutopilotSettings = {
 // A run that stopped by itself: why, what is safe, and the technical details.
 export type RunFailure = { title: string; reason: string; details: readonly string[]; lastGoodRun: string };
 
+// Where a geom is, in MuJoCo axes (quaternion wxyz); poses are by geom name.
+export type CopyPose = { position: [number, number, number]; quaternion: [number, number, number, number] };
+export type CopyPoses = ReadonlyMap<string, CopyPose>;
+
+// The parallel copies of the selected run as the engine samples them while it trains.
+export type LiveCopies =
+  | { kind: "connecting" }
+  | { kind: "message"; title: string; body: string }
+  | { kind: "live"; scene: SceneDescription; step: string; copies: readonly CopyPoses[]; note?: string }
+  | { kind: "closed"; reason: string };
+
+// What changed in a run, so the views that show it read it again.
+export type TrainingChange = "runs" | "metrics" | "checkpoints" | "console" | "live-view";
+
+export type TrainingListener = {
+  onLive: (live: LiveCopies) => void;
+  onChange: (changes: readonly TrainingChange[]) => void;
+  // The watched run stopped by itself.
+  onFailed: () => void;
+};
+
+export type CheckpointMark = { step: number; label: string; result: string; best: boolean; replayable: boolean };
+
+export type ReplayFrame = { time: number; poses: CopyPoses };
+
+// A checkpoint's recorded episode, replayed exactly as MuJoCo computed it.
+export type Replay = {
+  scene: SceneDescription;
+  label: string;
+  outcome: string;
+  // Seconds from the first frame to the last.
+  duration: number;
+  frames: readonly ReplayFrame[];
+};
+
 export type TrainingPort = {
   listRuns: (project: string) => Promise<RunList>;
   selectRun: (input: { project: string; id: string }) => Promise<RunList>;
@@ -99,48 +136,16 @@ export type TrainingPort = {
   getAutopilot: (project: string) => Promise<AutopilotSettings>;
   setAutopilot: (input: { project: string; mode: AutopilotMode }) => Promise<AutopilotSettings>;
   getFailure: (project: string) => Promise<RunFailure>;
+  // Streams the selected run while the Train workspace is open; the returned function disconnects.
+  watch: (project: string, listener: TrainingListener) => () => void;
+  getCheckpoints: (project: string) => Promise<CheckpointMark[]>;
+  getReplay: (input: { project: string; step: number }) => Promise<Replay>;
 };
-
-const trainIds = ["SCR-TRAIN", "MOD-STOP-RUN", "MOD-AUTOPILOT", "STA-TRAIN-FAILED"] as const;
 
 export const trainingPort = definePort<TrainingPort>({
   app: {
-    listRuns: pending({ key: "training.runs", summary: "The training runs", sprint: 5, ids: [...trainIds] }),
-    selectRun: pending({ key: "training.selectRun", summary: "Selecting a run", sprint: 5, ids: [...trainIds] }),
-    getLiveView: pending({
-      key: "training.liveView",
-      summary: "Watching the parallel copies train",
-      sprint: 5,
-      ids: [...trainIds],
-    }),
-    getMetrics: pending({ key: "training.metrics", summary: "Live training metrics", sprint: 5, ids: [...trainIds] }),
-    getConsole: pending({ key: "training.console", summary: "The training log", sprint: 5, ids: [...trainIds] }),
-    getStartPlan: pending({
-      key: "training.plan",
-      summary: "The cost of a training run",
-      sprint: 5,
-      ids: ["MOD-START-TRAINING"],
-    }),
-    updateStartPlan: pending({
-      key: "training.updatePlan",
-      summary: "Changing the steps and copies of a run",
-      sprint: 5,
-      ids: ["MOD-START-TRAINING"],
-    }),
-    startRun: pending({
-      key: "training.start",
-      summary: "Starting a training run",
-      sprint: 5,
-      ids: ["MOD-START-TRAINING"],
-    }),
-    getStopSummary: pending({
-      key: "training.stopSummary",
-      summary: "What stopping a run keeps",
-      sprint: 5,
-      ids: ["MOD-STOP-RUN"],
-    }),
-    pauseRun: pending({ key: "training.pause", summary: "Pausing a training run", sprint: 5, ids: ["MOD-STOP-RUN"] }),
-    stopRun: pending({ key: "training.stop", summary: "Stopping a training run", sprint: 5, ids: ["MOD-STOP-RUN"] }),
+    ...createEngineTrainingPort(),
+    pauseRun: pending({ key: "training.pause", summary: "Pausing a training run", sprint: 8, ids: ["MOD-STOP-RUN"] }),
     getAutopilot: pending({
       key: "training.autopilot",
       summary: "What the copilot may change while training",
@@ -152,12 +157,6 @@ export const trainingPort = definePort<TrainingPort>({
       summary: "Choosing what the copilot may change while training",
       sprint: 7,
       ids: ["MOD-AUTOPILOT"],
-    }),
-    getFailure: pending({
-      key: "training.failure",
-      summary: "Why a run stopped by itself",
-      sprint: 5,
-      ids: ["STA-TRAIN-FAILED"],
     }),
   },
   prototype: createTrainingFixture,

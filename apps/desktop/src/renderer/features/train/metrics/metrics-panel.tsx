@@ -32,11 +32,19 @@ export function MetricsPanel({ project, className = "h-52.5 flex-none" }: { proj
         </>
       }
       options={
-        metrics.data ? <span className="font-mono text-meta text-fg-tertiary">{metrics.data.progress}</span> : null
+        metrics.data?.progress ? (
+          <span className="font-mono text-meta text-fg-tertiary">{metrics.data.progress}</span>
+        ) : null
       }
     >
       {tab === "metrics" ? (
-        <QueryView query={metrics}>{(data) => <MetricsTab metrics={data} />}</QueryView>
+        <QueryView
+          query={metrics}
+          isEmpty={(data) => data.series.length === 0}
+          empty={<EmptyState title="No metrics yet" body="The curves start with the first practice episodes." />}
+        >
+          {(data) => <MetricsTab metrics={data} />}
+        </QueryView>
       ) : (
         <QueryView
           query={log}

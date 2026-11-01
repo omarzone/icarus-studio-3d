@@ -147,5 +147,9 @@ export function createTrainingFixture(): TrainingPort {
       return autopilot;
     },
     getFailure: async () => FAILURE,
+    // The prototype has no live copies or recorded episodes; the engine streams and records them.
+    watch: () => () => undefined,
+    getCheckpoints: async () => [],
+    getReplay: () => Promise.reject(new Error("The prototype has no recorded episodes")),
   };
 }

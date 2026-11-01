@@ -11,10 +11,15 @@ const VALUE_TONE: Record<RewardTerm["tone"], string> = {
   danger: "text-danger",
 };
 
+// Two series as designed; more share the space evenly, the breakdown keeps its width.
+function columns(series: number): string {
+  return series === 2 ? "1.3fr 1fr 1.1fr" : `repeat(${series}, minmax(0, 1fr)) 1.1fr`;
+}
+
 // Mean reward and failure-rate charts with their change, and the reward breakdown by term.
 export function MetricsTab({ metrics }: { metrics: LiveMetrics }) {
   return (
-    <div className="grid h-full min-h-0 grid-cols-[1.3fr_1fr_1.1fr] gap-2.5 p-2.5">
+    <div className="grid h-full min-h-0 gap-2.5 p-2.5" style={{ gridTemplateColumns: columns(metrics.series.length) }}>
       {metrics.series.map((series) => (
         <SeriesCard key={series.label} series={series} />
       ))}

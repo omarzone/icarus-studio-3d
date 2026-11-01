@@ -18,11 +18,11 @@ import type {
 
 type Record_ = Record<string, unknown>;
 
-function isRecord(value: unknown): value is Record_ {
+export function isRecord(value: unknown): value is Record_ {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function has(value: unknown, key: string, kind: "string" | "number" | "boolean" | "object" | "array"): boolean {
+export function has(value: unknown, key: string, kind: "string" | "number" | "boolean" | "object" | "array"): boolean {
   if (!isRecord(value)) {
     return false;
   }
@@ -30,7 +30,7 @@ function has(value: unknown, key: string, kind: "string" | "number" | "boolean" 
   return kind === "array" ? Array.isArray(field) : kind === "object" ? isRecord(field) : typeof field === kind;
 }
 
-function isListOf<T>(value: unknown, item: (entry: unknown) => entry is T): value is T[] {
+export function isListOf<T>(value: unknown, item: (entry: unknown) => entry is T): value is T[] {
   return Array.isArray(value) && value.every(item);
 }
 
@@ -95,7 +95,7 @@ export function isLibraryCatalog(value: unknown): value is LibraryCatalog {
   );
 }
 
-function isTriple(value: unknown, length: number): boolean {
+export function isTriple(value: unknown, length: number): boolean {
   return Array.isArray(value) && value.length === length && value.every((item) => typeof item === "number");
 }
 
