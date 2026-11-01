@@ -14,6 +14,7 @@ STILL = RewardState(
     colliding=False,
     fallen=False,
     effort=0.0,
+    speed=0.0,
 )
 
 
@@ -32,10 +33,16 @@ def test_progress_is_positive_when_getting_closer_and_negative_when_leaving():
     assert weighted("progress_to_goal", closer, STILL) == pytest.approx(-1.0)
 
 
-def test_reach_goal_pays_once_when_entering_the_zone():
+def test_reach_goal_pays_once_when_the_agent_comes_to_rest_inside_the_zone():
     inside = replace(STILL, position=(9.5, 0.0, 0.5))
     assert weighted("reach_goal", STILL, inside) == pytest.approx(10)
     assert weighted("reach_goal", inside, inside) == 0
+
+
+def test_passing_through_the_goal_zone_fast_is_not_reaching_it():
+    passing = replace(STILL, position=(9.5, 0.0, 0.5), speed=1.0)
+    assert weighted("reach_goal", STILL, passing) == 0
+    assert weighted("reach_goal", passing, replace(passing, speed=0.0)) == pytest.approx(10)
 
 
 def test_heading_alignment_is_highest_facing_the_goal():

@@ -3,6 +3,7 @@ import re
 import numpy as np
 import pytest
 
+from icarus.sim.model_state import GOAL_DISTANCE_SCALE
 from icarus.sim.policy import RandomPolicy
 from icarus.training.evaluation import EVALUATION_SEED, evaluate
 from tests.sim.conftest import project_from
@@ -11,12 +12,13 @@ OUTCOME = re.compile(r"^(Reached the parking spot at \d+\.\d s|Touched .+ at \d+
 
 
 class SteerToSpot:
-    label = "Full throttle toward the spot"
+    label = "Drive toward the spot and stop there"
 
     def act(self, observation: np.ndarray) -> np.ndarray:
-        goal_x, goal_y = observation[-3], observation[-2]
-        steer = float(np.clip(np.arctan2(goal_y, goal_x) / np.radians(35), -1, 1))
-        return np.array([steer, -1.0, steer, -1.0])
+        distance, cos, sin = observation[-3] * GOAL_DISTANCE_SCALE, observation[-2], observation[-1]
+        steer = float(np.clip(np.arctan2(sin, cos) / np.radians(35), -1, 1))
+        throttle = float(np.clip(2 * (min(0.6 * distance, 1.6) - observation[5]), -1, 1))
+        return np.array([steer, throttle, steer, throttle])
 
 
 def test_the_same_seeds_give_the_same_returns_and_rollout(parking):
