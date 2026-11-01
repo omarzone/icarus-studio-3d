@@ -1,11 +1,9 @@
-// TAB-PROPERTIES
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { RouteId } from "../../app/navigation/catalog-id.ts";
-import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { GoTo } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import type { Inspection, Property, PropertyValue } from "../../ports/scene-port.ts";
 import { EmptyState } from "../../ui/states.tsx";
-import { SCENE_ICONS } from "../scene-icons.ts";
 import type { PanelRoutes } from "./controls/property-control.tsx";
 import { InspectorSection } from "./inspector-section.tsx";
 import { PropertyRow } from "./property-row.tsx";
@@ -19,9 +17,9 @@ export type PropertiesTabProps = {
   onAccept: (target: PropertyTarget) => void;
   // Where "+ Add component" leads; it only shows for scene objects.
   addComponentTo?: RouteId;
+  // Scene key the new component goes to, passed to the picker as the `addTo` route parameter.
+  scene?: string;
   panelRoutes?: PanelRoutes;
-  // Board layout: object header with an icon tile, 160 px controls and a primary Add component button.
-  board?: boolean;
 };
 
 export function PropertiesTab(props: PropertiesTabProps) {
@@ -42,31 +40,16 @@ function ObjectProperties({
   onReset,
   onAccept,
   addComponentTo,
+  scene,
   panelRoutes,
-  board = false,
 }: PropertiesTabProps & { inspection: Extract<Inspection, { kind: "object" }> }) {
   const [filter, setFilter] = useState("");
   const query = filter.trim().toLowerCase();
   const matches = (property: Property) => !query || property.label.toLowerCase().includes(query);
-  const Icon = inspection.icon ? SCENE_ICONS[inspection.icon] : null;
   return (
     <div className="flex flex-col">
-      {board ? (
-        <div className="flex items-center gap-2.5 p-3">
-          <span className="grid size-9 place-items-center rounded-button bg-control">
-            {Icon ? <Icon size={18} strokeWidth={1.75} aria-hidden /> : null}
-          </span>
-          <span className="flex flex-col">
-            <span className="text-body font-semibold">{inspection.title}</span>
-            <span className="text-meta text-fg-tertiary">{inspection.subtitle}</span>
-          </span>
-        </div>
-      ) : (
-        <>
-          <Heading title={inspection.title} subtitle={inspection.subtitle} />
-          <Filter value={filter} onChange={setFilter} />
-        </>
-      )}
+      <Heading title={inspection.title} subtitle={inspection.subtitle} />
+      <Filter value={filter} onChange={setFilter} />
       {inspection.sections.map((section) => {
         const properties = section.properties.filter(matches);
         if (query && properties.length === 0) {
@@ -80,7 +63,6 @@ function ObjectProperties({
                 <PropertyRow
                   key={property.id}
                   property={property}
-                  wide={board}
                   panelRoutes={panelRoutes}
                   onChange={(value) => onChange(target, value)}
                   onReset={() => onReset(target)}
@@ -91,7 +73,7 @@ function ObjectProperties({
           </InspectorSection>
         );
       })}
-      {inspection.components && addComponentTo ? <AddComponent to={addComponentTo} board={board} /> : null}
+      {inspection.components && addComponentTo ? <AddComponent to={addComponentTo} scene={scene} /> : null}
     </div>
   );
 }
@@ -130,22 +112,18 @@ function Filter({ value, onChange }: { value: string; onChange: (value: string) 
   );
 }
 
-function AddComponent({ to, board }: { to: RouteId; board: boolean }) {
-  const className = board
-    ? "flex h-8 w-full items-center justify-center gap-1.5 rounded-button bg-selected text-ui font-semibold text-on-selected hover:opacity-90"
-    : "flex h-7.5 w-full items-center justify-center rounded-button border-[1.5px] border-dashed border-line-dashed text-ui text-fg-secondary hover:bg-fill-hover hover:text-fg";
+function AddComponent({ to, scene }: { to: RouteId; scene: string | undefined }) {
+  const params = useNavigation((state) => state.params);
   return (
     <div className="p-3">
-      {board ? (
-        <Act cta="Add component" className={className}>
-          <Plus size={13} strokeWidth={1.75} aria-hidden />
-          Add component
-        </Act>
-      ) : (
-        <GoTo to={to} cta="+ Add component" className={className}>
-          + Add component
-        </GoTo>
-      )}
+      <GoTo
+        to={to}
+        cta="+ Add component"
+        params={scene ? { ...params, addTo: scene } : params}
+        className="flex h-7.5 w-full items-center justify-center rounded-button border-[1.5px] border-dashed border-line-dashed text-ui text-fg-secondary hover:bg-fill-hover hover:text-fg"
+      >
+        + Add component
+      </GoTo>
     </div>
   );
 }
