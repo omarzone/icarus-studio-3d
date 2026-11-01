@@ -1,7 +1,7 @@
 // SCR-RESULTS · STA-RESULTS-FAILURES · STA-RESULTS-REFERENCE
-import type { ReactNode } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { useProjectName } from "../../ui/project-name.ts";
@@ -23,9 +23,8 @@ export function ResultsScreen() {
   const config = RESULTS_CONFIGS[variant];
   const project = useProjectName(config.project);
   const guide = useGuide(config.scene);
-  const columns = COLUMNS[variant](project.id);
   return (
-    <WorkspaceShell
+    <DockWorkspaceShell
       header={{
         project: project.name,
         active: "Results",
@@ -35,55 +34,59 @@ export function ResultsScreen() {
         guide: guideLabel(guide.data),
         primary: config.primary,
       }}
-      left={columns.left}
-      center={columns.center}
-      chat={
-        <ChatPanel
-          conversation={config.conversation}
-          placeholder={config.placeholder}
-          suggestionRoutes={config.suggestionRoutes}
-        />
-      }
+      layoutKey="results"
+      panels={{
+        ...PANELS[variant](project.id),
+        chat: copilotPanel(() => (
+          <ChatPanel
+            conversation={config.conversation}
+            placeholder={config.placeholder}
+            suggestionRoutes={config.suggestionRoutes}
+          />
+        )),
+      }}
     />
   );
 }
 
-const COLUMNS: Record<ResultsVariant, (project: string) => { left: ReactNode; center: ReactNode }> = {
+const VIEW = { minimumWidth: 360, minimumHeight: 200 } as const;
+
+const PANELS: Record<ResultsVariant, (project: string) => DockPanels> = {
   compare: (project) => ({
-    left: (
-      <>
-        <ResultRunsPanel project={project} />
-        <SummaryPanel project={project} view="best" />
-      </>
-    ),
-    center: (
-      <>
-        <ResultsViewPanel project={project} tab="compare" />
-        <LearnedPanel project={project} />
-      </>
-    ),
+    runs: { title: "Runs", home: HOME.left, render: () => <ResultRunsPanel project={project} /> },
+    summary: {
+      title: "Summary",
+      home: HOME.below("runs", 613),
+      render: () => <SummaryPanel project={project} view="best" />,
+    },
+    view: { title: "Compare", ...VIEW, render: () => <ResultsViewPanel project={project} tab="compare" /> },
+    learned: {
+      title: "How it learned",
+      home: HOME.below("view", 168),
+      render: () => <LearnedPanel project={project} />,
+    },
   }),
   failures: (project) => ({
-    left: (
-      <>
-        <FailuresPanel project={project} />
-        <SummaryPanel project={project} view="failures" />
-      </>
-    ),
-    center: <ResultsViewPanel project={project} tab="where-it-fails" />,
+    failures: { title: "Failures", home: HOME.left, render: () => <FailuresPanel project={project} /> },
+    summary: {
+      title: "Summary",
+      home: HOME.below("failures", 569),
+      render: () => <SummaryPanel project={project} view="failures" />,
+    },
+    view: {
+      title: "Where it fails",
+      ...VIEW,
+      render: () => <ResultsViewPanel project={project} tab="where-it-fails" />,
+    },
   }),
   reference: (project) => ({
-    left: (
-      <>
-        <ReferenceTestsPanel project={project} />
-        <SummaryPanel project={project} view="reference" />
-      </>
-    ),
-    center: (
-      <>
-        <ReferenceViewPanel project={project} />
-        <ReferenceMatchPanel project={project} />
-      </>
-    ),
+    tests: { title: "Tests", home: HOME.left, render: () => <ReferenceTestsPanel project={project} /> },
+    summary: {
+      title: "Summary",
+      home: HOME.below("tests", 629),
+      render: () => <SummaryPanel project={project} view="reference" />,
+    },
+    view: { title: "Reference", ...VIEW, render: () => <ReferenceViewPanel project={project} /> },
+    match: { title: "Match", home: HOME.below("view", 257), render: () => <ReferenceMatchPanel project={project} /> },
   }),
 };

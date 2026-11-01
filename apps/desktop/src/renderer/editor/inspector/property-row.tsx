@@ -10,8 +10,6 @@ export type PropertyRowProps = {
   onReset: () => void;
   onAccept: () => void;
   panelRoutes?: PanelRoutes;
-  // Width of the control column: 150 px in panels, 160 px on wide boards.
-  wide?: boolean;
 };
 
 const DOT: Partial<Record<Property["state"], string>> = {
@@ -21,15 +19,13 @@ const DOT: Partial<Record<Property["state"], string>> = {
 };
 
 // One property: label (drag it to scrub numbers), its control and the line its state adds underneath.
-export function PropertyRow({ property, onChange, onReset, onAccept, panelRoutes, wide = false }: PropertyRowProps) {
+export function PropertyRow({ property, onChange, onReset, onAccept, panelRoutes }: PropertyRowProps) {
   const scrub = useScrub(property, onChange);
   const dot = DOT[property.state];
   return (
     <div
       title={property.hint}
-      className={`grid items-center gap-x-2 gap-y-0.5 px-3 text-ui ${
-        wide ? "grid-cols-[minmax(0,1fr)_160px] py-0.75" : "grid-cols-[minmax(0,1fr)_150px] py-1"
-      }`}
+      className="grid grid-cols-[minmax(0,1fr)_150px] items-center gap-x-2 gap-y-0.5 px-3 py-1 text-ui"
     >
       <span
         {...scrub}

@@ -2,7 +2,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
@@ -33,7 +34,7 @@ export function TrainScreen() {
   const guide = useGuide(TRAIN_CONFIG.scene);
   return (
     <div className="relative h-full">
-      <WorkspaceShell
+      <DockWorkspaceShell
         header={{
           project: project.name,
           active: "Train",
@@ -41,30 +42,41 @@ export function TrainScreen() {
           guide: guideLabel(guide.data),
           primary: { label: "Stop", to: "MOD-STOP-RUN" },
         }}
-        left={
-          <>
-            <RunsPanel project={project.id} />
-            <InspectorPanel scene={TRAIN_CONFIG.scene} panelRoutes={{ autopilot: "MOD-AUTOPILOT" }} />
-          </>
-        }
-        center={
-          <>
-            <ViewportPanel
-              label="Every parallel copy training"
-              tabs={VIEWS}
-              toolbar={<Toolbar groups={TRAIN_TOOLS} selected="Train" overrides={TOOL_ROUTES} />}
-              overlays={<LiveOverlays project={project.id} />}
+        layoutKey="train"
+        panels={{
+          runs: { title: "Runs", home: HOME.left, render: () => <RunsPanel project={project.id} /> },
+          inspector: {
+            title: "Inspector",
+            optionsLabel: "Inspector options",
+            home: HOME.below("runs", 608),
+            render: () => <InspectorPanel scene={TRAIN_CONFIG.scene} panelRoutes={{ autopilot: "MOD-AUTOPILOT" }} />,
+          },
+          viewport: {
+            title: "Viewport",
+            minimumWidth: 360,
+            minimumHeight: 200,
+            render: () => (
+              <ViewportPanel
+                label="Every parallel copy training"
+                tabs={VIEWS}
+                toolbar={<Toolbar groups={TRAIN_TOOLS} selected="Train" overrides={TOOL_ROUTES} />}
+                overlays={<LiveOverlays project={project.id} />}
+              />
+            ),
+          },
+          metrics: {
+            title: "Metrics",
+            home: HOME.below("viewport", 210),
+            render: () => <MetricsPanel project={project.id} />,
+          },
+          chat: copilotPanel(() => (
+            <ChatPanel
+              conversation={TRAIN_CONFIG.conversation}
+              placeholder="Ask why, or what to try next…"
+              suggestionRoutes={TRAIN_CONFIG.suggestionRoutes}
             />
-            <MetricsPanel project={project.id} />
-          </>
-        }
-        chat={
-          <ChatPanel
-            conversation={TRAIN_CONFIG.conversation}
-            placeholder="Ask why, or what to try next…"
-            suggestionRoutes={TRAIN_CONFIG.suggestionRoutes}
-          />
-        }
+          )),
+        }}
       />
       {variant === "failed" ? <RunFailedCard project={project.id} /> : null}
     </div>

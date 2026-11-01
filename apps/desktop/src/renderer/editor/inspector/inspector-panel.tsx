@@ -6,6 +6,7 @@ import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { scenePort } from "../../ports/scene-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
+import { useDockedPanel } from "../../ui/dock-slot.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
 import { useInspection, useSceneCache } from "../scene-queries.ts";
@@ -31,15 +32,19 @@ export function InspectorPanel({
   panelRoutes,
   className = "flex-[1.1]",
 }: InspectorPanelProps) {
+  const docked = useDockedPanel();
   return (
     <Panel
       id="PNL-INSPECTOR"
       className={className}
       tabs={<PanelTab label={label} active />}
       options={
-        <Act cta="Inspector options" aria-label="Inspector options" className={buttonClass("icon", "size-6!")}>
-          <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
-        </Act>
+        // Docked, the dock's ⋯ menu stands in for the panel's own.
+        docked ? undefined : (
+          <Act cta="Inspector options" aria-label="Inspector options" className={buttonClass("icon", "size-6!")}>
+            <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
+          </Act>
+        )
       }
     >
       <InspectorBody scene={scene} addComponentTo={addComponentTo} panelRoutes={panelRoutes} />
@@ -47,10 +52,9 @@ export function InspectorPanel({
   );
 }
 
-type BodyProps = Pick<InspectorPanelProps, "scene" | "addComponentTo" | "panelRoutes"> & { board?: boolean };
+type BodyProps = Pick<InspectorPanelProps, "scene" | "addComponentTo" | "panelRoutes">;
 
-// The inspector content without its panel, for boards and dialogs that show an object's components.
-export function InspectorBody({ scene, addComponentTo, panelRoutes, board }: BodyProps) {
+function InspectorBody({ scene, addComponentTo, panelRoutes }: BodyProps) {
   const port = usePort(scenePort);
   const inspection = useInspection(scene);
   const cache = useSceneCache(scene);
@@ -62,8 +66,8 @@ export function InspectorBody({ scene, addComponentTo, panelRoutes, board }: Bod
       {(data) => (
         <PropertiesTab
           inspection={data}
-          board={board}
           addComponentTo={addComponentTo}
+          scene={scene}
           panelRoutes={panelRoutes}
           onChange={(target, value) => set.mutate({ scene, ...target, value }, { onSuccess: cache.inspection })}
           onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.inspection })}

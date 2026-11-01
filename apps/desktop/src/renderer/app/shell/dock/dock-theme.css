@@ -1,0 +1,102 @@
+/* Dock theme from the design tokens: each group looks like a style-guide panel (strip tab bar over a card). */
+.dockview-theme-icarus {
+  color-scheme: dark;
+  --dv-group-view-background-color: var(--ic-bg-panel);
+  --dv-tabs-and-actions-container-background-color: var(--ic-bg-strip);
+  --dv-tabs-and-actions-container-height: 39px;
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-activegroup-visiblepanel-tab-background-color: transparent;
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-visiblepanel-tab-background-color: transparent;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--ic-fg);
+  --dv-activegroup-hiddenpanel-tab-color: var(--ic-fg-tertiary);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--ic-fg);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--ic-fg-tertiary);
+  --dv-tab-divider-color: transparent;
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--ic-line-subtle);
+  --dv-drag-over-background-color: var(--ic-fill-hover);
+  --dv-drag-over-border: 1px solid var(--ic-line-strong);
+  --dv-edge-dock-indicator-color: var(--ic-selected);
+  --dv-icon-hover-background-color: var(--ic-fill-hover);
+  --dv-tabs-container-scrollbar-color: var(--ic-line-strong);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--ic-line-strong);
+  --dv-active-sash-transition-delay: 0.1s;
+  --dv-border-radius: 16px;
+  --dv-tab-border-radius: 8px;
+  --dv-sash-border-radius: 4px;
+  --dv-dropdown-border-radius: 8px;
+  --dv-floating-box-shadow: var(--ic-shadow-floating);
+  --dv-floating-border: 1px solid var(--ic-line-strong);
+  --dv-floating-titlebar-background-color: var(--ic-bg-strip);
+  --dv-floating-titlebar-border-bottom: 1px solid var(--ic-line-subtle);
+  background-color: var(--ic-bg-app);
+  font-family: var(--ic-font-ui);
+}
+
+.dockview-theme-icarus .dv-groupview {
+  overflow: hidden;
+  border: 1px solid var(--ic-line);
+  border-radius: var(--dv-border-radius);
+  background-color: var(--ic-bg-panel);
+}
+
+.dockview-theme-icarus .dv-groupview .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--ic-line-subtle);
+}
+
+.dockview-theme-icarus .dv-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 1px;
+  border-radius: var(--dv-tab-border-radius);
+}
+
+.dockview-theme-icarus .dv-tabs-container {
+  align-items: center;
+  gap: 2px;
+}
+
+.dockview-theme-icarus .dv-sash {
+  border-radius: var(--dv-sash-border-radius);
+}
+
+.dockview-theme-icarus .dv-drop-target-anchor {
+  border-radius: 8px;
+}
+
+.dockview-theme-icarus .dv-resize-container {
+  overflow: hidden;
+  border: 1px solid var(--ic-line-strong);
+  border-radius: var(--dv-border-radius) !important;
+}
+
+.dockview-theme-icarus .dv-resize-container .dv-groupview {
+  border: none;
+  border-radius: 0;
+}
+
+/* Only the grip inside each tab looks draggable. */
+.dockview-theme-icarus .dv-tab,
+.dockview-theme-icarus .dv-void-container {
+  cursor: default;
+}
+
+/* A lone tab shrinks with its group instead of hiding behind an overflow menu; its own tabs truncate. */
+.dockview-theme-icarus .dv-single-tab .dv-scrollable,
+.dockview-theme-icarus .dv-single-tab .dv-tabs-container {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.dockview-theme-icarus .dv-single-tab .dv-tab {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dockview-theme-icarus .dv-single-tab .dv-tabs-overflow-dropdown-default {
+  display: none;
+}

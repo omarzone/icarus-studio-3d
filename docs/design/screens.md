@@ -1354,20 +1354,15 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Kind:** Popover or menu of `PNL-INSPECTOR` Inspector
 - **Mockup:** *Components* (`Components`)
 - **Reached from:** `MOD-AUTO-RIG`, `MOD-DELETE-PROJECT`, `MOD-DUPLICATE`, `MOD-HISTORY`, `MOD-MOTION-VIDEO`, `MOD-RENAME`, `MOD-SHARE`, `POP-PROJECT-MENU`, `POP-TRAINING-COPIES`, `REF-PROPERTY-TYPES`, `SCR-BODY`, `SCR-WORLD`, `STA-BODY-CHECK-FAILED`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-PROPOSAL`
-- **Purpose:** Add a component to any object. Shown on the reference board with a generic imported object.
+- **Purpose:** Add a component to the selected object. The reference board explains components with an imported robot joint; in the app the picker floats next to the inspector's *+ Add component* button.
 - **Content:**
-  - Inspector of an imported robot joint with Transform, Physics body, Joint, Motor and Randomize per copy.
-  - Add component popover: search or describe, then groups Shape and look, Physics, Senses, Brain, Learning, World.
-  - Rules and an example of the copilot proposing two components for approval.
-- **Header:** Window title bar · Inspector · components
-- **Page:** no tabbed panels · inspector rows: Position, Rotation, Scale, Body, Mass, Friction, Type, Range, Damping, Strength, Max speed
+  - Search or describe a component, then groups Shape and look, Physics, Senses, Brain, Learning, World.
+  - Picking one adds it to the object and closes the picker; Escape or a click outside closes it.
+- **Header:** none, it floats over the workspace
 
 | Region | Control | Type | Result |
 |---|---|---|---|
-| Page | Property types | Button or link | → `REF-PROPERTY-TYPES` Property types |
-| Page | Back to the editor | Button or link | → `SCR-WORLD` World workspace |
-| Page | Apply | Button or link | Acts in place |
-| Page | Discard | Button or link | Acts in place |
+| Picker | A component | Button or link | Acts in place |
 
 ### Project and editor
 

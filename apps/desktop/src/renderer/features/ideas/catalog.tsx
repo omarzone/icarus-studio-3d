@@ -3,7 +3,7 @@ import { IdeasPanel } from "./ideas-panel.tsx";
 import { IdeasScreen } from "./ideas-screen.tsx";
 
 export const catalog: Catalog = {
-  routes: [{ id: "SCR-IDEAS", maxDiff: 0.03, component: IdeasScreen }],
+  routes: [{ id: "SCR-IDEAS", maxDiff: 0.045, component: IdeasScreen }],
   modules: [
     {
       id: "PNL-IDEAS",

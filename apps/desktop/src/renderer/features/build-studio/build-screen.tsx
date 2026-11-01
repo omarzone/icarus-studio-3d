@@ -1,7 +1,8 @@
 // SCR-BUILD · STA-BUILD-HARDWARE
 import type { ScreenId } from "../../app/navigation/catalog-id.ts";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import type { SuggestionRoutes } from "../copilot/suggestion-chips.tsx";
 import { HardwarePage } from "./hardware/hardware-page.tsx";
@@ -33,37 +34,60 @@ export function BuildScreen() {
   switch (variant) {
     case "community":
       return (
-        <WorkspaceShell
+        <DockWorkspaceShell
           header={header}
-          left={
-            <BuildTargetsPanel
-              project={project.id}
-              selected="community"
-              routes={{
-                community: underOverlay ? "SCR-BUILD" : undefined,
-                "export-brain": "MOD-EXPORT-BRAIN",
-                hardware: "STA-BUILD-HARDWARE",
-                game: "MOD-EXPORT-BRAIN",
-                animation: "MOD-EXPORT-ANIMATION",
-              }}
-            />
-          }
-          center={<BuildTargetViewPanel project={project.id} projectName={project.name} underOverlay={underOverlay} />}
-          chat={
-            <ChatPanel
-              conversation="park-pilot-build"
-              placeholder="Ask about sharing or building…"
-              suggestionRoutes={communityChips(underOverlay)}
-            />
-          }
+          layoutKey="build"
+          panels={{
+            targets: {
+              title: "Build",
+              home: HOME.left,
+              render: () => (
+                <BuildTargetsPanel
+                  project={project.id}
+                  selected="community"
+                  routes={{
+                    community: underOverlay ? "SCR-BUILD" : undefined,
+                    "export-brain": "MOD-EXPORT-BRAIN",
+                    hardware: "STA-BUILD-HARDWARE",
+                    game: "MOD-EXPORT-BRAIN",
+                    animation: "MOD-EXPORT-ANIMATION",
+                  }}
+                />
+              ),
+            },
+            view: {
+              title: "Share to community",
+              minimumWidth: 360,
+              render: () => (
+                <BuildTargetViewPanel project={project.id} projectName={project.name} underOverlay={underOverlay} />
+              ),
+            },
+            chat: copilotPanel(() => (
+              <ChatPanel
+                conversation="park-pilot-build"
+                placeholder="Ask about sharing or building…"
+                suggestionRoutes={communityChips(underOverlay)}
+              />
+            )),
+          }}
         />
       );
     case "hardware":
       return (
-        <WorkspaceShell
+        <DockWorkspaceShell
           header={header}
-          page={<HardwarePage project={project.id} projectName={project.name} />}
-          chat={<ChatPanel conversation="park-pilot-hardware" placeholder="Ask about the hardware…" />}
+          layoutKey="build-hardware"
+          panels={{
+            hardware: {
+              title: "Hardware",
+              bare: true,
+              minimumWidth: 480,
+              render: () => <HardwarePage project={project.id} projectName={project.name} />,
+            },
+            chat: copilotPanel(() => (
+              <ChatPanel conversation="park-pilot-hardware" placeholder="Ask about the hardware…" />
+            )),
+          }}
         />
       );
   }

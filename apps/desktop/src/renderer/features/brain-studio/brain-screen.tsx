@@ -1,6 +1,7 @@
 // SCR-BRAIN · STA-BRAIN-NETWORK · STA-BRAIN-CONNECTOME
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { WorkspaceShell } from "../../app/shell/workspace-shell.tsx";
+import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
+import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
@@ -37,7 +38,7 @@ export function BrainScreen() {
     return <LoadingState label="Opening the workspace" />;
   }
   return (
-    <WorkspaceShell
+    <DockWorkspaceShell
       header={{
         project,
         active: "Brain",
@@ -47,57 +48,94 @@ export function BrainScreen() {
         playTo: config.playTo,
         primary: config.primary,
       }}
-      narrowChat={variant === "network"}
-      left={<BrainLeft variant={variant} config={config} />}
-      center={<BrainCenter variant={variant} config={config} />}
-      chat={
-        <ChatPanel
-          conversation={config.conversation}
-          placeholder={config.placeholder}
-          suggestionRoutes={config.suggestionRoutes}
-        />
-      }
+      layoutKey="brain"
+      panels={brainPanels(variant, config)}
     />
   );
 }
 
-type Props = { variant: BrainVariant; config: BrainConfig };
-
-function BrainLeft({ variant, config }: Props) {
+function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
+  const chat = copilotPanel(
+    () => (
+      <ChatPanel
+        conversation={config.conversation}
+        placeholder={config.placeholder}
+        suggestionRoutes={config.suggestionRoutes}
+      />
+    ),
+    variant === "network",
+  );
+  const view = {
+    title: "Viewport",
+    minimumWidth: 360,
+    minimumHeight: 200,
+    render: () => <BrainView variant={variant} config={config} />,
+  };
   switch (variant) {
     case "learned":
-      return (
-        <>
-          <SensesActionsPanel brain={config.brain} />
-          <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} />
-        </>
-      );
+      return {
+        senses: {
+          title: "Senses and actions",
+          home: HOME.left,
+          render: () => <SensesActionsPanel brain={config.brain} />,
+        },
+        inspector: {
+          title: "Inspector",
+          optionsLabel: "Inspector options",
+          home: HOME.below("senses", 432),
+          render: () => <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} />,
+        },
+        viewport: view,
+        learning: {
+          title: "Learning",
+          home: HOME.below("viewport", 168),
+          render: () => <LearningPanel brain={config.brain} />,
+        },
+        chat,
+      };
     case "network":
-      return <BrainShapePanel brain={config.brain} addLayerTo={config.addLayerTo} />;
+      return {
+        shape: {
+          title: "Shape",
+          home: HOME.left,
+          render: () => <BrainShapePanel brain={config.brain} addLayerTo={config.addLayerTo} />,
+        },
+        viewport: view,
+        chat,
+      };
     case "connectome":
-      return (
-        <>
-          <ExplorerPanel scene={config.scene} />
-          <InspectorPanel scene={config.scene} />
-        </>
-      );
+      return {
+        explorer: { title: "Explorer", home: HOME.left, render: () => <ExplorerPanel scene={config.scene} /> },
+        inspector: {
+          title: "Inspector",
+          optionsLabel: "Inspector options",
+          home: HOME.below("explorer", 432),
+          render: () => <InspectorPanel scene={config.scene} />,
+        },
+        viewport: view,
+        activity: {
+          title: "Brain activity",
+          home: HOME.below("viewport", 196),
+          render: () => <BrainActivityPanel brain={config.brain} />,
+        },
+        chat,
+      };
   }
 }
 
-function BrainCenter({ variant, config }: Props) {
+type Props = { variant: BrainVariant; config: BrainConfig };
+
+function BrainView({ variant, config }: Props) {
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
   const checkpoints = useNetworkCheckpoints(variant === "network" ? config.brain : null);
   switch (variant) {
     case "learned":
       return (
-        <>
-          <ViewportPanel
-            label="The body with its sensor rays, as the brain senses them"
-            toolbar={toolbar}
-            overlays={<ReadingsCard brain={config.brain} />}
-          />
-          <LearningPanel brain={config.brain} />
-        </>
+        <ViewportPanel
+          label="The body with its sensor rays, as the brain senses them"
+          toolbar={toolbar}
+          overlays={<ReadingsCard brain={config.brain} />}
+        />
       );
     case "network":
       return (
@@ -111,14 +149,11 @@ function BrainCenter({ variant, config }: Props) {
       );
     case "connectome":
       return (
-        <>
-          <ViewportPanel
-            label="The body, its brain lit where neurons fire"
-            toolbar={toolbar}
-            overlays={<ReadingsCard brain={config.brain} />}
-          />
-          <BrainActivityPanel brain={config.brain} />
-        </>
+        <ViewportPanel
+          label="The body, its brain lit where neurons fire"
+          toolbar={toolbar}
+          overlays={<ReadingsCard brain={config.brain} />}
+        />
       );
   }
 }
