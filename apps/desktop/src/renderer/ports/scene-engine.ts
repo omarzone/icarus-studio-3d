@@ -1,7 +1,8 @@
 import type { EditOperation, LibraryCatalog, Project, PropertySchema } from "@icarus/contracts";
 import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
 import { trainingVariations, variationOperations } from "./copy-variations.ts";
-import type { GuideProgress, PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
+import { guideProgress } from "./guide-progress.ts";
+import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
 import {
   componentGroups,
   findObject,
@@ -14,7 +15,7 @@ import {
 
 export { nextComponentId } from "./scene-views.ts";
 
-type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene"> & CopiesApi;
+type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene" | "runs"> & CopiesApi;
 
 export type EngineScenePort = Omit<ScenePort, "acceptProposedValue">;
 
@@ -35,19 +36,6 @@ export function worldToParent([x, y, z]: Vec3, [w, qx, qy, qz]: readonly [number
   const ty = 2 * (cz * x - cx * z);
   const tz = 2 * (cx * y - cy * x);
   return [x + w * tx + (cy * tz - cz * ty), y + w * ty + (cz * tx - cx * tz), z + w * tz + (cx * ty - cy * tx)];
-}
-
-function guide(project: Project): GuideProgress {
-  const objects = [...project.world.objects, ...project.bodies.flatMap((body) => body.objects)];
-  const steps = [
-    project.bodies.length > 0,
-    objects.some((obj) => obj.components.some((component) => component.kind === "goal_zone")),
-    project.task.rewards.length > 0,
-    // Training lands in Sprint 5; no project has trained yet.
-    false,
-  ];
-  const done = steps.filter(Boolean).length;
-  return { started: done > 0, done, total: steps.length };
 }
 
 function reference(catalog: LibraryCatalog): PropertyReference {
@@ -115,6 +103,16 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       const { project, catalog: lib } = await load(scene);
       return sceneTree(project, lib, id);
     },
+    selectKind: async ({ scene, kind }) => {
+      const { project, catalog: lib } = await load(scene);
+      const objects = [...project.world.objects, ...project.bodies.flatMap((body) => body.objects)];
+      const found = objects.find((obj) => obj.components.some((component) => component.kind === kind));
+      if (!found) {
+        return null;
+      }
+      selection.set(scene, found.id);
+      return sceneTree(project, lib, found.id);
+    },
     getInspection: async (scene) => {
       const { project, catalog: lib, selected } = await load(scene);
       return inspection(project, lib, selected);
@@ -161,6 +159,16 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       const operation: EditOperation = { op: "add_component", object: obj.id, component: { id, kind, properties } };
       return edit(scene, [operation], `Added ${spec.label} to ${obj.name}`);
     },
+    removeComponent: async ({ scene, section }) => {
+      const { obj, catalog: lib } = await selectedObject(scene);
+      const component = obj.components.find((item) => item.id === section);
+      if (!component) {
+        throw new Error(`${obj.name} has no ${section} to remove`);
+      }
+      const label = lib.components.find((item) => item.kind === component.kind)?.label ?? component.kind;
+      const operation: EditOperation = { op: "remove_component", object: obj.id, component: section };
+      return edit(scene, [operation], `Removed ${label} from ${obj.name}`);
+    },
     getTrainingCopies: async (scene) => trainingCopies((await load(scene)).project),
     setTrainingCopies: async ({ scene, copies }) => {
       const state = await api.applyOperations(scene, [{ op: "set_brain", copies }], `${copies} training copies`);
@@ -177,7 +185,10 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       return trainingCopies((await api.applyOperations(scene, operations, summary)).project);
     },
     getCopyScenes: ({ scene, count }) => api.copyScenes(scene, count),
-    getGuide: async (scene) => guide((await load(scene)).project),
+    getGuide: async (scene) => {
+      const [{ project }, runs] = await Promise.all([load(scene), api.runs(scene)]);
+      return guideProgress(project, runs);
+    },
     getSceneDescription: (scene) => api.scene(scene),
     moveObject: async ({ scene, id, delta }) => {
       const [{ project }, description] = await Promise.all([load(scene), api.scene(scene)]);

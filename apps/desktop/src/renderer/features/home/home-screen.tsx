@@ -76,7 +76,13 @@ function FirstLaunchCard() {
           Describe an idea above, pick a starter, or open one from the community to see how it was made.
         </span>
       </span>
-      <GoTo to="STA-WORLD-EMPTY" cta="Take the 3 minute tour" className={buttonClass("primary", "h-8.5 text-body")}>
+      <GoTo
+        to="STA-WORLD-EMPTY"
+        cta="Take the 3 minute tour"
+        params={{}}
+        title="Start an empty world with a checklist of the first steps"
+        className={buttonClass("primary", "h-8.5 text-body")}
+      >
         Take the 3 minute tour
       </GoTo>
     </section>

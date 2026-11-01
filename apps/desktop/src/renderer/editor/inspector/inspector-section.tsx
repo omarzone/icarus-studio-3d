@@ -1,18 +1,24 @@
-import { ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
+import { ChevronDown, ChevronRight, Ellipsis, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { InspectorSection as Section } from "../../ports/scene-port.ts";
+import { MenuButton } from "../../ui/menu.tsx";
 import { SCENE_ICONS } from "../scene-icons.ts";
 
 type Props = {
   section: Section;
   // Component sections show their icon, note and actions; settings groups only a title.
   component: boolean;
+  // Removes this component from the selected object; the ··· menu offers it.
+  onRemove?: () => void;
   children: ReactNode;
 };
 
+const ACTIONS_CLASS =
+  "grid size-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80";
+
 // A collapsible component or settings group of the inspector.
-export function InspectorSection({ section, component, children }: Props) {
+export function InspectorSection({ section, component, onRemove, children }: Props) {
   const [open, setOpen] = useState(!section.collapsed);
   const Chevron = open ? ChevronDown : ChevronRight;
   const Icon = section.icon ? SCENE_ICONS[section.icon] : null;
@@ -30,12 +36,23 @@ export function InspectorSection({ section, component, children }: Props) {
           <span className="truncate">{section.title}</span>
           {section.note ? <span className="ml-auto font-normal text-fg-tertiary">{section.note}</span> : null}
         </Act>
-        {component ? (
-          <Act
-            cta={`${section.title} actions`}
-            aria-label={`${section.title} actions`}
-            className="grid size-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg"
+        {component && onRemove ? (
+          <MenuButton
+            label={`${section.title} actions`}
+            entries={[
+              {
+                label: `Remove ${section.title}`,
+                hint: "Take this component off the object; Undo brings it back",
+                icon: Trash2,
+                run: onRemove,
+              },
+            ]}
+            className={ACTIONS_CLASS}
           >
+            <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
+          </MenuButton>
+        ) : component ? (
+          <Act cta={`${section.title} actions`} aria-label={`${section.title} actions`} className={ACTIONS_CLASS}>
             <Ellipsis size={14} strokeWidth={1.75} aria-hidden />
           </Act>
         ) : null}

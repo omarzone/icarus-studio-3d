@@ -1,0 +1,32 @@
+import type { RouteId } from "../../../app/navigation/catalog-id.ts";
+import type { RuntimeMode } from "../../../app/runtime/port.tsx";
+import type { Tool } from "./toolbar.tsx";
+
+// What clicking a tool does: open its surface, run the workspace's action, select it as a mode (prototype only),
+// or say it is not available yet (app tools with nothing behind them never stay silent).
+export type ToolBehavior = { kind: "go"; to: RouteId } | { kind: "act" } | { kind: "mode" } | { kind: "not-yet" };
+
+type Input = {
+  tool: Tool;
+  mode: RuntimeMode;
+  hasAction: boolean;
+  // Destination replaced for this screen; null removes it, undefined keeps the tool's own.
+  override?: RouteId | null;
+};
+
+export function toolBehavior({ tool, mode, hasAction, override }: Input): ToolBehavior {
+  if (mode === "app" && hasAction) {
+    return { kind: "act" };
+  }
+  const to = override === undefined ? tool.to : override;
+  if (to) {
+    return { kind: "go", to };
+  }
+  return mode === "app" ? { kind: "not-yet" } : { kind: "mode" };
+}
+
+// Tooltip of a tool: its name and one line on what it is for.
+export function toolTitle(tool: Tool, notYet: boolean): string {
+  const purpose = `${tool.hint.charAt(0).toLowerCase()}${tool.hint.slice(1)}`;
+  return `${tool.label}: ${purpose}${notYet ? ". Not available yet." : ""}`;
+}

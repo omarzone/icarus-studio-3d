@@ -116,7 +116,11 @@ export function startPlan({ runs, family, settings, choice }: PlanInput): StartP
   const estimate = time === "under a minute" ? time : `${family === "locomotion" ? "roughly" : "about"} ${time}`;
   return {
     run: `run ${runs + 1}`,
-    intro: `Icarus will practice in ${copies} ${copies === 1 ? "copy" : "copies"} of the world at once. You can keep editing and chatting while it trains.`,
+    intro: [
+      "Training is practice: the brain tries over and over and keeps what earns rewards.",
+      `It will practice ${compactNumber(steps)} steps (one step is one moment of practice) in ${copies} ${copies === 1 ? "copy" : "copies"} of the world at once; more copies finish sooner but use more of your computer.`,
+      "You can keep editing and chatting meanwhile, and Play then uses the best brain it found.",
+    ].join(" "),
     steps,
     copies,
     estimate,

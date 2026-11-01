@@ -33,12 +33,13 @@ function stateOf(doc: Project, number = 1): ProjectState {
 
 function fakeApi(apply: (operations: EditOperation[]) => Promise<ProjectState>) {
   const applyOperations = vi.fn((_id: string, operations: EditOperation[]) => apply(operations));
-  const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene"> & CopiesApi = {
+  const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene" | "runs"> & CopiesApi = {
     project: async () => stateOf(project),
     scene: async () => ({ revision: 1, bodies: [], geoms: [], lights: [] }),
     library: async (): Promise<LibraryCatalog> => catalog,
     applyOperations,
     copyScenes: async () => [],
+    runs: async () => [],
   };
   return { api, applyOperations };
 }

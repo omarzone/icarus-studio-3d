@@ -1,6 +1,7 @@
 import { Check, ListChecks } from "lucide-react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import type { GuideProgress } from "../../ports/scene-port.ts";
+import { GuideChecklist } from "../../ui/guide-checklist.tsx";
 
 // The five getting-started steps and the workspace each one lives in; they can be done in any order.
 const STEPS = [
@@ -15,7 +16,8 @@ export function guideLabel(guide: GuideProgress | undefined): string {
   return guide?.started ? `Getting started ${guide.done}/${guide.total}` : "Guide";
 }
 
-export function GuideCard({ guide }: { guide: GuideProgress }) {
+// `project` is the open project in the app, whose checklist the engine knows; the prototype shows the sample steps.
+export function GuideCard({ guide, project }: { guide: GuideProgress; project?: string }) {
   return (
     <div className="flex w-82.5 flex-col gap-2 rounded-[18px] bg-floating p-4">
       <div className="flex items-center">
@@ -24,26 +26,11 @@ export function GuideCard({ guide }: { guide: GuideProgress }) {
           {guide.done} of {guide.total}
         </span>
       </div>
-      <span className="text-ui leading-[1.45] text-fg-secondary">
-        Go in any order. Every step can also be done by asking in the chat.
-      </span>
-      <ol className="flex flex-col text-ui">
-        {STEPS.map((step, index) => (
-          <li key={step.label} className="flex items-center gap-2.5 py-1.75">
-            {index < guide.done ? (
-              <Check size={13} strokeWidth={1.75} className="text-ok" aria-label="Done" />
-            ) : (
-              <span
-                role="img"
-                aria-label="To do"
-                className="size-3.25 rounded-full border-[1.5px] border-fg-disabled"
-              />
-            )}
-            <span className="flex-1">{step.label}</span>
-            <span className="rounded-full bg-control-raised px-2 py-0.5 text-meta text-fg-secondary">{step.place}</span>
-          </li>
-        ))}
-      </ol>
+      {guide.steps && project ? (
+        <GuideChecklist steps={guide.steps} project={project} />
+      ) : (
+        <SampleSteps done={guide.done} />
+      )}
       <div className="mt-1 flex gap-1.5">
         <GoTo
           to="STA-WORLD-EMPTY-NOGUIDE"
@@ -74,5 +61,32 @@ export function ShowGuidePill({ guide }: { guide: GuideProgress }) {
       <ListChecks size={14} strokeWidth={1.75} aria-hidden />
       Show guide · {guide.done} of {guide.total}
     </GoTo>
+  );
+}
+
+function SampleSteps({ done }: { done: number }) {
+  return (
+    <>
+      <span className="text-ui leading-[1.45] text-fg-secondary">
+        Go in any order. Every step can also be done by asking in the chat.
+      </span>
+      <ol className="flex flex-col text-ui">
+        {STEPS.map((step, index) => (
+          <li key={step.label} className="flex items-center gap-2.5 py-1.75">
+            {index < done ? (
+              <Check size={13} strokeWidth={1.75} className="text-ok" aria-label="Done" />
+            ) : (
+              <span
+                role="img"
+                aria-label="To do"
+                className="size-3.25 rounded-full border-[1.5px] border-fg-disabled"
+              />
+            )}
+            <span className="flex-1">{step.label}</span>
+            <span className="rounded-full bg-control-raised px-2 py-0.5 text-meta text-fg-secondary">{step.place}</span>
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }

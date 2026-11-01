@@ -59,7 +59,7 @@ describe("start plan", () => {
     expect(startPlan({ runs: 3, family: "navigation", settings, choice: {} })).toEqual({
       run: "run 4",
       intro:
-        "Icarus will practice in 16 copies of the world at once. You can keep editing and chatting while it trains.",
+        "Training is practice: the brain tries over and over and keeps what earns rewards. It will practice 1M steps (one step is one moment of practice) in 16 copies of the world at once; more copies finish sooner but use more of your computer. You can keep editing and chatting meanwhile, and Play then uses the best brain it found.",
       steps: 1_000_000,
       copies: 16,
       estimate: "about 8 min",

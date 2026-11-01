@@ -142,6 +142,7 @@ function BrainView({ variant, config }: Props) {
       return (
         <ViewportPanel
           label="The body with its sensor rays, as the brain senses them"
+          scene={config.scene}
           toolbar={toolbar}
           overlays={<ReadingsCard brain={config.brain} />}
         />

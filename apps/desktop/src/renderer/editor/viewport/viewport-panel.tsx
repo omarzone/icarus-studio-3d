@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type CameraMode, CameraViewContext, defaultCameraMode } from "../../scene/camera-mode.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { CameraMenu } from "./camera-menu.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
@@ -50,6 +51,8 @@ export const DEFAULT_VIEWPORT_TABS: readonly ViewportTab[] = [
 ];
 
 const DEFAULT_OPTIONS = ["Lit", "Perspective"] as const;
+// What view options without a handler will do, for the app's "not available yet" tooltip.
+const OPTION_PURPOSES: Readonly<Record<string, string>> = { Lit: "Switch between lit, unlit and wireframe looks" };
 // The view option the camera menu takes the place of.
 const CAMERA_OPTION = "Perspective";
 
@@ -101,6 +104,7 @@ export function ViewportPanel({
   const camera = cameraReady ? { mode, frame, onFrameAll: frameAll } : null;
   const options = cameraReady ? viewOptions.filter((option) => option !== CAMERA_OPTION) : viewOptions;
   const surface = { label, tint, overlays, scene, ghosts };
+  const notYet = useNotYet();
   return (
     <Panel
       id="PNL-VIEWPORT"
@@ -114,7 +118,8 @@ export function ViewportPanel({
             cta="Add a view"
             aria-label="Add a view"
             title="Split the view"
-            className="grid h-6.5 place-items-center rounded-control px-2.5 text-fg-tertiary hover:bg-fill-hover hover:text-fg"
+            className={`grid h-6.5 place-items-center rounded-control px-2.5 text-fg-tertiary hover:bg-fill-hover hover:text-fg ${NOT_YET_CLASS}`}
+            {...notYet?.("Add a view", "Split the viewport to see the world from two cameras at once")}
           >
             <Plus size={12} strokeWidth={1.75} aria-hidden />
           </Act>
@@ -128,7 +133,8 @@ export function ViewportPanel({
               key={option}
               cta={option}
               onClick={() => onViewOption?.(option)}
-              className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg"
+              className={`rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg ${NOT_YET_CLASS}`}
+              {...(onViewOption ? {} : notYet?.(option, OPTION_PURPOSES[option] ?? "Change what the view shows"))}
             >
               {option}
             </Act>

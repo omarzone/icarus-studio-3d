@@ -24,6 +24,17 @@ export function usePlayLayout(project: string) {
   });
 }
 
+// Which brain plays, in words; it changes only when a new session starts.
+export function usePlayBrain(project: string): string | undefined {
+  const port = usePort(playPort);
+  return useQuery({
+    queryKey: playKey(project),
+    queryFn: () => port.getSession(project),
+    retry: false,
+    select: (session: PlaySession) => session.decisions?.brain,
+  }).data;
+}
+
 // The live world the Play viewport draws, written by the Play connection.
 export function usePlayLive(project: string) {
   return useQuery<PlayLive>({ queryKey: playLiveKey(project), queryFn: skipToken });

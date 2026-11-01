@@ -6,9 +6,20 @@ import type {
   SceneGeom,
 } from "@icarus/contracts";
 import type { AttachmentLinks } from "../engine-client/attachment-api.ts";
-import type { ChatAttachment, ChatMessage, Conversation, Proposal, ProposalChange, RichText } from "./copilot-port.ts";
+import type {
+  AgentStep,
+  AnswerAction,
+  ChatAttachment,
+  ChatMessage,
+  Conversation,
+  Proposal,
+  ProposalChange,
+  RichText,
+} from "./copilot-port.ts";
 
 // Pure mappings from the engine's conversation documents onto the chat's view types.
+
+type EngineMessage = EngineConversation["messages"][number];
 
 function changeView(change: EngineProposalChange): ProposalChange {
   if (change.before === undefined || change.before === null) {
@@ -67,7 +78,7 @@ export function hasAttachments(conversation: EngineConversation): boolean {
 }
 
 // Files the person sent, and apart from them the renders of the scene the app took for the copilot.
-function userMessage(message: EngineConversation["messages"][number], links: AttachmentLinks | null): ChatMessage {
+function userMessage(message: EngineMessage, links: AttachmentLinks | null): ChatMessage {
   const all = (message.attachments ?? []).map((info) => attachmentView(info, links));
   const files = all.filter((item) => item.kind !== "view");
   const views = all.filter((item) => item.kind === "view");
@@ -80,20 +91,42 @@ function userMessage(message: EngineConversation["messages"][number], links: Att
   };
 }
 
+// An answer with the buttons the copilot offered, the steps it took and the renders it looked at.
+function copilotMessage(
+  message: EngineMessage,
+  proposal: CopilotProposal | undefined,
+  links: AttachmentLinks | null,
+): ChatMessage {
+  const actions = (message.actions ?? []).map(
+    (action): AnswerAction => ({ label: action.label, kind: action.kind, target: action.target ?? null }),
+  );
+  const steps = (message.steps ?? []).map(
+    (step): AgentStep => ({ tool: step.tool, summary: step.summary, ok: step.ok ?? true }),
+  );
+  const views = (message.attachments ?? [])
+    .filter((info) => info.kind === "view")
+    .map((info) => attachmentView(info, links));
+  return {
+    id: message.id,
+    role: "copilot",
+    text: [{ text: message.text }],
+    markdown: message.text,
+    ...(message.thinking ? { thinking: message.thinking } : {}),
+    ...(actions.length > 0 ? { answerActions: actions } : {}),
+    ...(steps.length > 0 ? { steps } : {}),
+    ...(views.length > 0 ? { views } : {}),
+    ...(proposal && actions.length > 0 ? { proposal: { id: proposal.id, open: proposal.status === "open" } } : {}),
+  };
+}
+
 export function conversationView(conversation: EngineConversation, links: AttachmentLinks | null = null): Conversation {
   const proposals = new Map(conversation.proposals.map((proposal) => [proposal.id, proposal]));
   const messages = conversation.messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user") {
       return [userMessage(message, links)];
     }
-    const answer: ChatMessage = {
-      id: message.id,
-      role: "copilot",
-      text: [{ text: message.text }],
-      markdown: message.text,
-      ...(message.thinking ? { thinking: message.thinking } : {}),
-    };
     const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;
+    const answer = copilotMessage(message, proposal, links);
     return proposal
       ? [answer, { id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
       : [answer];

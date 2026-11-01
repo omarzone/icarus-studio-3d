@@ -80,6 +80,8 @@ export function createSceneFixture(): ScenePort {
       const document = find(scene);
       return save(scene, { ...document, tree: { ...document.tree, selected: id } }).tree;
     },
+    // Sample scenes have no component kinds to look up; the selection stays.
+    selectKind: async () => null,
     getInspection: async (scene) => inspectionOf(find(scene)),
     setProperty: async ({ scene, section, property, value }) =>
       editProperty(scene, section, property, (item) => withValue(item, value)),
@@ -106,6 +108,16 @@ export function createSceneFixture(): ScenePort {
         properties: [],
       };
       const next: Inspection = { ...inspection, sections: [...inspection.sections, added] };
+      save(scene, { ...document, inspections: { ...document.inspections, [document.tree.selected ?? ""]: next } });
+      return next;
+    },
+    removeComponent: async ({ scene, section }) => {
+      const document = find(scene);
+      const inspection = inspectionOf(document);
+      if (inspection.kind !== "object") {
+        return inspection;
+      }
+      const next: Inspection = { ...inspection, sections: inspection.sections.filter((item) => item.id !== section) };
       save(scene, { ...document, inspections: { ...document.inspections, [document.tree.selected ?? ""]: next } });
       return next;
     },

@@ -52,12 +52,20 @@ export function ProjectsScreen() {
             <GoTo
               to="MOD-IMPORT"
               cta="Open a file"
+              title="Bring in a model, robot or environment from a file"
               className={buttonClass("secondary", "h-8.5 gap-1.75 px-4 text-body")}
             >
               <FolderOpen size={14} strokeWidth={1.75} aria-hidden />
               Open a file
             </GoTo>
-            <GoTo to="STA-WORLD-EMPTY" cta="New project" className={buttonClass("primary", "h-8.5 gap-1.75 text-body")}>
+            {/* No route parameters: a project opened before must not be reopened as the "new" one. */}
+            <GoTo
+              to="STA-WORLD-EMPTY"
+              cta="New project"
+              params={{}}
+              title="Start an empty world with the getting-started checklist"
+              className={buttonClass("primary", "h-8.5 gap-1.75 text-body")}
+            >
               <Plus size={14} strokeWidth={1.75} aria-hidden />
               New project
             </GoTo>

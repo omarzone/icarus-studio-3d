@@ -4,6 +4,7 @@ import type { RouteId } from "../../../app/navigation/catalog-id.ts";
 import { Act, GoTo } from "../../../app/navigation/go-to.tsx";
 import { formatNumber, formatPropertyValue, formatTime } from "../../../ports/property-format.ts";
 import type { ListOption, Property, PropertyPanel, PropertyValue, Swatch } from "../../../ports/scene-port.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../../ui/not-yet.ts";
 import { Select } from "../../../ui/select.tsx";
 import { SCENE_ICONS } from "../../scene-icons.ts";
 import { RangeTrack, SliderTrack } from "./slider-track.tsx";
@@ -68,6 +69,7 @@ type ValueProps = {
 };
 
 function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps) {
+  const notYet = useNotYet();
   switch (value.type) {
     case "number":
       return (
@@ -250,7 +252,8 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
           <span className={`min-w-0 flex-1 truncate ${toneText[tone]}`}>{value.value}</span>
           <Act
             cta={`Change ${label}`}
-            className="rounded-control px-1 text-meta text-fg-secondary hover:bg-fill-hover hover:text-fg"
+            className={`rounded-control px-1 text-meta text-fg-secondary hover:bg-fill-hover hover:text-fg ${NOT_YET_CLASS}`}
+            {...notYet?.(`Change ${label}`, "Pick another file or library asset")}
           >
             Change
           </Act>

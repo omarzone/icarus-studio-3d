@@ -1,5 +1,6 @@
 // SCR-BODY · STA-BODY-CHECK-FAILED
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
@@ -40,6 +41,8 @@ export function BodyScreen() {
 function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: BodyConfig }) {
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
+  // The sample is a character with motion clips; app projects have no Motion workspace yet, so Play plays the project.
+  const app = useRuntimeMode() === "app";
   // The header's project name and guide pill change label once they load, so the screen waits for them.
   if (guide.isPending || project === null) {
     return <LoadingState label="Opening the workspace" />;
@@ -50,10 +53,10 @@ function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: Body
       header={{
         project,
         active: "Body",
-        workspaces: CHARACTER_WORKSPACES,
+        workspaces: app ? undefined : CHARACTER_WORKSPACES,
         activeGoesTo: "SCR-BODY",
         guide: guideLabel(guide.data),
-        playTo: "SCR-MOTION",
+        playTo: app ? undefined : "SCR-MOTION",
         primary: { label: "Train", to: "MOD-START-TRAINING" },
       }}
       layoutKey="body"
@@ -84,6 +87,7 @@ function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: Body
               <ViewportPanel
                 label="The body seen through, with its bones, joints and colliders"
                 tabs={RIG_TABS}
+                scene={config.scene}
                 toolbar={toolbar}
                 overlays={variant === "check-failed" ? <CheckFailedBanner body={config.body} /> : null}
               />

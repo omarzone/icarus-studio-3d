@@ -68,6 +68,48 @@ describe("copilot conversation views", () => {
     expect(view.autonomy).toBe("ask");
   });
 
+  it("carries an answer's buttons, the steps the copilot took and what it saw", () => {
+    const links = {
+      content: (id: string) => `http://engine/attachments/${id}/content`,
+      frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+    };
+    const engine: Conversation = {
+      ...conversation([{ ...night, status: "applied", applied_revision: 5 }]),
+      messages: [
+        {
+          id: "m2",
+          role: "copilot",
+          text: "Done.",
+          created_at: "2026-11-01T10:00:02Z",
+          proposal_id: "p1",
+          actions: [
+            { label: "Apply", kind: "apply" },
+            { label: "See it train", kind: "navigate", target: "SCR-TRAIN" },
+          ],
+          steps: [
+            { tool: "look", summary: "Looked at the lot from above" },
+            { tool: "try", summary: "Tried 2 changes: placement check failed", ok: false },
+          ],
+          attachments: [{ id: "v1", kind: "view", name: "Top view", media_type: "image/png", size: 30 }],
+        },
+      ],
+    };
+    const [message] = conversationView(engine, links).messages;
+    expect(message).toMatchObject({
+      role: "copilot",
+      answerActions: [
+        { label: "Apply", kind: "apply", target: null },
+        { label: "See it train", kind: "navigate", target: "SCR-TRAIN" },
+      ],
+      steps: [
+        { tool: "look", summary: "Looked at the lot from above", ok: true },
+        { tool: "try", summary: "Tried 2 changes: placement check failed", ok: false },
+      ],
+      views: [{ id: "v1", kind: "view", url: "http://engine/attachments/v1/content" }],
+      proposal: { id: "p1", open: false },
+    });
+  });
+
   it("turns suggestions into chips that send their own text", () => {
     expect(conversationView(conversation([night])).suggestions).toEqual([
       { text: "Add rain", intent: "ask" },

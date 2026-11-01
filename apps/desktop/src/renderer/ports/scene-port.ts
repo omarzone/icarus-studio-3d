@@ -161,8 +161,14 @@ export type TrainingCopies = {
   variations: readonly Variation[];
 };
 
-// Progress of the getting-started guide for the project.
-export type GuideProgress = { started: boolean; done: number; total: number };
+// The getting-started checklist of a project: what it still needs before it can learn.
+export type GuideStepId = "body" | "goal" | "rewards" | "trained";
+
+// `training` is true while a run is learning, so the step offers to watch it instead of starting another.
+export type GuideStep = { id: GuideStepId; done: boolean; training?: boolean };
+
+// Progress of the getting-started guide; `steps` is the checklist where the engine knows it (the app).
+export type GuideProgress = { started: boolean; done: number; total: number; steps?: readonly GuideStep[] };
 
 export type PropertyReference = {
   types: readonly { type: PropertyType; label: string; tag?: string; use: string; sample: Property }[];
@@ -172,12 +178,15 @@ export type PropertyReference = {
 export type ScenePort = {
   getTree: (scene: string) => Promise<SceneTree>;
   selectObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
+  // Selects the first object with a component of this kind (the ground, the sky, the sun); null when there is none.
+  selectKind: (input: { scene: string; kind: string }) => Promise<SceneTree | null>;
   getInspection: (scene: string) => Promise<Inspection>;
   setProperty: (edit: PropertyEdit) => Promise<Inspection>;
   resetProperty: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   acceptProposedValue: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   listComponentKinds: () => Promise<ComponentGroup[]>;
   addComponent: (input: { scene: string; kind: string }) => Promise<Inspection>;
+  removeComponent: (input: { scene: string; section: string }) => Promise<Inspection>;
   getTrainingCopies: (scene: string) => Promise<TrainingCopies>;
   setTrainingCopies: (input: { scene: string; copies: number; layout: string }) => Promise<TrainingCopies>;
   toggleVariation: (input: { scene: string; id: string }) => Promise<TrainingCopies>;
