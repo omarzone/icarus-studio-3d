@@ -4,9 +4,17 @@ import { Canvas, type ThreeEvent, useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type Group, type Mesh, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
+import { geomShape } from "./geom-shape.ts";
 import { isDeliberateClick } from "./pick.ts";
 import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
-import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
+import {
+  AMBIENT_INTENSITY,
+  floorDepth,
+  GEOM_ROUGHNESS,
+  PROPOSAL_OPACITY,
+  sceneColors,
+  sceneLight,
+} from "./scene-materials.ts";
 
 type Vec3 = [number, number, number];
 
@@ -39,20 +47,17 @@ export type SceneViewProps = {
 const CAMERA: Vec3 = [7, 6, 9];
 const CAMERA_FRAMES = 12;
 
-// Three's local axes for a MuJoCo geom: MuJoCo local z (the axis of cylinders and capsules) is Three's y.
 function GeomShape({ geom }: { geom: SceneGeom }) {
-  const [x, y, z] = geom.size;
-  switch (geom.shape) {
+  const shape = geomShape(geom);
+  switch (shape.kind) {
     case "box":
-      return <boxGeometry args={[x, z, y]} />;
+      return <boxGeometry args={shape.args} />;
     case "sphere":
-      return <sphereGeometry args={[x / 2, 32, 16]} />;
+      return <sphereGeometry args={shape.args} />;
     case "cylinder":
-      return <cylinderGeometry args={[x / 2, x / 2, z, 32]} />;
+      return <cylinderGeometry args={shape.args} />;
     case "capsule":
-      return <capsuleGeometry args={[x / 2, Math.max(z - x, 0.001), 8, 16]} />;
-    case "plane":
-      return <boxGeometry args={[x, 0.002, y]} />;
+      return <capsuleGeometry args={shape.args} />;
   }
 }
 
@@ -80,7 +85,7 @@ function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
       }}
     >
       <GeomShape geom={geom} />
-      <meshStandardMaterial color={geom.color} roughness={0.8} />
+      <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
       {selected ? <Edges color={colors.selected} /> : null}
     </mesh>
   );
@@ -228,7 +233,7 @@ function LiveGeoms({
             }}
           >
             <GeomShape geom={geom} />
-            <meshStandardMaterial color={geom.color} roughness={0.8} />
+            <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
           </mesh>
         ))}
         {/* Catches clicks on the ground beyond the floor geoms. */}
@@ -258,18 +263,19 @@ export default function SceneView(props: SceneViewProps) {
   const scale = Math.max(1, framing / CAMERA_FRAMES);
   return (
     <Canvas
-      camera={{ position: [CAMERA[0] * scale, CAMERA[1] * scale, CAMERA[2] * scale], fov: 45 }}
+      camera={{
+        position: [CAMERA[0] * scale, CAMERA[1] * scale, CAMERA[2] * scale],
+        fov: 45,
+        near: 0.1,
+        far: 500 * scale,
+      }}
       dpr={[1, 2]}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
       <color attach="background" args={[colors.background]} />
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={AMBIENT_INTENSITY} />
       {description.lights.map((light) => (
-        <directionalLight
-          key={light.name}
-          position={toThreePosition([-light.direction[0] * 10, -light.direction[1] * 10, -light.direction[2] * 10])}
-          intensity={Math.max(light.intensity, 0.2) * 2}
-        />
+        <directionalLight key={light.name} {...sceneLight(light)} />
       ))}
       <Grid
         infiniteGrid

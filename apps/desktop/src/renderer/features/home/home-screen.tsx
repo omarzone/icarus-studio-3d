@@ -39,7 +39,7 @@ function Templates() {
   const query = useQuery({ queryKey: ["templates"], queryFn: templates.listTemplates });
   return (
     <QueryView query={query} isEmpty={(list) => list.length === 0} empty={<EmptyState title="No templates yet" />}>
-      {(list) => <TemplateCards templates={list} />}
+      {(list) => <TemplateCards templates={list} scene={templates.templateScene} />}
     </QueryView>
   );
 }

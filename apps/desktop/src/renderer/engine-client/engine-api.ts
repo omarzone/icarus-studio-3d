@@ -53,6 +53,8 @@ const put = (body: unknown): RequestInit => ({ method: "PUT", body: JSON.stringi
 // One function per engine route the desktop uses.
 export const engineApi = {
   library: (): Promise<LibraryCatalog> => request("/library", {}, isLibraryCatalog),
+  templateScene: (templateId: string): Promise<SceneDescription> =>
+    request(`/library/templates/${encodeURIComponent(templateId)}/scene`, {}, isSceneDescription),
   listProjects: (): Promise<ProjectSummary[]> => request("/projects", {}, isProjectSummaries),
   createProject: (name: string, template: string): Promise<ProjectState> =>
     request("/projects", post({ name, template }), isProjectState),

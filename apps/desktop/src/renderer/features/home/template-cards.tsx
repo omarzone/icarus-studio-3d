@@ -1,7 +1,9 @@
 import { Upload } from "lucide-react";
 import type { RouteId } from "../../app/navigation/catalog-id.ts";
 import { GoTo } from "../../app/navigation/go-to.tsx";
-import type { TemplateKind, TemplateSummary } from "../../ports/templates-port.ts";
+import type { TemplateKind, TemplateSummary, TemplatesPort } from "../../ports/templates-port.ts";
+import { SceneThumbnail } from "../../scene/scene-thumbnail.tsx";
+import { templateThumbnailKey } from "../../scene/thumbnail-cache.ts";
 
 const OPENS: Record<TemplateKind, RouteId> = {
   "empty-world": "STA-WORLD-EMPTY-NOGUIDE",
@@ -13,7 +15,9 @@ const OPENS: Record<TemplateKind, RouteId> = {
 const cardClass =
   "flex flex-col overflow-hidden rounded-card bg-control text-left hover:bg-control-raised active:opacity-80";
 
-export function TemplateCards({ templates }: { templates: readonly TemplateSummary[] }) {
+type Props = { templates: readonly TemplateSummary[]; scene: TemplatesPort["templateScene"] };
+
+export function TemplateCards({ templates, scene }: Props) {
   return (
     <div className="grid grid-cols-6 gap-3">
       {templates.map((template) => (
@@ -24,7 +28,11 @@ export function TemplateCards({ templates }: { templates: readonly TemplateSumma
           cta={`${template.name}\n${template.description}`}
           className={cardClass}
         >
-          <span aria-hidden className="h-27.5 w-full bg-control-raised" />
+          <SceneThumbnail
+            cacheKey={templateThumbnailKey(template.id)}
+            load={scene ? () => scene(template.id) : null}
+            className="h-27.5 w-full"
+          />
           <span className="flex flex-col gap-0.5 px-3 py-2.5">
             <span className="leading-tight font-semibold">{template.name}</span>
             <span className="text-ui leading-tight text-fg-tertiary">{template.description}</span>

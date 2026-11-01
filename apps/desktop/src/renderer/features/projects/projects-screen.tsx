@@ -4,7 +4,9 @@ import { ArrowBigUp, FolderOpen, Plus } from "lucide-react";
 import { useState } from "react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { type ProjectStatus, type ProjectSummary, projectsPort } from "../../ports/projects-port.ts";
+import { type ProjectStatus, type ProjectSummary, type ProjectsPort, projectsPort } from "../../ports/projects-port.ts";
+import { SceneThumbnail } from "../../scene/scene-thumbnail.tsx";
+import { projectThumbnailKey } from "../../scene/thumbnail-cache.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { LauncherPage } from "../../ui/launcher-page.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
@@ -71,6 +73,7 @@ export function ProjectsScreen() {
         >
           {(list) => (
             <ProjectGrid
+              scene={projects.projectScene}
               projects={list.filter((project) => statuses === null || statuses.some((s) => s === project.status))}
             />
           )}
@@ -80,20 +83,22 @@ export function ProjectsScreen() {
   );
 }
 
-function ProjectGrid({ projects }: { projects: readonly ProjectSummary[] }) {
+type Scene = ProjectsPort["projectScene"];
+
+function ProjectGrid({ projects, scene }: { projects: readonly ProjectSummary[]; scene: Scene }) {
   if (projects.length === 0) {
     return <EmptyState title="Nothing here" body="No project matches this filter." />;
   }
   return (
     <div className="grid grid-cols-3 gap-4">
       {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} />
+        <ProjectCard key={project.id} project={project} scene={scene} />
       ))}
     </div>
   );
 }
 
-function ProjectCard({ project }: { project: ProjectSummary }) {
+function ProjectCard({ project, scene }: { project: ProjectSummary; scene: Scene }) {
   const votes = project.votes === undefined ? "" : ` ·\n${project.votes}`;
   return (
     <GoTo
@@ -102,7 +107,11 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
       cta={`${project.name}\n${project.statusLine}${votes}`}
       className="flex flex-col overflow-hidden rounded-card bg-control text-left hover:bg-control-raised active:opacity-80"
     >
-      <span aria-hidden className="h-42.5 w-full bg-control-raised" />
+      <SceneThumbnail
+        cacheKey={projectThumbnailKey(project.id, project.revision)}
+        load={scene ? () => scene(project.id) : null}
+        className="h-42.5 w-full"
+      />
       <span className="flex flex-col items-start gap-1.5 px-3.5 py-3">
         <span className="leading-tight font-semibold">{project.name}</span>
         <StatusPill tone={TONES[project.status]}>

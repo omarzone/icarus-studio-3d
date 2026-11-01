@@ -100,5 +100,6 @@ export function createProjectsFixture(): ProjectsPort {
       projects = [...projects, created];
       return created;
     },
+    projectScene: null,
   };
 }

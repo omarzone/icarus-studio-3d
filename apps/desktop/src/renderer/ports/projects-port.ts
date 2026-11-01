@@ -1,3 +1,4 @@
+import type { SceneDescription } from "@icarus/contracts";
 import type { ScreenId } from "../app/navigation/catalog-id.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
@@ -36,6 +37,8 @@ export type ProjectsPort = {
   deleteProject: (id: string) => Promise<void>;
   getFootprint: (id: string) => Promise<ProjectFootprint>;
   createProject: (input: { template: string; name: string }) => Promise<ProjectSummary>;
+  // The compiled scene of the current revision; null where there is none (sample data).
+  projectScene: ((id: string) => Promise<SceneDescription>) | null;
 };
 
 export const projectsPort = definePort<ProjectsPort>({
@@ -66,6 +69,7 @@ export const projectsPort = definePort<ProjectsPort>({
       const state = await engineApi.createProject(name, template);
       return projectView({ ...state.project, revision: state.revision.number });
     },
+    projectScene: engineApi.scene,
   },
   prototype: createProjectsFixture,
 });

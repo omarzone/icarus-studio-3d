@@ -10,5 +10,5 @@ const TEMPLATES: readonly TemplateSummary[] = [
 ];
 
 export function createTemplatesFixture(): TemplatesPort {
-  return { listTemplates: async () => [...TEMPLATES] };
+  return { listTemplates: async () => [...TEMPLATES], templateScene: null };
 }
