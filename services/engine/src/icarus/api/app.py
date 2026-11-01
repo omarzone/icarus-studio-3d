@@ -13,9 +13,10 @@ from icarus import __version__
 from icarus.api import copilot, health, ideas, library, model_settings, play, projects, runs
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
-from icarus.copilot.architect import IdeaBook, UnknownIdeas
+from icarus.copilot.architect import IdeaBook, NoValidIdeas, UnknownIdeas
 from icarus.copilot.builds import BuildBoard, UnknownBuild
 from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
+from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import CopilotError, NotConnected
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
@@ -110,6 +111,8 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
         case NotConnected():
             return _error(503, ApiError(code="not_connected", message=str(exc)))
+        case NoValidIdeas():
+            return _error(502, ApiError(code="copilot_error", message=str(exc), details=exc.reasons or None))
         case CopilotError():
             return _error(502, ApiError(code="copilot_error", message=str(exc)))
         case UnknownProposal():
@@ -154,8 +157,9 @@ def create_app(
     app.state.supervisor = Supervisor(app.state.runs)
     app.state.training_settings = TrainingSettingsStore(runs_folder, projects_folder)
     app.state.model_settings = ModelSettingsStore(settings_root or settings_dir())
+    trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.copilot = Copilot(
-        app.state.store, app.state.runs, ConversationStore(projects_folder), app.state.model_settings
+        app.state.store, app.state.runs, ConversationStore(projects_folder), app.state.model_settings, trainer
     )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)

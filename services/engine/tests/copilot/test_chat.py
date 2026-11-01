@@ -8,6 +8,7 @@ from icarus.contracts.operations import OperationBatch, SetProperty
 from icarus.contracts.properties import NumberValue, SliderValue
 from icarus.copilot import chat
 from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
+from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import Connection, ModelClient
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.fixture_provider import fixture_transport
@@ -15,6 +16,8 @@ from icarus.copilot.grounding import UNSUPPORTED_ANSWER
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunStore
+from icarus.training.settings import TrainingSettingsStore
+from icarus.training.supervisor import Supervisor
 
 
 @pytest.fixture
@@ -24,9 +27,11 @@ def store(tmp_path) -> ProjectStore:
 
 @pytest.fixture
 def copilot(tmp_path, store) -> Copilot:
-    return Copilot(
-        store, RunStore(tmp_path / "runs"), ConversationStore(tmp_path / "projects"), ModelSettingsStore(tmp_path)
+    runs = RunStore(tmp_path / "runs")
+    trainer = ChatTrainer(
+        store, runs, Supervisor(runs), TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects")
     )
+    return Copilot(store, runs, ConversationStore(tmp_path / "projects"), ModelSettingsStore(tmp_path), trainer)
 
 
 @pytest.fixture
@@ -255,3 +260,10 @@ def test_autopilot_reports_a_proposal_outdated_while_the_model_answered(copilot,
     conversation = say(copilot, project_id, "make it night")
     assert only_proposal(conversation).status == "outdated"
     assert store.state(project_id).revision.summary == "Heavier"
+
+
+def test_a_proposal_carries_the_copilots_clearance_warnings(copilot, project_id, monkeypatch, tmp_path):
+    warned = {**NIGHT, "warnings": ["The car is wider than the gap between the parked cars."]}
+    answer_with(monkeypatch, tmp_path, default={"answer": "Here it is.", "proposal": warned})
+    proposal = only_proposal(say(copilot, project_id, "make it night"))
+    assert "The car is wider than the gap between the parked cars." in proposal.warnings

@@ -78,7 +78,9 @@ def _apply(project: Project, operation: EditOperation) -> None:
                 return
             body = next((item for item in project.bodies if item.id == target), None)
             if body is None:
-                raise _fail(f"bodies.{target}", f"There is no body {target!r}")
+                targets = ", ".join(['"world"', *(item.id for item in project.bodies)])
+                message = f"There is no body {target!r}; the target of create_object must be one of: {targets}"
+                raise _fail(f"bodies.{target}", message)
             body.objects.append(obj)
         case DeleteObject(object=object_id):
             objects, _ = _object(project, object_id)

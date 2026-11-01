@@ -102,6 +102,8 @@ def test_without_a_connection_every_copilot_route_answers_503(client, project_id
 def test_no_valid_idea_is_a_readable_copilot_error(client):
     response = client.post("/ideas", json={"prompt": "something impossible"})
     assert response.status_code == 502 and response.json()["code"] == "copilot_error"
+    details = response.json()["details"]
+    assert set(details) == {"Hovercraft", "Impossible weight"} and "hovercraft" in details["Hovercraft"]
 
 
 def test_model_settings_keep_the_key_inside_the_engine(client, monkeypatch):

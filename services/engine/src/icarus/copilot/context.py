@@ -2,8 +2,12 @@ import json
 from typing import Any
 
 from icarus.contracts.objects import ObjectSpec
-from icarus.contracts.project import ProjectState
+from icarus.contracts.project import Project, ProjectState
 from icarus.contracts.properties import PropertySchema, PropertyValue, RangeValue
+from icarus.contracts.specs import BodySpec
+from icarus.contracts.training import MetricPoint
+from icarus.design.compiler import CompileError, compile_project
+from icarus.design.scene import object_extents
 from icarus.library.components import COMPONENTS
 from icarus.library.pieces import PIECES
 from icarus.library.rewards import REWARD_TERMS
@@ -11,8 +15,12 @@ from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
 from icarus.projects.operations import apply_operations, empty_project
 from icarus.training.run_store import RunStore
+from icarus.training.schedule import RECOMMENDED_STEPS
 
 RECENT_EVALUATIONS = 5
+NO_RUN = "No training has run for this project yet"
+# A run shorter than this share of the recommended budget is too short to judge learning by.
+FAR_BELOW = 0.25
 
 
 def _plain(value: PropertyValue) -> Any:
@@ -89,18 +97,34 @@ def _library(state: ProjectState) -> dict[str, Any]:
     }
 
 
-def _latest_run(state: ProjectState, runs: RunStore) -> dict[str, Any] | None:
+def _episodes(point: MetricPoint) -> dict[str, Any]:
+    return {
+        "step": point.step,
+        "episode_return": point.episode_return,
+        "episode_length": point.episode_length,
+        "success_rate": point.success_rate,
+        "failure_rate": point.failure_rate,
+        "reward_terms": point.reward_terms,
+    }
+
+
+def _latest_run(state: ProjectState, runs: RunStore) -> dict[str, Any] | str:
     statuses = runs.list_runs(state.project.id)
     if not statuses:
-        return None
+        return NO_RUN
     status = statuses[0]
-    evaluations = [point for point in runs.folder(status.run_id).metrics() if point.kind == "eval"]
+    metrics = runs.folder(status.run_id).metrics()
+    evaluations = [point for point in metrics if point.kind == "eval"]
+    training = [point for point in metrics if point.kind == "train"]
+    recommended = RECOMMENDED_STEPS[state.project.task.family]
     return {
         "name": status.name,
         "state": status.state,
         "revision": status.revision_number,
         "step": status.step,
         "total_steps": status.total_steps,
+        "recommended_steps": recommended,
+        "far_below_recommended": status.total_steps < recommended * FAR_BELOW,
         "copies": status.copies,
         "best_step": status.best_step,
         "success_rate": status.success_rate,
@@ -114,7 +138,24 @@ def _latest_run(state: ProjectState, runs: RunStore) -> dict[str, Any] | None:
             }
             for point in evaluations[-RECENT_EVALUATIONS:]
         ],
+        "latest_evaluation": _episodes(evaluations[-1]) if evaluations else None,
+        "latest_training": _episodes(training[-1]) if training else None,
     }
+
+
+def _bodies(project: Project) -> list[dict[str, Any]]:
+    try:
+        compiled = compile_project(project)
+    except CompileError:
+        compiled = None
+    return [
+        {
+            "id": body.id,
+            "name": body.name,
+            "size": object_extents(compiled, [obj.id for obj in body.objects]) if compiled else None,
+        }
+        for body in project.bodies
+    ]
 
 
 def project_context(state: ProjectState, runs: RunStore, selection: str | None, workspace: str | None) -> str:
@@ -126,7 +167,8 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
             "name": project.name,
             "revision": state.revision.number,
             "objects": _objects(state),
-            "bodies": [{"id": body.id, "name": body.name} for body in project.bodies],
+            # Length, width and height in metres of the box around each body, for clearance checks.
+            "bodies": _bodies(project),
             "task": {
                 "family": project.task.family,
                 "rewards": [{"term": term.term, "weight": term.weight} for term in project.task.rewards],
@@ -142,21 +184,53 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
+SENSOR_KINDS = ("distance_ray", "balance", "touch")
+
+
+def _choices(kind: str, prop: str) -> list[str]:
+    schema = next(schema for schema in COMPONENTS[kind].properties if schema.id == prop)
+    return [str(option.value) for option in schema.options or []]
+
+
+def _abilities(body: BodySpec) -> dict[str, Any]:
+    kinds = [component.kind for obj in body.objects for component in obj.components]
+    return {"motors": kinds.count("motor"), "sensors": sorted({kind for kind in kinds if kind in SENSOR_KINDS})}
+
+
+def _rules() -> dict[str, str]:
+    joints = [kind for kind in _choices("joint", "kind") if kind != "fixed"]
+    return {
+        "create_object": (
+            'Its "target" is "world" for scenery and obstacles, or one of the body ids listed under a template\'s '
+            '"bodies" to add a part to that body; never an object id, a piece id or a template id. Its object.id is '
+            "a new id used nowhere else in the project."
+        ),
+        "movement": (
+            f"Bodies move only through motors ({', '.join(_choices('motor', 'kind'))}) that drive their joints "
+            f"({', '.join(joints)}). The library has no thruster, propeller, wing or buoyancy: nothing can fly, "
+            "hover or swim, and a body without motors cannot learn to move."
+        ),
+    }
+
+
 def design_reference() -> str:
-    """The library as the architect needs it: templates with their objects, pieces, components and reward terms."""
+    """The library as the architect needs it: templates with where their objects live, pieces, components, rewards."""
     templates: dict[str, Any] = {}
     for template_id, info in TEMPLATES.items():
         project = apply_operations(empty_project("000000000000", info.label), template_operations(template_id))
-        objects = {
-            obj.id: {"name": obj.name, "components": [c.id for c in obj.components]} for obj in all_objects(project)
-        }
         templates[template_id] = {
             "label": info.label,
             "family": info.family,
             "description": info.description,
-            "objects": objects,
+            "world": [obj.id for obj in project.world.objects],
+            "bodies": {body.id: [obj.id for obj in body.objects] for body in project.bodies},
+            "abilities": {body.id: _abilities(body) for body in project.bodies},
+            "objects": {
+                obj.id: {"name": obj.name, "components": [c.id for c in obj.components]} for obj in all_objects(project)
+            },
         }
     reference = {
+        "rules": _rules(),
         "templates": templates,
         "pieces": {piece_id: piece.object.model_dump() for piece_id, piece in PIECES.items()},
         "components": {

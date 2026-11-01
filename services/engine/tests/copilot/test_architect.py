@@ -1,12 +1,15 @@
 import json
+import logging
 import threading
 
 import httpx
 import pytest
 
-from icarus.copilot.architect import NoValidIdeas, propose_ideas
+from icarus.copilot.architect import CREATE_OBJECT_EXAMPLE, NoValidIdeas, propose_ideas
 from icarus.copilot.client import Connection, ModelClient
 from icarus.copilot.fixture_provider import fixture_transport
+from icarus.library.templates import template_operations
+from icarus.projects.operations import apply_operations, empty_project
 
 PARKING_PROMPT = "a little car that learns to park itself"
 
@@ -81,3 +84,72 @@ def test_no_valid_idea_is_an_error():
     client, _ = counting_client()
     with pytest.raises(NoValidIdeas):
         propose_ideas(client, "something impossible that floats in nothing")
+
+
+def answering(drafts: list[dict], fixed: dict, systems: list[str] | None = None) -> ModelClient:
+    """A model that proposes the given drafts and answers every fix-up with the same fixed draft."""
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if systems is not None:
+            systems.append(body["messages"][0]["content"])
+        if body["response_format"]["json_schema"]["name"] == "design_ideas":
+            content: dict = {"ideas": drafts}
+        else:
+            content = fixed
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(content)}}]})
+
+    return ModelClient(Connection("http://fixtures.invalid/v1", "", "fixtures"), httpx.MockTransport(handle))
+
+
+def test_the_architect_is_shown_a_valid_create_object_and_told_to_promise_only_what_it_builds():
+    systems: list[str] = []
+    propose_ideas(answering([draft("Lot", "parking_car")], draft("Lot", "parking_car"), systems), "park")
+    system = " ".join(systems[0].split())
+    assert CREATE_OBJECT_EXAMPLE.model_dump_json() in system
+    assert CREATE_OBJECT_EXAMPLE.target == "world"
+    parking = apply_operations(empty_project("000000000000", "Lot"), template_operations("parking_car"))
+    assert any(
+        obj.id == CREATE_OBJECT_EXAMPLE.object.id
+        for obj in apply_operations(parking, [CREATE_OBJECT_EXAMPLE]).world.objects
+    )
+    assert "only what the operations build" in system
+    assert "closest real option" in system
+    assert '"abilities"' in system and '"rules"' in system
+
+
+def flying_box() -> dict:
+    box = {
+        "op": "create_object",
+        "target": "world",
+        "object": {"id": "drone", "name": "Drone", "parent": None, "components": []},
+    }
+    return {
+        **draft("Drone", "empty_world"),
+        "learns": "To fly to the goal",
+        "operations": [{"op": "set_task_family", "family": "navigation"}, box],
+    }
+
+
+def test_an_idea_that_must_train_without_a_motorized_body_is_dropped_with_its_reason(caplog):
+    caplog.set_level(logging.INFO, logger="icarus.copilot.architect")
+    with pytest.raises(NoValidIdeas) as error:
+        propose_ideas(answering([flying_box()], flying_box()), "a drone that flies")
+    assert "motor" in error.value.reasons["Drone"]
+    assert "Drone" in caplog.text and "motor" in caplog.text
+
+
+def test_fewer_than_three_ideas_are_logged_with_how_many_and_why(caplog):
+    caplog.set_level(logging.INFO, logger="icarus.copilot.architect")
+    client, _ = counting_client()
+    idea_set, _ = propose_ideas(client, "an obstacle course for a robot")
+    assert len(idea_set.ideas) == 2
+    assert "2 of 3 ideas" in caplog.text and "trailer" in caplog.text
+
+
+def test_no_valid_idea_carries_each_drafts_reason():
+    client, _ = counting_client()
+    with pytest.raises(NoValidIdeas) as error:
+        propose_ideas(client, "something impossible that floats in nothing")
+    assert set(error.value.reasons) == {"Hovercraft", "Impossible weight"}
+    assert "hovercraft" in error.value.reasons["Hovercraft"]

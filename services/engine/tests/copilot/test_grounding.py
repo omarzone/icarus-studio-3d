@@ -38,3 +38,9 @@ def test_percentages_need_run_facts_or_the_person_and_not_library_ranges():
     assert unsupported_numbers("It parks 42% of the time.", [library], percent_sources=[run]) == []
     assert unsupported_numbers("Is 35% enough?", [library], percent_sources=["I want 35% success"]) == []
     assert unsupported_numbers("Steering goes to 35 degrees.", [library], percent_sources=[]) == []
+
+
+def test_numbers_rounded_to_two_or_three_significant_figures_are_supported():
+    facts = ['{"step": 123456, "episode_return": -48.731}']
+    assert unsupported_numbers("About 123,000 steps, or 120,000, with a return near -48.7 or -49.", facts) == []
+    assert unsupported_numbers("About 124,000 steps.", facts) == ["124,000"]

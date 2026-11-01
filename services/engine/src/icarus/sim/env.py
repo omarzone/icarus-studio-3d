@@ -8,6 +8,7 @@ from gymnasium import spaces
 from icarus.contracts.project import Project
 from icarus.contracts.training import CopyPoses
 from icarus.sim.model_state import (
+    LiveWorld,
     apply_action,
     build_world,
     control_substeps,
@@ -23,17 +24,23 @@ EPISODE_SECONDS = 30.0
 FRICTION_SPREAD = 0.2
 
 
+def trainable_world(project: Project) -> LiveWorld:
+    """The project's world when it can be trained; otherwise a ValueError that says why."""
+    if project.task.family not in ("navigation", "locomotion"):
+        raise ValueError("Only navigation and locomotion projects can be trained")
+    world = build_world(project)
+    if world.agent is None or not world.actuators:
+        raise ValueError("The project needs a body with at least one motor")
+    return world
+
+
 class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
     """One copy of a navigation or locomotion project as a Gymnasium environment, stepped at the control rate."""
 
     metadata = {"render_modes": []}
 
     def __init__(self, project: Project, randomize: bool = False) -> None:
-        if project.task.family not in ("navigation", "locomotion"):
-            raise ValueError("Only navigation and locomotion projects can be trained")
-        self.world = build_world(project)
-        if self.world.agent is None or not self.world.actuators:
-            raise ValueError("The project needs a body with at least one motor")
+        self.world = trainable_world(project)
         self.randomize = randomize
         self._base_friction = self.world.model.geom_friction[:, 0].copy()
         self._substeps = control_substeps(self.world)

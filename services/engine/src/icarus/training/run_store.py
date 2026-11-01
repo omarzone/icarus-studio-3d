@@ -281,6 +281,17 @@ class RunStore:
             folder.write_status(status)
             return status
 
+    def latest_ended(self, project_id: str, revision: int) -> RunStatus | None:
+        """The newest run of a revision that is no longer training."""
+        return next(
+            (
+                status
+                for status in self.list_runs(project_id)
+                if status.revision_number == revision and status.state in TERMINAL_STATES
+            ),
+            None,
+        )
+
     def trained_checkpoint(self, project_id: str, revision: int) -> tuple[RunStatus, Path] | None:
         """The best trained checkpoint of the newest ended run of a revision, the brain Play should use.
 

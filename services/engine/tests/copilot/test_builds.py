@@ -70,3 +70,14 @@ def test_a_build_that_fails_after_creating_its_project_leaves_no_project_behind(
     status = finished(board, board.start(BuildIdea(idea_set=idea_set.id, idea=idea.id)).build_id)
     assert status.error and not status.ready and status.project_id is None
     assert store.list_projects() == []
+
+
+def test_building_the_same_idea_twice_returns_the_first_build(tmp_path, ideas):
+    book, idea_set = ideas
+    store = ProjectStore(tmp_path / "projects")
+    board = BuildBoard(store, book)
+    request = BuildIdea(idea_set=idea_set.id, idea=idea_set.ideas[0].id)
+    first = finished(board, board.start(request).build_id)
+    again = board.start(request)
+    assert again.build_id == first.build_id and again.project_id == first.project_id
+    assert len(store.list_projects()) == 1

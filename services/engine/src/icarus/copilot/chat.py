@@ -1,3 +1,4 @@
+import contextlib
 import json
 import secrets
 from dataclasses import dataclass, field
@@ -9,6 +10,7 @@ from icarus.contracts.copilot import Autonomy, Conversation, CopilotMessage, Cop
 from icarus.contracts.operations import EditOperation, OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
+from icarus.copilot.chat_training import ChatTrainer, TrainingRequest
 from icarus.copilot.client import copilot_client
 from icarus.copilot.context import project_context
 from icarus.copilot.conversation_store import ConversationStore
@@ -25,15 +27,31 @@ from icarus.training.run_store import RunStore
 HISTORY_MESSAGES = 12
 
 SYSTEM = """You are the copilot of Icarus Studio 3D, inside one project: a world, bodies, a task and a brain trained
-with reinforcement learning on MuJoCo. Answer the person briefly and concretely. When they ask for a change, propose
-it as edit operations on objects, components and properties that exist in the project, using only library component
-kinds and values inside their ranges. When they ask what something does, explain it from the library schema and its
-current values. Only cite numbers that appear in the context below or in their message. Suggest up to three short
-follow-up questions.
+with reinforcement learning on MuJoCo. Answer the person briefly and concretely, in the language of the person's
+message. Match their level: plain everyday words and no jargon for casual messages, technical terms for technical ones.
+When they ask for a change, propose it as edit operations on objects, components and properties that exist in the
+project, using only library component kinds and values inside their ranges. When you place or move objects near the
+goal or a body, compare the gaps with the body's "size" (length, width, height in metres) in the context and add a
+short warning to the proposal's "warnings" when the body cannot fit or pass. When they ask what something does,
+explain it from the library schema and its current values.
+Only cite numbers that appear in the context below or in their message, rounded to 2 or 3 significant figures.
+Training: you can start or stop training yourself with the "training" field. Set it only when the person's latest
+message asks to train, start, stop or pause training{autopilot}. Otherwise leave it null and never offer to start
+training on your own. Never tell the person to press Train. The engine adds what happened to your answer, so do not
+claim a run started or stopped.
+Diagnosis: base every explanation of learning on "latest_run". When it says "No training has run for this project
+yet", answer that no training has run yet and offer to start one, without guessing causes. When a run exists, use its
+evaluations, "latest_evaluation" and "latest_training" (reward_terms, episode_length, success and failure rates) and
+compare its total_steps with recommended_steps; when "far_below_recommended" is true, say the run is too short to
+judge.
+Suggest up to three short follow-up questions.
+Autonomy: {autonomy}
 Conversation so far:
 {history}
 Project context (JSON):
 {context}"""
+
+AUTOPILOT = ", or right after a change you propose to fix why it does not learn"
 
 
 class _Output(BaseModel):
@@ -44,12 +62,15 @@ class ProposalDraft(_Output):
     summary: str = Field(min_length=1, max_length=200)
     explanation: str = Field(min_length=1, max_length=2000)
     operations: list[EditOperation] = Field(min_length=1, max_length=50)
+    # Problems the copilot sees in its own change, such as a gap narrower than the body.
+    warnings: list[str] = Field(default_factory=list, max_length=3)
 
 
 class ChatReply(_Output):
     answer: str = Field(min_length=1, max_length=4000)
     proposal: ProposalDraft | None
     suggestions: list[str] = Field(max_length=3)
+    training: TrainingRequest | None = None
 
 
 class UnknownProposal(LookupError):
@@ -102,7 +123,7 @@ class _Review:
             else:
                 # Values the copilot proposes in a validated change are backed by that change.
                 sources.append(json.dumps([op.model_dump() for op in reply.proposal.operations]))
-            described = f"{reply.proposal.summary}\n{reply.proposal.explanation}"
+            described = "\n".join([reply.proposal.summary, reply.proposal.explanation, *reply.proposal.warnings])
             self.proposal_unsupported = self._unbacked(described, sources)
         self.unsupported = self._unbacked(reply.answer, sources)
         self.dropped_suggestions = [text for text in reply.suggestions if self._unbacked(text, sources)]
@@ -136,12 +157,18 @@ class Copilot:
     """The chat role: answers, proposals validated by a dry run, and applying them through the project store."""
 
     def __init__(
-        self, projects: ProjectStore, runs: RunStore, conversations: ConversationStore, settings: ModelSettingsStore
+        self,
+        projects: ProjectStore,
+        runs: RunStore,
+        conversations: ConversationStore,
+        settings: ModelSettingsStore,
+        trainer: ChatTrainer,
     ) -> None:
         self._projects = projects
         self._runs = runs
         self._conversations = conversations
         self._settings = settings
+        self._trainer = trainer
 
     def conversation(self, project_id: str) -> Conversation:
         head = self._projects.state(project_id).revision.number
@@ -161,8 +188,10 @@ class Copilot:
         state = self._projects.state(project_id)
         client = copilot_client(self._settings)
         context = project_context(state, self._runs, message.selection, message.workspace)
-        history = _history(self.conversation(project_id))
-        system = SYSTEM.format(history=history, context=context)
+        conversation = self.conversation(project_id)
+        history = _history(conversation)
+        autopilot = AUTOPILOT if conversation.autonomy == "autopilot" else ""
+        system = SYSTEM.format(autopilot=autopilot, autonomy=conversation.autonomy, history=history, context=context)
         run_facts = json.dumps(json.loads(context)["latest_run"])
         review = _Review(state.project, [context, message.text, history], [run_facts, message.text, history])
         reply = client.ask("chat_reply", ChatReply, system, message.text, review.check)
@@ -177,24 +206,30 @@ class Copilot:
             answer = UNSUPPORTED_ANSWER
         suggestions = [text for text in reply.value.suggestions if text not in review.dropped_suggestions]
         proposal = self._proposal(state.project, state.revision.number, draft) if draft else None
+        proposal_id = proposal.id if proposal else None
+        copilot_message = _message("copilot", answer, thinking=reply.thinking, proposal_id=proposal_id)
         with self._conversations.editing(project_id) as conversation:
             conversation.messages.append(_message("user", message.text))
-            proposal_id = proposal.id if proposal else None
-            conversation.messages.append(_message("copilot", answer, thinking=reply.thinking, proposal_id=proposal_id))
+            conversation.messages.append(copilot_message)
             if proposal:
                 conversation.proposals.append(proposal)
             conversation.suggestions = suggestions
             autopilot = conversation.autonomy == "autopilot"
         if proposal and autopilot:
-            try:
-                return self.apply(proposal.id)
-            except ProposalOutdated:
-                # The project moved on while the model answered; the proposal stays visible as outdated.
-                pass
+            # The project may have moved on while the model answered; the proposal then stays visible as outdated.
+            with contextlib.suppress(ProposalOutdated):
+                self.apply(proposal.id)
+        if reply.value.training is not None:
+            # After an autopilot change is applied, so a run started now trains the fixed revision.
+            outcome = self._trainer.act(project_id, reply.value.training)
+            with self._conversations.editing(project_id) as conversation:
+                for item in conversation.messages:
+                    if item.id == copilot_message.id:
+                        item.text = f"{item.text} {outcome}"
         return self.conversation(project_id)
 
     def _proposal(self, project: Project, base: int, draft: ProposalDraft) -> CopilotProposal:
-        warnings: list[str] = []
+        warnings = list(draft.warnings)
         if self._runs.list_runs(project.id):
             warnings.append("Earlier runs keep their results; train again to see the effect of this change.")
         return CopilotProposal(

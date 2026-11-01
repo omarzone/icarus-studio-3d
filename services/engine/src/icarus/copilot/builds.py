@@ -65,6 +65,7 @@ class BuildBoard:
         self._projects = projects
         self._ideas = ideas
         self._builds: dict[str, _Build] = {}
+        self._by_idea: dict[tuple[str, str], _Build] = {}
         self._lock = threading.Lock()
 
     def start(self, request: BuildIdea) -> BuildStatus:
@@ -73,9 +74,15 @@ class BuildBoard:
         draft = drafts.get(request.idea)
         if idea is None or draft is None:
             raise UnknownIdeas(f"{request.idea_set}/{request.idea}")
-        build = _Build(secrets.token_hex(6))
+        key = (request.idea_set, request.idea)
         with self._lock:
+            # Building the same idea again returns the build already made or running, not a second project.
+            earlier = self._by_idea.get(key)
+            if earlier is not None and earlier.error is None:
+                return earlier.status()
+            build = _Build(secrets.token_hex(6))
             self._builds[build.build_id] = build
+            self._by_idea[key] = build
             status = build.status()
         threading.Thread(target=self._run, args=(build, idea, draft), daemon=True).start()
         return status

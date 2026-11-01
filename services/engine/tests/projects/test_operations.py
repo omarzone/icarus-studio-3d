@@ -1,8 +1,10 @@
 import pytest
 
-from icarus.contracts.operations import DeleteObject, RenameObject, SetProperty
+from icarus.contracts.objects import ObjectSpec
+from icarus.contracts.operations import CreateObject, DeleteObject, RenameObject, SetProperty
 from icarus.contracts.properties import NumberValue
 from icarus.projects.operations import OperationError, apply_operations
+from tests.sim.conftest import project_from
 
 
 def mass_of(project, object_id):
@@ -37,3 +39,12 @@ def test_operations_on_missing_objects_report_an_issue(base):
     with pytest.raises(OperationError) as error:
         apply_operations(base, [RenameObject(op="rename_object", object="ghost", name="Ghost")])
     assert error.value.issues[0].path == "objects.ghost"
+
+
+def test_creating_an_object_in_a_missing_body_names_the_valid_targets():
+    parking = project_from("parking_car")
+    box = ObjectSpec(id="parked_left", name="Parked car", parent=None, components=[])
+    with pytest.raises(OperationError) as error:
+        apply_operations(parking, [CreateObject(op="create_object", target="parked_left", object=box)])
+    message = error.value.issues[0].message
+    assert "'parked_left'" in message and '"world"' in message and "car_body" in message

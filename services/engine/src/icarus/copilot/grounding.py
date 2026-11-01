@@ -6,6 +6,7 @@ from dataclasses import dataclass
 _NUMBER = re.compile(r"(?<![\w.])(?<!\w-)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(%?)(?!\w)(?!-\w)")
 # Whole numbers below this are counts and ordinals ("3 changes", "Run 2") that need no source.
 SMALL_WHOLE = 10
+SIGNIFICANT = (2, 3)
 UNSUPPORTED_ANSWER = "I could not back that answer with data from this project, so I will not guess at the numbers."
 
 
@@ -27,7 +28,11 @@ def _numbers(text: str) -> list[_Cited]:
 
 
 def _matches(value: float, decimals: int, fact: float) -> bool:
-    return abs(abs(fact) - value) <= 0.5 * 10**-decimals + 1e-9
+    size = abs(fact)
+    if abs(size - value) <= 0.5 * 10**-decimals + 1e-9:
+        return True
+    # Answers round to 2 or 3 significant figures ("123,456 steps" becomes "123,000" or "120,000").
+    return any(abs(float(f"{size:.{digits}g}") - value) <= 1e-9 * max(1.0, value) for digits in SIGNIFICANT)
 
 
 def _supported(cited: _Cited, facts: list[float]) -> bool:

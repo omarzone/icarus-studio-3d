@@ -87,3 +87,26 @@ def scene_description(compiled: CompiledModel, revision: int) -> SceneDescriptio
         for index in range(model.nlight)
     ]
     return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights)
+
+
+def object_extents(compiled: CompiledModel, object_ids: list[str]) -> tuple[float, float, float] | None:
+    """Full length, width and height in metres of the box around these objects' geoms at the initial pose."""
+    model = compiled.model
+    bodies = {
+        mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, compiled.objects[id])
+        for id in object_ids
+        if id in compiled.objects
+    }
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    low, high = np.full(3, np.inf), np.full(3, -np.inf)
+    for index in range(model.ngeom):
+        if int(model.geom_bodyid[index]) not in bodies or int(model.geom_type[index]) == mujoco.mjtGeom.mjGEOM_PLANE:
+            continue
+        rotation = data.geom_xmat[index].reshape(3, 3)
+        center = data.geom_xpos[index] + rotation @ model.geom_aabb[index][:3]
+        half = np.abs(rotation) @ model.geom_aabb[index][3:]
+        low, high = np.minimum(low, center - half), np.maximum(high, center + half)
+    if not np.all(np.isfinite(low)):
+        return None
+    return _vector(np.round(high - low, 2))
