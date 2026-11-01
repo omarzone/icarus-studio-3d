@@ -77,3 +77,26 @@ def test_undo_at_the_first_revision_is_409(client):
 def test_unknown_template_is_422(client):
     response = client.post("/projects", json={"name": "X", "template": "nope"})
     assert response.status_code == 422
+
+
+def test_rename_duplicate_and_restore_over_http(client):
+    project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
+    renamed = client.post(
+        f"/projects/{project_id}/operations",
+        json={
+            "summary": "Rename",
+            "operations": [{"op": "rename_project", "name": "Lot", "description": "Park between the cones"}],
+        },
+    ).json()
+    assert (renamed["project"]["name"], renamed["project"]["description"]) == ("Lot", "Park between the cones")
+    copy = client.post(f"/projects/{project_id}/duplicate", json={"name": "Lot copy"})
+    assert copy.status_code == 201
+    assert copy.json()["project"]["name"] == "Lot copy"
+    restored = client.post(f"/projects/{project_id}/revisions/1/restore")
+    assert restored.json()["revision"]["restored_from"] == 1
+    assert restored.json()["project"]["name"] == "Parking"
+    assert client.post(f"/projects/{project_id}/revisions/9/restore").status_code == 404
+
+
+def test_library_lists_pieces(client):
+    assert {"box", "ramp", "wall", "post", "ball"} <= {piece["id"] for piece in client.get("/library").json()["pieces"]}
