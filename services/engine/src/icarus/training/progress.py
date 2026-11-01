@@ -68,6 +68,7 @@ class RunProgress:
         self._success_rate: float | None = None
         self._saved: set[int] = set()
         self.last_step = 0
+        self._snapshot_warned = False
 
     def elapsed(self) -> float:
         return max(0.0, (datetime.now(UTC) - self.started_at).total_seconds())
@@ -126,7 +127,13 @@ class RunProgress:
         self.write_status(self.state, step)
 
     def snapshot(self, step: int, geoms: list[str], copies: list[Any]) -> None:
-        self.folder.write_snapshot(TrainingSnapshot(step=step, geoms=geoms, copies=copies))
+        # The live view is a preview: a file held open by a reader must never stop training.
+        try:
+            self.folder.write_snapshot(TrainingSnapshot(step=step, geoms=geoms, copies=copies))
+        except OSError as error:
+            if not self._snapshot_warned:
+                self._snapshot_warned = True
+                self.log(f"The live view could not be updated ({error.strerror or error}); training goes on", "warn")
 
     def finish(self, state: RunState, step: int) -> None:
         self.write_status(state, step, finished_at=datetime.now(UTC))
