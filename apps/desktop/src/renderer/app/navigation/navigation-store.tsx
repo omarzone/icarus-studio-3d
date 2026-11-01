@@ -41,7 +41,7 @@ export function createNavigationStore(initial: NavigationLocation): StoreApi<Nav
   }));
 }
 
-const NavigationContext = createContext<StoreApi<NavigationState> | null>(null);
+export const NavigationContext = createContext<StoreApi<NavigationState> | null>(null);
 
 export function NavigationProvider({ initial, children }: { initial: NavigationLocation; children: ReactNode }) {
   const [store] = useState(() => createNavigationStore(initial));
