@@ -118,13 +118,19 @@ describe("model settings on the engine", () => {
     await settings.saveModelSettings({
       endpoint: " https://x/v1 ",
       apiKey: "",
-      models: { reasoning: " thinker-2 ", vision: "" },
+      models: { reasoning: " thinker-2 " },
     });
     await settings.saveModelSettings({ endpoint: "https://x/v1", apiKey: "sk-new", models: {} });
     expect(saved).toEqual([
       { endpoint: "https://x/v1", models: { reasoning: "thinker-2" } },
       { endpoint: "https://x/v1", api_key: "sk-new" },
     ]);
+  });
+
+  it("clears a model name that was emptied", async () => {
+    const { settings, saved } = modelsEngine();
+    await settings.saveModelSettings({ endpoint: "https://x/v1", apiKey: "", models: { vision: " " } });
+    expect(saved).toEqual([{ endpoint: "https://x/v1", models: { vision: "" } }]);
   });
 
   it("tests the connection on the engine", async () => {

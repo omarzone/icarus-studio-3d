@@ -45,7 +45,7 @@ export type NotificationSettings = Record<NotificationOption, boolean>;
 
 export type SettingsPort = {
   getModelSettings: () => Promise<ModelSettings>;
-  // An empty key keeps the stored one; empty model names are left as they are.
+  // An empty key keeps the stored one; only the model names given change, and an empty name clears it.
   saveModelSettings: (input: {
     endpoint: string;
     apiKey: string;

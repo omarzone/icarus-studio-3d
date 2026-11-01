@@ -88,7 +88,7 @@ export function createEngineModelSettings(
         patch.api_key = apiKey.trim();
       }
       const named = Object.entries(models).flatMap(([capability, name]) =>
-        name && name.trim() !== "" ? [[capability, name.trim()] as const] : [],
+        name === undefined ? [] : [[capability, name.trim()] as const],
       );
       if (named.length > 0) {
         patch.models = Object.fromEntries(named);

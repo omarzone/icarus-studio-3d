@@ -7,6 +7,7 @@ import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { sceneKeys } from "../../editor/scene-queries.ts";
+import { CopilotNotConnected } from "../../ports/copilot-connection.ts";
 import { type Conversation, copilotPort } from "../../ports/copilot-port.ts";
 import { workspaceOf } from "../../ports/copilot-views.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
@@ -108,6 +109,20 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
     void action.mutateAsync(args).then(settled, refused);
   };
   const send = useEngineAction(port.sendMessage);
+  // Resolves whether the copilot got the message, so the composer can give back the text of a failed one.
+  const sendText = (text: string) =>
+    send.isPending
+      ? Promise.resolve(false)
+      : send.mutateAsync({ key: conversation, text, selection: selection(), workspace: workspaceOf(screen) }).then(
+          (next) => {
+            settled(next);
+            return true;
+          },
+          () => {
+            refused();
+            return false;
+          },
+        );
   const apply = useEngineAction(port.applyProposal);
   const discard = useEngineAction(port.discardProposal);
   const autonomy = useEngineAction(port.setAutonomy);
@@ -128,9 +143,8 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
           suggestionRoutes={suggestionRoutes}
           proposalRoutes={proposalRoutes}
           sending={send.isPending ? (send.variables?.text ?? null) : null}
-          onSend={(text) =>
-            run(send, { key: conversation, text, selection: selection(), workspace: workspaceOf(screen) })
-          }
+          notConnected={send.error instanceof CopilotNotConnected ? send.error.message : null}
+          onSend={sendText}
           onApply={(id) => run(apply, { key: conversation, id })}
           onDiscard={(id) => run(discard, { key: conversation, id })}
           onAttach={() => attach.mutate({ key: conversation })}

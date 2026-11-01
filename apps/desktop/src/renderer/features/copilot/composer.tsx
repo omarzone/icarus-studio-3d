@@ -2,6 +2,7 @@ import { ArrowUp, ChevronDown, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { AutonomyMode } from "../../ports/copilot-port.ts";
+import { draftAfterSend, draftToSend } from "./composer-draft.ts";
 
 const AUTONOMY_LABEL: Record<AutonomyMode, string> = { ask: "Ask before changes", autopilot: "Autopilot" };
 
@@ -9,23 +10,34 @@ type Props = {
   placeholder: string;
   autonomy: AutonomyMode;
   autonomyNote?: string;
-  onSend: (text: string) => void;
+  // A message is on its way; sending again waits until it settles.
+  sending?: boolean;
+  // Resolves true once the copilot has the message; false gives the text back.
+  onSend: (text: string) => Promise<boolean>;
   onAttach: () => void;
   onAutonomy: (mode: AutonomyMode) => void;
 };
 
 // Composer: workspace-specific placeholder, + to attach, autonomy mode and the round send button.
-export function Composer({ placeholder, autonomy, autonomyNote, onSend, onAttach, onAutonomy }: Props) {
+export function Composer({
+  placeholder,
+  autonomy,
+  autonomyNote,
+  sending = false,
+  onSend,
+  onAttach,
+  onAutonomy,
+}: Props) {
   const [text, setText] = useState("");
   const field = useRef<HTMLInputElement>(null);
   const send = () => {
-    const message = text.trim();
-    if (!message) {
+    const message = draftToSend(text, sending);
+    if (message === null) {
       field.current?.focus();
       return;
     }
-    onSend(message);
     setText("");
+    void onSend(message).then((sent) => setText((current) => draftAfterSend(current, message, sent)));
   };
   return (
     <div className="m-2.5 flex flex-col gap-3 rounded-bubble bg-control pt-3.25 pr-2.5 pb-2.25 pl-3.75">
@@ -65,8 +77,9 @@ export function Composer({ placeholder, autonomy, autonomyNote, onSend, onAttach
         <Act
           cta="Send"
           aria-label="Send"
+          disabled={sending}
           onClick={send}
-          className="ml-auto grid size-8 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90"
+          className="ml-auto grid size-8 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90 disabled:opacity-50"
         >
           <ArrowUp size={14} strokeWidth={1.75} aria-hidden />
         </Act>

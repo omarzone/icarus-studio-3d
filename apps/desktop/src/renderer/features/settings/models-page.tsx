@@ -14,6 +14,7 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { StatusPill } from "../../ui/status-pill.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { modelSettingsRequest } from "./model-settings-form.ts";
 import { SettingsLayout } from "./settings-layout.tsx";
 
 const CAPABILITIES: Record<ModelCapability, { label: string; purpose: string }> = {
@@ -46,6 +47,9 @@ function ModelsForm({ models }: { models: ModelSettings }) {
   const [names, setNames] = useState<Partial<Record<ModelCapability, string>>>(() =>
     Object.fromEntries(models.connections.map((connection) => [connection.capability, connection.model ?? ""])),
   );
+  // Shown after Test saved a new address without a key, since the engine then has no key to test with.
+  const [keyNeeded, setKeyNeeded] = useState(false);
+  const request = modelSettingsRequest(models, { endpoint, apiKey, names });
   // Save also leaves the page, so the result is handled on the promise; per-call callbacks would not run.
   const refresh = () => client.invalidateQueries({ queryKey: ["settings", "models"] });
   const test = useEngineAction(settings.testModelConnection);
@@ -62,23 +66,41 @@ function ModelsForm({ models }: { models: ModelSettings }) {
       ))}
       <div className="grid grid-cols-2 gap-3">
         <TextField label="Endpoint" mono value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
-        <TextField
-          label="API key"
-          mono
-          type="password"
-          autoComplete="off"
-          value={apiKey}
-          placeholder={`•••••••••••••••• ${models.apiKeyHint}`}
-          onChange={(event) => setApiKey(event.target.value)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <TextField
+            label="API key"
+            mono
+            type="password"
+            autoComplete="off"
+            value={apiKey}
+            placeholder={models.apiKeyHint ? `•••••••••••••••• ${models.apiKeyHint}` : "not set"}
+            onChange={(event) => {
+              setApiKey(event.target.value);
+              setKeyNeeded(false);
+            }}
+          />
+          {request.keyRequired ? (
+            <p className="text-meta leading-tight text-fg-tertiary">
+              Changing the address clears the saved key; enter the key for the new address
+            </p>
+          ) : keyNeeded ? (
+            <p role="alert" className="text-meta leading-tight text-warn">
+              Saved. Enter the key for the new address, then test the connection
+            </p>
+          ) : null}
+        </div>
       </div>
       <div className="flex gap-2">
         <Act
           cta="Test connection"
           onClick={() => {
+            const { input, keyRequired } = request;
             void save
-              .mutateAsync({ endpoint, apiKey, models: names })
-              .then(() => test.mutateAsync(undefined))
+              .mutateAsync(input)
+              .then(() => {
+                setKeyNeeded(keyRequired);
+                return keyRequired ? undefined : test.mutateAsync(undefined);
+              })
               .then(refresh, refresh);
           }}
           className={buttonClass("secondary", "h-8.5 px-4 text-body")}
@@ -89,7 +111,7 @@ function ModelsForm({ models }: { models: ModelSettings }) {
           to="SCR-HOME"
           cta="Save"
           onClick={() => {
-            void save.mutateAsync({ endpoint, apiKey, models: names }).then(refresh, () => undefined);
+            void save.mutateAsync(request.input).then(refresh, () => undefined);
           }}
           className={buttonClass("primary", "h-8.5 text-body")}
         >
