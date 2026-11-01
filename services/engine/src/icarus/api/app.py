@@ -1,4 +1,6 @@
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -7,7 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from icarus import __version__
-from icarus.api import health, library, play, projects
+from icarus.api import health, library, play, projects, runs
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.library.templates import UnknownTemplate
@@ -20,6 +22,9 @@ from icarus.projects.store import (
     UnknownProject,
     UnknownRevision,
 )
+from icarus.training.run_store import RunStore, UnknownRun, runs_dir
+from icarus.training.settings import SettingsRejected, TrainingSettingsStore
+from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor
 
 PROJECTS_DIR_ENV = "ICARUS_PROJECTS_DIR"
 
@@ -87,6 +92,17 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _rejected(exc.issues)
         case UnknownTemplate():
             return _rejected([ValidationIssue(path="template", message=f"There is no template {exc.args[0]!r}")])
+        case UnknownRun():
+            return _error(404, ApiError(code="not_found", message=f"There is no run {exc.args[0]!r}"))
+        case RunInProgress():
+            name = request.app.state.runs.folder(exc.run_id).status().name
+            message = f"{name} is still training. Stop it before starting another run."
+            return _error(409, ApiError(code="conflict", message=message))
+        case NotTrainable():
+            return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
+        case SettingsRejected():
+            details = {exc.field: exc.message}
+            return _error(422, ApiError(code="invalid", message=exc.message, details=details))
         case _:
             raise exc
 
@@ -96,13 +112,27 @@ def projects_dir() -> Path:
     return Path(configured) if configured else Path.home() / "Icarus Studio" / "projects"
 
 
-def create_app(projects_root: Path | None = None) -> FastAPI:
-    app = FastAPI(title="Icarus engine", version=__version__)
-    app.state.store = ProjectStore(projects_root or projects_dir())
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    supervisor: Supervisor = app.state.supervisor
+    supervisor.recover()
+    yield
+    supervisor.shutdown()
+
+
+def create_app(projects_root: Path | None = None, runs_root: Path | None = None) -> FastAPI:
+    app = FastAPI(title="Icarus engine", version=__version__, lifespan=_lifespan)
+    projects_folder = projects_root or projects_dir()
+    runs_folder = runs_root or runs_dir()
+    app.state.store = ProjectStore(projects_folder)
+    app.state.runs = RunStore(runs_folder)
+    app.state.supervisor = Supervisor(app.state.runs)
+    app.state.training_settings = TrainingSettingsStore(runs_folder, projects_folder)
     app.include_router(health.router)
     app.include_router(library.router)
     app.include_router(projects.router)
     app.include_router(play.router)
+    app.include_router(runs.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     for error in (
@@ -113,6 +143,10 @@ def create_app(projects_root: Path | None = None) -> FastAPI:
         RejectedBatch,
         OperationError,
         UnknownTemplate,
+        UnknownRun,
+        RunInProgress,
+        NotTrainable,
+        SettingsRejected,
     ):
         app.add_exception_handler(error, _domain_error)
     return app

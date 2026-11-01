@@ -50,3 +50,6 @@ Add dependencies with `uv add`, never `pip install`. Justify any new dependency 
 ## Traps that already cost us
 
 *(Fill in as we go: symptom → cause → rule.)*
+
+- Run files flicker with `PermissionError` on Windows → `os.replace` and reads fail while another process holds the file for a moment (the worker writes `live.json` twice a second while the API reads it) → read and write run files through `training/run_store.py`, which retries briefly.
+- Worker copies open console windows on Windows → `multiprocessing` spawns children with the parent's console → the supervisor starts the worker with `CREATE_NO_WINDOW`, so its copies inherit a hidden console.

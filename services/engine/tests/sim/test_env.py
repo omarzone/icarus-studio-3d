@@ -43,3 +43,31 @@ def test_navigation_observes_the_goal_in_the_agent_frame(parking):
 def test_a_project_without_a_task_family_is_rejected():
     with pytest.raises(ValueError):
         ProjectEnv(project_from("empty_world"))
+
+
+def test_copy_poses_cover_every_moving_geom_and_match_mujoco(parking):
+    env = ProjectEnv(parking)
+    env.reset(seed=0)
+    for _ in range(5):
+        env.step(np.ones(len(env.world.actuators), dtype=np.float32))
+    model, data = env.world.model, env.world.data
+    names = env.moving_geoms
+    assert "car" in names and all(model.body_weldid[model.geom(name).bodyid[0]] != 0 for name in names)
+    poses = env.poses()
+    assert len(poses.positions) == len(poses.quaternions) == len(names)
+    car = names.index("car")
+    np.testing.assert_allclose(poses.positions[car], data.geom_xpos[model.geom("car").id])
+    assert abs(np.linalg.norm(poses.quaternions[car]) - 1) < 1e-9
+
+
+def test_the_last_step_of_an_episode_reports_its_outcome_and_reward_terms(parking):
+    env = ProjectEnv(parking)
+    env.reset(seed=0)
+    total, info, done = 0.0, {}, False
+    while not done:
+        _, reward, terminated, truncated, info = env.step(np.zeros(len(env.world.actuators), dtype=np.float32))
+        total += reward
+        done = terminated or truncated
+    assert info["is_success"] is False and info["failed"] is False
+    assert set(info["episode_terms"]) == {"reach_goal", "progress_to_goal", "collision_penalty", "time_penalty"}
+    assert sum(info["episode_terms"].values()) == pytest.approx(total)

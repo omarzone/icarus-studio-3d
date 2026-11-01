@@ -12,10 +12,13 @@ from icarus.contracts.play import (
     PlayMessageEnvelope,
     PlayReady,
 )
+from icarus.contracts.project import Project
 from icarus.design.compiler import CompileError, compile_project
 from icarus.projects.store import ProjectStore, UnknownProject
+from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
-from icarus.sim.policy import RandomPolicy
+from icarus.sim.policy import CheckpointPolicy, Policy, RandomPolicy
+from icarus.training.run_store import RunStore
 
 router = APIRouter()
 
@@ -36,11 +39,23 @@ def _error(text: str) -> PlayErrorMessage:
     return PlayErrorMessage(type="error", message=text)
 
 
-def _open_session(store: ProjectStore, project_id: str) -> PlaySession:
+def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
+    """The best trained brain of this revision when one exists, otherwise random actions."""
+    trained = runs.trained_checkpoint(project.id, revision)
+    if trained is not None:
+        status, path = trained
+        label = f"Trained brain: {status.name} at {status.best_step:,} steps"
+        try:
+            return CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+        except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
+            pass
+    return RandomPolicy(compile_project(project).model.nu, project.brain.seed)
+
+
+def _open_session(store: ProjectStore, runs: RunStore, project_id: str) -> PlaySession:
     state = store.state(project_id)
-    seed = state.project.brain.seed
-    brain = RandomPolicy(compile_project(state.project).model.nu, seed)
-    return PlaySession(state.project, state.revision.number, brain, seed)
+    brain = _brain(runs, state.project, state.revision.number)
+    return PlaySession(state.project, state.revision.number, brain, state.project.brain.seed)
 
 
 async def _receive(websocket: WebSocket, inbox: asyncio.Queue[Inbound]) -> None:
@@ -87,7 +102,8 @@ async def _run(websocket: WebSocket, session: PlaySession, receiver: asyncio.Tas
 async def play(websocket: WebSocket, project_id: str) -> None:
     await websocket.accept()
     try:
-        session = await asyncio.to_thread(_open_session, websocket.app.state.store, project_id)
+        state = websocket.app.state
+        session = await asyncio.to_thread(_open_session, state.store, state.runs, project_id)
     except UnknownProject:
         await _send(websocket, _error(f"There is no project {project_id!r}"))
         await websocket.close(code=UNKNOWN_PROJECT)
