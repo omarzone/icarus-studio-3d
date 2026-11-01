@@ -1,8 +1,16 @@
 import pytest
 
-from icarus.contracts.operations import DeleteObject, ReparentObject, SetProperty, SetRewardTerm, SetTaskFamily
+from icarus.contracts.operations import (
+    AddComponent,
+    DeleteObject,
+    ReparentObject,
+    SetProperty,
+    SetRewardTerm,
+    SetTaskFamily,
+)
 from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import RewardTermSpec
+from icarus.library.components import default_component
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.operations import apply_operations, empty_project
 from icarus.projects.validation import validate_project
@@ -71,3 +79,15 @@ def test_reward_term_from_another_family_is_reported(base):
 def test_every_template_builds_a_valid_project(template):
     project = apply_operations(empty_project("0123456789ab", "T"), template_operations(template))
     assert validate_project(project) == []
+
+
+def randomize_on(object_id: str):
+    return AddComponent(op="add_component", object=object_id, component=default_component("randomize", "randomize"))
+
+
+def test_randomize_per_copy_is_accepted_on_a_world_object_and_refused_on_a_body_part():
+    project = apply_operations(empty_project("0123456789ab", "Test"), template_operations("parking_car"))
+    assert validate_project(apply_operations(project, [randomize_on("ground")])) == []
+    issues = validate_project(apply_operations(project, [randomize_on("car")]))
+    assert [issue.path for issue in issues] == ["objects.car.components.randomize"]
+    assert "world" in issues[0].message

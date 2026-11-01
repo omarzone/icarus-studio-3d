@@ -71,6 +71,7 @@ def _component_path(object_id: str, component_id: str) -> str:
 def _apply(project: Project, operation: EditOperation) -> None:
     match operation:
         case CreateObject(target=target, object=obj):
+            obj = obj.model_copy(deep=True)
             if find_object(project, obj.id) is not None:
                 raise _fail(f"objects.{obj.id}", f"An object with id {obj.id!r} already exists")
             if target == "world":
@@ -91,6 +92,7 @@ def _apply(project: Project, operation: EditOperation) -> None:
         case ReparentObject(object=object_id, parent=parent):
             _object(project, object_id)[1].parent = parent
         case AddComponent(object=object_id, component=component):
+            component = component.model_copy(deep=True)
             obj = _object(project, object_id)[1]
             if any(item.id == component.id for item in obj.components):
                 raise _fail(_component_path(object_id, component.id), f"{obj.name} already has {component.id!r}")
@@ -105,8 +107,9 @@ def _apply(project: Project, operation: EditOperation) -> None:
             component = next((item for item in obj.components if item.id == component_id), None)
             if component is None:
                 raise _fail(_component_path(object_id, component_id), f"{obj.name} has no {component_id!r}")
-            component.properties[prop] = value
+            component.properties[prop] = value.model_copy(deep=True)
         case AddBody(body=body):
+            body = body.model_copy(deep=True)
             if any(item.id == body.id for item in project.bodies):
                 raise _fail(f"bodies.{body.id}", f"A body with id {body.id!r} already exists")
             project.bodies.append(body)
@@ -121,6 +124,7 @@ def _apply(project: Project, operation: EditOperation) -> None:
         case SetTaskFamily(family=family):
             project.task.family = family
         case SetRewardTerm(term=term):
+            term = term.model_copy(deep=True)
             project.task.rewards = [*(item for item in project.task.rewards if item.term != term.term), term]
         case RemoveRewardTerm(term=term_id):
             if not any(item.term == term_id for item in project.task.rewards):

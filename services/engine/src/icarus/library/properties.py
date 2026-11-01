@@ -51,11 +51,13 @@ def slider(
     *,
     expert: bool = False,
     randomizable: bool = False,
+    unit: str | None = None,
 ) -> PropertySchema:
     return PropertySchema(
         id=id,
         label=label,
         type="slider",
+        unit=unit,
         min=lo,
         max=hi,
         step=step,
@@ -97,12 +99,14 @@ def listing(id: str, label: str, options: list[str], default: str) -> PropertySc
     )
 
 
-def switch(id: str, label: str, default: bool) -> PropertySchema:
-    return PropertySchema(id=id, label=label, type="switch", default=SwitchValue(type="switch", value=default))
+def switch(id: str, label: str, default: bool, *, hint: str | None = None) -> PropertySchema:
+    return PropertySchema(
+        id=id, label=label, type="switch", default=SwitchValue(type="switch", value=default), hint=hint
+    )
 
 
-def color(id: str, label: str, default: str) -> PropertySchema:
-    return PropertySchema(id=id, label=label, type="color", default=ColorValue(type="color", value=default))
+def color(id: str, label: str, default: str, *, hint: str | None = None) -> PropertySchema:
+    return PropertySchema(id=id, label=label, type="color", default=ColorValue(type="color", value=default), hint=hint)
 
 
 def vector(

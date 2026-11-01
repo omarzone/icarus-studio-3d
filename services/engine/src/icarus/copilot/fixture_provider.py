@@ -54,6 +54,8 @@ def _answer(root: Path, body: dict) -> dict:
         return {"role": "assistant", "content": "OK"}
     role = response_format["json_schema"]["name"]
     request = next((m["content"] for m in messages if m.get("role") == "user"), "")
+    if isinstance(request, list):
+        request = " ".join(part.get("text", "") for part in request if part.get("type") == "text")
     attempt = sum(1 for m in messages if m.get("role") == "assistant")
     fixture = pick_fixture(root, role, request)
     reply = fixture.replies[min(attempt, len(fixture.replies) - 1)]

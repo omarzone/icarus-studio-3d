@@ -7,6 +7,7 @@ from icarus.contracts.copilot import CopilotProposal, SendMessage
 from icarus.contracts.operations import OperationBatch, SetProperty
 from icarus.contracts.properties import NumberValue, SliderValue
 from icarus.copilot import chat
+from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import Connection, ModelClient
@@ -31,7 +32,9 @@ def copilot(tmp_path, store) -> Copilot:
     trainer = ChatTrainer(
         store, runs, Supervisor(runs), TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects")
     )
-    return Copilot(store, runs, ConversationStore(tmp_path / "projects"), ModelSettingsStore(tmp_path), trainer)
+    projects = tmp_path / "projects"
+    settings = ModelSettingsStore(tmp_path)
+    return Copilot(store, runs, ConversationStore(projects), settings, trainer, AttachmentStore(projects))
 
 
 @pytest.fixture

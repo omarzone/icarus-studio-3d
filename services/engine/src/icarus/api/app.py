@@ -10,10 +10,11 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from icarus import __version__
-from icarus.api import copilot, health, ideas, library, model_settings, play, projects, runs
+from icarus.api import attachments, copilot, health, ideas, library, model_settings, play, projects, runs
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.copilot.architect import IdeaBook, NoValidIdeas, UnknownIdeas
+from icarus.copilot.attachments import AttachmentRejected, AttachmentStore, UnknownAttachment
 from icarus.copilot.builds import BuildBoard, UnknownBuild
 from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
 from icarus.copilot.chat_training import ChatTrainer
@@ -124,6 +125,10 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(409, ApiError(code="conflict", message=f"This proposal was already {exc.args[0]}"))
         case UnknownIdeas():
             return _error(404, ApiError(code="not_found", message=f"There are no ideas {exc.args[0]!r}"))
+        case UnknownAttachment():
+            return _error(404, ApiError(code="not_found", message="There is no such attachment"))
+        case AttachmentRejected():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
         case UnknownBuild():
             return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
         case SettingsRejected():
@@ -158,8 +163,14 @@ def create_app(
     app.state.training_settings = TrainingSettingsStore(runs_folder, projects_folder)
     app.state.model_settings = ModelSettingsStore(settings_root or settings_dir())
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
+    app.state.attachments = AttachmentStore(projects_folder)
     app.state.copilot = Copilot(
-        app.state.store, app.state.runs, ConversationStore(projects_folder), app.state.model_settings, trainer
+        app.state.store,
+        app.state.runs,
+        ConversationStore(projects_folder),
+        app.state.model_settings,
+        trainer,
+        app.state.attachments,
     )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
@@ -177,6 +188,7 @@ def create_app(
     app.include_router(play.router)
     app.include_router(runs.router)
     app.include_router(copilot.router)
+    app.include_router(attachments.router)
     app.include_router(ideas.router)
     app.include_router(model_settings.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
@@ -199,6 +211,8 @@ def create_app(
         ProposalClosed,
         UnknownIdeas,
         UnknownBuild,
+        UnknownAttachment,
+        AttachmentRejected,
     ):
         app.add_exception_handler(error, _domain_error)
     return app

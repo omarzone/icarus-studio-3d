@@ -14,7 +14,11 @@ from icarus.library.properties import (
     vector,
 )
 
+# Furthest a randomized object may move per axis on each try, in metres.
+POSITION_RANGE_MAX = 50.0
+
 SURFACES = ["asphalt", "grass", "ice", "rubber", "wood", "metal"]
+SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 
 
 class UnknownKind(KeyError):
@@ -162,6 +166,45 @@ _KINDS = [
         [
             listing("kind", "Kind", SURFACES, "asphalt"),
             slider("friction", "Friction", 0, 2, 0.05, 1, randomizable=True),
+        ],
+        unique=True,
+    ),
+    # How the world looks around it; one per world and never part of the physics (see design/sky.py).
+    _kind(
+        "sky",
+        "Sky",
+        "sky",
+        "World",
+        [
+            choice("preset", "Preset", SKY_PRESETS, "day"),
+            color("top", "Top color", "#5f8fc4", hint="Used when the preset is Custom"),
+            color("horizon", "Horizon color", "#e4ecef", hint="Used when the preset is Custom"),
+            slider("ambient", "Ambient light", 0, 2, 0.05, 1),
+            slider("fog", "Fog", 0, 1, 0.05, 0),
+        ],
+        unique=True,
+    ),
+    # What changes between training copies and on every try; world objects only (see sim/variation.py).
+    _kind(
+        "randomize",
+        "Randomize per copy",
+        "shuffle",
+        "Learning",
+        [
+            vector(
+                "position_range",
+                "Position range",
+                "m",
+                0,
+                POSITION_RANGE_MAX,
+                (0, 0, 0),
+                hint="Each try moves the object up to this far either way on X and Y, and only up on Z",
+            ),
+            number(
+                "rotation_range", "Rotation range", "deg", 0, 180, 0, hint="Each try turns it up to this far either way"
+            ),
+            switch("color", "Vary color", False, hint="Each try shifts its material color a little"),
+            slider("friction_spread", "Friction spread", 0, 50, 5, 0, unit="%"),
         ],
         unique=True,
     ),

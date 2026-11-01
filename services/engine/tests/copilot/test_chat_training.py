@@ -8,6 +8,7 @@ import pytest
 from icarus.contracts.copilot import SendMessage
 from icarus.contracts.training import StartRun
 from icarus.copilot import chat
+from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import Connection, ModelClient
@@ -43,7 +44,9 @@ def store(tmp_path) -> ProjectStore:
 @pytest.fixture
 def copilot(tmp_path, store, runs, supervisor) -> Copilot:
     trainer = ChatTrainer(store, runs, supervisor, TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects"))
-    return Copilot(store, runs, ConversationStore(tmp_path / "projects"), ModelSettingsStore(tmp_path), trainer)
+    projects = tmp_path / "projects"
+    settings = ModelSettingsStore(tmp_path)
+    return Copilot(store, runs, ConversationStore(projects), settings, trainer, AttachmentStore(projects))
 
 
 @pytest.fixture

@@ -73,11 +73,12 @@ def _hex(rgba) -> str:
     return "#" + "".join(f"{round(float(channel) * 255):02x}" for channel in rgba[:3])
 
 
-def scene_description(compiled: CompiledModel, revision: int) -> SceneDescription:
-    """Bodies, geoms and lights of the compiled model at its initial pose, in the world frame."""
+def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjData | None = None) -> SceneDescription:
+    """Bodies, geoms and lights in the world frame: at the initial pose, or as `live` data already holds them."""
     model = compiled.model
-    data = mujoco.MjData(model)
-    mujoco.mj_forward(model, data)
+    data = live if live is not None else mujoco.MjData(model)
+    if live is None:
+        mujoco.mj_forward(model, data)
     bodies = [
         SceneBody(
             name=model.body(index).name,
@@ -114,7 +115,8 @@ def scene_description(compiled: CompiledModel, revision: int) -> SceneDescriptio
         )
         for index in range(model.nlight)
     ]
-    return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights, zones=_zones(model, data))
+    zones = _zones(model, data)
+    return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights, zones=zones, sky=compiled.sky)
 
 
 def object_extents(compiled: CompiledModel, object_ids: list[str]) -> tuple[float, float, float] | None:

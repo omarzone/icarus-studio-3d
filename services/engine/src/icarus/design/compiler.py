@@ -8,9 +8,11 @@ import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
+from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.sensors import add_actuator, add_sensors
+from icarus.design.sky import add_sky, world_sky
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.projects.document import all_objects, containers
 
@@ -23,6 +25,8 @@ class CompiledModel:
     model: mujoco.MjModel
     # Object id → MJCF body name.
     objects: dict[str, str]
+    # How the world looks around it; None when the world has no sky object.
+    sky: SceneSky | None = None
 
 
 def _fmt(values) -> str:
@@ -192,6 +196,9 @@ def to_mjcf(project: Project) -> str:
     root = ET.Element("mujoco", {"model": project.id})
     ET.SubElement(root, "compiler", {"angle": "radian", "inertiafromgeom": "true", "autolimits": "true"})
     ET.SubElement(root, "option", {"timestep": str(TIMESTEP), "integrator": "implicitfast"})
+    sky = world_sky(project)
+    if sky:
+        add_sky(root, sky)
     world = ET.SubElement(root, "worldbody")
     for objects in containers(project):
         children: dict[str | None, list[ObjectSpec]] = {}
@@ -211,7 +218,8 @@ def compile_project(project: Project) -> CompiledModel:
         model = mujoco.MjModel.from_xml_string(mjcf)
     except ValueError as error:
         raise CompileError(_readable(str(error), project)) from error
-    return CompiledModel(mjcf=mjcf, model=model, objects={obj.id: obj.id for obj in all_objects(project)})
+    objects = {obj.id: obj.id for obj in all_objects(project)}
+    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project))
 
 
 __all__ = ["CompileError", "CompiledModel", "compile_project", "to_mjcf"]

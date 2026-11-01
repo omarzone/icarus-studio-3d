@@ -19,9 +19,9 @@ from icarus.sim.model_state import (
 from icarus.sim.poses import geom_poses, moving_geoms
 from icarus.sim.rewards import compose, parked
 from icarus.sim.start_pose import place_start
+from icarus.sim.variation import WorldVariation
 
 EPISODE_SECONDS = 30.0
-FRICTION_SPREAD = 0.2
 
 
 def trainable_world(project: Project) -> LiveWorld:
@@ -42,7 +42,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
     def __init__(self, project: Project, randomize: bool = False) -> None:
         self.world = trainable_world(project)
         self.randomize = randomize
-        self._base_friction = self.world.model.geom_friction[:, 0].copy()
+        self.variation = WorldVariation(self.world)
         self._substeps = control_substeps(self.world)
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
@@ -50,7 +50,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(size,), dtype=np.float32)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(len(self.world.actuators),), dtype=np.float32)
         self._state = reward_state(self.world)
-        self._geoms = moving_geoms(self.world)
+        self._geoms = sorted(set(moving_geoms(self.world)) | self.variation.moved_geoms)
         self.moving_geoms = [self.world.model.geom(index).name for index in self._geoms]
         self._start_episode()
 
@@ -64,14 +64,12 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
-        model = self.world.model
         if self.randomize:
-            spread = self.np_random.uniform(1 - FRICTION_SPREAD, 1 + FRICTION_SPREAD, size=self._base_friction.shape)
-            model.geom_friction[:, 0] = self._base_friction * spread
+            self.variation.start_copy(self.np_random)
         else:
-            model.geom_friction[:, 0] = self._base_friction
-        reset_world(self.world)
-        place_start(self.world, self.np_random)
+            self.variation.restore()
+            reset_world(self.world)
+            place_start(self.world, self.np_random)
         self._state = reward_state(self.world)
         self._start_episode()
         return observation(self.world), {}

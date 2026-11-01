@@ -48,3 +48,19 @@ def test_creating_an_object_in_a_missing_body_names_the_valid_targets():
         apply_operations(parking, [CreateObject(op="create_object", target="parked_left", object=box)])
     message = error.value.issues[0].message
     assert "'parked_left'" in message and '"world"' in message and "car_body" in message
+
+
+def test_the_same_operations_can_be_applied_twice_because_applying_never_changes_them():
+    from icarus.contracts.operations import AddBody
+    from icarus.contracts.specs import BodySpec
+    from icarus.projects.operations import empty_project
+
+    part = ObjectSpec(id="chassis", name="Chassis", parent=None, components=[])
+    operations = [
+        AddBody(op="add_body", body=BodySpec(id="rover", name="Rover", objects=[])),
+        CreateObject(op="create_object", target="rover", object=part),
+    ]
+    first = apply_operations(empty_project("000000000000", "a"), operations)
+    second = apply_operations(empty_project("000000000000", "b"), operations)
+    assert [obj.id for obj in second.bodies[0].objects] == ["chassis"]
+    assert first.bodies[0].objects[0] is not part and operations[0].body.objects == []

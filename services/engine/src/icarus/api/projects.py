@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Request, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Request, Response
 
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import CreateProject, DuplicateProject, ProjectState, ProjectSummary, Revision
@@ -6,8 +8,11 @@ from icarus.contracts.scene import SceneDescription
 from icarus.design.compiler import compile_project
 from icarus.design.scene import scene_description
 from icarus.projects.store import ProjectStore
+from icarus.sim.variation import copy_scenes
 
 router = APIRouter(prefix="/projects")
+
+MAX_PREVIEW_COPIES = 64
 
 
 def _store(request: Request) -> ProjectStore:
@@ -32,6 +37,7 @@ def get_project(request: Request, project_id: str) -> ProjectState:
 @router.delete("/{project_id}", status_code=204)
 def delete_project(request: Request, project_id: str) -> Response:
     _store(request).delete(project_id)
+    request.app.state.attachments.forget(project_id)
     return Response(status_code=204)
 
 
@@ -69,3 +75,15 @@ def redo(request: Request, project_id: str) -> ProjectState:
 def get_scene(request: Request, project_id: str) -> SceneDescription:
     state = _store(request).state(project_id)
     return scene_description(compile_project(state.project), state.revision.number)
+
+
+@router.get("/{project_id}/copies")
+def get_copies(
+    request: Request, project_id: str, count: Annotated[int | None, Query(ge=1, le=MAX_PREVIEW_COPIES)] = None
+) -> list[SceneDescription]:
+    """Each training copy's first episode, seeded as training seeds it: brain seed + copy index."""
+    state = _store(request).state(project_id)
+    brain = state.project.brain
+    copies = count or min(brain.copies, MAX_PREVIEW_COPIES)
+    seeds = [brain.seed + index for index in range(copies)]
+    return copy_scenes(state.project, state.revision.number, seeds)

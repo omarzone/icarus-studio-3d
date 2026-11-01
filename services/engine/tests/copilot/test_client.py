@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Annotated, Literal
 
 import httpx
@@ -252,3 +253,16 @@ def test_reasoning_fields_and_unclosed_think_tags_are_split_from_the_answer():
     cut_off, _ = scripted([{"content": '{"answer": "no", "score": 1}<think>Still going'}])
     reply = cut_off.ask("verdict", Verdict, "s", "u")
     assert reply.thinking == "Still going" and reply.value.score == 1
+
+
+def test_a_long_answer_may_be_given_more_time_than_the_default_but_never_past_the_deadline():
+    waits: list[float] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        waits.append(request.extensions["timeout"]["read"])
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"answer": "ok", "score": 1}'}}]})
+
+    client = ModelClient(Connection("https://models.example/v1", KEY, "big-model"), httpx.MockTransport(handle))
+    client.ask("verdict", Verdict, "Judge.", "Go", timeout=90)
+    client.ask("verdict", Verdict, "Judge.", "Go", timeout=90, deadline=time.monotonic() + 30)
+    assert waits[0] == 90 and 29 < waits[1] <= 30

@@ -1,0 +1,32 @@
+{
+ "match": [
+  "warehouse"
+ ],
+ "replies": [
+  {
+   "reasoning": "No template is a three-wheeled robot, so build one from scratch; the parking car is the closest template alternative.",
+   "content": {
+    "ideas": [
+     {
+      "title": "Warehouse runner",
+      "world": "A warehouse aisle with blue shelving, yellow lane lines and a loading dock",
+      "body": "A delivery robot with two driven wheels, a front caster and distance rays",
+      "learns": "To drive down the aisle and stop at the loading spot",
+      "template": "empty_world",
+      "outline": "Concrete-grey floor, shelving on both sides of a 4 m aisle, a crate in the way, the goal in front of the dock. Body: a 0.6 m chassis on two rear torque-driven wheels and a front caster ball, five distance rays forward.",
+      "operations": []
+     },
+     {
+      "title": "Park at the dock",
+      "world": "An open lot with one parking spot",
+      "body": "A car with front steering and rear-wheel drive",
+      "learns": "To drive to the spot and stop inside it",
+      "template": "parking_car",
+      "outline": "",
+      "operations": []
+     }
+    ]
+   }
+  }
+ ]
+}

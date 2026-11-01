@@ -93,6 +93,38 @@ def _reward_issues(project: Project) -> list[ValidationIssue]:
     return issues
 
 
+def _randomize_issues(project: Project) -> list[ValidationIssue]:
+    """Body parts never vary per copy: moving one would tear its joints, so only world objects take Randomize."""
+    return [
+        ValidationIssue(
+            path=f"objects.{obj.id}.components.{component.id}",
+            message=f"{obj.name} is part of a body; only world objects can vary per copy",
+        )
+        for body in project.bodies
+        for obj in body.objects
+        for component in obj.components
+        if component.kind == "randomize"
+    ]
+
+
+def _sky_issues(project: Project) -> list[ValidationIssue]:
+    """A world has one sky at most, and a body never carries one."""
+    issues = [
+        ValidationIssue(
+            path=f"objects.{obj.id}.components.{component.id}",
+            message=f"{obj.name} is part of a body; a sky belongs to the world",
+        )
+        for body in project.bodies
+        for obj in body.objects
+        for component in obj.components
+        if component.kind == "sky"
+    ]
+    skies = [obj for obj in project.world.objects if any(item.kind == "sky" for item in obj.components)]
+    if len(skies) > 1:
+        issues.append(ValidationIssue(path="objects", message="A world can have only one sky"))
+    return issues
+
+
 def validate_project(project: Project) -> list[ValidationIssue]:
     """Every structural problem: ids, parents, components, property values, references and rewards."""
     issues: list[ValidationIssue] = []
@@ -108,4 +140,4 @@ def validate_project(project: Project) -> list[ValidationIssue]:
     spawns = [obj for obj in project.world.objects if any(item.kind == "spawn_point" for item in obj.components)]
     if len(spawns) > 1:
         issues.append(ValidationIssue(path="objects", message="A world can have only one spawn point"))
-    return issues + _reward_issues(project)
+    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project)

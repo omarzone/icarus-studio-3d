@@ -10,13 +10,15 @@ from icarus.contracts.copilot import Autonomy, Conversation, CopilotMessage, Cop
 from icarus.contracts.operations import EditOperation, OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
+from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat_training import ChatTrainer, TrainingRequest
-from icarus.copilot.client import copilot_client
+from icarus.copilot.client import InputRejected, ModelClient, capability_client, copilot_client
 from icarus.copilot.context import project_context
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.grounding import UNSUPPORTED_ANSWER, unsupported_numbers
 from icarus.copilot.proposal_changes import proposal_changes
 from icarus.copilot.settings import ModelSettingsStore
+from icarus.copilot.turn_media import TurnMedia, turn_media
 from icarus.design.checks import design_report
 from icarus.design.compiler import CompiledModel
 from icarus.design.scene import scene_description
@@ -34,6 +36,14 @@ project, using only library component kinds and values inside their ranges. When
 goal or a body, compare the gaps with the body's "size" (length, width, height in metres) in the context and add a
 short warning to the proposal's "warnings" when the body cannot fit or pass. When they ask what something does,
 explain it from the library schema and its current values.
+When they ask to vary something between training copies or on every try (positions, turning, colors, friction of a
+world object), add or set the "randomize" component (Randomize per copy) on that world object; never on body parts.
+The "sky" component on a world object (preset, top and horizon colors, ambient light, fog) controls how the sky, light
+and haze look; change the look with set_property on it. Its top and horizon colors apply only with preset "custom",
+so "blue sky" means preset "day", or preset "custom" with a blue top color.
+Pictures: views are renders of the current scene taken by the app; use them to check layout, colors and proportions
+before proposing. Other pictures, video frames and documents are the person's references. Numbers in their documents
+count as sources.
 Only cite numbers that appear in the context below or in their message, rounded to 2 or 3 significant figures.
 Training: you can start or stop training yourself with the "training" field. Set it only when the person's latest
 message asks to train, start, stop or pause training{autopilot}. Otherwise leave it null and never offer to start
@@ -52,6 +62,10 @@ Project context (JSON):
 {context}"""
 
 AUTOPILOT = ", or right after a change you propose to fix why it does not learn"
+CANNOT_SEE = (
+    "I can't read pictures with the current model connection. Set a Vision model in Settings › AI models, "
+    "or tell me in words what you need."
+)
 
 
 class _Output(BaseModel):
@@ -148,9 +162,13 @@ def _project_of(proposal_id: str) -> str:
     return project_id
 
 
+def _attached(message: CopilotMessage) -> str:
+    return f" [attached: {', '.join(item.name for item in message.attachments)}]" if message.attachments else ""
+
+
 def _history(conversation: Conversation) -> str:
     recent = conversation.messages[-HISTORY_MESSAGES:]
-    return "\n".join(f"{message.role}: {message.text}" for message in recent) or "(none)"
+    return "\n".join(f"{message.role}: {message.text}{_attached(message)}" for message in recent) or "(none)"
 
 
 class Copilot:
@@ -163,12 +181,14 @@ class Copilot:
         conversations: ConversationStore,
         settings: ModelSettingsStore,
         trainer: ChatTrainer,
+        attachments: AttachmentStore,
     ) -> None:
         self._projects = projects
         self._runs = runs
         self._conversations = conversations
         self._settings = settings
         self._trainer = trainer
+        self._attachments = attachments
 
     def conversation(self, project_id: str) -> Conversation:
         head = self._projects.state(project_id).revision.number
@@ -184,17 +204,30 @@ class Copilot:
             conversation.autonomy = autonomy
         return self.conversation(project_id)
 
+    def _client(self, media: TurnMedia) -> tuple[ModelClient, bool]:
+        """The vision client for a turn with pictures when one is set, else the reasoning one; and whether it sees."""
+        vision = capability_client(self._settings, "vision") if media.pictures else None
+        return (vision, True) if vision else (copilot_client(self._settings), False)
+
     def send(self, project_id: str, message: SendMessage) -> Conversation:
         state = self._projects.state(project_id)
-        client = copilot_client(self._settings)
+        media = turn_media(self._attachments, project_id, message)
+        client, sees = self._client(media)
         context = project_context(state, self._runs, message.selection, message.workspace)
         conversation = self.conversation(project_id)
         history = _history(conversation)
         autopilot = AUTOPILOT if conversation.autonomy == "autopilot" else ""
         system = SYSTEM.format(autopilot=autopilot, autonomy=conversation.autonomy, history=history, context=context)
         run_facts = json.dumps(json.loads(context)["latest_run"])
-        review = _Review(state.project, [context, message.text, history], [run_facts, message.text, history])
-        reply = client.ask("chat_reply", ChatReply, system, message.text, review.check)
+        heard = [message.text, history, *media.documents]
+        review = _Review(state.project, [context, *heard], [run_facts, *heard])
+        user_message = _message("user", message.text, attachments=media.infos)
+        try:
+            reply = client.ask("chat_reply", ChatReply, system, media.user_content(message.text), review.check)
+        except InputRejected:
+            if not media.pictures or sees:
+                raise
+            return self._record(project_id, user_message, _message("copilot", CANNOT_SEE))
         answer, draft = reply.value.answer, reply.value.proposal
         if review.proposal_problem:
             answer = f"{answer} I could not turn this into a change that passes validation: {review.proposal_problem}"
@@ -209,7 +242,7 @@ class Copilot:
         proposal_id = proposal.id if proposal else None
         copilot_message = _message("copilot", answer, thinking=reply.thinking, proposal_id=proposal_id)
         with self._conversations.editing(project_id) as conversation:
-            conversation.messages.append(_message("user", message.text))
+            conversation.messages.append(user_message)
             conversation.messages.append(copilot_message)
             if proposal:
                 conversation.proposals.append(proposal)
@@ -226,6 +259,12 @@ class Copilot:
                 for item in conversation.messages:
                     if item.id == copilot_message.id:
                         item.text = f"{item.text} {outcome}"
+        return self.conversation(project_id)
+
+    def _record(self, project_id: str, user: CopilotMessage, answer: CopilotMessage) -> Conversation:
+        with self._conversations.editing(project_id) as conversation:
+            conversation.messages += [user, answer]
+            conversation.suggestions = []
         return self.conversation(project_id)
 
     def _proposal(self, project: Project, base: int, draft: ProposalDraft) -> CopilotProposal:

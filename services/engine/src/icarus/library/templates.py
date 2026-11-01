@@ -78,7 +78,7 @@ def _motor(kind: str, max_force: float) -> dict[str, Raw]:
     return {"kind": kind, "max_force": max_force}
 
 
-def _world() -> list[Part]:
+def _world(sky: str) -> list[Part]:
     return [
         Part(
             "ground",
@@ -94,6 +94,7 @@ def _world() -> list[Part]:
         ),
         Part("sun", "Sun", None, {"transform": {"position": (0, 0, 10)}, "light": {"kind": "sun"}}),
         Part("spawn", "Spawn point", None, {"transform": {}, "spawn_point": {}}),
+        Part("sky", "Sky", None, {"sky": {"preset": sky}}),
     ]
 
 
@@ -266,6 +267,7 @@ class _Template:
     body: tuple[str, str] | None
     parts: list[Part]
     rewards: list[str]
+    sky: str
 
 
 def _template(id: str, label: str, description: str, family: TaskFamily) -> TemplateInfo:
@@ -275,7 +277,11 @@ def _template(id: str, label: str, description: str, family: TaskFamily) -> Temp
 def _templates() -> dict[str, _Template]:
     return {
         "empty_world": _Template(
-            _template("empty_world", "Empty world", "Ground, light and a spawn point.", "none"), None, [], []
+            _template("empty_world", "Empty world", "Ground, light, sky and a spawn point.", "none"),
+            None,
+            [],
+            [],
+            "day",
         ),
         "parking_car": _Template(
             _template(
@@ -284,12 +290,14 @@ def _templates() -> dict[str, _Template]:
             ("car_body", "Car"),
             _car(),
             ["reach_goal", "progress_to_goal", "collision_penalty", "time_penalty"],
+            "day",
         ),
         "walker_robot": _Template(
             _template("walker_robot", "Walker robot", "A torso on two jointed legs that learns to walk.", "locomotion"),
             ("walker_body", "Walker"),
             _walker(),
             ["forward_progress", "stay_upright", "energy_cost", "fall_penalty"],
+            "overcast",
         ),
         "humanoid": _Template(
             _template(
@@ -298,6 +306,7 @@ def _templates() -> dict[str, _Template]:
             ("humanoid_body", "Humanoid"),
             _humanoid(),
             ["forward_progress", "stay_upright", "energy_cost", "fall_penalty"],
+            "dusk",
         ),
     }
 
@@ -311,7 +320,7 @@ def template_operations(template_id: str) -> list[EditOperation]:
     if template is None:
         raise UnknownTemplate(template_id)
     operations: list[EditOperation] = [
-        CreateObject(op="create_object", target="world", object=part.spec()) for part in _world()
+        CreateObject(op="create_object", target="world", object=part.spec()) for part in _world(template.sky)
     ]
     if template.body:
         body_id, body_name = template.body

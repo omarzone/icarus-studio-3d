@@ -85,7 +85,7 @@ def _library(state: ProjectState) -> dict[str, Any]:
                 "properties": {schema.id: _schema(schema, False) for schema in spec.properties},
             }
             for kind, spec in COMPONENTS.items()
-            if kind in used or kind in ("light", "material")
+            if kind in used or kind in ("light", "material", "randomize", "sky")
         },
         "reward_terms": {
             term: {"label": info.label, "family": info.family, "weight": [info.weight_min, info.weight_max]}

@@ -100,3 +100,59 @@ def test_rename_duplicate_and_restore_over_http(client):
 
 def test_library_lists_pieces(client):
     assert {"box", "ramp", "wall", "post", "ball"} <= {piece["id"] for piece in client.get("/library").json()["pieces"]}
+
+
+def vector(value: list[float]) -> dict:
+    return {"type": "vector", "value": value}
+
+
+def add_varied_crate(client: TestClient, project_id: str) -> None:
+    static_mode = {"mode": {"type": "choice", "value": "static"}}
+    crate = {
+        "id": "crate",
+        "name": "Crate",
+        "parent": None,
+        "components": [
+            {"id": "transform", "kind": "transform", "properties": {"position": vector([6, 4, 0.5])}},
+            {"id": "mesh", "kind": "mesh", "properties": {}},
+            {"id": "material", "kind": "material", "properties": {"color": {"type": "color", "value": "#3366cc"}}},
+            {"id": "physics_body", "kind": "physics_body", "properties": static_mode},
+            {
+                "id": "randomize",
+                "kind": "randomize",
+                "properties": {
+                    "position_range": vector([2, 1, 0]),
+                    "color": {"type": "switch", "value": True},
+                },
+            },
+        ],
+    }
+    batch = {"summary": "Crate", "operations": [{"op": "create_object", "target": "world", "object": crate}]}
+    assert client.post(f"/projects/{project_id}/operations", json=batch).status_code == 200
+
+
+def geoms_by_name(scene: dict) -> dict[str, dict]:
+    return {geom["name"]: geom for geom in scene["geoms"]}
+
+
+def test_copies_preview_one_scene_per_training_copy_varying_only_what_randomize_says(client):
+    project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
+    add_varied_crate(client, project_id)
+
+    response = client.get(f"/projects/{project_id}/copies", params={"count": 3})
+    assert response.status_code == 200
+    copies = [geoms_by_name(scene) for scene in response.json()]
+    assert len(copies) == 3
+    assert len({tuple(copy["crate"]["position"]) for copy in copies}) == 3
+    assert len({copy["crate"]["color"] for copy in copies}) == 3
+    assert all(copy["ground"] == copies[0]["ground"] for copy in copies)
+    assert all(scene["zones"] for scene in response.json())
+    assert client.get(f"/projects/{project_id}/copies", params={"count": 3}).json() == response.json()
+
+
+def test_copies_default_to_the_brain_copies_and_refuse_bad_counts_and_unknown_projects(client):
+    project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
+    assert len(client.get(f"/projects/{project_id}/copies").json()) == 16
+    assert client.get(f"/projects/{project_id}/copies", params={"count": 0}).status_code == 422
+    assert client.get(f"/projects/{project_id}/copies", params={"count": 65}).status_code == 422
+    assert client.get("/projects/ffffffffffff/copies").status_code == 404

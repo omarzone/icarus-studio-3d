@@ -1,6 +1,7 @@
 import json
 import logging
 import threading
+from pathlib import Path
 
 import httpx
 import pytest
@@ -113,7 +114,7 @@ def test_the_architect_is_shown_a_valid_create_object_and_told_to_promise_only_w
         obj.id == CREATE_OBJECT_EXAMPLE.object.id
         for obj in apply_operations(parking, [CREATE_OBJECT_EXAMPLE]).world.objects
     )
-    assert "only what the operations build" in system
+    assert "only what can be built from the library" in system
     assert "closest real option" in system
     assert '"abilities"' in system and '"rules"' in system
 
@@ -153,3 +154,55 @@ def test_no_valid_idea_carries_each_drafts_reason():
         propose_ideas(client, "something impossible that floats in nothing")
     assert set(error.value.reasons) == {"Hovercraft", "Impossible weight"}
     assert "hovercraft" in error.value.reasons["Hovercraft"]
+
+
+WAREHOUSE_PROMPT = "a three-wheeled delivery robot that drives through a warehouse to a loading dock"
+
+
+def test_a_request_no_template_fits_gives_a_from_scratch_idea_with_a_real_scene():
+    client, roles = counting_client()
+    idea_set, drafts = propose_ideas(client, WAREHOUSE_PROMPT)
+    assert sorted(roles) == ["design_ideas", "scratch_plan"]
+    scratch = idea_set.ideas[0]
+    assert scratch.template == "empty_world" and scratch.family == "navigation" and scratch.recommended
+    geoms = {geom.name: geom for geom in scratch.scene.geoms}
+    assert {"chassis", "wheel_left", "caster", "shelf_left", "lane_left", "crate"} <= set(geoms)
+    assert geoms["shelf_left"].color == "#2f5d8a" and geoms["lane_left"].color == "#f2c230"
+    assert any(zone.kind == "goal_zone" for zone in scratch.scene.zones)
+    design = drafts[scratch.id].design
+    assert design is not None and [stage.id for stage in design.stages] == ["world", "body:delivery_bot", "task"]
+    assert idea_set.ideas[1].template == "parking_car" and drafts[idea_set.ideas[1].id].design is None
+
+
+def test_a_from_scratch_idea_whose_stages_cannot_be_repaired_is_dropped_with_its_reason():
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        role = body["response_format"]["json_schema"]["name"]
+        content = fixture_content("design_ideas", "warehouse")
+        if role == "design_ideas":
+            content["ideas"] = content["ideas"][:1]
+        else:
+            content = fixture_content("scratch_plan", "default")
+            if role == "scratch_body_fix":
+                content = content["bodies"][0]
+            for part in (content["bodies"][0] if role == "scratch_plan" else content)["parts"]:
+                if part["id"] == "chassis":
+                    part["position"] = [0, 0, 0.05]
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(content)}}]})
+
+    client = ModelClient(Connection("http://fixtures.invalid/v1", "", "fixtures"), httpx.MockTransport(handle))
+    with pytest.raises(NoValidIdeas) as error:
+        propose_ideas(client, WAREHOUSE_PROMPT)
+    assert "inside the ground" in error.value.reasons["Warehouse runner"]
+
+
+def fixture_content(role: str, name: str) -> dict:
+    path = Path(__file__).parent / "fixtures" / role / f"{name}.json"
+    return json.loads(path.read_text(encoding="utf-8"))["replies"][0]["content"]
+
+
+def test_the_architect_may_choose_the_empty_world_and_is_told_what_cannot_be_built():
+    systems: list[str] = []
+    propose_ideas(answering([draft("Lot", "parking_car")], draft("Lot", "parking_car"), systems), "park")
+    system = " ".join(systems[0].split())
+    assert '"empty_world"' in system and "outline" in system

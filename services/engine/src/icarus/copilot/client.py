@@ -11,7 +11,17 @@ from icarus.contracts.copilot import Capability
 from icarus.copilot.response_schema import response_schema
 from icarus.copilot.settings import Connection, ModelSettingsStore, answers_from_fixtures
 
-__all__ = ["Connection", "CopilotError", "ModelClient", "NotConnected", "Reply", "capability_client", "copilot_client"]
+__all__ = [
+    "Connection",
+    "CopilotError",
+    "InputRejected",
+    "ModelClient",
+    "NotConnected",
+    "Reply",
+    "UserContent",
+    "capability_client",
+    "copilot_client",
+]
 
 TIMEOUT_SECONDS = 60.0
 NOT_CONNECTED = "Connect a model in Settings › AI models to use the copilot."
@@ -19,8 +29,12 @@ ERROR_TEXT_LIMIT = 300
 _THINK = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 _FORMAT_REFUSAL = re.compile(r"response_format|schema", re.IGNORECASE)
 _FENCE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
+# Statuses with which a service refuses the request's content, such as pictures a text-only model cannot read.
+_INPUT_REFUSALS = frozenset({400, 413, 415, 422})
 
 type Check[T] = Callable[[T], list[str]]
+# A user turn: plain text, or OpenAI content parts (text and image_url) when it carries pictures.
+type UserContent = str | list[dict[str, object]]
 
 
 class CopilotError(Exception):
@@ -31,7 +45,11 @@ class NotConnected(CopilotError):
     pass
 
 
-class _FormatRefused(CopilotError):
+class InputRejected(CopilotError):
+    """The service refused what was sent rather than failing to answer."""
+
+
+class _FormatRefused(InputRejected):
     """The service rejected the requested response format rather than the request itself."""
 
 
@@ -80,10 +98,10 @@ class ModelClient:
         key = self.connection.api_key
         return text.replace(key, "…") if key else text
 
-    def _post(self, body: dict, deadline: float | None = None) -> dict:
+    def _post(self, body: dict, deadline: float | None = None, patience: float = TIMEOUT_SECONDS) -> dict:
         headers = {"Authorization": f"Bearer {self.connection.api_key}"} if self.connection.api_key else {}
         url = f"{self.connection.endpoint}/chat/completions"
-        timeout = TIMEOUT_SECONDS if deadline is None else min(TIMEOUT_SECONDS, deadline - time.monotonic())
+        timeout = patience if deadline is None else min(patience, deadline - time.monotonic())
         if timeout <= 0:
             raise CopilotError("The model ran out of time to answer")
         try:
@@ -96,15 +114,16 @@ class ModelClient:
         if response.status_code >= 400:
             text = self._hide_key(response.text[:ERROR_TEXT_LIMIT])
             refused = response.status_code == 400 and _FORMAT_REFUSAL.search(response.text)
-            error_type = _FormatRefused if refused else CopilotError
+            error_type = InputRejected if response.status_code in _INPUT_REFUSALS else CopilotError
+            error_type = _FormatRefused if refused else error_type
             raise error_type(f"The model service answered {response.status_code}: {text}")
         try:
             return response.json()
         except ValueError as error:
             raise CopilotError("The model service did not answer with JSON") from error
 
-    def _message(self, body: dict, deadline: float | None = None) -> dict:
-        payload = self._post(body, deadline)
+    def _message(self, body: dict, deadline: float | None = None, patience: float = TIMEOUT_SECONDS) -> dict:
+        payload = self._post(body, deadline, patience)
         try:
             message = payload["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as error:
@@ -113,8 +132,8 @@ class ModelClient:
             raise CopilotError("The model service answered without a message")
         return message
 
-    def _complete(self, body: dict, deadline: float | None) -> tuple[str, str | None]:
-        message = self._message(body, deadline)
+    def _complete(self, body: dict, deadline: float | None, patience: float) -> tuple[str, str | None]:
+        message = self._message(body, deadline, patience)
         content = message.get("content")
         if not isinstance(content, str):
             raise CopilotError("The model service answered without text")
@@ -125,9 +144,10 @@ class ModelClient:
         role: str,
         output: type[T],
         system: str,
-        user: str,
+        user: UserContent,
         check: Check[T] | None = None,
         deadline: float | None = None,
+        timeout: float = TIMEOUT_SECONDS,
     ) -> Reply[T]:
         """A validated output; invalid output or a failed check is retried once with the reasons.
 
@@ -146,13 +166,13 @@ class ModelClient:
         for attempt in range(2):
             body = {"model": self.connection.model, "messages": messages, "response_format": response_format}
             try:
-                content, thinking = self._complete(body, deadline)
+                content, thinking = self._complete(body, deadline, timeout)
             except _FormatRefused:
                 if response_format["type"] == "json_object":
                     raise
                 response_format = {"type": "json_object"}
                 body = {"model": self.connection.model, "messages": messages, "response_format": response_format}
-                content, thinking = self._complete(body, deadline)
+                content, thinking = self._complete(body, deadline, timeout)
             try:
                 value = output.model_validate_json(content)
             except ValidationError as error:
