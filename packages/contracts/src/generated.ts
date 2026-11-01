@@ -24,7 +24,7 @@ export type Type7 = "vector";
  * @minItems 3
  * @maxItems 3
  */
-export type Value6 = [unknown, unknown, unknown];
+export type Value6 = [number, number, number];
 export type Type8 = "count";
 export type Value7 = number;
 export type Type9 = "asset";
@@ -257,12 +257,12 @@ export type Parent3 = string | null;
  * @minItems 3
  * @maxItems 3
  */
-export type Position = [unknown, unknown, unknown];
+export type Position = [number, number, number];
 /**
  * @minItems 4
  * @maxItems 4
  */
-export type Quaternion = [unknown, unknown, unknown, unknown];
+export type Quaternion = [number, number, number, number];
 export type Bodies1 = SceneBody[];
 export type Body1 = string;
 export type Color = string;
@@ -271,31 +271,31 @@ export type Name9 = string;
  * @minItems 3
  * @maxItems 3
  */
-export type Position1 = [unknown, unknown, unknown];
+export type Position1 = [number, number, number];
 /**
  * @minItems 4
  * @maxItems 4
  */
-export type Quaternion1 = [unknown, unknown, unknown, unknown];
+export type Quaternion1 = [number, number, number, number];
 export type Shape = "plane" | "box" | "sphere" | "capsule" | "cylinder";
 /**
  * @minItems 3
  * @maxItems 3
  */
-export type Size = [unknown, unknown, unknown];
+export type Size = [number, number, number];
 export type Geoms = SceneGeom[];
 /**
  * @minItems 3
  * @maxItems 3
  */
-export type Direction = [unknown, unknown, unknown];
+export type Direction = [number, number, number];
 export type Intensity = number;
 export type Name10 = string;
 /**
  * @minItems 3
  * @maxItems 3
  */
-export type Position2 = [unknown, unknown, unknown];
+export type Position2 = [number, number, number];
 export type Lights = SceneLight[];
 export type Revision2 = number;
 export type Code1 = string;
