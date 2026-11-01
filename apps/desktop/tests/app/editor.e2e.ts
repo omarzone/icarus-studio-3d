@@ -103,7 +103,11 @@ function project(point: Vec, box: { x: number; y: number; width: number; height:
   const eye: Vec = [7, 6, 9];
   const sub = (a: Vec, b: Vec): Vec => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const dot = (a: Vec, b: Vec) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-  const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const cross = (a: Vec, b: Vec): Vec => [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
   const norm = (a: Vec): Vec => {
     const length = Math.hypot(...a);
     return [a[0] / length, a[1] / length, a[2] / length];
@@ -129,7 +133,8 @@ test("edits commit once and the inspector shows only what the engine stored", as
     await page.locator('[data-cta="car"]').first().waitFor({ timeout: 60_000 });
     const id = await page.evaluate(async () => {
       const status = await window.icarus.engine.status();
-      const list: { id: string }[] = status.kind === "ready" ? await (await fetch(`${status.url}/projects`)).json() : [];
+      const list: { id: string }[] =
+        status.kind === "ready" ? await (await fetch(`${status.url}/projects`)).json() : [];
       return list[0]?.id ?? "";
     });
     await page.locator('[data-cta="car"]').first().click();
