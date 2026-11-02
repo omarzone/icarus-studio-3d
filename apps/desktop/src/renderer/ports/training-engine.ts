@@ -261,6 +261,10 @@ export function createEngineTrainingPort(
               );
             },
             onLog: (line) => {
+              // Until the copies show, the newest line says what the worker is doing, so the wait never looks stuck.
+              if (shown.kind === "message" && !endedEarlier && line.level === "info") {
+                show({ kind: "message", title: `${run.name} is starting`, body: line.text });
+              }
               lines.push(line);
               lines.splice(0, Math.max(0, lines.length - MAX_LOG_LINES));
               listener.onChange(["console"]);

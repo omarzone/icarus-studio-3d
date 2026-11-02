@@ -183,6 +183,8 @@ describe("training on the engine", () => {
       throw new Error("no stream");
     }
     expect(lives.at(-1)).toMatchObject({ kind: "message", title: "Run 3 is starting" });
+    stream.handlers.onLog({ elapsed: 2, level: "info", text: "Starting 12 copies of the world" });
+    expect(lives.at(-1)).toMatchObject({ title: "Run 3 is starting", body: "Starting 12 copies of the world" });
     stream.handlers.onSnapshot({
       step: 32_768,
       geoms: ["chassis"],
@@ -196,8 +198,11 @@ describe("training on the engine", () => {
     stream.handlers.onLog({ elapsed: 3, level: "info", text: "checkpoint 0 saved" });
     stream.handlers.onMetric(trainPoint(32_768));
     stream.handlers.onCheckpoint(checkpoint(0, 0));
-    expect(changes).toEqual(["console", "metrics", "checkpoints", "live-view"]);
-    expect(await port.getConsole("p")).toEqual([{ time: "0:00:03", text: "checkpoint 0 saved", level: "info" }]);
+    expect(changes).toEqual(["console", "console", "metrics", "checkpoints", "live-view"]);
+    expect(await port.getConsole("p")).toEqual([
+      { time: "0:00:02", text: "Starting 12 copies of the world", level: "info" },
+      { time: "0:00:03", text: "checkpoint 0 saved", level: "info" },
+    ]);
     stream.handlers.onStatus(status({ state: "failed" }));
     expect(calls.onFailed).toHaveBeenCalledTimes(1);
     expect(lives.at(-1)).toMatchObject({
