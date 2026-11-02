@@ -3,7 +3,7 @@ name: reward-design
 title: Choose reward terms and balance their weights
 when: The person asks about rewards, weights, what the body is paid for, or a brain games its reward.
 tools: [library, inspect_object, read_run, try, propose]
-version: 2
+version: 3
 ---
 The reward is a weighted sum of library terms, computed at every one of the 600 control steps of a 30 s episode.
 A term paid once (a bonus or a penalty) and a term paid every step live on different scales: a per-step term at
@@ -11,7 +11,9 @@ weight w can add up to 600 × w per episode.
 
 1. **Pick the family's core.** Navigation needs `progress_to_goal` and `reach_goal`; locomotion needs
    `forward_progress`. Without them there is nothing to learn toward. Use only terms of the task's family; posture
-   and effort (`stay_upright`, `fall_penalty`, `energy_cost`) also fit navigation for legged bodies.
+   and effort (`stay_upright`, `fall_penalty`, `energy_cost`) also fit navigation for legged bodies. Other jobs
+   have their own core: `object_to_goal` for pushing (push-an-object), `coverage` for cleaning or exploring, and
+   `height_gain` for jumping, climbing or getting up (jump-and-climb, balance-and-stand).
 2. **Size each term per episode.** Estimate what a good episode earns from each term: `reach_goal` = 10 once;
    `progress_to_goal` = 1 per metre (12 for a 12 m approach); `time_penalty` = -0.01 is -6 over 600 steps;
    `collision_penalty` = -5 per new contact; `fall_penalty` = -10 once and the episode ends; `energy_cost` = -0.001

@@ -1,9 +1,9 @@
 ---
 name: diagnose-a-brain
 title: Diagnose a brain that does not learn and fix it
-when: A run finished or is training and the body falls, stalls, wanders, crashes or never succeeds.
+when: A run's numbers look wrong and the person wants to know why: success stays low, return stalls, episodes end early, the body falls, crashes or times out.
 tools: [read_run, inspect_object, try, look, propose, train]
-version: 3
+version: 4
 ---
 Every explanation comes from the run's own data. When there is no run, say no training has run yet and offer one.
 Do not wait for a stall: the run brief's health facts and coach notes already name what blocks learning at the
@@ -36,7 +36,8 @@ first checkpoints (reward paid without doing the task, objects touched, early en
    ("the left foot touches the ground 98% of the time ... (dragged)"), every foot in the air at once (hopping),
    action change per step (twitching), joints at their limits and sideways drift. Quote the number and add the
    one gait term that answers it, as walking-robot lists: `feet_air_time`, `body_height`, `smooth_actions`,
-   `joint_limits` or `heading_and_drift`. Compare the same fact at the next run's checkpoints to see it worked.
+   `joint_limits` or `heading_and_drift`. Compare the same fact at the next run's checkpoints to see it worked;
+   to see the motion itself, follow watch-a-training.
 8. **Propose one fix.** `try` the smallest change that answers the largest group, `look` if it changes layout,
    then `propose` with the evidence (the group and its count). Offer `train`, continuing from the best brain when
    the sensors and motors did not change.

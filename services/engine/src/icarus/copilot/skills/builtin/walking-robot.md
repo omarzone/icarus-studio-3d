@@ -1,12 +1,13 @@
 ---
 name: walking-robot
-title: Design a robot that learns to walk
-when: The person wants legs, a walker, a humanoid, a quadruped or any body that moves by stepping.
+title: Design any legged body that learns to walk
+when: The person wants legs, a walker, a humanoid, a quadruped, an insect or any body that moves forward by stepping.
 tools: [library, inspect_object, try, look, propose, train]
-version: 2
+version: 3
 ---
 Locomotion pays the body for moving forward along +x without falling. A legged body has fallen once its root
-drops below 40% of its start height or turns upside down; the episode then ends.
+drops below 40% of its start height; the episode then ends. The two templates are examples: a quadruped or a
+six-legged body uses the same leg chain once per leg, spread around the torso.
 
 1. **Start from a template.** Call `library` with `walker_robot` (a 10 kg torso 0.3 × 0.3 × 0.4 m on two legs,
    six motors) or `humanoid` (twelve motors, balance and foot sensors). Try its operations first and adapt sizes,

@@ -13,15 +13,20 @@ from icarus.library.templates import TEMPLATES
 from icarus.sim.start_pose import START_ACROSS, START_HEADING_DEG
 
 EXPECTED = {
-    "parking-and-navigation",
+    "reach-a-target",
     "walking-robot",
-    "race-and-obstacle-course",
+    "avoid-obstacles",
     "reward-design",
     "diagnose-a-brain",
     "curriculum-and-warm-start",
     "environment-look",
     "sensors-for-a-task",
     "about-icarus-studio",
+    "watch-a-training",
+    "balance-and-stand",
+    "push-an-object",
+    "jump-and-climb",
+    "move-a-joint",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.

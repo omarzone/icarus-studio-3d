@@ -1,9 +1,9 @@
 ---
 name: sensors-for-a-task
 title: Give a body the senses its task needs
-when: The person asks what the body can see or feel, or a body must react to obstacles, balance or contact.
+when: The person asks what the body can see or feel, or wants to add, aim, tilt or name a sensor: distance rays, balance or touch.
 tools: [library, inspect_object, try, look, propose]
-version: 2
+version: 3
 ---
 The brain sees only its observation: its sensors plus what the task adds. Navigation already adds forward and side
 speed, turn rate, joint angles and the goal's distance and bearing; locomotion adds every joint's angle and speed.
