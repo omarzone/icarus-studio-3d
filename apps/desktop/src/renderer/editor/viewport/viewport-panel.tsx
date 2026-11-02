@@ -16,6 +16,7 @@ import { RaysMenu } from "./rays-menu.tsx";
 import { ReplayTab } from "./replay-tab.tsx";
 import { SceneTab } from "./scene-tab.tsx";
 import { ViewportSurface } from "./viewport-surface.tsx";
+import { type ViewportTabs, ViewportTabsContext } from "./viewport-tabs.ts";
 
 export type ViewportTab = { id: string; label: string };
 
@@ -93,6 +94,20 @@ export function ViewportPanel({
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
+  // The checkpoint a card over the view asked Replay to play; choosing a tab by hand forgets it.
+  const [replayFrom, setReplayFrom] = useState<number | null>(null);
+  const select = (tab: string) => {
+    setActive(tab);
+    setReplayFrom(null);
+  };
+  const tabControl: ViewportTabs | null = tabs.some((tab) => tab.id === "replay")
+    ? {
+        replay: (step) => {
+          setActive("replay");
+          setReplayFrom(step);
+        },
+      }
+    : null;
   // Each tab keeps the camera mode chosen in it; `frame` asks the camera to frame everything again.
   const [modes, setModes] = useState<Readonly<Record<string, CameraMode>>>({});
   const [frame, setFrame] = useState(0);
@@ -124,7 +139,7 @@ export function ViewportPanel({
       tabs={
         <>
           {tabs.map((tab) => (
-            <PanelTab key={tab.id} label={tab.label} active={tab.id === active} onSelect={() => setActive(tab.id)} />
+            <PanelTab key={tab.id} label={tab.label} active={tab.id === active} onSelect={() => select(tab.id)} />
           ))}
           <Act
             cta="Add a view"
@@ -158,22 +173,24 @@ export function ViewportPanel({
     >
       <CameraViewContext value={camera}>
         <RayViewContext value={rays}>
-          <div className="flex h-full flex-col">
-            {toolbar}
-            {active === "scene" ? (
-              <SceneTab {...surface} copiesPreview={copiesPreview} />
-            ) : active === "game-view" ? (
-              <GameViewTab {...surface} />
-            ) : active === "play" ? (
-              <PlayTab {...surface} play={play} />
-            ) : active === "live-training" ? (
-              <LiveTrainingTab {...surface} training={training} />
-            ) : active === "replay" ? (
-              <ReplayTab {...surface} training={training} />
-            ) : (
-              <ViewportSurface {...surface} />
-            )}
-          </div>
+          <ViewportTabsContext value={tabControl}>
+            <div className="flex h-full flex-col">
+              {toolbar}
+              {active === "scene" ? (
+                <SceneTab {...surface} copiesPreview={copiesPreview} />
+              ) : active === "game-view" ? (
+                <GameViewTab {...surface} />
+              ) : active === "play" ? (
+                <PlayTab {...surface} play={play} />
+              ) : active === "live-training" ? (
+                <LiveTrainingTab {...surface} training={training} />
+              ) : active === "replay" ? (
+                <ReplayTab {...surface} training={training} start={replayFrom} />
+              ) : (
+                <ViewportSurface {...surface} />
+              )}
+            </div>
+          </ViewportTabsContext>
         </RayViewContext>
       </CameraViewContext>
     </Panel>

@@ -28,12 +28,17 @@ const SCRUB_STEPS = 1000;
 const ignorePick = () => undefined;
 
 // Replay of any checkpoint's recorded episode, exactly as MuJoCo computed it: play, scrub and change speed.
-export function ReplayTab({ training, ...surface }: ViewportSurfaceProps & { training?: TrainingView }) {
+// `start` is a checkpoint to open on and play at once, as the live view's episode bar asks.
+export function ReplayTab({
+  training,
+  start = null,
+  ...surface
+}: ViewportSurfaceProps & { training?: TrainingView; start?: number | null }) {
   return (
     <ViewportSurface {...surface}>
       {training ? (
         <div data-ui-id="TAB-REPLAY" className="absolute inset-0 bg-panel">
-          <Checkpoints project={training.project} />
+          <Checkpoints project={training.project} start={start} />
         </div>
       ) : null}
     </ViewportSurface>
@@ -45,9 +50,9 @@ function defaultStep(marks: readonly CheckpointMark[]): number | null {
   return (replayable.find((mark) => mark.best) ?? replayable.at(-1))?.step ?? null;
 }
 
-function Checkpoints({ project }: { project: string }) {
+function Checkpoints({ project, start }: { project: string; start: number | null }) {
   const checkpoints = useCheckpoints(project);
-  const [chosen, setChosen] = useState<number | null>(null);
+  const [chosen, setChosen] = useState<number | null>(start);
   return (
     <QueryView
       query={checkpoints}
@@ -61,7 +66,9 @@ function Checkpoints({ project }: { project: string }) {
     >
       {(marks) => {
         const step = chosen !== null && marks.some((mark) => mark.step === chosen) ? chosen : defaultStep(marks);
-        return step === null ? null : <ReplayLoader project={project} marks={marks} step={step} onChoose={setChosen} />;
+        return step === null ? null : (
+          <ReplayLoader project={project} marks={marks} step={step} autoplay={step === start} onChoose={setChosen} />
+        );
       }}
     </QueryView>
   );
@@ -71,21 +78,26 @@ type LoaderProps = {
   project: string;
   marks: readonly CheckpointMark[];
   step: number;
+  autoplay: boolean;
   onChoose: (step: number) => void;
 };
 
-function ReplayLoader({ project, marks, step, onChoose }: LoaderProps) {
+function ReplayLoader({ project, marks, step, autoplay, onChoose }: LoaderProps) {
   const replay = useReplay(project, step);
   return (
     <QueryView query={replay} loading={<LoadingState label="Loading the recorded episode" />}>
-      {(data) => <ReplayPlayer key={step} replay={data} marks={marks} step={step} onChoose={onChoose} />}
+      {(data) => (
+        <ReplayPlayer key={step} replay={data} marks={marks} step={step} autoplay={autoplay} onChoose={onChoose} />
+      )}
     </QueryView>
   );
 }
 
 // Moves the player with the screen's frames while it plays.
-function usePlayer(duration: number) {
-  const [player, setPlayer] = useState<PlayerState>(() => startPlayer(duration));
+function usePlayer(duration: number, autoplay: boolean) {
+  const [player, setPlayer] = useState<PlayerState>(() =>
+    autoplay ? togglePlaying(startPlayer(duration)) : startPlayer(duration),
+  );
   useEffect(() => {
     if (!player.playing) {
       return;
@@ -103,10 +115,16 @@ function usePlayer(duration: number) {
   return [player, setPlayer] as const;
 }
 
-type PlayerProps = { replay: Replay; marks: readonly CheckpointMark[]; step: number; onChoose: (step: number) => void };
+type PlayerProps = {
+  replay: Replay;
+  marks: readonly CheckpointMark[];
+  step: number;
+  autoplay: boolean;
+  onChoose: (step: number) => void;
+};
 
-function ReplayPlayer({ replay, marks, step, onChoose }: PlayerProps) {
-  const [player, setPlayer] = usePlayer(replay.duration);
+function ReplayPlayer({ replay, marks, step, autoplay, onChoose }: PlayerProps) {
+  const [player, setPlayer] = usePlayer(replay.duration, autoplay);
   const times = useMemo(() => replay.frames.map((frame) => frame.time), [replay]);
   const start = times[0] ?? 0;
   const poses = replay.frames[frameAt(times, start + player.time)]?.poses ?? new Map();

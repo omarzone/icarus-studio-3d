@@ -160,8 +160,8 @@ export function liveView(run: RunStatus, checkpoints: readonly CheckpointInfo[],
   };
   const first = rollout?.frames[0]?.time;
   const last = rollout?.frames.at(-1)?.time;
-  if (first !== undefined && last !== undefined) {
-    view.episode = { at: episodeClock(0), length: episodeClock(last - first), played: 0 };
+  if (rollout && first !== undefined && last !== undefined) {
+    view.episode = { step: rollout.step, at: episodeClock(0), length: episodeClock(last - first), played: 0 };
   }
   return view;
 }

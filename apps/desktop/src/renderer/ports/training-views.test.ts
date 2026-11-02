@@ -125,6 +125,7 @@ describe("live view and console", () => {
       frames: [frame(0.2), frame(1.8)],
     };
     expect(liveView(status(), [checkpoint(250_000, 0.714)], rollout).episode).toEqual({
+      step: 250_000,
       at: "0:00.0",
       length: "0:01.6",
       played: 0,

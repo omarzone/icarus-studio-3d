@@ -37,11 +37,22 @@ test("sprint 5 demo: train the parking car, watch the copies, replay a checkpoin
     await replay.locator('[data-cta="play-the-replay"]').click();
     await expect(replay.locator('[data-cta="pause-the-replay"]')).toBeVisible();
 
+    // The live view's episode bar plays its checkpoint in Replay instead of doing nothing.
+    await page.getByRole("tab", { name: "Live training" }).click();
+    await page.locator('[data-ui-id="PNL-VIEWPORT"] [data-cta="play-replay"]').click();
+    await expect(replay.locator('[data-cta="pause-the-replay"]')).toBeVisible({ timeout: 30_000 });
+
     await page.locator('[data-ui-id="HDR-WORKSPACE"] [data-cta="stop"]').click();
     await page.locator('[data-route-overlay="MOD-STOP-RUN"] [data-cta="stop-run-1"]').click();
     await page.waitForSelector('[data-route-screen="SCR-RESULTS"]', { timeout: 30_000 });
     await page.locator('[data-ui-id="HDR-WORKSPACE"] [data-goes-to="SCR-TRAIN"]').first().click();
     await page.waitForSelector('[data-route-screen="SCR-TRAIN"]');
+    // With nothing training, the Stop tool says so instead of opening a stop dialog for no run.
+    await expect(page.locator('[data-ui-id="PNL-VIEWPORT"] [role="toolbar"] [data-cta="stop"]')).toHaveAttribute(
+      "aria-disabled",
+      "true",
+      { timeout: 120_000 },
+    );
     await expect(
       page
         .locator('[data-ui-id="PNL-RUNS"]')

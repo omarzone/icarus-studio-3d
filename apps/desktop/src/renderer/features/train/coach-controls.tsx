@@ -43,7 +43,11 @@ function EngineCoachControls({ project }: { project: string }) {
       ) : null}
       <Act
         cta="Diagnose now"
-        title="Ask the coach why this run behaves as it does; the answer appears in the chat"
+        title={
+          run === undefined || run === ""
+            ? "Diagnose now: start a run first; the coach explains a run it can read"
+            : "Ask the coach why this run behaves as it does; the answer appears in the chat"
+        }
         disabled={run === undefined || run === "" || diagnose.isPending}
         onClick={() => diagnose.mutate({ project, run }, { onSuccess: refresh })}
         className={buttonClass("ghost", "h-6.5! px-2!")}

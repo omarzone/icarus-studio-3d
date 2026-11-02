@@ -1,6 +1,7 @@
 // MOD-AUTO-RIG
 import { useQuery } from "@tanstack/react-query";
 import { CloseOverlay, GoTo } from "../../app/navigation/go-to.tsx";
+import { NotAvailableYet } from "../../app/runtime/pending.ts";
 import { usePort } from "../../app/runtime/port.tsx";
 import { bodyPort } from "../../ports/body-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
@@ -26,21 +27,29 @@ export function AutoRigDialog() {
 function AutoRig({ body }: { body: string }) {
   const port = usePort(bodyPort);
   const query = useQuery({ queryKey: ["body", body, "auto-rig"], queryFn: () => port.getAutoRig(body) });
+  // With no auto-rig behind it there is nothing to cancel or see, so the only way on is Close.
+  const notYet = query.error instanceof NotAvailableYet;
   return (
     <Dialog
       title={query.data ? `Auto-rigging ${query.data.file}` : "Auto-rigging"}
       footer={
-        <>
-          <CloseOverlay cta="Run in background" className={dialogButtonClass("secondary")}>
-            Run in background
+        notYet ? (
+          <CloseOverlay cta="Close" className={dialogButtonClass("primary")}>
+            Close
           </CloseOverlay>
-          <ActionButton cta="Cancel" run={() => port.cancelAutoRig(body)} className={dialogButtonClass("secondary")}>
-            Cancel
-          </ActionButton>
-          <GoTo to="STA-BODY-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>
-            See result
-          </GoTo>
-        </>
+        ) : (
+          <>
+            <CloseOverlay cta="Run in background" className={dialogButtonClass("secondary")}>
+              Run in background
+            </CloseOverlay>
+            <ActionButton cta="Cancel" run={() => port.cancelAutoRig(body)} className={dialogButtonClass("secondary")}>
+              Cancel
+            </ActionButton>
+            <GoTo to="STA-BODY-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>
+              See result
+            </GoTo>
+          </>
+        )
       }
     >
       <QueryView query={query}>

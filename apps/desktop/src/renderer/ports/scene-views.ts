@@ -247,7 +247,7 @@ export function componentGroups(catalog: LibraryCatalog): ComponentGroup[] {
   const groups = new Map<string, ComponentGroup["kinds"][number][]>();
   for (const kind of catalog.components) {
     const kinds = groups.get(kind.group) ?? [];
-    kinds.push({ id: kind.kind, label: kind.label, icon: sceneIcon(kind.icon) });
+    kinds.push({ id: kind.kind, label: kind.label, icon: sceneIcon(kind.icon), unique: kind.unique });
     groups.set(kind.group, kinds);
   }
   return [...groups].map(([label, kinds]) => ({ label, kinds }));

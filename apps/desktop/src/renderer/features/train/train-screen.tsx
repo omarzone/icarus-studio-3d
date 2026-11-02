@@ -1,5 +1,7 @@
 // SCR-TRAIN · STA-TRAIN-FAILED
+import { useContext } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
@@ -7,6 +9,7 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { TRAIN_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
+import { ViewportTabsContext } from "../../editor/viewport/viewport-tabs.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { PlaybackBar } from "../../ui/playback-bar.tsx";
 import { useProjectKey, useProjectName } from "../../ui/project-name.ts";
@@ -19,6 +22,9 @@ import { TRAIN_CONFIG, TRAIN_VARIANTS } from "./train-variants.ts";
 import { useIsTraining, useLiveView, useTrainingStream } from "./use-training.ts";
 
 const TOOL_ROUTES = { Train: "MOD-START-TRAINING", Stop: "MOD-STOP-RUN" } as const;
+// With nothing training, Pause and Stop have nothing to act on.
+const IDLE = "No run is training right now";
+const IDLE_TOOLS = { Pause: IDLE, Stop: IDLE } as const;
 const VIEWS = [
   { id: "live-training", label: "Live training" },
   { id: "replay", label: "Replay" },
@@ -67,7 +73,14 @@ function TrainWorkspace({ project, scene }: { project: { id: string; name: strin
               <ViewportPanel
                 label="Every parallel copy training"
                 tabs={VIEWS}
-                toolbar={<Toolbar groups={TRAIN_TOOLS} selected="Train" overrides={TOOL_ROUTES} />}
+                toolbar={
+                  <Toolbar
+                    groups={TRAIN_TOOLS}
+                    selected="Train"
+                    overrides={TOOL_ROUTES}
+                    unavailable={training ? undefined : IDLE_TOOLS}
+                  />
+                }
                 overlays={<LiveOverlays project={project.id} />}
                 training={{ project: project.id, onReconnect: stream.reconnect }}
               />
@@ -94,10 +107,14 @@ function TrainWorkspace({ project, scene }: { project: { id: string; name: strin
 
 function LiveOverlays({ project }: { project: string }) {
   const view = useLiveView(project);
+  const tabs = useContext(ViewportTabsContext);
+  // The prototype has no recorded episodes to replay, so its bar keeps the design.
+  const app = useRuntimeMode() === "app";
   const data = view.data;
   if (!data) {
     return null;
   }
+  const episode = data.episode;
   return (
     <>
       <div className="absolute top-3 left-3 flex flex-col gap-0.5 rounded-card-sm bg-overlay px-3.25 py-2.5">
@@ -105,14 +122,16 @@ function LiveOverlays({ project }: { project: string }) {
         <span className="text-headline font-semibold">{data.checkpoint}</span>
         <span className="text-ui text-fg-secondary">{data.result}</span>
       </div>
-      {data.episode ? (
+      {episode ? (
         <div className="absolute inset-x-3 bottom-3 rounded-card-sm bg-overlay px-3 py-2">
           <PlaybackBar
-            at={data.episode.at}
-            length={data.episode.length}
-            played={data.episode.played}
-            marker={data.episode.failureAt}
+            at={episode.at}
+            length={episode.length}
+            played={episode.played}
+            marker={episode.failureAt}
             chip={data.speed}
+            onPlay={app && tabs ? () => tabs.replay(episode.step) : undefined}
+            playTitle="Replay this checkpoint's recorded episode"
           />
         </div>
       ) : null}

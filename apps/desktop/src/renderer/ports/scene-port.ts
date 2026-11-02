@@ -148,7 +148,8 @@ export type Inspection =
 
 export type PropertyEdit = { scene: string; section: string; property: string; value: PropertyValue };
 
-export type ComponentKind = { id: string; label: string; icon: SceneIcon };
+// `unique` kinds fit once per object; the prototype's kinds leave it out.
+export type ComponentKind = { id: string; label: string; icon: SceneIcon; unique?: boolean };
 export type ComponentGroup = { label: string; kinds: readonly ComponentKind[] };
 
 // `objects` names the world objects that vary, or would once it is on; samples without it list none.

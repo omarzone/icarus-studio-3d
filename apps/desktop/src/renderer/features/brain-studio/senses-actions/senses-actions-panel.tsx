@@ -6,6 +6,7 @@ import { Act } from "../../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../../app/runtime/engine-query.tsx";
 import { usePort } from "../../../app/runtime/port.tsx";
 import { brainPort, type SensesActions } from "../../../ports/brain-port.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../../ui/not-yet.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { EmptyState } from "../../../ui/states.tsx";
@@ -23,6 +24,7 @@ export function SensesActionsPanel({ brain }: { brain: string }) {
   const update = { onSuccess: (next: SensesActions) => client.setQueryData(key, next) };
   const toggleInput = useEngineAction(port.toggleInput);
   const toggleOutput = useEngineAction(port.toggleOutput);
+  const notYet = useNotYet();
   return (
     <Panel
       id="PNL-SENSES-ACTIONS"
@@ -38,7 +40,8 @@ export function SensesActionsPanel({ brain }: { brain: string }) {
           cta="Add a sensor input"
           aria-label="Add a sensor input"
           title="Add a sensor input"
-          className="grid h-6 w-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80"
+          className={`grid h-6 w-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80 ${NOT_YET_CLASS}`}
+          {...notYet?.("Add a sensor input", "Add a sensor to the body and feed its readings to the brain")}
         >
           <Plus size={14} strokeWidth={1.75} aria-hidden />
         </Act>

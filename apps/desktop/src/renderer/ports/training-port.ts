@@ -58,7 +58,8 @@ export type LiveView = {
   caption: string;
   checkpoint: string;
   result: string;
-  episode?: { at: string; length: string; played: number; failureAt?: number };
+  // `step` is the checkpoint whose recorded episode it is, which Replay opens.
+  episode?: { step: number; at: string; length: string; played: number; failureAt?: number };
   speed: string;
 };
 

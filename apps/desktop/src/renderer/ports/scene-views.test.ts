@@ -79,4 +79,5 @@ it("groups component kinds for the Add component picker", () => {
     label: "Motor",
     icon: "motor",
   });
+  expect(groups.flatMap((group) => group.kinds).find((kind) => kind.id === "transform")?.unique).toBe(true);
 });

@@ -22,6 +22,8 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Home | From the community strip | Panel says the community is not available yet | pending-honest | |
 | Launcher header | Home, Projects, Community | Navigate; Community pages are pending | works / pending-honest | |
 | Launcher header | Search creations, Bell, Avatar | Community, notifications and sign-in screens say not available yet | pending-honest | |
+| Sign in dialog | Continue with Google, GitHub, email | Dimmed, *not available yet* | pending-honest | Opened an empty profile page as if signed in |
+| Ideas | Tweak | Dimmed, *not available yet* | pending-honest | Undimmed, answered with a generic notice |
 | Projects | Filters All · Training · Drafts · Published | Filter the list; a project with a live run (starting, running or stopping) shows as *Training · Run N at P%*; Published is empty and its empty state says publishing is not available yet | works | Every project was a draft, so Training and Published were always empty → the list reads each project's runs; Published says why it is empty |
 | Projects | Project card | Opens the project in World | works | |
 | Projects | *Open a file* | Opens `MOD-IMPORT` (pending); tooltip added | pending-honest | |
@@ -62,6 +64,7 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Body | Toolbar Import, Auto-rig | Open pending dialogs | pending-honest | |
 | Body | Toolbar Bone, Joint, Motor, Sensor, Mirror, Collider, Weights, Test pose | Dimmed with tooltip and notice | pending-honest | Only highlighted themselves |
 | Brain | Senses and actions, Learning, readings card | Say not available yet | pending-honest | |
+| Brain | Senses and actions `+` (add a sensor input) | Dimmed, *not available yet* | pending-honest | Did nothing |
 | Brain | Inspector, Train | Work | works | |
 | Brain | Viewport | Draws the project scene | works | Was an empty panel |
 | Brain | Toolbar Senses | Dimmed with tooltip and notice | pending-honest | Only highlighted itself |
@@ -69,8 +72,10 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Train | Train tool, header Train, *Start run N* | Start a real run; the dialog now explains practice, steps, copies and time | works | Steps, copies and time were unexplained → plain-words intro and field tooltips |
 | Train | Stop tool, header Stop, Stop dialog | Stop the run, keeping the best brain | works | |
 | Train | Pause tool | Opens the stop dialog, where Pause says not available yet | pending-honest | |
+| Train | Pause and Stop tools with nothing training | Dimmed; hover and click say no run is training | works | Opened a stop dialog for no run, whose buttons failed |
 | Train | Timelapse, Autopilot | Open screens that say not available yet | pending-honest | |
 | Train | Runs, Metrics, Console, Live training, Replay | Real run data | works | |
+| Train | Live training episode bar play button | Opens Replay on that checkpoint's recorded episode, playing | works | Did nothing, also after the run finished |
 | Results | Every panel | Says not available yet | pending-honest | |
 | Build | Every panel and dialog | Says not available yet | pending-honest | |
 | Play | Header | Names the brain that plays (untrained or trained run N) with *Train it* while untrained | works | Which brain played was only a small line in a side panel → header chip |
@@ -87,10 +92,12 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Settings | Profile, Privacy, Notifications | Say not available yet | pending-honest | |
 | Dialogs | Start training, Stop run, Rename, Duplicate, Delete, History, Training copies, Add component | Work | works | |
 | Dialogs | Share, Import, Auto-rig, Autopilot, Brain sizes, Brain source, Export, Publish | Say not available yet | pending-honest | |
+| Auto-rig dialog | Footer | Only Close while auto-rig is not available | pending-honest | Cancel answered *not available yet* and See result opened a failed-check state |
+| Notices | Every notice | Leaves after a few seconds; the same notice is not stacked twice | works | Stayed until dismissed and piled up over the bottom of the workspace (Library cards, Console) |
 
 ## Counts
 
-Rows of the inventory after the fixes (72): **works 45**, **pending-honest 25**, **confusing 1**, **broken 1**. A row whose status depends on the page, like the launcher links, counts once as works.
+Rows of the inventory after the fixes (79): **works 48**, **pending-honest 29**, **confusing 1**, **broken 1**. A row whose status depends on the page, like the launcher links, counts once as works.
 
 Before the fixes, 34 rows were broken or confusing; 32 are fixed and 2 remain (the inspector *auto* chip, Play's *Chat options*).
 

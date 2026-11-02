@@ -5,7 +5,7 @@ import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { AddComponentMenu } from "../../editor/inspector/add-component-menu.tsx";
-import { useSceneCache } from "../../editor/scene-queries.ts";
+import { useInspection, useSceneCache } from "../../editor/scene-queries.ts";
 import { scenePort } from "../../ports/scene-port.ts";
 import { useAnchoredStyle } from "../../ui/anchored.ts";
 import { useDismiss } from "../../ui/dismiss.ts";
@@ -27,6 +27,8 @@ function AddComponentPicker({ scene }: { scene: string }) {
   const port = usePort(scenePort);
   const cache = useSceneCache(scene);
   const add = useEngineAction(port.addComponent);
+  const inspection = useInspection(scene).data;
+  const taken = inspection?.kind === "object" ? inspection.sections.map((section) => section.id) : [];
   const anchor = useRef<HTMLElement | null>(null);
   const placed = useAnchor(anchor);
   const surface = useRef<HTMLDivElement>(null);
@@ -37,6 +39,7 @@ function AddComponentPicker({ scene }: { scene: string }) {
   return (
     <div ref={surface} role="dialog" aria-label="Add component" style={placement} className="fixed z-40 w-90">
       <AddComponentMenu
+        taken={taken}
         onPick={(kind) =>
           add.mutate(
             { scene, kind },

@@ -122,8 +122,8 @@ const STEP_CLASS =
 function CopyPicker({ followed, count, onPick }: { followed: number; count: number; onPick: (copy: number) => void }) {
   return (
     <span className="pointer-events-auto flex items-center gap-1 rounded-full bg-overlay px-1.5 py-1 text-meta">
-      <button
-        type="button"
+      <Act
+        cta="Follow the previous copy"
         aria-label="Follow the previous copy"
         title="Follow the previous copy"
         disabled={followed === 0}
@@ -131,12 +131,12 @@ function CopyPicker({ followed, count, onPick }: { followed: number; count: numb
         className={STEP_CLASS}
       >
         <ChevronLeft size={14} aria-hidden />
-      </button>
+      </Act>
       <span className="font-mono">
         Following copy {followed + 1} of {count}
       </span>
-      <button
-        type="button"
+      <Act
+        cta="Follow the next copy"
         aria-label="Follow the next copy"
         title="Follow the next copy"
         disabled={followed >= count - 1}
@@ -144,7 +144,7 @@ function CopyPicker({ followed, count, onPick }: { followed: number; count: numb
         className={STEP_CLASS}
       >
         <ChevronRight size={14} aria-hidden />
-      </button>
+      </Act>
     </span>
   );
 }

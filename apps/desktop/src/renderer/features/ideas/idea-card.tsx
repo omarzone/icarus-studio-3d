@@ -2,11 +2,14 @@ import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { ScenePreview } from "../../editor/viewport/scene-preview.tsx";
 import type { Idea } from "../../ports/ideas-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 
 type Props = { idea: Idea; onUse: () => void; onTweak: () => void };
 
 // One generated alternative: real 3D preview on top, what it is, how long it trains, then Use this and Tweak.
 export function IdeaCard({ idea, onUse, onTweak }: Props) {
+  // Tweaking an idea has no engine side yet; using one and then chatting changes it.
+  const notYet = useNotYet();
   return (
     <article aria-label={idea.title} className="relative flex flex-col overflow-hidden rounded-[18px] bg-control">
       <div role="img" aria-label={`Preview of ${idea.title}`} className="relative h-85 shrink-0 bg-panel">
@@ -32,7 +35,15 @@ export function IdeaCard({ idea, onUse, onTweak }: Props) {
           >
             Use this
           </GoTo>
-          <Act cta="Tweak" onClick={onTweak} className={buttonClass("secondary", "h-8.5! px-4! text-body!")}>
+          <Act
+            cta="Tweak"
+            onClick={onTweak}
+            className={buttonClass("secondary", `h-8.5! px-4! text-body! ${NOT_YET_CLASS}`)}
+            {...notYet?.(
+              "Tweak",
+              "Change this idea with the copilot before building it. Meanwhile, use it and ask in the chat",
+            )}
+          >
             Tweak
           </Act>
         </div>

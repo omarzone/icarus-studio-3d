@@ -2,11 +2,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { accountPort, type SignInProvider } from "../../ports/account-port.ts";
 import { Dialog } from "../../ui/dialog.tsx";
+import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 import { GitHubMark, GoogleMark } from "./brand-marks.tsx";
 
 const PROVIDERS: readonly { provider: SignInProvider; label: string; mark: ReactNode; className: string }[] = [
@@ -35,25 +36,39 @@ export function SignInDialog() {
   const account = usePort(accountPort);
   const client = useQueryClient();
   const signIn = useEngineAction(account.signIn);
+  // Signing in has no engine side yet, so the app dims the providers instead of opening an empty profile.
+  const notYet = useNotYet();
   return (
     <Dialog title="Sign in to Icarus" width="w-105">
       <p className="m-0 leading-normal text-fg-secondary">
         You only need an account to share or remix. Creating and training work offline, on your computer.
       </p>
-      {PROVIDERS.map(({ provider, label, mark, className }) => (
-        <GoTo
-          key={provider}
-          to="SCR-PROFILE"
-          cta={label}
-          onClick={() =>
-            signIn.mutate(provider, { onSuccess: () => client.invalidateQueries({ queryKey: ["account"] }) })
-          }
-          className={`flex h-11 items-center justify-center gap-2.5 rounded-card-sm font-semibold active:opacity-80 ${className}`}
-        >
-          {mark}
-          {label}
-        </GoTo>
-      ))}
+      {PROVIDERS.map(({ provider, label, mark, className }) =>
+        notYet ? (
+          <Act
+            key={provider}
+            cta={label}
+            className={`flex h-11 items-center justify-center gap-2.5 rounded-card-sm font-semibold active:opacity-80 ${className} ${NOT_YET_CLASS}`}
+            {...notYet(label, "Sign in to share and remix creations with the community")}
+          >
+            {mark}
+            {label}
+          </Act>
+        ) : (
+          <GoTo
+            key={provider}
+            to="SCR-PROFILE"
+            cta={label}
+            onClick={() =>
+              signIn.mutate(provider, { onSuccess: () => client.invalidateQueries({ queryKey: ["account"] }) })
+            }
+            className={`flex h-11 items-center justify-center gap-2.5 rounded-card-sm font-semibold active:opacity-80 ${className}`}
+          >
+            {mark}
+            {label}
+          </GoTo>
+        ),
+      )}
       <p className="m-0 text-center text-meta leading-tight text-fg-tertiary">
         By continuing you agree to the community guidelines and terms.
       </p>

@@ -26,6 +26,8 @@ export type ToolbarProps = {
   overrides?: Readonly<Record<string, RouteId | null>>;
   // What a tool does in the app, by tool label; app tools with no action and no destination say they are not available yet.
   actions?: Readonly<Record<string, () => void>>;
+  // Tools that cannot act right now in the app, by tool label, with the reason said on hover and click.
+  unavailable?: Readonly<Record<string, string>>;
 };
 
 const toolClass = (selected: boolean) =>
@@ -34,7 +36,7 @@ const toolClass = (selected: boolean) =>
   } aria-disabled:opacity-35 aria-disabled:hover:bg-transparent`;
 
 // The strip of tools above the viewport, in groups separated by dividers.
-export function Toolbar({ groups, selected, overrides, actions = {} }: ToolbarProps) {
+export function Toolbar({ groups, selected, overrides, actions = {}, unavailable = {} }: ToolbarProps) {
   const [mode, setMode] = useState(selected);
   const runtime = useRuntimeMode();
   const notify = useNotices((state) => state.notify);
@@ -49,9 +51,17 @@ export function Toolbar({ groups, selected, overrides, actions = {} }: ToolbarPr
           {group.map((tool) => {
             const action = actions[tool.label];
             const override = overrides && tool.label in overrides ? overrides[tool.label] : undefined;
-            const behavior = toolBehavior({ tool, mode: runtime, hasAction: action !== undefined, override });
+            const behavior = toolBehavior({
+              tool,
+              mode: runtime,
+              hasAction: action !== undefined,
+              override,
+              unavailable: unavailable[tool.label],
+            });
             const isSelected = tool.label === mode;
             const notYet = behavior.kind === "not-yet";
+            const reason = behavior.kind === "unavailable" ? behavior.reason : null;
+            const dimmed = notYet || reason !== null;
             const content = (
               <>
                 <tool.icon size={18} strokeWidth={1.75} aria-hidden />
@@ -73,11 +83,15 @@ export function Toolbar({ groups, selected, overrides, actions = {} }: ToolbarPr
               <Act
                 key={tool.label}
                 cta={tool.label}
-                title={toolTitle(tool, notYet)}
-                aria-disabled={notYet ? true : undefined}
-                aria-pressed={notYet ? undefined : isSelected}
-                aria-current={isSelected && !notYet ? "true" : undefined}
+                title={reason ? `${toolTitle(tool, false)}. ${reason}.` : toolTitle(tool, notYet)}
+                aria-disabled={dimmed ? true : undefined}
+                aria-pressed={dimmed ? undefined : isSelected}
+                aria-current={isSelected && !dimmed ? "true" : undefined}
                 onClick={() => {
+                  if (reason) {
+                    notify({ title: `${tool.label}: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}` });
+                    return;
+                  }
                   if (notYet) {
                     notify({
                       title: `${tool.label} is not available yet`,
@@ -88,7 +102,7 @@ export function Toolbar({ groups, selected, overrides, actions = {} }: ToolbarPr
                   setMode(tool.label);
                   action?.();
                 }}
-                className={toolClass(isSelected && !notYet)}
+                className={toolClass(isSelected && !dimmed)}
               >
                 {content}
               </Act>
