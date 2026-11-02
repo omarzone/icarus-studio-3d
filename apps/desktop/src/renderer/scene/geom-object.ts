@@ -21,6 +21,7 @@ import {
 } from "three";
 import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomShape } from "./geom-shape.ts";
+import { partFinish } from "./part-finish.ts";
 import { floorDepth } from "./scene-materials.ts";
 import { grainImage } from "./surface-grain.ts";
 import { finishLook, type Grain, type MaterialLook, surfaceLook } from "./visual-styles/finishes.ts";
@@ -95,7 +96,8 @@ function repeats(grain: Grain, geom: SceneGeom): [number, number] {
 
 function material(look: MaterialLook, color: string, geom: SceneGeom): Material {
   const repeat = look.grain ? repeats(look.grain, geom) : null;
-  const key = JSON.stringify([look, color, repeat, geom.shape === "plane"]);
+  const finish = partFinish(geom);
+  const key = JSON.stringify([look, color, repeat, geom.shape === "plane", finish]);
   const cached = materials.get(key);
   if (cached) {
     return cached;
@@ -112,8 +114,10 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
   }
   const settings = {
     color: tint,
-    roughness: look.roughness,
+    roughness: look.roughness * finish.roughness,
     metalness: look.metalness,
+    envMapIntensity: finish.envMapIntensity,
+    ...(finish.opacity < 1 ? { transparent: true, opacity: finish.opacity, depthWrite: false } : {}),
     map,
     emissive: look.emissive ? tint : new Color(0),
     emissiveIntensity: look.emissive ?? 0,
@@ -130,7 +134,7 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
 
 function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Mesh {
   const created = new Mesh(geometry, material(look, geom.color, geom));
-  created.castShadow = geom.shape !== "plane" && !look.decal;
+  created.castShadow = geom.shape !== "plane" && !look.decal && geom.cast_shadow !== false;
   created.receiveShadow = true;
   return created;
 }

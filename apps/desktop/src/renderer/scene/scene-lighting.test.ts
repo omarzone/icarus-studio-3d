@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { toThreePosition } from "./coordinates.ts";
-import { groundColor, hemisphereLook, sunFrame } from "./scene-lighting.ts";
+import {
+  groundColor,
+  hemisphereLook,
+  SHADOW_SOFTNESS,
+  shadowCaster,
+  shadowRadius,
+  sunFrame,
+} from "./scene-lighting.ts";
 
 const SUN = {
   name: "sun",
@@ -43,5 +50,31 @@ describe("scene lighting", () => {
       ),
     ).toBe("#3a3f47");
     expect(groundColor([], "#000000")).toBe("#000000");
+  });
+});
+
+describe("world lighting options", () => {
+  it("keeps the old shadow edge at the default softness", () => {
+    expect(shadowRadius()).toBe(SHADOW_SOFTNESS);
+    expect(shadowRadius(0)).toBe(1);
+    expect(shadowRadius(1)).toBe(5);
+  });
+
+  it("lets the first light that allows shadows cast them, and none when the world turns them off", () => {
+    expect(shadowCaster([SUN, SUN])).toBe(0);
+    expect(shadowCaster([{ ...SUN, shadows: false }, SUN])).toBe(1);
+    expect(shadowCaster([SUN], false)).toBe(-1);
+  });
+
+  it("tints the light from above with the sky's ambient color and keeps white as it was", () => {
+    const look = { top: "#000000", horizon: "#ff8040", ambient: 1, fog: null };
+    expect(hemisphereLook(look, "#333333", 0.5).sky).toBe("#ff8040");
+    expect(hemisphereLook(look, "#333333", 0.5, "#ffffff").sky).toBe("#ff8040");
+    expect(hemisphereLook(look, "#333333", 0.5, "#808080").sky).toBe("#804020");
+  });
+
+  it("colors the sun with its light's color, white for scenes without one", () => {
+    expect(sunFrame(SUN, null).color).toBe("#ffffff");
+    expect(sunFrame({ ...SUN, color: "#ffb36b" }, null).color).toBe("#ffb36b");
   });
 });

@@ -17,6 +17,7 @@ export const SHADOW_NORMAL_BIAS = 0.03;
 // with an orthographic shadow box just big enough to hold it.
 export type SunFrame = {
   position: Vec3;
+  color: string;
   target: Vec3;
   intensity: number;
   // Half the side of the shadow box, in metres.
@@ -25,6 +26,7 @@ export type SunFrame = {
   far: number;
 };
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const EMPTY: SceneBounds = { center: [0, 0, 0], radius: 4 };
 
 export function sunFrame(light: SceneLight, bounds: SceneBounds | null): SunFrame {
@@ -39,6 +41,7 @@ export function sunFrame(light: SceneLight, bounds: SceneBounds | null): SunFram
   ];
   return {
     position: toThreePosition(from),
+    color: light.color && HEX_COLOR.test(light.color) ? light.color : "#ffffff",
     target: toThreePosition(center),
     intensity: Math.max(light.intensity, 0.2) * 2,
     extent: radius * 1.25 + 1,
@@ -51,8 +54,37 @@ export function sunFrame(light: SceneLight, bounds: SceneBounds | null): SunFram
 // the ambient light the world asks for; without a sky, the editor's neutral ambient.
 export type HemisphereLook = { sky: string; ground: string; intensity: number };
 
-export function hemisphereLook(look: SkyLook | null, ground: string, ambient: number): HemisphereLook {
-  return { sky: look?.horizon ?? "#ffffff", ground, intensity: (look?.ambient ?? ambient) * 1.2 };
+// `tint` is the sky's ambient color, which multiplies the light from above (white leaves it).
+export function hemisphereLook(
+  look: SkyLook | null,
+  ground: string,
+  ambient: number,
+  tint = "#ffffff",
+): HemisphereLook {
+  const sky = look?.horizon ?? "#ffffff";
+  return { sky: multiply(sky, tint), ground, intensity: (look?.ambient ?? ambient) * 1.2 };
+}
+
+function multiply(color: string, tint: string): string {
+  if (!HEX_COLOR.test(tint) || tint.toLowerCase() === "#ffffff" || !HEX_COLOR.test(color)) {
+    return color;
+  }
+  const channels = [1, 3, 5].map((index) => {
+    const product =
+      (Number.parseInt(color.slice(index, index + 2), 16) * Number.parseInt(tint.slice(index, index + 2), 16)) / 255;
+    return Math.round(product).toString(16).padStart(2, "0");
+  });
+  return `#${channels.join("")}`;
+}
+
+// Which light casts the shadows: the first that allows them, or none when the world turns shadows off.
+export function shadowCaster(lights: readonly SceneLight[], worldShadows = true): number {
+  return worldShadows ? lights.findIndex((light) => light.shadows !== false) : -1;
+}
+
+// Shadow edge blur in shadow-map texels for a softness of 0 to 1; the default softness keeps the old edge.
+export function shadowRadius(softness = 0.5): number {
+  return 1 + 4 * Math.min(1, Math.max(0, softness));
 }
 
 // The color light bounces off: the first ground plane's, or `fallback` in a world without one.

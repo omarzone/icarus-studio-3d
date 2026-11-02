@@ -1,23 +1,22 @@
 import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { type KeyboardEvent, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type RefObject, useContext, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { type CameraView, CameraViewContext } from "./camera-mode.ts";
 import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { GeomShape } from "./geom-geometry.tsx";
 import { geomGeometry, geomObject } from "./geom-object.ts";
+import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import { isDeliberateClick } from "./pick.ts";
 import type { Poses, PoseTrack } from "./pose-track.ts";
 import { RayOverlay } from "./ray-overlay.tsx";
-import { groundColor, hemisphereLook, sunFrame } from "./scene-lighting.ts";
-import { AMBIENT_INTENSITY, PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
-import { SKY_RADIUS, type SkyLook, skyLook } from "./scene-sky.ts";
-import { createSkyDome } from "./sky-dome.ts";
-import { sunLight } from "./sun-light.ts";
-import { sceneBounds } from "./thumbnail-framing.ts";
+import { groundColor } from "./scene-lighting.ts";
+import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
+import { skyLook } from "./scene-sky.ts";
+import { Sky, Suns } from "./world-lighting.tsx";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
 export type { ScenePick } from "./live-geoms.tsx";
@@ -151,67 +150,15 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
           renderOrder={1}
         >
           <GeomShape geom={geom} />
-          <meshStandardMaterial color={color} transparent opacity={PROPOSAL_OPACITY} depthWrite={false} />
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={PROPOSAL_OPACITY}
+            depthWrite={false}
+            envMapIntensity={0}
+          />
           <Edges color={color} />
         </mesh>
-      ))}
-    </>
-  );
-}
-
-// The world's sky: a gradient dome, its light from above and below and its haze; without one, the flat panel color of
-// the editor.
-function Sky({
-  look,
-  scale,
-  background,
-  ground,
-}: {
-  look: SkyLook | null;
-  scale: number;
-  background: string;
-  ground: string;
-}) {
-  const hemisphere = hemisphereLook(look, ground, AMBIENT_INTENSITY);
-  const dome = useMemo(() => (look ? createSkyDome(look, SKY_RADIUS * scale) : null), [look, scale]);
-  useEffect(
-    () => () => {
-      dome?.geometry.dispose();
-      dome?.material.dispose();
-    },
-    [dome],
-  );
-  return (
-    <>
-      <color attach="background" args={[look?.horizon ?? background]} />
-      <hemisphereLight args={[hemisphere.sky, hemisphere.ground, hemisphere.intensity]} />
-      {dome ? <primitive object={dome} /> : null}
-      {look?.fog ? <fogExp2 attach="fog" args={[look.fog.color, look.fog.density]} /> : null}
-    </>
-  );
-}
-
-// The world's lights as suns aimed at what the scene shows; the first casts the soft shadows.
-function Suns({ description }: { description: SceneDescription }) {
-  const lights = useMemo(() => {
-    const bounds = sceneBounds(description.geoms, description.zones ?? []);
-    return description.lights.map((light, index) => sunLight(sunFrame(light, bounds), index === 0));
-  }, [description]);
-  useEffect(
-    () => () => {
-      for (const light of lights) {
-        light.dispose();
-      }
-    },
-    [lights],
-  );
-  return (
-    <>
-      {lights.map((light) => (
-        <group key={light.uuid}>
-          <primitive object={light} />
-          <primitive object={light.target} />
-        </group>
       ))}
     </>
   );
@@ -227,7 +174,29 @@ function frameOnKey(view: CameraView | null) {
 }
 
 // Draws the engine's compiled scene; it never moves anything itself, a drag or a pick only reports what was done.
+// The sky's color grade applies to the finished picture: a filter over the canvas and a multiplied tint.
 export default function SceneView(props: SceneViewProps) {
+  const grade = useMemo(() => imageGrade(props.description.sky), [props.description.sky]);
+  const labels = useRef<HTMLDivElement>(null);
+  return (
+    <div className="relative h-full w-full">
+      <div className="relative h-full w-full" style={{ filter: grade.filter }}>
+        <SceneCanvas {...props} exposure={grade.exposure} labels={labels} />
+        {grade.tint ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 mix-blend-multiply"
+            style={{ backgroundColor: grade.tint }}
+          />
+        ) : null}
+      </div>
+      {/* Labels drawn over the 3D view live outside the canvas, so they stay put when the canvas re-renders. */}
+      <div ref={labels} className="pointer-events-none absolute inset-0 overflow-hidden" />
+    </div>
+  );
+}
+
+function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObject<HTMLDivElement | null> }) {
   const colors = useMemo(sceneColors, []);
   const { description, framing = CAMERA_FRAMES, follows, viewCube = true } = props;
   const view = useContext(CameraViewContext);
@@ -255,10 +224,12 @@ export default function SceneView(props: SceneViewProps) {
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
       <Sky
+        description={description}
         look={look}
         scale={scale}
         background={colors.background}
         ground={groundColor(description.geoms, colors.background)}
+        exposure={props.exposure}
       />
       <Suns description={description} />
       {/* The grid is an editing aid: Play, replays and training show the world as it is. */}
@@ -277,7 +248,12 @@ export default function SceneView(props: SceneViewProps) {
         <EditGeoms {...props} />
       )}
       {props.rays && props.rays.length > 0 ? (
-        <RayOverlay rays={props.rays} values={props.rayValues ?? false} track={props.mode === "play" ? track : null} />
+        <RayOverlay
+          rays={props.rays}
+          values={props.rayValues ?? false}
+          track={props.mode === "play" ? track : null}
+          layer={props.labels}
+        />
       ) : null}
       <ZoneMarkers
         zones={description.zones ?? []}

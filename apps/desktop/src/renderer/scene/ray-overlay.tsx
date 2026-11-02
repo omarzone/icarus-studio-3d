@@ -53,10 +53,14 @@ export function RayOverlay({
   rays,
   values,
   track,
+  layer,
 }: {
   rays: readonly SceneRay[];
   values: boolean;
   track: RefObject<PoseTrack | null> | null;
+  // A fixed element over the canvas: drei moves labels between hosts when its default host changes, and React then
+  // fails to remove them.
+  layer: RefObject<HTMLDivElement | null>;
 }) {
   const frames = useRef({ from: rays, to: rays });
   useEffect(() => {
@@ -77,6 +81,8 @@ export function RayOverlay({
     const t = current ? trackProgress(current, performance.now()) : 1;
     draw(easeRays(frames.current.from, frames.current.to, t).map(rayLine), segments, dots);
   });
+  // SAFETY: drei reads `portal.current` with optional chaining, so an element not attached yet is handled.
+  const host = layer as RefObject<HTMLElement>;
   const labels = values && count <= MAX_VALUES ? rays.map(rayLine).filter((line) => line.value !== null) : [];
   return (
     <>
@@ -87,7 +93,7 @@ export function RayOverlay({
         <pointsMaterial vertexColors size={DOT_SIZE} sizeAttenuation depthWrite={false} />
       </points>
       {labels.map((line) => (
-        <Html key={line.sensor} position={toThreePosition(line.to)} center zIndexRange={[1, 0]}>
+        <Html key={line.sensor} portal={host} position={toThreePosition(line.to)} center zIndexRange={[1, 0]}>
           <span className="pointer-events-none select-none whitespace-nowrap rounded-full bg-overlay px-1.5 py-0.5 font-mono text-meta">
             {line.value}
           </span>
