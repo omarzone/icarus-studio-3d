@@ -2,6 +2,7 @@ import { ArrowUp, ChevronDown, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { AutonomyMode, ChatAttachment } from "../../ports/copilot-port.ts";
+import { Spinner } from "../../ui/spinner.tsx";
 import { ACCEPTED_FILES } from "./attachment-rules.ts";
 import { ComposerAttachments } from "./composer-attachments.tsx";
 import { draftAfterSend, draftToSend } from "./composer-draft.ts";
@@ -32,7 +33,8 @@ function sendBlocker(attachments: Attachments | undefined): string | null {
   return null;
 }
 
-// Composer: workspace-specific placeholder, + to attach, autonomy mode and the round send button.
+// Composer: workspace-specific placeholder, + to attach, autonomy mode and the round send button, which turns
+// into a spinner while a message is on its way.
 export function Composer({
   placeholder,
   autonomy,
@@ -133,16 +135,27 @@ export function Composer({
           </span>
           <ChevronDown size={12} strokeWidth={1.75} aria-hidden className="shrink-0" />
         </Act>
-        <Act
-          cta="Send"
-          aria-label="Send"
-          title={blocker ?? undefined}
-          disabled={sending || blocker !== null}
-          onClick={send}
-          className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90 active:opacity-80 disabled:opacity-35"
-        >
-          <ArrowUp size={14} strokeWidth={1.75} aria-hidden />
-        </Act>
+        {sending ? (
+          <span
+            role="status"
+            aria-label="The copilot is working"
+            title="The copilot is working"
+            className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-control-raised text-fg"
+          >
+            <Spinner className="size-3.5" />
+          </span>
+        ) : (
+          <Act
+            cta="Send"
+            aria-label="Send"
+            title={blocker ?? undefined}
+            disabled={blocker !== null}
+            onClick={send}
+            className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90 active:opacity-80 disabled:opacity-35"
+          >
+            <ArrowUp size={14} strokeWidth={1.75} aria-hidden />
+          </Act>
+        )}
       </div>
     </div>
   );

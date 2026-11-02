@@ -138,11 +138,35 @@ function ThinkingToggle({ thinking }: { thinking: string }) {
   );
 }
 
-// While the copilot works on an answer; its steps arrive with the answer.
+const DOT_DELAYS = ["[animation-delay:-320ms]", "[animation-delay:-160ms]", ""] as const;
+
+// While the copilot works on an answer; its steps arrive with the answer. The dots bounce, or only pulse
+// when the system asks for reduced motion.
 export function ThinkingBubble() {
   return (
-    <div role="status" className="self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary">
-      <span className="animate-pulse">Working…</span>
+    <div
+      role="status"
+      className="flex items-center gap-2 self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary"
+    >
+      Working…
+      <span aria-hidden className="flex items-center gap-1">
+        {DOT_DELAYS.map((delay) => (
+          <span
+            key={delay}
+            className={`size-1 rounded-full bg-current motion-safe:animate-bounce motion-reduce:animate-pulse ${delay}`}
+          />
+        ))}
+      </span>
     </div>
+  );
+}
+
+// What is left of an answer's options once the person picked one.
+export function ChosenOption({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-ui text-fg-tertiary">
+      <Check size={12} strokeWidth={1.75} aria-hidden className="shrink-0" />
+      You chose: {label}
+    </span>
   );
 }

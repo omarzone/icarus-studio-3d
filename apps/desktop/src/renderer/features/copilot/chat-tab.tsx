@@ -1,14 +1,16 @@
 // TAB-CHAT
 import { Paperclip } from "lucide-react";
 import { type DragEvent, useRef, useState } from "react";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import type { AutonomyMode, ChatAttachment, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
 import { AgentStepsList } from "./agent-steps-list.tsx";
 import { AnswerActionsBar } from "./answer-actions-bar.tsx";
+import { answerOptions, type OptionsState } from "./answer-options.ts";
 import type { ReadFile } from "./attachment-reading.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
-import { CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
+import { ChosenOption, CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
 import { Composer } from "./composer.tsx";
 import { MessageAttachments, SceneViewsStrip } from "./message-attachments.tsx";
 import { PlanCard } from "./plan-card.tsx";
@@ -53,7 +55,11 @@ export function ChatTab(props: ChatTabProps) {
   const list = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   useStickToBottom(list, `${conversation.messages.length}:${sending?.text ?? ""}`, Boolean(sending));
-  const suggestions = visibleSuggestions(conversation, Boolean(sending));
+  // The prototype shows every suggestion of the sample, as the design does.
+  const app = useRuntimeMode() === "app";
+  const suggestions = app ? visibleSuggestions(conversation, Boolean(sending)) : conversation.suggestions;
+  // Likewise its options stay under every sample answer; in the app only the newest unanswered answer keeps them.
+  const options = app ? answerOptions(conversation.messages, sending?.text ?? null) : null;
   return (
     <section
       aria-label="Copilot chat"
@@ -94,7 +100,7 @@ export function ChatTab(props: ChatTabProps) {
         >
           <div className="mt-auto flex min-w-0 flex-col gap-3.5">
             {conversation.messages.map((message) => (
-              <Message key={message.id} message={message} {...props} />
+              <Message key={message.id} message={message} options={options?.get(message.id) ?? LIVE} {...props} />
             ))}
             {sending ? (
               <>
@@ -134,8 +140,16 @@ export function ChatTab(props: ChatTabProps) {
   );
 }
 
+const LIVE: OptionsState = { show: "live" };
+
+// The options once answered: the picked one in a quiet line, or nothing.
+function Answered({ state }: { state: Exclude<OptionsState, { show: "live" }> }) {
+  return state.show === "chosen" ? <ChosenOption label={state.label} /> : null;
+}
+
 function Message({
   message,
+  options,
   proposalRoutes,
   suggestionRoutes,
   sending,
@@ -143,7 +157,7 @@ function Message({
   onApply,
   onDiscard,
   onSend,
-}: ChatTabProps & { message: ChatMessage }) {
+}: ChatTabProps & { message: ChatMessage; options: OptionsState }) {
   switch (message.role) {
     case "user":
       return (
@@ -166,7 +180,9 @@ function Message({
             thinking={message.thinking}
             checks={message.checks}
             actions={
-              message.actions ? (
+              options.show === "chosen" ? (
+                <ChosenOption label={options.label} />
+              ) : options.show === "none" ? undefined : message.actions ? (
                 <ChatActions actions={message.actions} routes={suggestionRoutes} onSend={onSend} />
               ) : message.answerActions && message.answerActions.length > 0 ? (
                 <AnswerActionsBar
@@ -201,6 +217,13 @@ function Message({
     case "progress":
       return <RunProgressCard progress={message.progress} />;
     case "plan":
-      return <PlanCard plan={message.plan} routes={suggestionRoutes} onSend={onSend} />;
+      return (
+        <PlanCard
+          plan={message.plan}
+          routes={suggestionRoutes}
+          onSend={onSend}
+          answered={options.show === "live" ? undefined : <Answered state={options} />}
+        />
+      );
   }
 }

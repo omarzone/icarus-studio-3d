@@ -1,8 +1,15 @@
+import type { ReactNode } from "react";
 import type { NextStepPlan } from "../../ports/copilot-port.ts";
 import { ChatActions } from "./chat-actions.tsx";
 import type { SuggestionRoutes } from "./suggestion-chips.tsx";
 
-type Props = { plan: NextStepPlan; routes: SuggestionRoutes; onSend: (text: string) => void };
+type Props = {
+  plan: NextStepPlan;
+  routes: SuggestionRoutes;
+  onSend: (text: string) => void;
+  // Drawn instead of the actions once the plan was answered; nothing at all when null.
+  answered?: ReactNode;
+};
 
 const MARKS = {
   add: { sign: "+", className: "bg-ok-tint text-ok", label: "Added" },
@@ -10,7 +17,7 @@ const MARKS = {
 } as const;
 
 // What the copilot suggests for the next step: each addition or change, then the actions that take it.
-export function PlanCard({ plan, routes, onSend }: Props) {
+export function PlanCard({ plan, routes, onSend, answered }: Props) {
   return (
     <div className="flex flex-col gap-2 rounded-bubble bg-control px-3.5 py-3">
       <span className="font-semibold">{plan.title}</span>
@@ -30,9 +37,13 @@ export function PlanCard({ plan, routes, onSend }: Props) {
           </span>
         );
       })}
-      <div className="mt-1">
-        <ChatActions actions={plan.actions} routes={routes} onSend={onSend} large />
-      </div>
+      {answered === undefined ? (
+        <div className="mt-1">
+          <ChatActions actions={plan.actions} routes={routes} onSend={onSend} large />
+        </div>
+      ) : (
+        answered
+      )}
     </div>
   );
 }

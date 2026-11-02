@@ -2,8 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { toThreePosition } from "../../src/renderer/scene/coordinates.ts";
 import { launchApp } from "../design/launch.ts";
-import { project } from "./screen-projection.ts";
+import { elementAt, engineScene, frameAll, project } from "./screen-projection.ts";
 
 type Component = { kind: string; properties: Record<string, { value?: unknown }> };
 type EngineProject = {
@@ -138,12 +139,15 @@ test("edits commit once and the inspector shows only what the engine stored", as
     await expect(mass).toHaveValue(/900/);
     expect(await revision()).toBe(start + 1);
 
-    const canvas = page.locator("canvas").first();
-    const view = await canvas.boundingBox();
-    if (!view) {
-      throw new Error("no viewport");
+    // The gizmo sits on the car's body; find it on screen with the camera the viewport framed the scene with.
+    const scene = await engineScene(page, id);
+    const car = scene.bodies.find((body) => body.name === "car");
+    if (!car) {
+      throw new Error("no car body in the scene");
     }
-    const center = project([0, 0.5, 0], view);
+    const { box: view, camera } = await frameAll(page, scene);
+    const center = project(toThreePosition(car.position), view, camera);
+    expect(await elementAt(page, center)).toBe("CANVAS");
     await page.mouse.move(center.x, center.y);
     await page.mouse.down();
     await page.mouse.move(center.x + 30, center.y, { steps: 5 });

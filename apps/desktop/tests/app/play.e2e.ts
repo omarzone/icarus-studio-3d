@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { launchApp } from "../design/launch.ts";
-import { project } from "./screen-projection.ts";
+import { elementAt, engineScene, frameAll, project } from "./screen-projection.ts";
 
 // The straight-ahead ray of the parking car, as the senses panel shows it.
 async function frontDistance(page: Page): Promise<number> {
@@ -14,6 +14,7 @@ async function frontDistance(page: Page): Promise<number> {
 
 // React Three Fiber finds what is under the pointer on move, so a click comes after a hover, as a person's does.
 async function clickWorld(page: Page, at: { x: number; y: number }): Promise<void> {
+  expect(await elementAt(page, at)).toBe("CANVAS");
   await page.mouse.move(at.x, at.y);
   await page.waitForTimeout(200);
   await page.mouse.down();
@@ -27,6 +28,13 @@ test("sprint 4 demo: play the parking car, add a box in front, push it, reset", 
     await page.waitForSelector('[data-route-screen="SCR-HOME"]', { timeout: 120_000 });
     await page.locator('[data-cta^="parking-car"]').first().click();
     await page.locator('[data-cta="car"]').first().waitFor({ timeout: 60_000 });
+    const id = await page.evaluate(async () => {
+      const status = await window.icarus.engine.status();
+      const list: { id: string }[] =
+        status.kind === "ready" ? await (await fetch(`${status.url}/projects`)).json() : [];
+      return list[0]?.id ?? "";
+    });
+    const scene = await engineScene(page, id);
 
     await page.locator('[data-ui-id="HDR-WORKSPACE"] [data-cta="play"]').click();
     await page.waitForSelector('[data-route-screen="SCR-PLAY"]');
@@ -36,25 +44,23 @@ test("sprint 4 demo: play the parking car, add a box in front, push it, reset", 
       await expect(page.getByText(`Car distance ${ray}`).first()).toBeVisible();
     }
 
+    // Play starts chasing the car; a framed, still camera makes the world's points findable on screen.
+    const { box: view, camera } = await frameAll(page, scene);
     await page.locator('[data-cta="add-object"]').first().click();
-    const view = await page.locator("canvas").first().boundingBox();
-    if (!view) {
-      throw new Error("no Play viewport");
-    }
-    const ahead = project([3.5, 0, 0], view);
+    const ahead = project([3.5, 0, 0], view, camera);
     await clickWorld(page, ahead);
     await expect(page.getByText(/You added Box/).first()).toBeVisible({ timeout: 15_000 });
     await expect.poll(() => frontDistance(page), { timeout: 15_000 }).toBeLessThan(5);
 
     await page.locator('[data-cta="push"]').first().click();
-    const box = project([3.75, 0.25, 0], view);
+    const box = project([3.75, 0.25, 0], view, camera);
     await clickWorld(page, box);
     await expect(page.getByText(/You pushed/).first()).toBeVisible({ timeout: 15_000 });
 
     await page.locator('[data-cta="add-object"]').first().click();
     // Turning the camera with a tool selected must not use the tool.
     const added = await page.getByText(/You added/).count();
-    const from = project([-3, 0, 4], view);
+    const from = project([-3, 0, 4], view, camera);
     await page.mouse.move(from.x, from.y);
     await page.waitForTimeout(200);
     await page.mouse.down();
