@@ -53,6 +53,10 @@ class SceneGeom(BaseModel):
     # None draws the plain primitive (also every scene exported before styles existed).
     style: GeomStyle | None = None
     surface: GeomSurface | None = None
+    # Drawing only, 0 to 1: how see-through and how mirror-like the part looks. Rays and contacts never read them.
+    transparency: float = 0
+    reflectance: float = 0
+    cast_shadow: bool = True
 
 
 class SceneLight(BaseModel):
@@ -62,6 +66,9 @@ class SceneLight(BaseModel):
     position: Vector3
     direction: Vector3
     intensity: float
+    # The light's own hue at full strength; None draws white (scenes exported before light colors).
+    color: str | None = None
+    shadows: bool = True
 
 
 class SceneZone(BaseModel):
@@ -91,6 +98,30 @@ class SceneSky(BaseModel):
     ambient: float
     # How thick the haze is, 0 for none.
     fog: float
+    # Everything below defaults to the look worlds had before it existed.
+    # The sun's disc on the sky in degrees across, 0 for none; it sits where the first light shines from.
+    sun_size: float = 0
+    # Glow around the sun and whitening of the horizon band, 0 to 1.
+    glare: float = 0
+    haze: float = 0
+    # How many stars show once the sky is dark, 0 to 1.
+    stars: float = 0
+    # How much of the sky clouds cover and how thick they look, 0 to 1.
+    clouds: float = 0
+    cloud_density: float = 0.7
+    cloud_color: str = "#ffffff"
+    # Tint of the light the sky adds everywhere.
+    ambient_color: str = "#ffffff"
+    shadows: bool = True
+    # 0 for hard shadow edges, 1 for very soft ones.
+    shadow_softness: float = 0.5
+    # Stops of exposure before tone mapping: 1 doubles the light, -1 halves it.
+    exposure: float = 0
+    # Color grading of the final image, each -1 to 1 with 0 unchanged, and a tint it is multiplied by.
+    brightness: float = 0
+    contrast: float = 0
+    saturation: float = 0
+    tint: str = "#ffffff"
 
 
 class SceneRay(BaseModel):

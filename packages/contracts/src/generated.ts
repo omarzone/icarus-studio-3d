@@ -904,6 +904,7 @@ export interface SceneBody {
  */
 export interface SceneGeom {
   body: string;
+  cast_shadow?: boolean;
   color: string;
   name: string;
   /**
@@ -916,6 +917,7 @@ export interface SceneGeom {
    * @maxItems 4
    */
   quaternion: [number, number, number, number];
+  reflectance?: number;
   shape: "plane" | "box" | "sphere" | "capsule" | "cylinder";
   /**
    * @minItems 3
@@ -941,12 +943,14 @@ export interface SceneGeom {
       )
     | null;
   surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
+  transparency?: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "SceneLight".
  */
 export interface SceneLight {
+  color?: string | null;
   /**
    * @minItems 3
    * @maxItems 3
@@ -959,6 +963,7 @@ export interface SceneLight {
    * @maxItems 3
    */
   position: [number, number, number];
+  shadows?: boolean;
 }
 /**
  * How the world's sky and air look; the physics never depends on it.
@@ -968,8 +973,23 @@ export interface SceneLight {
  */
 export interface SceneSky {
   ambient: number;
+  ambient_color?: string;
+  brightness?: number;
+  cloud_color?: string;
+  cloud_density?: number;
+  clouds?: number;
+  contrast?: number;
+  exposure?: number;
   fog: number;
+  glare?: number;
+  haze?: number;
   horizon: string;
+  saturation?: number;
+  shadow_softness?: number;
+  shadows?: boolean;
+  stars?: number;
+  sun_size?: number;
+  tint?: string;
   top: string;
 }
 /**
