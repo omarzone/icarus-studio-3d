@@ -7,6 +7,8 @@ import type { ListOption, Property, PropertyPanel, PropertyValue, Swatch } from 
 import { NOT_YET_CLASS, useNotYet } from "../../../ui/not-yet.ts";
 import { Select } from "../../../ui/select.tsx";
 import { SCENE_ICONS } from "../../scene-icons.ts";
+import { parseHex } from "./color-math.ts";
+import { ColorPicker } from "./color-picker.tsx";
 import { RangeTrack, SliderTrack } from "./slider-track.tsx";
 import { SwitchToggle } from "./switch-toggle.tsx";
 import { type ControlTone, fieldBox, fieldClass, parseNumber, toneText, ValueField } from "./value-field.tsx";
@@ -175,17 +177,22 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
     case "color":
       return (
         <span className={`${fieldClass} flex items-center gap-1.5 px-2`}>
-          <SwatchMark swatch={{ kind: "color", value: value.value }} large />
+          <ColorPicker
+            label={label}
+            tone={tone}
+            value={value.value}
+            onCommit={(hex) => onChange({ ...value, value: hex })}
+          />
           <ValueField
             label={label}
             tone={tone}
             value={value.value}
             onCommit={(text) => {
-              const valid = /^#[0-9a-f]{6}$/i.test(text.trim());
-              if (valid) {
-                onChange({ ...value, value: text.trim().toUpperCase() });
+              const hex = parseHex(text);
+              if (hex) {
+                onChange({ ...value, value: hex });
               }
-              return valid;
+              return hex !== null;
             }}
             className="h-6 w-full bg-transparent text-meta"
           />
