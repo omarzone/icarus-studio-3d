@@ -1,12 +1,11 @@
 import type { SceneGeom } from "@icarus/contracts";
 import { type ThreeEvent, useFrame } from "@react-three/fiber";
 import { type RefObject, useEffect, useMemo, useRef } from "react";
-import { type Mesh, Quaternion } from "three";
+import { type Object3D, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
-import { GeomShape } from "./geom-geometry.tsx";
+import { geomObject } from "./geom-object.ts";
 import { isDeliberateClick } from "./pick.ts";
 import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
-import { floorDepth, GEOM_ROUGHNESS } from "./scene-materials.ts";
 
 type Vec3 = [number, number, number];
 
@@ -26,7 +25,7 @@ function pickOf(object: string | null, event: ThreeEvent<MouseEvent>): ScenePick
 const from = new Quaternion();
 const to = new Quaternion();
 
-// Geoms placed by the engine's frames, eased from one frame to the next; clicks report picks instead of selecting.
+// Geoms placed by the engine's frames (drawn in their styles, see geom-object.ts), eased from one frame to the next; clicks report picks instead of selecting.
 // `track` is shared with the camera, which follows the same eased poses.
 export function LiveGeoms({
   geoms,
@@ -39,7 +38,7 @@ export function LiveGeoms({
   track: RefObject<PoseTrack | null>;
   onPick: (pick: ScenePick) => void;
 }) {
-  const meshes = useRef(new Map<string, Mesh>());
+  const meshes = useRef(new Map<string, Object3D>());
   const pick = useRef(onPick);
   useEffect(() => {
     pick.current = onPick;
@@ -72,27 +71,23 @@ export function LiveGeoms({
       <>
         {geoms.map((geom) => (
           // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element; the Play tool bar is the accessible control.
-          <mesh
+          <primitive
             key={geom.name}
-            ref={(mesh) => {
-              if (mesh) {
-                meshes.current.set(geom.name, mesh);
+            object={geomObject(geom)}
+            ref={(object: Object3D | null) => {
+              if (object) {
+                meshes.current.set(geom.name, object);
               } else {
                 meshes.current.delete(geom.name);
               }
             }}
-            position={toThreePosition(geom.position)}
-            quaternion={toThreeQuaternion(geom.quaternion)}
-            onClick={(event) => {
+            onClick={(event: ThreeEvent<MouseEvent>) => {
               event.stopPropagation();
               if (isDeliberateClick(event.delta)) {
                 pick.current(pickOf(geom.shape === "plane" ? null : geom.body, event));
               }
             }}
-          >
-            <GeomShape geom={geom} />
-            <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
-          </mesh>
+          />
         ))}
         {/* Catches clicks on the ground beyond the floor geoms. */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element. */}

@@ -15,6 +15,13 @@ describe("pose track", () => {
     expect(lerpPosition(from, to, halfway)).toEqual([0.5, 0, 0]);
   });
 
+  it("keeps moving through the whole gap of a slow stream, such as training snapshots a few times a second", () => {
+    let track = nextTrack(null, at(0), 0);
+    track = nextTrack(track, at(1), 400);
+    track = nextTrack(track, at(2), 800);
+    expect(trackProgress(track, 1100)).toBeCloseTo(0.75, 6);
+  });
+
   it("stops at the newest frame instead of guessing beyond it", () => {
     const track = nextTrack(nextTrack(null, at(0), 0), at(1), 30);
     expect(trackProgress(track, 500)).toBe(1);

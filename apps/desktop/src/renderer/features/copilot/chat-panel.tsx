@@ -36,10 +36,17 @@ export type ChatPanelProps = {
   proposalRoutes?: ProposalRoutes;
   // Tabs after Chat in the tab bar; History (→ MOD-HISTORY) by default.
   tabs?: ReactNode;
+  // What the app shows while no project is open, when this workspace explains it its own way.
+  noProject?: { title: string; body: string };
   className?: string;
 };
 
 export { copilotKey };
+
+const NO_PROJECT = {
+  title: "No project open yet",
+  body: "The copilot works on a project. Pick an idea or open a project to talk to it.",
+};
 
 export function ChatPanel({
   conversation: sample,
@@ -48,6 +55,7 @@ export function ChatPanel({
   proposalRoutes,
   tabs = <HistoryTab />,
   className = "flex-1",
+  noProject = NO_PROJECT,
 }: ChatPanelProps) {
   const conversation = useConversationKey(sample);
   const docked = useDockedPanel();
@@ -78,10 +86,7 @@ export function ChatPanel({
       }
     >
       {conversation === null ? (
-        <EmptyState
-          title="No project open yet"
-          body="The copilot works on a project. Pick an idea or open a project to talk to it."
-        />
+        <EmptyState title={noProject.title} body={noProject.body} />
       ) : (
         <ProjectChat
           conversation={conversation}

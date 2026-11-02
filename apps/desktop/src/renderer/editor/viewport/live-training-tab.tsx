@@ -1,10 +1,11 @@
 // TAB-LIVE-TRAINING
 import type { SceneGeom } from "@icarus/contracts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useContext, useMemo, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { LiveCopies } from "../../ports/training-port.ts";
 import { copyGrid } from "../../scene/copy-grid.ts";
+import { RayViewContext } from "../../scene/ray-lines.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
@@ -73,6 +74,12 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
   const [picked, setPicked] = useState(0);
   const followed = Math.min(picked, Math.max(0, copies.length - 1));
   const follows = useMemo(() => (geom: SceneGeom) => geom.name.startsWith(`${followed}:`), [followed]);
+  // Only the followed copy's rays by default, so many copies stay readable.
+  const view = useContext(RayViewContext);
+  const rays = useMemo(
+    () => (view?.shown ? grid.placeRays(live.rays, view.allCopies ? undefined : followed) : undefined),
+    [view?.shown, view?.allCopies, grid, live.rays, followed],
+  );
   return (
     <>
       <RenderBoundary
@@ -92,6 +99,8 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
             onPick={ignorePick}
             framing={grid.extent}
             follows={follows}
+            rays={rays}
+            rayValues={view?.values}
           />
         </Suspense>
       </RenderBoundary>

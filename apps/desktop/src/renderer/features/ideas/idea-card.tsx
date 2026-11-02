@@ -8,10 +8,7 @@ type Props = { idea: Idea; onUse: () => void; onTweak: () => void };
 // One generated alternative: real 3D preview on top, what it is, how long it trains, then Use this and Tweak.
 export function IdeaCard({ idea, onUse, onTweak }: Props) {
   return (
-    <article
-      aria-label={idea.title}
-      className="relative flex min-h-0 flex-col overflow-hidden rounded-[18px] bg-control"
-    >
+    <article aria-label={idea.title} className="relative flex flex-col overflow-hidden rounded-[18px] bg-control">
       <div role="img" aria-label={`Preview of ${idea.title}`} className="relative h-85 shrink-0 bg-panel">
         {idea.scene ? <ScenePreview description={idea.scene} /> : null}
         {idea.recommended ? (

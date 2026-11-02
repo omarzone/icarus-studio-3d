@@ -1,4 +1,4 @@
-import type { CheckpointInfo, Rollout, RunStatus, TrainingSnapshot } from "@icarus/contracts";
+import type { CheckpointInfo, Rollout, RunStatus, SceneRay, TrainingSnapshot } from "@icarus/contracts";
 import { compactNumber } from "../ui/compact-number.ts";
 import type { CheckpointMark, CopyPose, CopyPoses, ReplayFrame } from "./training-port.ts";
 import { checkpointResult } from "./training-views.ts";
@@ -40,4 +40,9 @@ export function replayFrames(rollout: Rollout): ReplayFrame[] {
 
 export function snapshotCopies(snapshot: TrainingSnapshot): CopyPoses[] {
   return snapshot.copies.map((copy) => posesOf(snapshot.geoms, copy.positions, copy.quaternions));
+}
+
+// Each copy's distance sensors, in the order of the copies.
+export function snapshotRays(snapshot: TrainingSnapshot): SceneRay[][] {
+  return snapshot.copies.map((copy) => copy.rays ?? []);
 }

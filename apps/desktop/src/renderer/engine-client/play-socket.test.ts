@@ -95,6 +95,18 @@ describe("openPlay", () => {
     expect(calls.onFrame).not.toHaveBeenCalled();
   });
 
+  it("passes a frame's distance sensors through and reports malformed ones", async () => {
+    const { calls, socket } = await connected();
+    const ray = { sensor: "car:ray0", label: "Car distance 1", origin: [0, 0, 0.5], direction: [1, 0, 0], range: 10 };
+    const withRays = (rays: unknown) => ({
+      message: { ...play.frame.message, frame: { ...play.frame.message.frame, rays } },
+    });
+    socket.receive(withRays([{ ...ray, distance: null }]));
+    socket.receive(withRays([{ ...ray, distance: "near" }]));
+    expect(calls.onFrame).toHaveBeenCalledTimes(1);
+    expect(calls.onError).toHaveBeenCalledTimes(1);
+  });
+
   it("sends a command as an envelope, waiting for the socket to open", async () => {
     const { connection, socket } = await connected();
     connection.send({ tool: "reset" });

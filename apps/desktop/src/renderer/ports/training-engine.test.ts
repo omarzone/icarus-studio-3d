@@ -111,6 +111,19 @@ describe("training on the engine", () => {
     expect((await port.getMetrics("p")).breakdown.terms[0]?.label).toBe(label);
   });
 
+  it("follows a run started elsewhere unless the person picks another run after it started", async () => {
+    const { api } = engine([
+      status({ run_id: "b", name: "Run 2", state: "stopped" }),
+      status({ run_id: "a", name: "Run 1", state: "done" }),
+    ]);
+    const port = createEngineTrainingPort(api, streams().open);
+    await port.selectRun({ project: "p", id: "b" });
+    await api.startRun("p", { total_steps: 30_000, copies: 4, coach: false });
+    expect((await port.listRuns("p")).selected).toBe("run-new");
+    expect((await port.selectRun({ project: "p", id: "b" })).selected).toBe("b");
+    expect((await port.listRuns("p")).selected).toBe("b");
+  });
+
   it("plans a run from the task defaults and the chosen changes, then starts it and selects it", async () => {
     const { api, started } = engine([]);
     const port = createEngineTrainingPort(api, streams().open);
@@ -122,7 +135,7 @@ describe("training on the engine", () => {
     await port.updateStartPlan({ project: "p", steps: 30_000 });
     expect(await port.updateStartPlan({ project: "p", copies: 4 })).toMatchObject({ steps: 30_000, copies: 4 });
     const list = await port.startRun("p");
-    expect(started).toEqual([{ total_steps: 30_000, copies: 4, coach: false }]);
+    expect(started).toEqual([{ total_steps: 30_000, copies: 4, coach: true }]);
     expect(list.selected).toBe("run-new");
     expect(list.runs[0]).toMatchObject({ status: "running", detail: "starting" });
   });

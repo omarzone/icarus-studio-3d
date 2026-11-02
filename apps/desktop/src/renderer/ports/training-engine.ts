@@ -2,7 +2,7 @@ import type { LogLine, RunStatus, SceneDescription } from "@icarus/contracts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
 import { type OpenRunEvents, openRunEvents, type RunEventsConnection } from "../engine-client/run-events.ts";
 import { compactNumber } from "../ui/compact-number.ts";
-import { checkpointMarks, replayFrames, snapshotCopies } from "./replay-views.ts";
+import { checkpointMarks, replayFrames, snapshotCopies, snapshotRays } from "./replay-views.ts";
 import { liveMetrics } from "./training-metrics.ts";
 import type { LiveCopies, RunList, TrainingPort } from "./training-port.ts";
 import {
@@ -45,7 +45,19 @@ export function createEngineTrainingPort(
   api: TrainingApi = engineApi,
   open: OpenRunEvents = openRunEvents,
 ): EngineTrainingPort {
-  const selected = new Map<string, string>();
+  // The run the person picked and the runs that existed then: a run started afterwards takes over the view.
+  const picks = new Map<string, { id: string; known: ReadonlySet<string> }>();
+  const pick = (project: string, id: string, runs: readonly RunStatus[]) =>
+    picks.set(project, { id, known: new Set(runs.map((run) => run.run_id)) });
+  const chosen = (project: string, runs: readonly RunStatus[]): string | undefined => {
+    const current = picks.get(project);
+    const active = activeRun(runs);
+    if (current && active && !current.known.has(active.run_id)) {
+      pick(project, active.run_id, runs);
+      return active.run_id;
+    }
+    return current?.id;
+  };
   const choices = new Map<string, PlanChoice>();
   const logs = new Map<string, LogLine[]>();
   const scenes = new Map<string, Promise<SceneDescription>>();
@@ -74,9 +86,13 @@ export function createEngineTrainingPort(
   };
   const selectedRun = async (project: string): Promise<{ runs: RunStatus[]; run: RunStatus | undefined }> => {
     const runs = await api.runs(project);
-    return { runs, run: runs.find((item) => item.run_id === selected.get(project)) ?? runs[0] };
+    const id = chosen(project, runs);
+    return { runs, run: runs.find((item) => item.run_id === id) ?? runs[0] };
   };
-  const listRuns = async (project: string): Promise<RunList> => runList(await api.runs(project), selected.get(project));
+  const listRuns = async (project: string): Promise<RunList> => {
+    const runs = await api.runs(project);
+    return runList(runs, chosen(project, runs));
+  };
   const requireRun = async (project: string): Promise<RunStatus> => {
     const { run } = await selectedRun(project);
     if (!run) {
@@ -104,8 +120,9 @@ export function createEngineTrainingPort(
   return {
     listRuns,
     selectRun: async ({ project, id }) => {
-      selected.set(project, id);
-      return listRuns(project);
+      const runs = await api.runs(project);
+      pick(project, id, runs);
+      return runList(runs, id);
     },
     getLiveView: async (project) => {
       const run = await requireRun(project);
@@ -139,8 +156,9 @@ export function createEngineTrainingPort(
     },
     startRun: async (project) => {
       const started = await api.startRun(project, startRequest(await getStartPlan(project)));
-      selected.set(project, started.run_id);
-      return listRuns(project);
+      const runs = await api.runs(project);
+      pick(project, started.run_id, runs);
+      return runList(runs, started.run_id);
     },
     getStopSummary: async (project) => {
       const run = await requireActive(project);
@@ -234,6 +252,7 @@ export function createEngineTrainingPort(
                     scene: description,
                     step: `${compactNumber(snapshot.step)} steps`,
                     copies: snapshotCopies(snapshot),
+                    rays: snapshotRays(snapshot),
                   }),
                 (error: unknown) =>
                   show({ kind: "closed", reason: error instanceof Error ? error.message : String(error) }),

@@ -1,8 +1,9 @@
 import type { SceneGeom } from "@icarus/contracts";
-import { lazy, type ReactNode, Suspense } from "react";
+import { lazy, type ReactNode, Suspense, useContext } from "react";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { scenePort } from "../../ports/scene-port.ts";
+import { RayViewContext } from "../../scene/ray-lines.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { ErrorState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneDescription, useSceneTree } from "../scene-queries.ts";
@@ -56,6 +57,7 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
   const cache = useSceneCache(scene);
   const select = useEngineAction(port.selectObject);
   const move = useEngineAction(port.moveObject);
+  const rays = useContext(RayViewContext);
   if (!description.data) {
     return null;
   }
@@ -75,6 +77,8 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
             key={scene}
             description={description.data}
             ghosts={ghosts}
+            rays={rays?.shown ? description.data.rays : undefined}
+            rayValues={rays?.values}
             selected={tree.data?.selected ?? null}
             onSelect={(id) => {
               if (id) {

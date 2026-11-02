@@ -11,7 +11,7 @@ import type {
   TrainingSettings,
   TrainingSnapshot,
 } from "@icarus/contracts";
-import { has, isListOf, isRecord, isTriple } from "./response-checks.ts";
+import { has, isListOf, isOptionalRays, isRecord, isTriple } from "./response-checks.ts";
 
 // Structural checks of training answers and run events: the fields the app reads, not the whole schema.
 
@@ -115,7 +115,10 @@ export function isTrainingSnapshot(value: unknown): value is TrainingSnapshot {
     return false;
   }
   const count = value.geoms.length;
-  return isListOf(value.copies, (copy): copy is CopyPoses => isRecord(copy) && isPoses(copy, count));
+  return isListOf(
+    value.copies,
+    (copy): copy is CopyPoses => isRecord(copy) && isPoses(copy, count) && isOptionalRays(copy.rays),
+  );
 }
 
 export function isRollout(value: unknown): value is Rollout {

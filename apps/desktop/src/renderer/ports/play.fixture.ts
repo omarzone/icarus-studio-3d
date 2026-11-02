@@ -118,7 +118,7 @@ export function createPlayFixture(): PlayPort {
       let connected = true;
       void Promise.resolve().then(() => {
         if (connected) {
-          listener.onUpdate(find(project), { scene: null, poses: new Map(), paused: false, speed: 1 });
+          listener.onUpdate(find(project), { scene: null, poses: new Map(), rays: [], paused: false, speed: 1 });
         }
       });
       return () => {

@@ -1,25 +1,23 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { type KeyboardEvent, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { type CameraView, CameraViewContext } from "./camera-mode.ts";
 import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { GeomShape } from "./geom-geometry.tsx";
+import { geomGeometry, geomObject } from "./geom-object.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import { isDeliberateClick } from "./pick.ts";
 import type { Poses, PoseTrack } from "./pose-track.ts";
-import {
-  AMBIENT_INTENSITY,
-  floorDepth,
-  GEOM_ROUGHNESS,
-  PROPOSAL_OPACITY,
-  sceneColors,
-  sceneLight,
-} from "./scene-materials.ts";
+import { RayOverlay } from "./ray-overlay.tsx";
+import { groundColor, hemisphereLook, sunFrame } from "./scene-lighting.ts";
+import { AMBIENT_INTENSITY, PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
 import { SKY_RADIUS, type SkyLook, skyLook } from "./scene-sky.ts";
 import { createSkyDome } from "./sky-dome.ts";
+import { sunLight } from "./sun-light.ts";
+import { sceneBounds } from "./thumbnail-framing.ts";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
 export type { ScenePick } from "./live-geoms.tsx";
@@ -50,6 +48,9 @@ export type SceneViewProps = {
   framing?: number;
   ghosts?: readonly SceneGeom[];
   follows?: (geom: SceneGeom) => boolean;
+  // Distance sensors to draw (eased with the poses in a live view), with their readings when `rayValues`.
+  rays?: readonly SceneRay[];
+  rayValues?: boolean;
 } & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
@@ -65,23 +66,28 @@ type GeomProps = {
 
 function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
   const colors = useMemo(sceneColors, []);
+  const object = useMemo(() => geomObject(geom), [geom]);
   const [x, y, z] = toThreePosition(geom.position);
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element; the explorer is the accessible way to select.
-    <mesh
+    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js object, not a DOM element; the explorer is the accessible way to select.
+    <primitive
+      object={object}
       position={[x - origin[0], y - origin[1], z - origin[2]]}
-      quaternion={toThreeQuaternion(geom.quaternion)}
-      onClick={(event) => {
+      onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         if (isDeliberateClick(event.delta)) {
           onSelect(geom.body);
         }
       }}
     >
-      <GeomShape geom={geom} />
-      <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
-      {selected ? <Edges color={colors.selected} /> : null}
-    </mesh>
+      {/* The outline of a selected part is its collider, whatever style it is drawn in. */}
+      {selected ? (
+        <mesh geometry={geomGeometry(geom)} raycast={() => undefined}>
+          <meshBasicMaterial visible={false} />
+          <Edges color={colors.selected} />
+        </mesh>
+      ) : null}
+    </primitive>
   );
 }
 
@@ -151,8 +157,20 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
   );
 }
 
-// The world's sky: a gradient dome, its ambient light and its haze; without one, the flat panel color of the editor.
-function Sky({ look, scale, background }: { look: SkyLook | null; scale: number; background: string }) {
+// The world's sky: a gradient dome, its light from above and below and its haze; without one, the flat panel color of
+// the editor.
+function Sky({
+  look,
+  scale,
+  background,
+  ground,
+}: {
+  look: SkyLook | null;
+  scale: number;
+  background: string;
+  ground: string;
+}) {
+  const hemisphere = hemisphereLook(look, ground, AMBIENT_INTENSITY);
   const dome = useMemo(() => (look ? createSkyDome(look, SKY_RADIUS * scale) : null), [look, scale]);
   useEffect(
     () => () => {
@@ -164,9 +182,35 @@ function Sky({ look, scale, background }: { look: SkyLook | null; scale: number;
   return (
     <>
       <color attach="background" args={[look?.horizon ?? background]} />
-      <ambientLight intensity={look?.ambient ?? AMBIENT_INTENSITY} />
+      <hemisphereLight args={[hemisphere.sky, hemisphere.ground, hemisphere.intensity]} />
       {dome ? <primitive object={dome} /> : null}
       {look?.fog ? <fogExp2 attach="fog" args={[look.fog.color, look.fog.density]} /> : null}
+    </>
+  );
+}
+
+// The world's lights as suns aimed at what the scene shows; the first casts the soft shadows.
+function Suns({ description }: { description: SceneDescription }) {
+  const lights = useMemo(() => {
+    const bounds = sceneBounds(description.geoms, description.zones ?? []);
+    return description.lights.map((light, index) => sunLight(sunFrame(light, bounds), index === 0));
+  }, [description]);
+  useEffect(
+    () => () => {
+      for (const light of lights) {
+        light.dispose();
+      }
+    },
+    [lights],
+  );
+  return (
+    <>
+      {lights.map((light) => (
+        <group key={light.uuid}>
+          <primitive object={light} />
+          <primitive object={light.target} />
+        </group>
+      ))}
     </>
   );
 }
@@ -200,6 +244,7 @@ export default function SceneView(props: SceneViewProps) {
   );
   return (
     <Canvas
+      shadows="percentage"
       camera={start}
       dpr={[1, 2]}
       tabIndex={view ? 0 : undefined}
@@ -207,22 +252,31 @@ export default function SceneView(props: SceneViewProps) {
       onKeyDown={frameOnKey(view)}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
-      <Sky look={look} scale={scale} background={colors.background} />
-      {description.lights.map((light) => (
-        <directionalLight key={light.name} {...sceneLight(light)} />
-      ))}
-      <Grid
-        infiniteGrid
-        cellColor={colors.grid}
-        sectionColor={colors.gridStrong}
-        fadeDistance={60 * scale}
-        position={[0, 0.001, 0]}
+      <Sky
+        look={look}
+        scale={scale}
+        background={colors.background}
+        ground={groundColor(description.geoms, colors.background)}
       />
+      <Suns description={description} />
+      {/* The grid is an editing aid: Play, replays and training show the world as it is. */}
+      {props.mode === "play" ? null : (
+        <Grid
+          infiniteGrid
+          cellColor={colors.grid}
+          sectionColor={colors.gridStrong}
+          fadeDistance={60 * scale}
+          position={[0, 0.001, 0]}
+        />
+      )}
       {props.mode === "play" ? (
         <LiveGeoms geoms={description.geoms} poses={props.poses} track={track} onPick={props.onPick} />
       ) : (
         <EditGeoms {...props} />
       )}
+      {props.rays && props.rays.length > 0 ? (
+        <RayOverlay rays={props.rays} values={props.rayValues ?? false} track={props.mode === "play" ? track : null} />
+      ) : null}
       <ZoneMarkers
         zones={description.zones ?? []}
         colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal }}

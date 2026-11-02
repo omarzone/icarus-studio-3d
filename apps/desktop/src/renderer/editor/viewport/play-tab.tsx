@@ -1,6 +1,7 @@
 // TAB-PLAY
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useContext } from "react";
 import type { PlayLive } from "../../ports/play-port.ts";
+import { RayViewContext } from "../../scene/ray-lines.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { ErrorState } from "../../ui/states.tsx";
@@ -14,6 +15,7 @@ export type PlayView = { live: PlayLive | null; onPick: (pick: ScenePick) => voi
 // Play mode view: the world as the engine steps it; a click applies the selected Play tool.
 export function PlayTab({ play, ...surface }: ViewportSurfaceProps & { play?: PlayView }) {
   const scene = play?.live?.scene;
+  const rays = useContext(RayViewContext);
   return (
     <ViewportSurface {...surface}>
       {play?.live && scene ? (
@@ -28,7 +30,14 @@ export function PlayTab({ play, ...surface }: ViewportSurfaceProps & { play?: Pl
             )}
           >
             <Suspense fallback={null}>
-              <SceneView mode="play" description={scene} poses={play.live.poses} onPick={play.onPick} />
+              <SceneView
+                mode="play"
+                description={scene}
+                poses={play.live.poses}
+                onPick={play.onPick}
+                rays={rays?.shown ? play.live.rays : undefined}
+                rayValues={rays?.values}
+              />
             </Suspense>
           </RenderBoundary>
         </div>

@@ -106,11 +106,31 @@ function isGeom(value: unknown): boolean {
     has(value, "body", "string") &&
     has(value, "shape", "string") &&
     has(value, "color", "string") &&
+    isOptionalText(value.style) &&
+    isOptionalText(value.surface) &&
     isTriple(value.size, 3) &&
     isTriple(value.position, 3) &&
     isTriple(value.quaternion, 4)
   );
 }
+
+const isOptionalText = (value: unknown): boolean => value === undefined || value === null || typeof value === "string";
+
+function isRay(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    has(value, "sensor", "string") &&
+    has(value, "label", "string") &&
+    has(value, "range", "number") &&
+    (value.distance === null || typeof value.distance === "number") &&
+    isTriple(value.origin, 3) &&
+    isTriple(value.direction, 3)
+  );
+}
+
+// Distance sensors drawn in a view; older engines send none.
+export const isOptionalRays = (value: unknown): boolean =>
+  value === undefined || (Array.isArray(value) && value.every(isRay));
 
 const ZONE_KINDS: readonly unknown[] = ["spawn_point", "goal_zone", "zone"];
 const ZONE_SHAPES: readonly unknown[] = ["sphere", "box"];
@@ -147,7 +167,8 @@ export function isSceneDescription(value: unknown): value is SceneDescription {
     Array.isArray(value.geoms) &&
     value.geoms.every(isGeom) &&
     (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone))) &&
-    isSky(value.sky)
+    isSky(value.sky) &&
+    isOptionalRays(value.rays)
   );
 }
 
@@ -196,7 +217,8 @@ export function isPlayFrame(value: unknown): value is PlayFrame {
     Array.isArray(value.geoms) &&
     value.geoms.every(isPose) &&
     isListOf(value.senses, isReading) &&
-    isListOf(value.actions, isReading)
+    isListOf(value.actions, isReading) &&
+    isOptionalRays(value.rays)
   );
 }
 

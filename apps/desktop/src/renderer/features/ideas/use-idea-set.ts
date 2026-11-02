@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useNavigation, useNavigationStore } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { ideasPort } from "../../ports/ideas-port.ts";
+import { ideasRouteParams } from "./ideas-route.ts";
 
 export type IdeaSetState =
   | { kind: "ready"; set: string | null }
@@ -23,7 +24,7 @@ export function useIdeaSet(): IdeaSetState {
       .mutateAsync(prompt)
       .then((created) => {
         if (mounted.current) {
-          store.getState().replaceParams({ ...store.getState().params, ideaSet: created.id });
+          store.getState().replaceParams({ ...ideasRouteParams(store.getState().params), ideaSet: created.id });
         }
       })
       .catch(() => undefined);

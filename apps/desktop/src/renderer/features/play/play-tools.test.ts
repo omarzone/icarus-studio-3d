@@ -23,6 +23,7 @@ const scene: SceneDescription = {
 const live: PlayLive = {
   scene,
   poses: new Map([["box_geom", { position: [2.5, 0, 0.3], quaternion: [1, 0, 0, 0] }]]),
+  rays: [],
   paused: false,
   speed: 1,
 };

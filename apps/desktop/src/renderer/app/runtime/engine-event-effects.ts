@@ -33,12 +33,16 @@ export function eventInvalidations(event: EngineEvent, project: string): QueryPr
       ];
     case "diagnosis_created":
       return [["results", project]];
+    case "message_posted":
+      return [["copilot", project]];
+    case "run_event":
+      // A run started from the chat or the autopilot takes over the Train view once the run list reads again.
+      return event.event.type === "status" ? [["training", project, "runs"]] : [];
     case "turn_started":
     case "step":
     case "view_taken":
     case "turn_finished":
     case "task_progress":
-    case "run_event":
     case "hook_decision":
       return [];
   }

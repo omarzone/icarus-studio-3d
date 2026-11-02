@@ -64,7 +64,7 @@ describe("start plan", () => {
       copies: 16,
       estimate: "about 8 min",
       threads: "10 of 12 CPU threads",
-      coach: false,
+      coach: true,
     });
   });
 
@@ -86,12 +86,12 @@ describe("start plan", () => {
   it("keeps the steps and copies within what the engine accepts", () => {
     const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 10, copies: 500 } });
     expect(plan).toMatchObject({ steps: 10_000, copies: 64 });
-    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64, coach: false });
+    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64, coach: true });
   });
 
-  it("asks the engine to coach the run when the copilot coach switch is on", () => {
-    const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { coach: true } });
-    expect(startRequest(plan).coach).toBe(true);
+  it("leaves the run uncoached when the person turns the copilot coach switch off", () => {
+    const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { coach: false } });
+    expect(startRequest(plan).coach).toBe(false);
   });
 });
 

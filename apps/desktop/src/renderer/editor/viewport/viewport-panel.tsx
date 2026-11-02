@@ -5,12 +5,14 @@ import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type CameraMode, CameraViewContext, defaultCameraMode } from "../../scene/camera-mode.ts";
+import { type RayView, RayViewContext, raysShownByDefault } from "../../scene/ray-lines.ts";
 import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { CameraMenu } from "./camera-menu.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
 import { LiveTrainingTab, type TrainingView } from "./live-training-tab.tsx";
 import { PlayTab, type PlayView } from "./play-tab.tsx";
+import { RaysMenu } from "./rays-menu.tsx";
 import { ReplayTab } from "./replay-tab.tsx";
 import { SceneTab } from "./scene-tab.tsx";
 import { ViewportSurface } from "./viewport-surface.tsx";
@@ -42,6 +44,8 @@ export type ViewportPanelProps = {
   training?: TrainingView;
   // The scene tab shows the training copies side by side instead of the editable scene.
   copiesPreview?: { onExit: () => void };
+  // The view is about what the agent senses, so its distance sensors show from the start.
+  senses?: boolean;
   className?: string;
 };
 
@@ -85,6 +89,7 @@ export function ViewportPanel({
   play,
   training,
   copiesPreview,
+  senses = false,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
@@ -102,6 +107,11 @@ export function ViewportPanel({
     setFrame((count) => count + 1);
   };
   const camera = cameraReady ? { mode, frame, onFrameAll: frameAll } : null;
+  // Each tab keeps its own ray options too; Replay has no sensor readings to draw.
+  const [rayViews, setRayViews] = useState<Readonly<Record<string, RayView>>>({});
+  const rayView = rayViews[active] ?? { shown: raysShownByDefault(active, senses), values: true, allCopies: false };
+  const rays = cameraReady && active !== "replay" ? rayView : null;
+  const setRayView = (next: RayView) => setRayViews((current) => ({ ...current, [active]: next }));
   const options = cameraReady ? viewOptions.filter((option) => option !== CAMERA_OPTION) : viewOptions;
   const surface = { label, tint, overlays, scene, ghosts };
   const notYet = useNotYet();
@@ -139,27 +149,30 @@ export function ViewportPanel({
               {option}
             </Act>
           ))}
+          {rays ? <RaysMenu view={rays} onView={setRayView} copies={active === "live-training"} /> : null}
           {camera ? <CameraMenu mode={mode} onMode={setMode} onFrameAll={frameAll} /> : null}
         </>
       }
     >
       <CameraViewContext value={camera}>
-        <div className="flex h-full flex-col">
-          {toolbar}
-          {active === "scene" ? (
-            <SceneTab {...surface} copiesPreview={copiesPreview} />
-          ) : active === "game-view" ? (
-            <GameViewTab {...surface} />
-          ) : active === "play" ? (
-            <PlayTab {...surface} play={play} />
-          ) : active === "live-training" ? (
-            <LiveTrainingTab {...surface} training={training} />
-          ) : active === "replay" ? (
-            <ReplayTab {...surface} training={training} />
-          ) : (
-            <ViewportSurface {...surface} />
-          )}
-        </div>
+        <RayViewContext value={rays}>
+          <div className="flex h-full flex-col">
+            {toolbar}
+            {active === "scene" ? (
+              <SceneTab {...surface} copiesPreview={copiesPreview} />
+            ) : active === "game-view" ? (
+              <GameViewTab {...surface} />
+            ) : active === "play" ? (
+              <PlayTab {...surface} play={play} />
+            ) : active === "live-training" ? (
+              <LiveTrainingTab {...surface} training={training} />
+            ) : active === "replay" ? (
+              <ReplayTab {...surface} training={training} />
+            ) : (
+              <ViewportSurface {...surface} />
+            )}
+          </div>
+        </RayViewContext>
       </CameraViewContext>
     </Panel>
   );

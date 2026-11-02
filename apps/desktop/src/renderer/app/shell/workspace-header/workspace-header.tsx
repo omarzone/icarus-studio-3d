@@ -44,6 +44,8 @@ export type WorkspaceHeaderProps = {
   primary: { label: string; to: RouteId; disabled?: boolean };
   // Panels menu of workspaces whose panels can be rearranged.
   layoutMenu?: ReactNode;
+  // Why the other workspace tabs cannot open yet (no project exists); omitted when they can.
+  workspacesLocked?: string;
 };
 
 export function WorkspaceHeader({
@@ -57,6 +59,7 @@ export function WorkspaceHeader({
   routes = {},
   primary,
   layoutMenu,
+  workspacesLocked,
 }: WorkspaceHeaderProps) {
   useTitleBarHeight(tokens.size.headerWorkspace);
   const mode = useRuntimeMode();
@@ -83,6 +86,19 @@ export function WorkspaceHeader({
               ? "rounded-control bg-selected px-3.5 py-1.5 text-ui font-semibold text-on-selected"
               : "rounded-control px-3.5 py-1.5 text-ui text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80";
             const to = isActive ? activeGoesTo : (routes[name] ?? WORKSPACE_ROUTES[name]);
+            if (!isActive && workspacesLocked) {
+              return (
+                <Act
+                  key={name}
+                  cta={name}
+                  disabled
+                  title={workspacesLocked}
+                  className={`${className} disabled:pointer-events-none disabled:opacity-50`}
+                >
+                  <TabLabel name={name} />
+                </Act>
+              );
+            }
             return to ? (
               <GoTo
                 key={name}

@@ -125,7 +125,8 @@ export function startPlan({ runs, family, settings, choice }: PlanInput): StartP
     copies,
     estimate,
     threads: `${settings.threads} of ${settings.max_threads} CPU threads`,
-    coach: choice.coach ?? false,
+    // The copilot coaches every run unless the person turns it off.
+    coach: choice.coach ?? true,
   };
 }
 

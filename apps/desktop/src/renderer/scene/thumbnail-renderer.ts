@@ -1,26 +1,20 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription } from "@icarus/contracts";
 import {
   ACESFilmicToneMapping,
-  AmbientLight,
-  BoxGeometry,
-  type BufferGeometry,
-  CapsuleGeometry,
   Color,
-  CylinderGeometry,
-  DirectionalLight,
   FogExp2,
-  Mesh,
-  MeshStandardMaterial,
+  HemisphereLight,
+  PCFShadowMap,
   PerspectiveCamera,
   Scene,
-  SphereGeometry,
   WebGLRenderer,
 } from "three";
-import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
-import { geomShape } from "./geom-shape.ts";
-import { AMBIENT_INTENSITY, floorDepth, GEOM_ROUGHNESS, sceneColors, sceneLight } from "./scene-materials.ts";
+import { geomObject } from "./geom-object.ts";
+import { groundColor, hemisphereLook, sunFrame } from "./scene-lighting.ts";
+import { AMBIENT_INTENSITY, sceneColors } from "./scene-materials.ts";
 import { skyLook } from "./scene-sky.ts";
 import { createSkyDome } from "./sky-dome.ts";
+import { sunLight } from "./sun-light.ts";
 import { sceneBounds, thumbnailCamera, topCamera } from "./thumbnail-framing.ts";
 import { zoneMesh } from "./zone-mesh.ts";
 
@@ -44,24 +38,12 @@ function renderer(): WebGLRenderer {
   });
   // The same output as the editor viewport, which React Three Fiber renders with this tone mapping.
   created.toneMapping = ACESFilmicToneMapping;
+  created.shadowMap.enabled = true;
+  created.shadowMap.type = PCFShadowMap;
   created.setPixelRatio(1);
   created.setSize(WIDTH, HEIGHT, false);
   shared = created;
   return created;
-}
-
-function geometry(geom: SceneGeom): BufferGeometry {
-  const shape = geomShape(geom);
-  switch (shape.kind) {
-    case "box":
-      return new BoxGeometry(...shape.args);
-    case "sphere":
-      return new SphereGeometry(...shape.args);
-    case "cylinder":
-      return new CylinderGeometry(...shape.args);
-    case "capsule":
-      return new CapsuleGeometry(...shape.args);
-  }
 }
 
 // Draws the engine's compiled scene at its initial pose from a fixed three-quarter view, as a PNG data URL.
@@ -83,9 +65,11 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   const look = skyLook(description.sky);
   const scene = new Scene();
   scene.background = new Color(look?.horizon ?? colors.background);
-  scene.add(new AmbientLight(0xffffff, look?.ambient ?? AMBIENT_INTENSITY));
+  const hemisphere = hemisphereLook(look, groundColor(description.geoms, colors.background), AMBIENT_INTENSITY);
+  scene.add(new HemisphereLight(hemisphere.sky, hemisphere.ground, hemisphere.intensity));
   const frame = options.view === "top" ? topCamera : thumbnailCamera;
-  const framing = frame(sceneBounds(description.geoms), width / height);
+  const bounds = sceneBounds(description.geoms);
+  const framing = frame(bounds, width / height);
   const dome = look ? createSkyDome(look, framing.far * DOME_REACH) : null;
   if (dome) {
     dome.position.set(...framing.target);
@@ -94,22 +78,15 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   if (look?.fog) {
     scene.fog = new FogExp2(look.fog.color, look.fog.density);
   }
-  for (const light of description.lights) {
-    const { position, intensity } = sceneLight(light);
-    const directional = new DirectionalLight(0xffffff, intensity);
-    directional.position.set(...position);
-    scene.add(directional);
-  }
-  const meshes = description.geoms.map((geom) => {
-    const mesh = new Mesh(
-      geometry(geom),
-      new MeshStandardMaterial({ color: geom.color, roughness: GEOM_ROUGHNESS, ...floorDepth(geom.shape) }),
-    );
-    mesh.position.set(...toThreePosition(geom.position));
-    mesh.quaternion.set(...toThreeQuaternion(geom.quaternion));
-    scene.add(mesh);
-    return mesh;
+  const suns = description.lights.map((light, index) => {
+    const sun = sunLight(sunFrame(light, bounds), index === 0);
+    scene.add(sun, sun.target);
+    return sun;
   });
+  // The same objects the viewport draws, styles included; their geometries and materials are shared, never disposed.
+  for (const geom of description.geoms) {
+    scene.add(geomObject(geom));
+  }
   // Where the task starts and ends, as the viewport paints it, so a parking card shows where it parks.
   const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal };
   const zones = (description.zones ?? []).map((zone) => {
@@ -128,7 +105,10 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   } finally {
     dome?.geometry.dispose();
     dome?.material.dispose();
-    for (const mesh of [...meshes, ...zones]) {
+    for (const sun of suns) {
+      sun.dispose();
+    }
+    for (const mesh of zones) {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }

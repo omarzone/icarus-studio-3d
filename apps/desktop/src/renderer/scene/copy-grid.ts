@@ -1,4 +1,4 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import type { Pose, Poses } from "./pose-track.ts";
 
 // The parallel copies of a training run side by side: each copy's geoms shifted by its place in a square grid.
@@ -13,6 +13,8 @@ export type CopyGrid = {
   extent: number;
   // The copies' poses shifted to their places, by grid geom name.
   place: (copies: readonly Poses[]) => Poses;
+  // The copies' distance sensors shifted to their places, sensors named "<copy>:<sensor>"; only one copy's when given.
+  placeRays: (copies: readonly (readonly SceneRay[])[], only?: number) => SceneRay[];
 };
 
 type Vec3 = [number, number, number];
@@ -83,12 +85,20 @@ export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
       });
       return poses;
     },
+    placeRays: (copies, only) =>
+      copies.flatMap((rays, index) => {
+        const offset = offsets[index];
+        if (!offset || (only !== undefined && only !== index)) {
+          return [];
+        }
+        return rays.map((ray) => ({ ...ray, sensor: `${index}:${ray.sensor}`, origin: shifted(ray.origin, offset) }));
+      }),
   };
 }
 
 // Training copies that each start differently (their own scene), side by side with their task zones, spaced by
 // the widest copy; the first copy's lights and sky light them all.
-export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, "place"> {
+export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, "place" | "placeRays"> {
   const sizes = scenes.map((scene) => footprint(solid(scene.geoms)));
   const width = Math.max(0, ...sizes.map(([x]) => x));
   const depth = Math.max(0, ...sizes.map(([, y]) => y));

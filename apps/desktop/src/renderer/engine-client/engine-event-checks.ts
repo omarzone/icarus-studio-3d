@@ -65,6 +65,8 @@ function isEngineEvent(value: unknown): value is EngineEvent {
       return has(value, "revision", "number") && (value.author === "user" || value.author === "copilot");
     case "hook_decision":
       return has(value, "action", "string") && has(value, "point", "string");
+    case "message_posted":
+      return has(value, "message_id", "string") && (value.role === "user" || value.role === "copilot");
     default:
       return false;
   }

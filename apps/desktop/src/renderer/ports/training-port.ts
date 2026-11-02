@@ -1,4 +1,4 @@
-import type { SceneDescription } from "@icarus/contracts";
+import type { SceneDescription, SceneRay } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createTrainingFixture } from "./training.fixture.ts";
@@ -111,7 +111,15 @@ export type CopyPoses = ReadonlyMap<string, CopyPose>;
 export type LiveCopies =
   | { kind: "connecting" }
   | { kind: "message"; title: string; body: string }
-  | { kind: "live"; scene: SceneDescription; step: string; copies: readonly CopyPoses[]; note?: string }
+  | {
+      kind: "live";
+      scene: SceneDescription;
+      step: string;
+      copies: readonly CopyPoses[];
+      // Each copy's distance sensors, in the order of `copies`.
+      rays: readonly (readonly SceneRay[])[];
+      note?: string;
+    }
   | { kind: "closed"; reason: string };
 
 // What changed in a run, so the views that show it read it again.

@@ -9,7 +9,8 @@ export type Poses = ReadonlyMap<string, Pose>;
 export type PoseTrack = { from: Poses; to: Poses; arrivedAt: number; span: number };
 
 const MIN_SPAN_MS = 1000 / 120;
-const MAX_SPAN_MS = 250;
+// Live training snapshots come a few times per second; a longer gap is a pause, not motion to ease through.
+const MAX_SPAN_MS = 1000;
 
 export function nextTrack(track: PoseTrack | null, poses: Poses, now: number): PoseTrack {
   if (!track) {

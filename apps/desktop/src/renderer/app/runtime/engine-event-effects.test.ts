@@ -1,5 +1,6 @@
 import type { EngineEvent, TaskInfo } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
+import { status } from "../../ports/testdata/training-runs.ts";
 import { eventInvalidations, nextLiveSteps, withTaskProgress } from "./engine-event-effects.ts";
 
 const step = (summary: string): EngineEvent => ({ type: "step", turn_id: "t1", step: { tool: "inspect", summary } });
@@ -45,6 +46,27 @@ describe("eventInvalidations", () => {
       started_at: "2026-11-01T10:00:00Z",
     };
     expect(eventInvalidations({ type: "task_started", task }, "p1")).toEqual([["tasks", "p1"]]);
+  });
+
+  it("re-reads the conversation when the copilot posts a message on its own", () => {
+    expect(eventInvalidations({ type: "message_posted", message_id: "m1", role: "copilot" }, "p1")).toEqual([
+      ["copilot", "p1"],
+    ]);
+  });
+
+  it("re-reads the run list when a run's state changes, so a run started from the chat shows up", () => {
+    const changed: EngineEvent = {
+      type: "run_event",
+      run_id: "r2",
+      event: { type: "status", status: status({ run_id: "r2" }) },
+    };
+    expect(eventInvalidations(changed, "p1")).toEqual([["training", "p1", "runs"]]);
+    const logged: EngineEvent = {
+      type: "run_event",
+      run_id: "r2",
+      event: { type: "log", line: { elapsed: 1, level: "info", text: "" } },
+    };
+    expect(eventInvalidations(logged, "p1")).toEqual([]);
   });
 
   it("leaves queries alone for live-only events", () => {

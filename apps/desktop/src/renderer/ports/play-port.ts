@@ -1,4 +1,4 @@
-import type { PlayGeomPose, SceneDescription } from "@icarus/contracts";
+import type { PlayGeomPose, SceneDescription, SceneRay } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createPlayFixture } from "./play.fixture.ts";
 import { createEnginePlayPort } from "./play-engine.ts";
@@ -62,6 +62,8 @@ export type PlayPose = Pick<PlayGeomPose, "position" | "quaternion">;
 export type PlayLive = {
   scene: SceneDescription | null;
   poses: ReadonlyMap<string, PlayPose>;
+  // Where each distance sensor looks now and what it reads.
+  rays: readonly SceneRay[];
   paused: boolean;
   speed: number;
 };
