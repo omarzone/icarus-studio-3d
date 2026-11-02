@@ -11,6 +11,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { SettingSwitchRow } from "./setting-switch-row.tsx";
 import { SettingsLayout } from "./settings-layout.tsx";
+import { STORAGE_SECTION_ID, StorageSection } from "./storage-section.tsx";
 
 export function TrainingPage() {
   const settings = usePort(settingsPort);
@@ -20,8 +21,14 @@ export function TrainingPage() {
       section="training"
       title="Training and hardware"
       description="Training runs on this computer. Nothing is uploaded."
+      onLocalItem={(label) => {
+        if (label === "Storage") {
+          document.getElementById(STORAGE_SECTION_ID)?.scrollIntoView({ block: "start" });
+        }
+      }}
     >
       <QueryView query={query}>{(training) => <TrainingForm training={training} />}</QueryView>
+      <StorageSection />
     </SettingsLayout>
   );
 }
@@ -63,7 +70,6 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
   const setTraining = useEngineAction(settings.setTraining);
   const restart = useEngineAction(settings.restartEngine);
   const app = useRuntimeMode() === "app";
-  const [folder, setFolder] = useState(training.projectsFolder);
   const [checkpoints, setCheckpoints] = useState(training.checkpoints);
   const free = training.maxThreads - training.threads;
   return (
@@ -100,12 +106,6 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
         onChange={(value) => setTraining.mutate({ useGraphicsCard: value }, store)}
       />
       <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label="Projects folder"
-          value={folder}
-          onChange={(event) => setFolder(event.target.value)}
-          onBlur={() => setTraining.mutate({ projectsFolder: folder }, store)}
-        />
         <TextField
           label="Keep checkpoints"
           value={checkpoints}

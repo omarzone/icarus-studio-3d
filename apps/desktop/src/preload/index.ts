@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { ENGINE_CHANNEL, type EngineBridge, type EngineStatus } from "../shared/engine-bridge.ts";
+import { STORAGE_CHANNEL, type StorageBridge } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL, type WindowBridge } from "../shared/window-bridge.ts";
 
 const engine: EngineBridge = {
@@ -19,4 +20,8 @@ const windowBridge: WindowBridge = {
   setTitleBarHeight: (height) => ipcRenderer.send(WINDOW_CHANNEL.titleBarHeight, height),
 };
 
-contextBridge.exposeInMainWorld("icarus", { engine, window: windowBridge });
+const storage: StorageBridge = {
+  chooseFolder: () => ipcRenderer.invoke(STORAGE_CHANNEL.chooseFolder),
+};
+
+contextBridge.exposeInMainWorld("icarus", { engine, window: windowBridge, storage });

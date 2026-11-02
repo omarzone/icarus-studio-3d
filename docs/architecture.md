@@ -256,7 +256,7 @@ Behaviors still being compared before one becomes the default are switched in `e
 
 ### Run store
 
-Runs live next to the projects, in `~/Icarus Studio/runs` (`ICARUS_RUNS_DIR` overrides it), so reinstalling the app never deletes a trained brain. On start the engine moves runs left in the older `services/engine/runs` folder into it, removing each original only after its copy is verified.
+Runs live next to the projects in the data folder, `~/Icarus Studio` by default (`projects/` and `runs/`), so reinstalling the app never deletes a trained brain. Settings › Training and hardware › Storage chooses another data folder, saved in `storage.json` in the settings folder; the engine copies every project and run there, verifies each byte for byte before removing the original, refuses while anything trains and is restarted by the app to use it. `ICARUS_PROJECTS_DIR` and `ICARUS_RUNS_DIR` always win over the saved folder. On start the engine moves runs left in the older `services/engine/runs` folder into it, removing each original only after its copy is verified.
 
 ```text
 runs/<run_id>/

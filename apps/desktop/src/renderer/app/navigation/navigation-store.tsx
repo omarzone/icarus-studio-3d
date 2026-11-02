@@ -10,20 +10,27 @@ export type NavigationLocation = {
   params: RouteParams;
 };
 
+// Where the window opens, with the screens before it when they were kept (a reload keeps the way back).
+export type NavigationStart = NavigationLocation & { history?: NavigationLocation[] };
+
 export type NavigationState = NavigationLocation & {
   history: NavigationLocation[];
   go: (id: RouteId, params?: RouteParams) => void;
   close: () => void;
   back: () => void;
+  // Returns to the screen at this point of the history, as it was, dropping what came after it.
+  returnTo: (index: number) => void;
   reset: (location: NavigationLocation) => void;
   // Same screen, new parameters, no history step (a created project replacing its template).
   replaceParams: (params: RouteParams) => void;
 };
 
-export function createNavigationStore(initial: NavigationLocation): StoreApi<NavigationState> {
+export function createNavigationStore(initial: NavigationStart): StoreApi<NavigationState> {
   return createStore<NavigationState>()((set) => ({
-    ...initial,
-    history: [],
+    screen: initial.screen,
+    overlay: initial.overlay,
+    params: initial.params,
+    history: initial.history ?? [],
     go: (id, params) =>
       set((state) => {
         const nextParams = params ?? state.params;
@@ -39,6 +46,11 @@ export function createNavigationStore(initial: NavigationLocation): StoreApi<Nav
         const previous = state.history.at(-1);
         return previous ? { ...previous, history: state.history.slice(0, -1) } : { overlay: null };
       }),
+    returnTo: (index) =>
+      set((state) => {
+        const target = state.history[index];
+        return target ? { ...target, overlay: null, history: state.history.slice(0, index) } : {};
+      }),
     reset: (location) => set({ ...location, history: [] }),
     replaceParams: (params) => set({ params }),
   }));
@@ -46,7 +58,7 @@ export function createNavigationStore(initial: NavigationLocation): StoreApi<Nav
 
 export const NavigationContext = createContext<StoreApi<NavigationState> | null>(null);
 
-export function NavigationProvider({ initial, children }: { initial: NavigationLocation; children: ReactNode }) {
+export function NavigationProvider({ initial, children }: { initial: NavigationStart; children: ReactNode }) {
   const [store] = useState(() => createNavigationStore(initial));
   return <NavigationContext.Provider value={store}>{children}</NavigationContext.Provider>;
 }

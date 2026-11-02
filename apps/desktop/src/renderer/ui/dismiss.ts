@@ -15,6 +15,8 @@ export function useDismiss(open: boolean, inside: readonly RefObject<HTMLElement
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // Closing the menu is all this Escape does; the page under it stays.
+        event.preventDefault();
         onClose();
       }
     };

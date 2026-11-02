@@ -7,12 +7,14 @@ import type { ScreenId } from "./catalog-id.ts";
 import { NavigationContext, type NavigationState, useNavigation, useNavigationStore } from "./navigation-store.tsx";
 import { NotBuiltYet } from "./not-built-yet.tsx";
 import { catalog } from "./route-registry.ts";
+import { useWayBackEscape } from "./way-back-escape.ts";
 
 // Longest a new screen stays hidden while its data loads; after that it shows its own loading states.
 const SWAP_TIMEOUT_MS = 300;
 
 export function Router() {
   const store = useNavigationStore();
+  useWayBackEscape(store);
   const screen = useNavigation((state) => state.screen);
   const overlay = useNavigation((state) => state.overlay);
   const Overlay = overlay ? catalog.routes.get(overlay)?.component : undefined;
@@ -70,6 +72,7 @@ function frozenStore(store: StoreApi<NavigationState>, state: NavigationState): 
     go: live.go,
     close: live.close,
     back: live.back,
+    returnTo: live.returnTo,
     reset: live.reset,
     replaceParams: live.replaceParams,
   }));

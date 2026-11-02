@@ -3,6 +3,7 @@ import type {
   NotificationSettings,
   PrivacySettings,
   SettingsPort,
+  StorageSettings,
   TrainingSettings,
 } from "./settings-port.ts";
 
@@ -38,6 +39,22 @@ const TRAINING: TrainingSettings = {
   engine: { version: "0.4", healthy: true },
 };
 
+const GB = 1024 ** 3;
+
+const STORAGE: StorageSettings = {
+  dataFolder: "Documents / Icarus",
+  projectsFolder: "Documents / Icarus / projects",
+  runsFolder: "Documents / Icarus / runs",
+  projectsBytes: 0.4 * GB,
+  runsBytes: 6.2 * GB,
+  freeBytes: 18 * GB,
+  setByEnvironment: false,
+  move: { state: "idle", folder: null, progress: 0, text: "", lines: [], restartNeeded: false },
+};
+
+// The folder the prototype's picker answers with.
+const PICKED = "Data / Icarus";
+
 const NOTIFICATIONS: NotificationSettings = {
   runFinished: true,
   copilotNeedsOk: true,
@@ -55,6 +72,7 @@ export function createSettingsFixture(): SettingsPort {
   let privacy = PRIVACY;
   let training = TRAINING;
   let notifications = NOTIFICATIONS;
+  let storage = STORAGE;
   return {
     getModelSettings: async () => models,
     saveModelSettings: async ({ endpoint, apiKey, models: names }) => {
@@ -83,6 +101,35 @@ export function createSettingsFixture(): SettingsPort {
       return training;
     },
     restartEngine: async () => undefined,
+    getStorage: async () => storage,
+    chooseDataFolder: async () => ({ kind: "chosen", folder: PICKED }),
+    checkDataFolder: async (folder) => ({
+      folder,
+      problem: folder === storage.dataFolder ? "This is already the data folder" : null,
+      neededBytes: storage.projectsBytes + storage.runsBytes,
+      freeBytes: 240 * GB,
+    }),
+    changeDataFolder: async ({ folder, moveData }) => {
+      const lines = moveData ? [`Moved 3 projects from ${storage.projectsFolder} to ${folder} / projects`] : [];
+      const move = {
+        state: "done" as const,
+        folder,
+        progress: 1,
+        text: "Done",
+        lines: [...lines, `Icarus now keeps projects and runs in ${folder}`],
+        restartNeeded: true,
+      };
+      storage = {
+        ...storage,
+        dataFolder: folder,
+        projectsFolder: `${folder} / projects`,
+        runsFolder: `${folder} / runs`,
+        ...(moveData ? {} : { projectsBytes: 0, runsBytes: 0 }),
+        move,
+      };
+      return move;
+    },
+    getDataFolderMove: async () => storage.move,
     getNotificationSettings: async () => notifications,
     setNotification: async ({ option, value }) => {
       notifications = { ...notifications, [option]: value };

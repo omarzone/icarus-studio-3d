@@ -46,8 +46,9 @@ def move_legacy_runs() -> None:
 
     A configured runs folder (tests, a temporary app) never receives them, so they cannot vanish with it.
     """
-    from icarus.training.run_relocation import relocate_runs
-    from icarus.training.run_store import LEGACY_RUNS_DIR, RUNS_DIR_ENV, runs_dir
+    from icarus.storage.data_folder import RUNS_DIR_ENV, runs_dir
+    from icarus.storage.relocation import relocate_runs
+    from icarus.training.run_store import LEGACY_RUNS_DIR
 
     if os.environ.get(RUNS_DIR_ENV):
         return
@@ -71,7 +72,9 @@ def main(argv: list[str] | None = None) -> None:
     # Before MuJoCo is imported; training workers inherit the backend through the environment.
     prepare_rendering()
     if args.projects_dir is not None:
-        os.environ["ICARUS_PROJECTS_DIR"] = str(args.projects_dir)
+        from icarus.storage.data_folder import PROJECTS_DIR_ENV
+
+        os.environ[PROJECTS_DIR_ENV] = str(args.projects_dir)
     move_legacy_runs()
     if not args.exit_with_stdin:
         uvicorn.run(

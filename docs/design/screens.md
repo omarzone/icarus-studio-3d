@@ -61,6 +61,7 @@ Top bar of the pages outside a project: Home, Projects, Community, Profile, Sett
 
 - Logo, nav links **Home** (`SCR-HOME`), **Projects** (`SCR-PROJECTS`), **Community** (`SCR-COMMUNITY`); the active one is underlined.
 - **Search creations** field → `SCR-COMMUNITY` with results. **Bell** with an unread dot → `POP-NOTIFICATIONS`. **Avatar** → `SCR-PROFILE` (signed out: `MOD-SIGN-IN`).
+- In the app a **way back** before the logo, with Escape doing the same: on every Settings page *Back to project* (or *Back to Home*, *Back to Projects*… for the page Settings was opened from; *Back to Home* when there is none), and on Home, Projects, Community, Creation and Profile *Back to project* when they were opened from a project. It returns to the exact project and workspace, and a reload keeps it.
 
 ### `HDR-PLAY` Play header
 
@@ -2077,6 +2078,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Test connection | Button or link | Acts in place |
 | Page | Save | Button or link | → `SCR-HOME` Home |
@@ -2098,6 +2100,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Change photo | Button or link | Acts in place |
 | Page | Remove | Button or link | Acts in place |
@@ -2122,6 +2125,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | Acts in place |
 | Side navigation | Blocked people | Button or link | Acts in place |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Unblock | Button or link | Acts in place |
 | Page | Download my data | Button or link | Acts in place |
@@ -2134,7 +2138,8 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `POP-PROJECT-MENU`, `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`
 - **Purpose:** Control how training uses this computer.
 - **Content:**
-  - CPU threads, graphics card, projects folder, checkpoints kept, engine status with Restart engine.
+  - CPU threads, graphics card, checkpoints kept, engine status with Restart engine.
+  - In the app, **Storage**: the data folder holding projects and runs, the space they use and what the drive has free, and *Change folder…*, which opens the system folder picker. A folder that is not writable, is inside the app or inside the current data folder is refused with the reason. Otherwise it offers *Move projects and runs* (copy, verify byte for byte, then remove each original, with progress and a list of what moved and what stayed), *Start empty there* or *Cancel*; nothing can train while it moves, and the engine restarts on its own to use the new folder. Locked when `ICARUS_PROJECTS_DIR` or `ICARUS_RUNS_DIR` sets the folders.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels
@@ -2146,6 +2151,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | Acts in place |
+| Side navigation | Storage | Button or link | Acts in place |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Restart engine | Button or link | → `SYS-ENGINE-DOWN` Engine stopped (in the app: restarts the engine in place) |
 
@@ -2166,6 +2172,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | Acts in place |
 
 ### System and team

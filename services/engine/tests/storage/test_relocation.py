@@ -3,11 +3,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from icarus import cli
-from icarus.api.app import projects_dir
 from icarus.contracts.training import RunStatus
-from icarus.training import run_relocation, run_store
-from icarus.training.run_relocation import relocate_runs
-from icarus.training.run_store import RunStore, runs_dir
+from icarus.storage import relocation
+from icarus.storage.data_folder import projects_dir, runs_dir
+from icarus.storage.relocation import relocate_runs
+from icarus.training import run_store
+from icarus.training.run_store import RunStore
 
 RUN = "run-20260101T000000Z-ab12"
 OTHER = "run-20260102T000000Z-cd34"
@@ -81,7 +82,7 @@ def test_a_copy_that_fails_keeps_the_original_and_leaves_nothing_behind(tmp_path
         (Path(destination) / "status.json").write_text("half", encoding="utf-8")
         raise OSError("disk full")
 
-    monkeypatch.setattr(run_relocation, "copytree", broken_copy)
+    monkeypatch.setattr(relocation, "copytree", broken_copy)
     result = relocate_runs(old, new)
 
     assert result.moved == []
@@ -99,7 +100,7 @@ def test_a_copy_that_does_not_match_is_discarded(tmp_path, monkeypatch):
         real_copy(source, destination)
         (Path(destination) / "checkpoints" / "1000.zip").write_bytes(b"damaged!")
 
-    monkeypatch.setattr(run_relocation, "copytree", corrupting_copy)
+    monkeypatch.setattr(relocation, "copytree", corrupting_copy)
     result = relocate_runs(old, new)
 
     assert result.skipped == [f"Left {RUN} in place: the copy did not match the original"]
