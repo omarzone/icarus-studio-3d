@@ -47,7 +47,8 @@ export interface ComponentSpec {
       | CountValue
       | AssetValue
       | PanelValue
-      | ReadonlyValue;
+      | ReadonlyValue
+      | TextValue;
   };
 }
 /**
@@ -149,6 +150,14 @@ export interface PanelValue {
  */
 export interface ReadonlyValue {
   type: "readonly";
+  value: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TextValue".
+ */
+export interface TextValue {
+  type: "text";
   value: string;
 }
 /**
@@ -455,7 +464,8 @@ export interface PropertySchema {
     | CountValue
     | AssetValue
     | PanelValue
-    | ReadonlyValue;
+    | ReadonlyValue
+    | TextValue;
   expert?: boolean;
   hint?: string | null;
   id: string;
@@ -477,7 +487,8 @@ export interface PropertySchema {
     | "count"
     | "asset"
     | "panel"
-    | "readonly";
+    | "readonly"
+    | "text";
   unit?: string | null;
 }
 /**
@@ -724,7 +735,8 @@ export interface SetProperty {
     | CountValue
     | AssetValue
     | PanelValue
-    | ReadonlyValue;
+    | ReadonlyValue
+    | TextValue;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -777,7 +789,8 @@ export interface RewardTermSpec {
       | CountValue
       | AssetValue
       | PanelValue
-      | ReadonlyValue;
+      | ReadonlyValue
+      | TextValue;
   };
   term: string;
   weight: number;
