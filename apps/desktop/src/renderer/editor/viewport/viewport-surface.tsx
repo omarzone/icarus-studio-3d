@@ -8,6 +8,7 @@ import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { ErrorState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneDescription, useSceneTree } from "../scene-queries.ts";
 import { CopiesPreview } from "./copies-preview.tsx";
+import { useGizmoMode } from "./gizmo-store.ts";
 
 // The 3D renderer is heavy, so it loads the first time a view has a scene to draw.
 const SceneView = lazy(() => import("../../scene/scene-view.tsx"));
@@ -57,6 +58,10 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
   const cache = useSceneCache(scene);
   const select = useEngineAction(port.selectObject);
   const move = useEngineAction(port.moveObject);
+  const rotate = useEngineAction(port.rotateObject);
+  const stretch = useEngineAction(port.scaleObject);
+  const gizmo = useGizmoMode((state) => state.mode);
+  const setGizmo = useGizmoMode((state) => state.setMode);
   const rays = useContext(RayViewContext);
   if (!description.data) {
     return null;
@@ -85,7 +90,11 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
                 select.mutate({ scene, id }, { onSuccess: cache.tree });
               }
             }}
+            gizmo={gizmo}
+            onGizmo={setGizmo}
             onMove={(id, delta) => move.mutate({ scene, id, delta }, { onSuccess: cache.inspection })}
+            onRotate={(id, delta) => rotate.mutate({ scene, id, delta }, { onSuccess: cache.inspection })}
+            onScale={(id, factor) => stretch.mutate({ scene, id, factor }, { onSuccess: cache.inspection })}
           />
         </Suspense>
       </RenderBoundary>

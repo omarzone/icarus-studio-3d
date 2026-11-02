@@ -205,6 +205,21 @@ export type ScenePort = {
   getSceneDescription: (scene: string) => Promise<SceneDescription | null>;
   // Moves an object by a delta in world axes (metres, MuJoCo frame), as a gizmo drag ends.
   moveObject: (input: { scene: string; id: string; delta: [number, number, number] }) => Promise<Inspection>;
+  // Turns an object by a rotation in world axes (quaternion wxyz, MuJoCo frame), as a gizmo drag ends.
+  rotateObject: (input: {
+    scene: string;
+    id: string;
+    delta: readonly [number, number, number, number];
+  }) => Promise<Inspection>;
+  // Stretches an object along its own axes by these factors (1 keeps an axis), as a gizmo drag ends.
+  scaleObject: (input: { scene: string; id: string; factor: readonly [number, number, number] }) => Promise<Inspection>;
+  renameObject: (input: { scene: string; id: string; name: string }) => Promise<SceneTree>;
+  // Copies the object and what is nested in it, and selects the copy.
+  duplicateObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
+  // Deletes the object and what is nested in it.
+  deleteObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
+  // Nests the object under another of its group (null: top level), keeping its place in the world.
+  reparentObject: (input: { scene: string; id: string; parent: string | null }) => Promise<SceneTree>;
 };
 
 export const scenePort = definePort<ScenePort>({

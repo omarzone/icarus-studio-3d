@@ -22,6 +22,8 @@ export type ToolbarProps = {
   groups: readonly ToolGroup[];
   // Label of the tool shown as selected (white).
   selected?: string;
+  // Label of the tool shown as selected when the workspace holds that choice (the gizmo mode); clicks then only act.
+  active?: string;
   // Destinations replaced for this screen, by tool label (a tool whose surface is already open acts in place).
   overrides?: Readonly<Record<string, RouteId | null>>;
   // What a tool does in the app, by tool label; app tools with no action and no destination say they are not available yet.
@@ -36,8 +38,9 @@ const toolClass = (selected: boolean) =>
   } aria-disabled:opacity-35 aria-disabled:hover:bg-transparent`;
 
 // The strip of tools above the viewport, in groups separated by dividers.
-export function Toolbar({ groups, selected, overrides, actions = {}, unavailable = {} }: ToolbarProps) {
-  const [mode, setMode] = useState(selected);
+export function Toolbar({ groups, selected, active, overrides, actions = {}, unavailable = {} }: ToolbarProps) {
+  const [chosen, setMode] = useState(selected);
+  const mode = active ?? chosen;
   const runtime = useRuntimeMode();
   const notify = useNotices((state) => state.notify);
   return (

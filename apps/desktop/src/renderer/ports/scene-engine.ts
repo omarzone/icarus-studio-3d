@@ -3,6 +3,8 @@ import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
 import { brainInspection, brainSettingOperation, brainSettingReset } from "./brain-settings-views.ts";
 import { trainingVariations, variationOperations } from "./copy-variations.ts";
 import { guideProgress } from "./guide-progress.ts";
+import { type Quat, stretchedScale, turnedRotation, type Vec3, worldToParent } from "./object-transform.ts";
+import { duplicateOperations, reparentOperations } from "./scene-objects.ts";
 import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
 import {
   componentGroups,
@@ -25,18 +27,6 @@ const LAYOUTS = ["Grid"];
 
 function trainingCopies(project: Project): TrainingCopies {
   return { copies: project.brain.copies, layout: "Grid", layouts: LAYOUTS, variations: trainingVariations(project) };
-}
-
-type Vec3 = [number, number, number];
-
-// Rotates a world vector into a parent frame whose world rotation is the quaternion wxyz.
-export function worldToParent([x, y, z]: Vec3, [w, qx, qy, qz]: readonly [number, number, number, number]): Vec3 {
-  // Inverse rotation: the conjugate quaternion applied to the vector.
-  const [cx, cy, cz] = [-qx, -qy, -qz];
-  const tx = 2 * (cy * z - cz * y);
-  const ty = 2 * (cz * x - cx * z);
-  const tz = 2 * (cx * y - cy * x);
-  return [x + w * tx + (cy * tz - cz * ty), y + w * ty + (cz * tx - cx * tz), z + w * tz + (cx * ty - cy * tx)];
 }
 
 function reference(catalog: LibraryCatalog): PropertyReference {
@@ -94,6 +84,43 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
   const edit = async (scene: string, operations: EditOperation[], summary: string) => {
     const state = await api.applyOperations(scene, operations, summary);
     return inspection(state.project, await library(), selection.get(scene) ?? null);
+  };
+  const objectOf = async (scene: string, id: string) => {
+    const current = await load(scene);
+    const obj = findObject(current.project, id);
+    if (!obj) {
+      throw new Error("That object is no longer in the project");
+    }
+    return { ...current, obj };
+  };
+  const editTree = async (scene: string, operations: EditOperation[], summary: string) => {
+    const state = await api.applyOperations(scene, operations, summary);
+    return sceneTree(state.project, await library(), selection.get(scene) ?? null);
+  };
+  // Reads one Transform vector of an object and writes back what `change` makes of it under its parent's rotation.
+  const editTransform = async (
+    scene: string,
+    id: string,
+    property: "position" | "rotation" | "scale",
+    verb: "Moved" | "Rotated" | "Scaled",
+    change: (value: Vec3, parent: Quat | undefined) => Vec3,
+  ) => {
+    const [{ project }, description] = await Promise.all([load(scene), api.scene(scene)]);
+    const obj = findObject(project, id);
+    const transform = obj?.components.find((component) => component.kind === "transform");
+    const current = transform?.properties[property];
+    if (!obj || !transform || current?.type !== "vector") {
+      throw new Error(`Only objects with a Transform can be ${verb.toLowerCase()}`);
+    }
+    const parent = description.bodies.find((body) => body.name === obj.parent)?.quaternion;
+    const operation: EditOperation = {
+      op: "set_property",
+      object: obj.id,
+      component: transform.id,
+      property,
+      value: { type: "vector", value: change(current.value, parent) },
+    };
+    return edit(scene, [operation], `${verb} ${obj.name}`);
   };
   const schemaOf = (lib: LibraryCatalog, kind: string | undefined, property: string) =>
     lib.components.find((item) => item.kind === kind)?.properties.find((item) => item.id === property);
@@ -211,25 +238,43 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       return guideProgress(project, runs);
     },
     getSceneDescription: (scene) => api.scene(scene),
-    moveObject: async ({ scene, id, delta }) => {
-      const [{ project }, description] = await Promise.all([load(scene), api.scene(scene)]);
-      const obj = findObject(project, id);
-      const transform = obj?.components.find((component) => component.kind === "transform");
-      const position = transform?.properties.position;
-      if (!obj || !transform || position?.type !== "vector") {
-        throw new Error("Only objects with a Transform can be moved");
+    moveObject: ({ scene, id, delta }) =>
+      editTransform(scene, id, "position", "Moved", (position, parent) => {
+        const local = parent ? worldToParent(delta, parent) : delta;
+        return [position[0] + local[0], position[1] + local[1], position[2] + local[2]];
+      }),
+    rotateObject: ({ scene, id, delta }) =>
+      editTransform(scene, id, "rotation", "Rotated", (rotation, parent) => turnedRotation(rotation, delta, parent)),
+    scaleObject: ({ scene, id, factor }) =>
+      editTransform(scene, id, "scale", "Scaled", (scale) => stretchedScale(scale, factor)),
+    renameObject: async ({ scene, id, name }) => {
+      const { obj } = await objectOf(scene, id);
+      const trimmed = name.trim();
+      if (!trimmed) {
+        throw new Error("A name cannot be empty");
       }
-      const parent = description.bodies.find((body) => body.name === obj.parent);
-      const local = parent ? worldToParent(delta, parent.quaternion) : delta;
-      const value: Vec3 = [position.value[0] + local[0], position.value[1] + local[1], position.value[2] + local[2]];
-      const operation: EditOperation = {
-        op: "set_property",
-        object: obj.id,
-        component: transform.id,
-        property: "position",
-        value: { type: "vector", value },
-      };
-      return edit(scene, [operation], `Moved ${obj.name}`);
+      return editTree(scene, [{ op: "rename_object", object: id, name: trimmed }], `Renamed ${obj.name} to ${trimmed}`);
+    },
+    duplicateObject: async ({ scene, id }) => {
+      const { project, obj } = await objectOf(scene, id);
+      const { operations, copy } = duplicateOperations(project, id);
+      const state = await api.applyOperations(scene, operations, `Duplicated ${obj.name}`);
+      selection.set(scene, copy);
+      return sceneTree(state.project, await library(), copy);
+    },
+    deleteObject: async ({ scene, id }) => {
+      const { obj } = await objectOf(scene, id);
+      return editTree(scene, [{ op: "delete_object", object: id }], `Deleted ${obj.name}`);
+    },
+    reparentObject: async ({ scene, id, parent }) => {
+      const [{ project, obj }, description] = await Promise.all([objectOf(scene, id), api.scene(scene)]);
+      const operations = reparentOperations(project, description, id, parent);
+      const into = parent === null ? undefined : findObject(project, parent)?.name;
+      return editTree(
+        scene,
+        operations,
+        into ? `Moved ${obj.name} into ${into}` : `Moved ${obj.name} to the top level`,
+      );
     },
     getPropertyReference: async () => reference(await library()),
   };

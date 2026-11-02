@@ -62,6 +62,11 @@ export function useSceneCache(scene: string) {
       client.setQueryData(sceneKeys.tree(scene), tree);
       void client.invalidateQueries({ queryKey: sceneKeys.inspection(scene) });
     },
+    // An edit of whole objects (rename, duplicate, delete, reparent): the tree it returned, everything else re-read.
+    objects: (tree: SceneTree) => {
+      client.setQueryData(sceneKeys.tree(scene), tree);
+      void refreshOthers("tree");
+    },
     inspection: (inspection: Inspection) => {
       client.setQueryData(sceneKeys.inspection(scene), inspection);
       void refreshOthers("inspection");

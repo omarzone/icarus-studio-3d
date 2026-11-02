@@ -2,12 +2,13 @@ import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { type KeyboardEvent, type RefObject, useContext, useMemo, useRef, useState } from "react";
-import type { Group } from "three";
+import { type Group, Quaternion } from "three";
 import { type CameraView, CameraViewContext } from "./camera-mode.ts";
 import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
-import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
+import { fromThreePosition, fromThreeQuaternion, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { GeomShape } from "./geom-geometry.tsx";
 import { geomGeometry, geomObject } from "./geom-object.ts";
+import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
 import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import { isDeliberateClick } from "./pick.ts";
@@ -27,8 +28,15 @@ type EditProps = {
   mode?: "edit";
   selected: string | null;
   onSelect: (objectId: string | null) => void;
+  // What a drag of the selected object does; W, E and R in the view ask for another mode through `onGizmo`.
+  gizmo?: GizmoMode;
+  onGizmo?: (mode: GizmoMode) => void;
   // A drag of the selected object ended; the move is in MuJoCo world axes.
   onMove: (objectId: string, delta: Vec3) => void;
+  // A turn ended: the rotation in MuJoCo world axes, quaternion wxyz.
+  onRotate?: (objectId: string, delta: [number, number, number, number]) => void;
+  // A stretch ended: the factor along each of the object's own axes, MuJoCo order.
+  onScale?: (objectId: string, factor: Vec3) => void;
 };
 
 type PlayProps = {
@@ -92,42 +100,77 @@ function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
   );
 }
 
-function EditGeoms({ description, selected, onSelect, onMove }: { description: SceneDescription } & EditProps) {
+const CONTROL_MODES = { move: "translate", rotate: "rotate", scale: "scale" } as const;
+const CHANGED = 1e-6;
+
+type Picked = { id: string; anchor: Vec3; turn: [number, number, number, number] };
+
+// Reads what the drag did to the group, puts the group back where the engine has it and reports the change;
+// the engine's answer moves the object for real.
+function reportDrag(group: Group, picked: Picked, gizmo: GizmoMode, props: EditProps) {
+  const { id, anchor, turn } = picked;
+  if (gizmo === "move") {
+    const delta = fromThreePosition([
+      group.position.x - anchor[0],
+      group.position.y - anchor[1],
+      group.position.z - anchor[2],
+    ]);
+    group.position.set(...anchor);
+    if (delta.some((value) => Math.abs(value) > CHANGED)) {
+      props.onMove(id, delta);
+    }
+    return;
+  }
+  if (gizmo === "rotate") {
+    const delta = group.quaternion.clone().multiply(new Quaternion(...turn).invert());
+    group.quaternion.set(...turn);
+    if (1 - Math.abs(delta.w) > CHANGED) {
+      props.onRotate?.(id, fromThreeQuaternion([delta.x, delta.y, delta.z, delta.w]));
+    }
+    return;
+  }
+  const factor = fromThreePosition([group.scale.x, group.scale.y, group.scale.z]).map(Math.abs);
+  group.scale.set(1, 1, 1);
+  const [x = 1, y = 1, z = 1] = factor;
+  // A drag that starts on the gizmo's very centre has no length to compare with and gives no finite factor.
+  if (factor.every(Number.isFinite) && factor.some((value) => Math.abs(value - 1) > CHANGED)) {
+    props.onScale?.(id, [x, y, z]);
+  }
+}
+
+function EditGeoms(props: { description: SceneDescription } & EditProps) {
+  const { description, selected, onSelect, gizmo = "move" } = props;
   const [dragged, setDragged] = useState<Group | null>(null);
   const picked = description.geoms.filter((geom) => geom.body === selected);
   const body = description.bodies.find((item) => item.name === selected);
-  const anchor = body ? toThreePosition(body.position) : null;
   const rest = description.geoms.filter((geom) => geom.body !== selected);
+  const target: Picked | null =
+    selected && body
+      ? { id: selected, anchor: toThreePosition(body.position), turn: toThreeQuaternion(body.quaternion) }
+      : null;
   return (
     <>
       {rest.map((geom) => (
         <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} />
       ))}
-      {selected && anchor && picked.length > 0 ? (
+      {target && picked.length > 0 ? (
         <>
-          <group ref={setDragged} position={anchor}>
-            {picked.map((geom) => (
-              <Geom key={geom.name} geom={geom} selected onSelect={onSelect} origin={anchor} />
-            ))}
+          {/* Turned like the object, so rotate and scale work along its own axes; the inner group undoes the turn. */}
+          <group ref={setDragged} position={target.anchor} quaternion={target.turn}>
+            <group quaternion={new Quaternion(...target.turn).invert()}>
+              {picked.map((geom) => (
+                <Geom key={geom.name} geom={geom} selected onSelect={onSelect} origin={target.anchor} />
+              ))}
+            </group>
           </group>
           {/* Attached to the group above (not a wrapper of its own), so the drag moves what is read on release. */}
           <TransformControls
             object={dragged ?? undefined}
-            mode="translate"
+            mode={CONTROL_MODES[gizmo]}
+            space={gizmo === "move" ? "world" : "local"}
             onMouseUp={() => {
-              const group = dragged;
-              if (!group) {
-                return;
-              }
-              const delta = fromThreePosition([
-                group.position.x - anchor[0],
-                group.position.y - anchor[1],
-                group.position.z - anchor[2],
-              ]);
-              // Back to where the engine has it; the engine's answer moves it for real.
-              group.position.set(anchor[0], anchor[1], anchor[2]);
-              if (delta.some((value) => Math.abs(value) > 1e-6)) {
-                onMove(selected, delta);
+              if (dragged) {
+                reportDrag(dragged, target, gizmo, props);
               }
             }}
           />
@@ -164,11 +207,26 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
   );
 }
 
-function frameOnKey(view: CameraView | null) {
+function viewLabel(editing: boolean): string {
+  return editing
+    ? "3D view, press F to frame everything, W to move, E to rotate and R to scale"
+    : "3D view, press F to frame everything";
+}
+
+function viewKeys(view: CameraView | null, onGizmo: ((mode: GizmoMode) => void) | undefined) {
   return (event: KeyboardEvent<HTMLDivElement>) => {
-    if (view && (event.key === "f" || event.key === "F") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
+    if (view && (event.key === "f" || event.key === "F") && plain) {
       event.preventDefault();
       view.onFrameAll();
+      return;
+    }
+    const gizmo = onGizmo
+      ? gizmoForKey({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey })
+      : null;
+    if (gizmo) {
+      event.preventDefault();
+      onGizmo?.(gizmo);
     }
   };
 }
@@ -219,8 +277,8 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
       camera={start}
       dpr={[1, 2]}
       tabIndex={view ? 0 : undefined}
-      aria-label={view ? "3D view, press F to frame everything" : undefined}
-      onKeyDown={frameOnKey(view)}
+      aria-label={view ? viewLabel(props.mode !== "play" && props.onGizmo !== undefined) : undefined}
+      onKeyDown={viewKeys(view, props.mode === "play" ? undefined : props.onGizmo)}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
       <Sky

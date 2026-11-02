@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Film,
   Mountain,
+  Move3d,
   Network,
   Orbit,
   Paintbrush,
@@ -15,6 +16,8 @@ import {
   PersonStanding,
   Play,
   Radar,
+  Rotate3d,
+  Scale3d,
   ScanLine,
   Scissors,
   Shuffle,
@@ -29,6 +32,13 @@ import {
 import type { ToolGroup } from "./toolbar.tsx";
 
 // Tool groups of each workspace (catalog PNL-TOOLBAR). Workspaces pass one of these to the toolbar.
+
+// What dragging the selected object does in the editable 3D view; the app puts them before a workspace's tools.
+export const GIZMO_TOOLS: ToolGroup = [
+  { label: "Move", icon: Move3d, hint: "Drag the selected object to a new place (W)" },
+  { label: "Rotate", icon: Rotate3d, hint: "Turn the selected object around its own axes (E)" },
+  { label: "Scale", icon: Scale3d, hint: "Stretch the selected object along its own axes (R)" },
+];
 
 export const WORLD_TOOLS: readonly ToolGroup[] = [
   [
