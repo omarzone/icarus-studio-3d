@@ -34,6 +34,7 @@ runs/
 !apps/desktop/src/**/runs/
 !services/engine/src/icarus/projects/
 !services/engine/tests/projects/
+tasks.json
 *.log
 MUJOCO_LOG.TXT
 
