@@ -1,6 +1,7 @@
 // PNL-EXPLORER
 import { Plus } from "lucide-react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useCopilotOutbox } from "../../app/runtime/copilot-outbox.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type SceneObject, scenePort } from "../../ports/scene-port.ts";
@@ -10,7 +11,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneTree } from "../scene-queries.ts";
 import { AddObjectMenu } from "./add-object-menu.tsx";
-import { ExplorerTab } from "./explorer-tab.tsx";
+import { type ExplorerActions, ExplorerTab } from "./explorer-tab.tsx";
 
 export type ExplorerPanelProps = {
   // Scene key of the project document to show (scene port).
@@ -28,7 +29,20 @@ export function ExplorerPanel({ scene, label = "Explorer", onAction, className =
   const tree = useSceneTree(scene);
   const cache = useSceneCache(scene);
   const select = useEngineAction(port.selectObject);
+  const rename = useEngineAction(port.renameObject);
+  const duplicate = useEngineAction(port.duplicateObject);
+  const remove = useEngineAction(port.deleteObject);
+  const reparent = useEngineAction(port.reparentObject);
+  const ask = useCopilotOutbox((state) => state.ask);
   const app = useRuntimeMode() === "app";
+  const edited = { onSuccess: cache.objects };
+  const actions: ExplorerActions = {
+    rename: (id, name) => rename.mutate({ scene, id, name }, edited),
+    duplicate: (id) => duplicate.mutate({ scene, id }, edited),
+    remove: (id) => remove.mutate({ scene, id }, edited),
+    reparent: (id, parent) => reparent.mutate({ scene, id, parent }, edited),
+    ask: (row) => ask(scene, `Tell me about ${row.name}: what it does in this project and how I could improve it.`),
+  };
   return (
     <Panel
       id="PNL-EXPLORER"
@@ -53,6 +67,7 @@ export function ExplorerPanel({ scene, label = "Explorer", onAction, className =
           <ExplorerTab
             tree={data}
             onAction={onAction}
+            actions={actions}
             onSelect={(id) => select.mutate({ scene, id }, { onSuccess: cache.tree })}
           />
         )}

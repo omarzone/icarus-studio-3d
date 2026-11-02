@@ -75,9 +75,10 @@ Left column, top. The project's scene tree. Folder: `editor/explorer/`. Used in:
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag to reparent, right-click for rename, duplicate, delete and *Ask the copilot*. `+` in the tab bar adds an object (in the app: a menu of library pieces). |
+| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag a row onto another to nest it there (onto a section title: back to the top; it keeps its place in the world), right-click for `POP-EXPLORER-OBJECT` (rename, duplicate, delete and *Ask the copilot*), F2 renames and Delete deletes. `+` in the tab bar adds an object (in the app: a menu of library pieces). |
 
 - One tab only: imported files live in the Library (`PNL-LIBRARY` › My files).
+- `POP-EXPLORER-OBJECT` Object menu (`object-menu.tsx`): opens under the right-clicked row. *Rename* turns the row's name into a field (Enter or leaving it keeps the name, Escape cancels); *Duplicate* copies the object and what is nested in it one metre along its parent's X and selects the copy; *Delete* removes it and what is nested in it; *Ask the copilot about it* sends a question about the object to the chat. Each is one batch of edit operations; Escape or a click outside closes the menu.
 
 ### `PNL-INSPECTOR` Inspector
 
@@ -96,7 +97,7 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-SCENE` | Scene | `scene-tab.tsx` | Editable 3D view of the world with gizmo, orientation cube, selection outlines, sensor rays and copilot ghosts (blue). | Orbit, select, move/rotate/scale, use the toolbar tools. |
+| `TAB-SCENE` | Scene | `scene-tab.tsx` | Editable 3D view of the world with gizmo, orientation cube, selection outlines, sensor rays and copilot ghosts (blue). | Orbit, select, move/rotate/scale the selected object with the gizmo (W, E, R pick the mode), use the toolbar tools. |
 | `TAB-GAME-VIEW` | Game view | `game-view-tab.tsx` | The world through the project camera, without editing chrome. | Look only. |
 | `TAB-RIG-VIEW` | Rig | `rig-tab.tsx` | Body workspace: see-through mesh with bones, joints and colliders. | Select bones and joints, drag joint limits. |
 | `TAB-MESH-VIEW` | Mesh | `mesh-tab.tsx` | Body workspace: the shaded mesh only. | Look, paint weights. |
@@ -112,6 +113,7 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 
 Strip above the viewport. Icon + label buttons in groups. The selected tool is white. Every tool's tooltip is its name and one line on what it is for. In the app, a tool with nothing behind it yet is dimmed and says *not available yet* on hover and click; Terrain, Sky and Light select the ground, sky and sun so the Inspector shows them, and Agent and Goal ask the copilot to add one. Folder: `editor/viewport/toolbar/`.
 
+- **Gizmo** (app, every editable World state): Move, Rotate, Scale lead the tools and pick what dragging the selected object does; the one in use is white and follows W, E and R in the view. Rotate and scale work along the object's own axes.
 - **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`).
 - **New project**: Terrain, Sky, Light · Part, Agent (→ `SCR-IDEAS`), Goal · Import.
 - **Body**: Import, Auto-rig · Bone, Joint, Motor, Sensor · Mirror, Collider, Weights · Test pose.
@@ -2225,6 +2227,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | `MOD-START-TRAINING` | Start training | Modal dialog | `StartTraining` |
 | `MOD-STOP-RUN` | Stop run | Modal dialog | `StopRun` |
 | `POP-ADD-COMPONENT` | Components and Add component | Popover or menu | `Components` |
+| `POP-EXPLORER-OBJECT` | Object menu | Popover or menu | — |
 | `POP-NOTIFICATIONS` | Notifications | Popover or menu | `Notifications` |
 | `POP-PROJECT-MENU` | Project menu | Popover or menu | `ProjectMenu` |
 | `POP-TRAINING-COPIES` | Training copies | Popover or menu | `Randomize` |

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
 import { EngineRejected } from "../engine-client/request.ts";
 import { isLibraryCatalog, isProject } from "../engine-client/response-checks.ts";
-import { createEngineScenePort, nextComponentId, worldToParent } from "./scene-engine.ts";
+import { createEngineScenePort, nextComponentId } from "./scene-engine.ts";
 import parking from "./testdata/parking-car.json";
 
 const { project, catalog } = (() => {
@@ -32,7 +32,7 @@ function stateOf(doc: Project, number = 1): ProjectState {
 }
 
 function fakeApi(apply: (operations: EditOperation[]) => Promise<ProjectState>) {
-  const applyOperations = vi.fn((_id: string, operations: EditOperation[]) => apply(operations));
+  const applyOperations = vi.fn((_id: string, operations: EditOperation[], _summary?: string) => apply(operations));
   const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene" | "runs"> & CopiesApi = {
     project: async () => stateOf(project),
     scene: async () => ({ revision: 1, bodies: [], geoms: [], lights: [] }),
@@ -90,18 +90,36 @@ describe("engine scene port", () => {
     ).rejects.toBeInstanceOf(EngineRejected);
     expect((await port.getTree(project.id)).selected).toBe("car");
   });
+
+  it("turns and stretches an object through set_property on its Transform", async () => {
+    const { api, applyOperations } = fakeApi(async () => stateOf(project, 2));
+    const port = createEngineScenePort(api);
+    const half = Math.SQRT1_2;
+    await port.rotateObject({ scene: project.id, id: "car", delta: [half, 0, 0, half] });
+    await port.scaleObject({ scene: project.id, id: "car", factor: [2, 1, 0.5] });
+    const sent = applyOperations.mock.calls.map((call) => call[1]);
+    expect(sent).toEqual([
+      [{ op: "set_property", object: "car", component: "transform", property: "rotation", value: vector(0, 0, 90) }],
+      [{ op: "set_property", object: "car", component: "transform", property: "scale", value: vector(2, 1, 0.5) }],
+    ]);
+  });
+
+  it("renames with the trimmed name and refuses an empty one before asking the engine", async () => {
+    const { api, applyOperations } = fakeApi(async () => stateOf(project, 2));
+    const port = createEngineScenePort(api);
+    await port.renameObject({ scene: project.id, id: "goal", name: "  Spot  " });
+    await expect(port.renameObject({ scene: project.id, id: "goal", name: " " })).rejects.toThrow(/empty/);
+    expect(applyOperations).toHaveBeenCalledTimes(1);
+    expect(applyOperations.mock.calls[0]?.[1]).toEqual([{ op: "rename_object", object: "goal", name: "Spot" }]);
+    expect(applyOperations.mock.calls[0]?.[2]).toBe("Renamed Parking spot to Spot");
+  });
 });
+
+function vector(x: number, y: number, z: number) {
+  return { type: "vector", value: [x, y, z] };
+}
 
 it("names a new component after its kind, numbering repeats", () => {
   expect(nextComponentId(["transform", "mesh"], "touch")).toBe("touch");
   expect(nextComponentId(["touch", "touch_2"], "touch")).toBe("touch_3");
-});
-
-it("moves an object by a world delta expressed in its parent's frame", () => {
-  // Parent turned 90° about z: a world +x move is a local −y move.
-  const half = Math.SQRT1_2;
-  const local = worldToParent([1, 0, 0], [half, 0, 0, half]);
-  expect(local[0]).toBeCloseTo(0, 6);
-  expect(local[1]).toBeCloseTo(-1, 6);
-  expect(local[2]).toBeCloseTo(0, 6);
 });

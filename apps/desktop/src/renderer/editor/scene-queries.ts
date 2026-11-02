@@ -48,6 +48,16 @@ export function useSceneCache(scene: string) {
       client.setQueryData(sceneKeys.tree(scene), tree);
       void client.invalidateQueries({ queryKey: sceneKeys.inspection(scene) });
     },
+    // An edit of whole objects (rename, duplicate, delete, reparent): the tree it returned, everything else re-read.
+    objects: (tree: SceneTree) => {
+      client.setQueryData(sceneKeys.tree(scene), tree);
+      void client.invalidateQueries({
+        predicate: (query) =>
+          (query.queryKey[0] === "scene" && query.queryKey[1] === scene && query.queryKey[2] !== "tree") ||
+          query.queryKey[0] === "projects" ||
+          query.queryKey[0] === "revisions",
+      });
+    },
     // Everything else about the scene (tree, guide, viewport) and the project's history is re-read.
     inspection: (inspection: Inspection) => {
       client.setQueryData(sceneKeys.inspection(scene), inspection);

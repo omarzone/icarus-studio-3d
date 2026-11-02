@@ -62,7 +62,8 @@ export function DockWorkspace({ panels, storage, onReady }: Props) {
   );
 }
 
-// Only the grip moves a panel; dragging a tab's label or an empty header does nothing.
+// Only the grip moves a panel; dragging a tab's label or an empty header does nothing. Panel content that drags
+// something of its own (an Explorer row onto another) marks itself with `data-own-drag`.
 let pressedGrip = false;
 
 function rememberGrip(event: PointerEvent<HTMLDivElement>): void {
@@ -70,7 +71,8 @@ function rememberGrip(event: PointerEvent<HTMLDivElement>): void {
 }
 
 function dragOnlyFromGrip(event: DragEvent<HTMLDivElement>): void {
-  if (!pressedGrip) {
+  const own = event.target instanceof Element && event.target.closest("[data-own-drag]") !== null;
+  if (!pressedGrip && !own) {
     event.preventDefault();
     event.stopPropagation();
   }

@@ -144,5 +144,58 @@ export function createSceneFixture(): ScenePort {
     getSceneDescription: async () => null,
     // The prototype has no 3D scene to drag in.
     moveObject: async ({ scene }) => inspectionOf(find(scene)),
+    rotateObject: async ({ scene }) => inspectionOf(find(scene)),
+    scaleObject: async ({ scene }) => inspectionOf(find(scene)),
+    renameObject: async ({ scene, id, name }) =>
+      editRows(scene, (rows) => rows.map((row) => (row.id === id ? { ...row, name } : row))),
+    duplicateObject: async ({ scene, id }) => {
+      const tree = editRows(scene, (rows) => {
+        const [start, end] = subtreeRange(rows, id);
+        const copies = rows.slice(start, end).map((row, index) => ({
+          ...row,
+          id: `${row.id}-copy`,
+          name: index === 0 ? `${row.name} copy` : row.name,
+        }));
+        return [...rows.slice(0, end), ...copies, ...rows.slice(end)];
+      });
+      return save(scene, { ...find(scene), tree: { ...tree, selected: `${id}-copy` } }).tree;
+    },
+    deleteObject: async ({ scene, id }) =>
+      editRows(scene, (rows) => {
+        const [start, end] = subtreeRange(rows, id);
+        return [...rows.slice(0, start), ...rows.slice(end)];
+      }),
+    reparentObject: async ({ scene, id, parent }) =>
+      editRows(scene, (rows) => {
+        const [start, end] = subtreeRange(rows, id);
+        const moved = rows.slice(start, end);
+        const rest = [...rows.slice(0, start), ...rows.slice(end)];
+        const [parentStart, parentEnd] = parent === null ? [-1, rest.length] : subtreeRange(rest, parent);
+        const depth = parent === null ? 0 : (rest[parentStart]?.depth ?? -1) + 1;
+        const shift = depth - (moved[0]?.depth ?? 0);
+        const placed = moved.map((row) => ({ ...row, depth: row.depth + shift }));
+        return [...rest.slice(0, parentEnd), ...placed, ...rest.slice(parentEnd)];
+      }),
   };
+
+  // Applies a change to the rows of the section holding them, as the engine would to the document.
+  function editRows(scene: string, change: (rows: readonly SceneObject[]) => SceneObject[]) {
+    const document = find(scene);
+    const sections = document.tree.sections.map((section) => ({ ...section, objects: change(section.objects) }));
+    return save(scene, { ...document, tree: { ...document.tree, sections } }).tree;
+  }
+}
+
+// Rows of an object and everything nested under it: [first, after last); empty when it is not there.
+function subtreeRange(rows: readonly SceneObject[], id: string): [number, number] {
+  const start = rows.findIndex((row) => row.id === id);
+  if (start < 0) {
+    return [rows.length, rows.length];
+  }
+  const depth = rows[start]?.depth ?? 0;
+  let end = start + 1;
+  while (end < rows.length && (rows[end]?.depth ?? 0) > depth) {
+    end++;
+  }
+  return [start, end];
 }
