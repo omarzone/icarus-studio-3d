@@ -111,7 +111,8 @@ def _car() -> list[Part]:
             extra={"distance_ray": {"range": 10, "count": 5}},
         )
     ]
-    for side, y in (("left", 1.05), ("right", -1.05)):
+    # Wide enough that a front wheel at full lock clears the body.
+    for side, y in (("left", 1.2), ("right", -1.2)):
         knuckle = f"steer_{side}"
         parts.append(
             solid(
@@ -134,6 +135,8 @@ def _car() -> list[Part]:
             extra: dict[str, dict[str, Raw]] = {"joint": _hinge((0, 0, 1), (-180, 180))}
             extra["collider"] = {"friction": 1.2}
             if motor:
+                # Drag on the driven axle caps the top speed near 1.6 m/s and brakes the car when the drive is off.
+                extra["joint"] = extra["joint"] | {"damping": 80}
                 extra["motor"] = motor
             parts.append(
                 solid(
@@ -145,7 +148,8 @@ def _car() -> list[Part]:
                     (0.6, 0.6, 0.25),
                     20,
                     "#1f2023",
-                    rotation=(90, 0, 0),
+                    # Turned so the wheel axis points left and a positive drive rolls the car forward.
+                    rotation=(-90, 0, 0),
                     extra=extra,
                 )
             )

@@ -16,7 +16,7 @@ def saved(tmp_path, parking):
 
 def test_a_checkpoint_acts_like_the_saved_brain_deterministically(saved, parking):
     model, path = saved
-    policy = CheckpointPolicy.load(path, "Trained brain: Run 1 at 0 steps", observation_size=8)
+    policy = CheckpointPolicy.load(path, "Trained brain: Run 1 at 0 steps", observation_size=13)
     observation, _ = ProjectEnv(parking).reset(seed=0)
     expected, _ = model.predict(observation, deterministic=True)
     np.testing.assert_allclose(policy.act(observation), expected)

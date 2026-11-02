@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -158,6 +159,14 @@ def create_app(
     )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
+    # The app window loads from files when packaged ("null") and from the local dev server in development.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["null"],
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(health.router)
     app.include_router(library.router)
     app.include_router(projects.router)

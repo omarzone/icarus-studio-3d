@@ -2,10 +2,19 @@ from icarus.contracts.library import RewardTermInfo
 from icarus.contracts.specs import TaskFamily
 
 
-def _term(term: str, label: str, family: TaskFamily, lo: float, hi: float, default: float, description: str):
+def _term(
+    term: str,
+    label: str,
+    family: TaskFamily,
+    lo: float,
+    hi: float,
+    default: float,
+    description: str,
+    version: int = 1,
+):
     return RewardTermInfo(
         term=term,
-        version=1,
+        version=version,
         label=label,
         family=family,
         weight_min=lo,
@@ -16,7 +25,16 @@ def _term(term: str, label: str, family: TaskFamily, lo: float, hi: float, defau
 
 
 _TERMS = [
-    _term("reach_goal", "Reach the goal", "navigation", 0, 100, 10, "A bonus once the agent is inside the goal zone."),
+    _term(
+        "reach_goal",
+        "Reach the goal",
+        "navigation",
+        0,
+        100,
+        10,
+        "A bonus once the agent comes to rest inside the goal zone.",
+        version=2,
+    ),
     _term(
         "progress_to_goal",
         "Progress to the goal",

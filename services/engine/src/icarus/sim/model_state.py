@@ -20,6 +20,8 @@ ACCEL_RANGE = 30.0
 GYRO_RANGE = 10.0
 # Locomotion ends when the root drops below this fraction of its start height.
 FALL_HEIGHT = 0.4
+# Goal distances are observed in tens of metres so they sit near the -1..1 range the policy expects.
+GOAL_DISTANCE_SCALE = 10.0
 
 _KINDS: dict[int, SensorKind] = {
     int(mujoco.mjtSensor.mjSENS_RANGEFINDER): "ray",
@@ -79,6 +81,8 @@ class LiveWorld:
     start_height: float
     # qpos and qvel addresses of the body's hinge and slide joints, which locomotion observes.
     joint_addresses: list[tuple[int, int]]
+    # qpos address and range of the body's limited joints, such as steering, which navigation observes.
+    limited_joints: list[tuple[int, float, float]]
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -131,6 +135,17 @@ def _joint_addresses(model: mujoco.MjModel, body_objects: set[str]) -> list[tupl
     ]
 
 
+def _limited_joints(model: mujoco.MjModel, body_objects: set[str]) -> list[tuple[int, float, float]]:
+    moving = (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_SLIDE))
+    return [
+        (int(model.jnt_qposadr[index]), float(model.jnt_range[index, 0]), float(model.jnt_range[index, 1]))
+        for index in range(model.njnt)
+        if int(model.jnt_type[index]) in moving
+        and bool(model.jnt_limited[index])
+        and model.body(int(model.jnt_bodyid[index])).name in body_objects
+    ]
+
+
 def _goal(project: Project, model: mujoco.MjModel) -> GoalInfo | None:
     for obj in all_objects(project):
         if view(obj, "goal_zone"):
@@ -175,6 +190,7 @@ def build_world(project: Project) -> LiveWorld:
         object_names=names,
         start_height=0.0,
         joint_addresses=_joint_addresses(model, body_objects),
+        limited_joints=_limited_joints(model, body_objects),
     )
     reset_world(world)
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
@@ -206,10 +222,36 @@ def goal_vector(world: LiveWorld) -> np.ndarray:
     return world.data.xmat[world.agent].reshape(3, 3).T @ offset
 
 
+def agent_velocity(world: LiveWorld) -> np.ndarray:
+    """Angular then linear velocity of the agent in its own frame."""
+    velocity = np.zeros(6)
+    if world.agent is not None:
+        mujoco.mj_objectVelocity(world.model, world.data, mujoco.mjtObj.mjOBJ_BODY, world.agent, velocity, 1)
+    return velocity
+
+
+def _navigation_state(world: LiveWorld) -> list[np.ndarray]:
+    """Forward and side speed and turn rate, limited joints from -1 to 1, then goal distance and bearing."""
+    velocity = agent_velocity(world)
+    qpos = world.data.qpos
+    joints = [2 * (qpos[address] - low) / (high - low) - 1 for address, low, high in world.limited_joints]
+    goal = goal_vector(world)
+    distance = float(np.hypot(goal[0], goal[1]))
+    bearing = float(np.arctan2(goal[1], goal[0])) if distance > 1e-9 else 0.0
+    return [
+        np.array([velocity[3], velocity[4], velocity[2]]),
+        np.array(joints, dtype=float),
+        np.array([distance / GOAL_DISTANCE_SCALE, np.cos(bearing), np.sin(bearing)]),
+    ]
+
+
 def observation(world: LiveWorld) -> np.ndarray:
-    parts = [sensor_value(world, sensor) for sensor in world.sensors]
+    parts = [
+        sensor_value(world, sensor) / sensor.high if sensor.kind == "ray" else sensor_value(world, sensor)
+        for sensor in world.sensors
+    ]
     if world.family == "navigation":
-        parts.append(goal_vector(world))
+        parts += _navigation_state(world)
     if world.family == "locomotion":
         data = world.data
         parts.append(np.array([data.qpos[address] for address, _ in world.joint_addresses], dtype=float))
@@ -269,4 +311,5 @@ def reward_state(world: LiveWorld) -> RewardState:
         colliding=bool(touching(world)),
         fallen=fallen,
         effort=float(np.sum(normalized_controls(world) ** 2)),
+        speed=float(np.hypot(*agent_velocity(world)[3:5])),
     )

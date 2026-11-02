@@ -4,6 +4,9 @@ from dataclasses import dataclass
 
 Vector3 = tuple[float, float, float]
 
+# A navigation agent has reached its goal once it is inside the zone and moving slower than this, in m/s.
+STOP_SPEED = 0.2
+
 
 @dataclass(frozen=True)
 class RewardState:
@@ -20,6 +23,8 @@ class RewardState:
     fallen: bool
     # Sum of squared controls normalized to -1..1.
     effort: float
+    # Ground speed of the agent in m/s.
+    speed: float
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -32,8 +37,12 @@ def inside_goal(state: RewardState) -> bool:
     return state.goal is not None and _goal_distance(state) <= state.goal_radius
 
 
+def parked(state: RewardState) -> bool:
+    return inside_goal(state) and state.speed <= STOP_SPEED
+
+
 def reach_goal(before: RewardState, after: RewardState) -> float:
-    return float(inside_goal(after) and not inside_goal(before))
+    return float(parked(after) and not parked(before))
 
 
 def progress_to_goal(before: RewardState, after: RewardState) -> float:

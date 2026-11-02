@@ -1,7 +1,7 @@
 import mujoco
 import numpy as np
 
-from icarus.sim.model_state import build_world, observation
+from icarus.sim.model_state import GOAL_DISTANCE_SCALE, build_world, observation
 
 
 def test_the_parking_car_has_five_rays_of_ten_metres_and_four_actuators(parking):
@@ -39,5 +39,20 @@ def test_locomotion_observes_the_angle_and_speed_of_every_body_joint(walker):
     assert np.count_nonzero(angles) == 1 and np.count_nonzero(speeds) == 1
 
 
-def test_navigation_keeps_sensors_and_goal_only(parking):
-    assert observation(build_world(parking)).shape == (5 + 3,)
+def test_navigation_observes_rays_motion_steering_and_the_goal_in_the_agent_frame(parking):
+    world = build_world(parking)
+    model, data = world.model, world.data
+    free = model.jnt_qposadr[model.body_jntadr[world.agent]]
+    data.qpos[free + 3 : free + 7] = (np.cos(np.pi / 4), 0, 0, np.sin(np.pi / 4))
+    data.qvel[model.jnt_dofadr[model.body_jntadr[world.agent]] + 1] = 1.5
+    data.qvel[model.jnt_dofadr[model.body_jntadr[world.agent]] + 5] = 0.4
+    steer = model.joint("steer_left:joint")
+    data.qpos[model.jnt_qposadr[steer.id]] = steer.range[1] / 2
+    mujoco.mj_forward(model, data)
+    values = observation(world)
+    assert values.shape == (5 + 3 + 2 + 3,)
+    rays, motion, steering, goal = values[:5], values[5:8], values[8:10], values[10:]
+    np.testing.assert_allclose(rays, 1.0)
+    np.testing.assert_allclose(motion, (1.5, 0.0, 0.4), atol=1e-6)
+    np.testing.assert_allclose(steering, (0.5, 0.0), atol=1e-6)
+    np.testing.assert_allclose(goal, (12 / GOAL_DISTANCE_SCALE, 0.0, -1.0), atol=1e-6)
