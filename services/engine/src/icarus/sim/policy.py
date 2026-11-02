@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -17,6 +17,13 @@ class Policy(Protocol):
     label: str
 
     def act(self, observation: np.ndarray) -> np.ndarray: ...
+
+
+@runtime_checkable
+class BatchPolicy(Protocol):
+    """A brain that answers many observations in one call, one row each."""
+
+    def act_many(self, observations: np.ndarray) -> np.ndarray: ...
 
 
 class RandomPolicy:
@@ -59,3 +66,7 @@ class CheckpointPolicy:
     def act(self, observation: np.ndarray) -> np.ndarray:
         action, _ = self._model.predict(observation, deterministic=True)
         return np.asarray(action, dtype=float)
+
+    def act_many(self, observations: np.ndarray) -> np.ndarray:
+        actions, _ = self._model.predict(observations, deterministic=True)
+        return np.asarray(actions, dtype=float)

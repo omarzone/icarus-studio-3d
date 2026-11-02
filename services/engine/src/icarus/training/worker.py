@@ -12,6 +12,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.specs import BrainSpec
 from icarus.contracts.training import RunState
 from icarus.sim.env import ProjectEnv
+from icarus.training.copy_process import start_copies
 from icarus.training.lifeline import watch_parent
 from icarus.training.progress import RunProgress
 from icarus.training.run_store import RunFolder
@@ -62,18 +63,22 @@ def train(run_dir: Path, device: Device = "cpu") -> RunState:
     env = None
     try:
         ProjectEnv(progress.project)
+        progress.log(f"Starting {config.copies} cop{'y' if config.copies == 1 else 'ies'} of the world")
+        started = start_copies(progress.project, config.copies) if config.copies > 1 else None
         import torch
         from stable_baselines3 import PPO
-        from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecMonitor
+        from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
 
         from icarus.training.callback import TrainingCallback
+        from icarus.training.copy_envs import CopyProcesses
 
         torch.set_num_threads(config.threads)
         actual_device = "cuda" if device == "cuda" and torch.cuda.is_available() else "cpu"
-        factories: list[Callable[[], gymnasium.Env]] = [
-            functools.partial(make_env, progress.project) for _ in range(config.copies)
-        ]
-        env = VecMonitor(SubprocVecEnv(factories) if config.copies > 1 else DummyVecEnv(factories))
+        if started is not None:
+            env = VecMonitor(CopyProcesses(started))
+        else:
+            factories: list[Callable[[], gymnasium.Env]] = [functools.partial(make_env, progress.project)]
+            env = VecMonitor(DummyVecEnv(factories))
         if progress.folder.stop_requested():
             progress.log("Stop requested before training started")
             progress.finish("stopped", 0)
@@ -105,6 +110,7 @@ def train(run_dir: Path, device: Device = "cpu") -> RunState:
             f"cop{'y' if config.copies == 1 else 'ies'} on the {actual_device.upper()}, {config.threads} threads"
         )
         progress.write_status(progress.state, 0)
+        progress.log("Testing the untrained brain: checkpoint 0 is the baseline every later one is compared with")
         progress.checkpoint(model, 0, 0)
         progress.stopping = progress.folder.stop_requested()
         if not progress.stopping:
