@@ -1,11 +1,14 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from icarus.contracts.training import LogLine, MetricPoint, RunStatus
-from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
+from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord, GaitSignals
 from icarus.training.progress_watch import CheckpointResult, trend
 from icarus.training.run_health import (
     episode_facts,
     failure_trend,
+    gait_facts,
     log_facts,
     reward_facts,
     speed_fact,
@@ -137,6 +140,59 @@ def test_failures_that_stay_high_are_not_dropping():
     fact = failure_trend(rising)
     assert fact is not None and "35% at step 50,000" in fact.text
     assert failure_trend(falling) is None
+
+
+def gait(**fields) -> GaitSignals:
+    values = {
+        "height_mean": 0.95,
+        "height_spread": 0.03,
+        "start_height": 1.0,
+        "tilt_mean": 8.0,
+        "turn_mean": 5.0,
+        "forward_speed": 0.5,
+        "drift": 0.2,
+        "feet": [
+            {"name": "Rear-left foot", "contact_share": 0.6, "lift_offs": 20},
+            {"name": "Rear-right foot", "contact_share": 0.55, "lift_offs": 21},
+        ],
+        "airborne_share": 0.45,
+        "flight_share": 0.02,
+        "joints_at_limits": 0.05,
+        "action_change": 0.08,
+    }
+    return GaitSignals.model_validate(values | fields)
+
+
+def walking(step: int, *gaits: GaitSignals) -> CheckpointEpisodes:
+    records = [record(index, forward=15.0, gait=item) for index, item in enumerate(gaits)]
+    return episodes(step, *records, has_goal=False)
+
+
+def test_a_good_gait_gives_only_its_summary_with_the_numbers():
+    facts = gait_facts(walking(50_000, gait(), gait()))
+    assert [fact.kind for fact in facts] == ["gait"]
+    assert "root at 0.95 m" in facts[0].text and "0.50 m/s forward" in facts[0].text
+    assert not facts[0].problem
+
+
+def test_a_dragged_foot_names_the_foot_and_its_contact_share():
+    dragging = gait(feet=[{"name": "Rear-left foot", "contact_share": 0.98, "lift_offs": 0}])
+    facts = gait_facts(walking(250_000, dragging), settled=True)
+    dragged = next(fact for fact in facts if fact.kind == "foot_dragged")
+    assert "rear-left foot touches the ground 98% of the time" in dragged.text and "(dragged)" in dragged.text
+    assert dragged.problem and dragged.value == pytest.approx(0.98)
+
+
+def test_crawling_hopping_twitching_locked_joints_and_drift_are_each_reported():
+    poor = gait(height_mean=0.4, flight_share=0.5, action_change=0.6, joints_at_limits=0.5, drift=9.0)
+    kinds = {fact.kind: fact for fact in gait_facts(walking(50_000, poor))}
+    assert {"body_low", "hopping", "twitching", "joints_at_limits", "drifting"} <= set(kinds)
+    assert kinds["body_low"].value == pytest.approx(0.4) and "40% of its start height" in kinds["body_low"].text
+    assert not kinds["twitching"].problem
+
+
+def test_episodes_recorded_before_gait_signals_give_no_gait_facts():
+    assert gait_facts(episodes(50_000, record(0), has_goal=False)) == []
 
 
 def results(*rows: tuple[int, float, float]) -> list[CheckpointResult]:

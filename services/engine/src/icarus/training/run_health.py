@@ -12,7 +12,7 @@ from typing import Literal
 from icarus.contracts.project import Project
 from icarus.contracts.properties import VectorValue
 from icarus.contracts.training import LogLine, MetricPoint, RunStatus
-from icarus.training.episodes import CheckpointEpisodes
+from icarus.training.episodes import CheckpointEpisodes, GaitSignals
 from icarus.training.run_store import RunFolder
 
 type FactKind = Literal[
@@ -25,6 +25,14 @@ type FactKind = Literal[
     "touches",
     "reward_dominance",
     "failures_flat",
+    "gait",
+    "foot_dragged",
+    "foot_unused",
+    "body_low",
+    "hopping",
+    "twitching",
+    "joints_at_limits",
+    "drifting",
 ]
 
 SLOW_STEPS_PER_SECOND = 200
@@ -42,6 +50,22 @@ FLAT_FAILURE = 0.5
 FLAT_FAILURE_MIN_STEP = 50_000
 # Before this many steps a brain that barely moves or fails is still exploring; later it is a hint of a design issue.
 SETTLED_STEP = 100_000
+# A foot on the ground this share of the steps while the body moves is dragged; at most the second, unused.
+DRAGGED_CONTACT = 0.95
+UNUSED_CONTACT = 0.05
+# The body moves when it goes at least this fast forward, in m/s.
+MOVING_SPEED = 0.1
+# A root held lower than this share of its start height crawls.
+LOW_HEIGHT = 0.7
+# Share of steps with every foot in the air from which the body hops instead of stepping.
+HOPPING_SHARE = 0.3
+# Mean change of a -1..1 action per step from which the joints twitch.
+TWITCH_CHANGE = 0.3
+# Share of joint readings pressed against a limit from which the joints lock.
+LIMIT_SHARE = 0.3
+# Sideways metres per episode, and their share of the forward metres, from which the body drifts.
+DRIFT_METRES = 1.0
+DRIFT_SHARE = 0.5
 UNSTABLE_WORDS = ("nan", "infinite", "unstable", "diverg", "mjwarn")
 SHOWN_LINES = 2
 CONSOLE_LINES = 40
@@ -52,6 +76,8 @@ class HealthFact:
     kind: FactKind
     text: str
     problem: bool = False
+    # The number the fact is about, so checkpoints can be compared; None for facts that only report.
+    value: float | None = None
 
 
 def _quoted(lines: list[str]) -> str:
@@ -149,6 +175,65 @@ def episode_facts(episodes: CheckpointEpisodes, project: Project | None = None) 
     return facts
 
 
+def _foot_facts(gaits: list[GaitSignals], step: int, moving: bool, settled: bool) -> list[HealthFact]:
+    facts: list[HealthFact] = []
+    for index, foot in enumerate(gaits[0].feet):
+        same = [gait.feet[index] for gait in gaits if len(gait.feet) == len(gaits[0].feet)]
+        contact = mean(item.contact_share for item in same)
+        lifts = mean(item.lift_offs for item in same)
+        name = f"{foot.name[:1].lower()}{foot.name[1:]}"
+        said = (
+            f"At step {step:,} the {name} touches the ground {contact:.0%} of the time and lifts off {lifts:.1f} "
+            "times per episode"
+        )
+        if moving and contact >= DRAGGED_CONTACT:
+            facts.append(HealthFact("foot_dragged", f"{said} (dragged).", settled, round(contact, 3)))
+        elif contact <= UNUSED_CONTACT:
+            facts.append(HealthFact("foot_unused", f"{said} (held up, never used).", settled, round(contact, 3)))
+    return facts
+
+
+def gait_facts(episodes: CheckpointEpisodes, settled: bool = False) -> list[HealthFact]:
+    """How a legged body moved in the checkpoint's episodes: one summary, then each sign of a poor gait."""
+    gaits = [record.gait for record in episodes.episodes if record.gait is not None]
+    if not gaits:
+        return []
+    step = episodes.step
+    height, start = mean(g.height_mean for g in gaits), mean(g.start_height for g in gaits)
+    speed, drift = mean(g.forward_speed for g in gaits), mean(abs(g.drift) for g in gaits)
+    flight, change = mean(g.flight_share for g in gaits), mean(g.action_change for g in gaits)
+    limits = mean(g.joints_at_limits for g in gaits)
+    spread = mean(g.height_spread for g in gaits)
+    summary = (
+        f"At step {step:,} the gait: root at {height:.2f} m (±{spread:.2f}, start {start:.2f} m), tilt "
+        f"{mean(g.tilt_mean for g in gaits):.0f}°, turned {mean(g.turn_mean for g in gaits):.0f}° from +x, "
+        f"{speed:.2f} m/s forward, {drift:.2f} m sideways, a foot in the air "
+        f"{mean(g.airborne_share for g in gaits):.0%} of steps and every foot {flight:.0%}, joints at their limits "
+        f"{limits:.0%}, actions change {change:.2f} per step."
+    )
+    facts = [HealthFact("gait", summary)]
+    moving = speed >= MOVING_SPEED
+    facts += _foot_facts(gaits, step, moving, settled)
+    if start > 0 and height < LOW_HEIGHT * start:
+        share = f"{height / start:.0%} of its start height"
+        text = f"At step {step:,} the root stays at {height:.2f} m, {share} (crawling low)."
+        facts.append(HealthFact("body_low", text, settled, round(height / start, 3)))
+    if gaits[0].feet and flight >= HOPPING_SHARE:
+        text = f"At step {step:,} every foot is in the air at once {flight:.0%} of the steps (hopping)."
+        facts.append(HealthFact("hopping", text, settled, round(flight, 3)))
+    if change >= TWITCH_CHANGE:
+        text = f"At step {step:,} each action changes by {change:.2f} per step on a -1 to 1 range (twitching)."
+        facts.append(HealthFact("twitching", text, settled, round(change, 3)))
+    if limits >= LIMIT_SHARE:
+        text = f"At step {step:,} {limits:.0%} of joint readings press against a limit of their range."
+        facts.append(HealthFact("joints_at_limits", text, settled, round(limits, 3)))
+    forward = mean(abs(record.forward) for record in episodes.episodes if record.gait is not None)
+    if drift >= DRIFT_METRES and drift >= DRIFT_SHARE * forward:
+        text = f"At step {step:,} the body drifts {drift:.2f} m sideways per episode, against {forward:.2f} m forward."
+        facts.append(HealthFact("drifting", text, settled, round(drift, 3)))
+    return facts
+
+
 def reward_facts(point: MetricPoint, episodes: CheckpointEpisodes | None = None) -> list[HealthFact]:
     """Terms that make most of an evaluation's reward while the body barely moves and nothing succeeds."""
     terms = point.reward_terms
@@ -214,6 +299,7 @@ def run_health(folder: RunFolder, step: int) -> list[HealthFact]:
         facts.append(slow)
     if episodes is not None:
         facts += episode_facts(episodes, project)
+        facts += gait_facts(episodes, settled=step >= SETTLED_STEP)
     if point is not None:
         facts += reward_facts(point, episodes)
     if (flat := failure_trend(evaluations)) is not None:
