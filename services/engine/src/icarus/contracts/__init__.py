@@ -16,6 +16,7 @@ from icarus.contracts.copilot import (
 )
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
+from icarus.contracts.events import EngineEventEnvelope, TaskInfo
 from icarus.contracts.health import HealthStatus
 from icarus.contracts.library import LibraryCatalog
 from icarus.contracts.operations import OperationBatch
@@ -73,6 +74,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     Diagnosis,
     AutopilotStart,
     AutopilotStatus,
+    EngineEventEnvelope,
+    TaskInfo,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]
