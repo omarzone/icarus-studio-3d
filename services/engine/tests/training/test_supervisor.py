@@ -175,6 +175,8 @@ def test_a_worker_whose_engine_dies_ends_itself_after_a_grace_period_even_if_stu
     store = RunStore(tmp_path)
     run_id = run_in_dying_engine(tmp_path, "ignore", grace=1)
     folder = store.folder(run_id)
+    # The worker writes its child's id once it starts; a slow machine can get here first.
+    wait_for(lambda: (folder.path / "child.pid").exists())
     child = int((folder.path / "child.pid").read_text(encoding="utf-8"))
     wait_for(state_is(store, run_id, "stopped"))
     pid = folder.worker_pid()
