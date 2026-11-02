@@ -188,6 +188,12 @@ LOOK_EDITS = {
     "car color": [edit("car", "material", "color", {"type": "color", "value": "#d23b3b"})],
     "sun light": [edit("sun", "light", "intensity", {"type": "slider", "value": 2})],
     "ray name": [edit("car", "distance_ray", "name", {"type": "text", "value": "Nose"})],
+    "practice settings": [
+        {
+            "operations": [{"op": "set_brain", "training_steps": 200_000, "ppo": {"learning_rate": 0.001}}],
+            "summary": "Practice",
+        }
+    ],
     "project name": [{"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}],
 }
 

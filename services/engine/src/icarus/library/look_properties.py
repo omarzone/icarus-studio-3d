@@ -8,6 +8,8 @@ LOOK_PROPERTIES = {
     "material": frozenset({"color", "style", "transparency", "reflectance", "cast_shadow"}),
     "distance_ray": frozenset({"name"}),
 }
+# How a brain practices shapes the next run, not what a finished brain can drive; the checkpoint keeps its own layers.
+PRACTICE_FIELDS = frozenset({"copies", "seed", "training_steps", "layers", "ppo"})
 
 
 def _training_objects(objects: list[ObjectSpec]) -> list[dict[str, object]]:
@@ -35,10 +37,10 @@ def _training_objects(objects: list[ObjectSpec]) -> list[dict[str, object]]:
 
 
 def training_content(project: Project) -> dict[str, object]:
-    """The project as training sees it: equal for two revisions when one only changed the look, name or description."""
+    """What a trained brain depends on: equal when a revision only changed the look, a label or how the brain practices."""
     return {
         "world": _training_objects(project.world.objects),
         "bodies": [{"id": body.id, "objects": _training_objects(body.objects)} for body in project.bodies],
         "task": project.task.model_dump(),
-        "brain": project.brain.model_dump(),
+        "brain": project.brain.model_dump(exclude=set(PRACTICE_FIELDS)),
     }
