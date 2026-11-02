@@ -246,6 +246,7 @@ A `BehaviorTest` replays a scripted situation and measures the simulated body ag
 - PPO from Stable-Baselines3, on CPU by default, using a GPU only when available and only for speed.
 - A checkpoint schedule (log-spaced by default: 0, 25k, 50k, 100k, 250k, 500k, 1M, …) gives the timeline detail where learning changes fastest.
 - At every checkpoint the worker saves the policy, runs deterministic evaluation episodes with fixed seeds, records the first one as a `Rollout` and stores its metrics.
+- For walking bodies each evaluation episode also records gait signals measured by MuJoCo (root height, tilt, drift, each foot's ground contact and lift-offs, joints at their limits, action change), which `training/run_health.py` turns into facts the coach quotes; the locomotion gait reward terms answer them.
 - Checkpoint 0 is the untrained policy, so every run carries its own before/after baseline.
 
 ### Run store
