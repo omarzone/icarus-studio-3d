@@ -83,6 +83,19 @@ describe("start plan", () => {
     );
   });
 
+  it("starts from the brain's own steps and copies until the person picks others", () => {
+    const brain = { steps: 400_000, copies: 8 };
+    expect(startPlan({ runs: 0, family: "navigation", settings, choice: {}, brain })).toMatchObject({
+      steps: 400_000,
+      copies: 8,
+    });
+    const recommended = { steps: null, copies: 8 };
+    expect(startPlan({ runs: 0, family: "locomotion", settings, choice: {}, brain: recommended }).steps).toBe(
+      2_000_000,
+    );
+    expect(startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 50_000 }, brain }).steps).toBe(50_000);
+  });
+
   it("keeps the steps and copies within what the engine accepts", () => {
     const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 10, copies: 500 } });
     expect(plan).toMatchObject({ steps: 10_000, copies: 64 });

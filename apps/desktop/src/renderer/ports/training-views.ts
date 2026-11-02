@@ -92,7 +92,14 @@ type PlanInput = {
   family: TaskFamily;
   settings: Pick<TrainingSettings, "threads" | "max_threads">;
   choice: PlanChoice;
+  // The brain's own practice: its default steps (none for the task's recommended budget) and copies.
+  brain?: { steps?: number | null; copies: number };
 };
+
+// Mirrors the engine's RECOMMENDED_STEPS: the budget a task family needs before its results say much.
+export function recommendedSteps(family: TaskFamily): number {
+  return family === "locomotion" ? 2_000_000 : 1_000_000;
+}
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(value)));
 
@@ -107,9 +114,9 @@ function duration(seconds: number): string {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-export function startPlan({ runs, family, settings, choice }: PlanInput): StartPlan {
-  const steps = clamp(choice.steps ?? (family === "locomotion" ? 2_000_000 : 1_000_000), MIN_STEPS, MAX_STEPS);
-  const copies = clamp(choice.copies ?? 16, 1, MAX_COPIES);
+export function startPlan({ runs, family, settings, choice, brain }: PlanInput): StartPlan {
+  const steps = clamp(choice.steps ?? brain?.steps ?? recommendedSteps(family), MIN_STEPS, MAX_STEPS);
+  const copies = clamp(choice.copies ?? brain?.copies ?? 16, 1, MAX_COPIES);
   const seconds = (steps / STEPS_PER_SECOND_ON_16) * Math.max(1, 16 / copies);
   const time = duration(seconds);
   // Walking bodies have not been measured yet, so their estimate says it is rough.

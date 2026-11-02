@@ -6,6 +6,7 @@ import { type Inspection, type SceneTree, scenePort } from "../ports/scene-port.
 export const sceneKeys = {
   tree: (scene: string) => ["scene", scene, "tree"] as const,
   inspection: (scene: string) => ["scene", scene, "inspection"] as const,
+  brainSettings: (scene: string) => ["scene", scene, "brain-settings"] as const,
   copies: (scene: string) => ["scene", scene, "copies"] as const,
   copyScenes: (scene: string) => ["scene", scene, "copy-scenes"] as const,
   guide: (scene: string) => ["scene", scene, "guide"] as const,
@@ -22,6 +23,11 @@ export function useSceneTree(scene: string) {
 export function useInspection(scene: string) {
   const port = usePort(scenePort);
   return useQuery({ queryKey: sceneKeys.inspection(scene), queryFn: () => port.getInspection(scene) });
+}
+
+export function useBrainSettings(scene: string) {
+  const port = usePort(scenePort);
+  return useQuery({ queryKey: sceneKeys.brainSettings(scene), queryFn: () => port.getBrainSettings(scene) });
 }
 
 export function useGuide(scene: string) {
@@ -43,20 +49,26 @@ export function useCopyScenes(scene: string) {
 // Writes what an edit returned into the cache so every panel shows it at once.
 export function useSceneCache(scene: string) {
   const client = useQueryClient();
+  // Everything else about the scene (tree, guide, viewport) and the project's history is re-read.
+  const refreshOthers = (kept: string) =>
+    client.invalidateQueries({
+      predicate: (query) =>
+        (query.queryKey[0] === "scene" && query.queryKey[1] === scene && query.queryKey[2] !== kept) ||
+        query.queryKey[0] === "projects" ||
+        query.queryKey[0] === "revisions",
+    });
   return {
     tree: (tree: SceneTree) => {
       client.setQueryData(sceneKeys.tree(scene), tree);
       void client.invalidateQueries({ queryKey: sceneKeys.inspection(scene) });
     },
-    // Everything else about the scene (tree, guide, viewport) and the project's history is re-read.
     inspection: (inspection: Inspection) => {
       client.setQueryData(sceneKeys.inspection(scene), inspection);
-      void client.invalidateQueries({
-        predicate: (query) =>
-          (query.queryKey[0] === "scene" && query.queryKey[1] === scene && query.queryKey[2] !== "inspection") ||
-          query.queryKey[0] === "projects" ||
-          query.queryKey[0] === "revisions",
-      });
+      void refreshOthers("inspection");
+    },
+    brainSettings: (settings: Inspection) => {
+      client.setQueryData(sceneKeys.brainSettings(scene), settings);
+      void refreshOthers("brain-settings");
     },
   };
 }

@@ -1,5 +1,6 @@
 import type { EditOperation, LibraryCatalog, Project, PropertySchema } from "@icarus/contracts";
 import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
+import { brainInspection, brainSettingOperation, brainSettingReset } from "./brain-settings-views.ts";
 import { trainingVariations, variationOperations } from "./copy-variations.ts";
 import { guideProgress } from "./guide-progress.ts";
 import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
@@ -61,6 +62,10 @@ function reference(catalog: LibraryCatalog): PropertyReference {
     })),
     states: first ? [{ state: "default", label: "Default", use: "The library value", sample: sample(first) }] : [],
   };
+}
+
+function settingLabel(catalog: LibraryCatalog, id: string): string {
+  return (catalog.brain_settings?.find((schema) => schema.id === id)?.label ?? id).toLowerCase();
 }
 
 // The scene port on the engine: the document comes from the engine, selection stays in the app.
@@ -143,6 +148,22 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
         value: schema.default,
       };
       return edit(scene, [operation], `Reset ${schema.label} on ${obj.name}`);
+    },
+    getBrainSettings: async (scene) => {
+      const { project, catalog: lib } = await load(scene);
+      return brainInspection(project, lib);
+    },
+    setBrainSetting: async ({ scene, property, value }) => {
+      const { project, catalog: lib } = await load(scene);
+      const operation = brainSettingOperation(project, lib, property, value);
+      const state = await api.applyOperations(scene, [operation], `Changed the brain's ${settingLabel(lib, property)}`);
+      return brainInspection(state.project, lib);
+    },
+    resetBrainSetting: async ({ scene, property }) => {
+      const { project, catalog: lib } = await load(scene);
+      const operation = brainSettingReset(project, lib, property);
+      const state = await api.applyOperations(scene, [operation], `Reset the brain's ${settingLabel(lib, property)}`);
+      return brainInspection(state.project, lib);
     },
     listComponentKinds: async () => componentGroups(await library()),
     addComponent: async ({ scene, kind }) => {

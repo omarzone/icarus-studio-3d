@@ -93,6 +93,12 @@ export function createSceneFixture(): ScenePort {
     },
     acceptProposedValue: async ({ scene, section, property }) =>
       editProperty(scene, section, property, (item) => (item.proposed ? withValue(item, item.proposed) : item)),
+    // Brain samples keep their settings as the selected inspection.
+    getBrainSettings: async (scene) => inspectionOf(find(scene)),
+    setBrainSetting: async ({ scene, section, property, value }) =>
+      editProperty(scene, section, property, (item) => withValue(item, value)),
+    resetBrainSetting: async ({ scene, section, property }) =>
+      editProperty(scene, section, property, (item) => originalProperty(scene, section, property) ?? item),
     listComponentKinds: async () => [...COMPONENT_GROUPS],
     addComponent: async ({ scene, kind }) => {
       const document = find(scene);
