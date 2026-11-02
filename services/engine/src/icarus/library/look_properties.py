@@ -37,7 +37,7 @@ def _training_objects(objects: list[ObjectSpec]) -> list[dict[str, object]]:
 
 
 def training_content(project: Project) -> dict[str, object]:
-    """What a trained brain depends on: equal when a revision only changed the look, a label or how the brain practices."""
+    """What a trained brain depends on: equal when a revision changed only looks, labels or how the brain practices."""
     return {
         "world": _training_objects(project.world.objects),
         "bodies": [{"id": body.id, "objects": _training_objects(body.objects)} for body in project.bodies],
