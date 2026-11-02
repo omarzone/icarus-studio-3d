@@ -51,6 +51,8 @@ export type SceneViewProps = {
   // Distance sensors to draw (eased with the poses in a live view), with their readings when `rayValues`.
   rays?: readonly SceneRay[];
   rayValues?: boolean;
+  // The orientation cube is for views you work in; previews only to look at leave it out.
+  viewCube?: boolean;
 } & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
@@ -227,7 +229,7 @@ function frameOnKey(view: CameraView | null) {
 // Draws the engine's compiled scene; it never moves anything itself, a drag or a pick only reports what was done.
 export default function SceneView(props: SceneViewProps) {
   const colors = useMemo(sceneColors, []);
-  const { description, framing = CAMERA_FRAMES, follows } = props;
+  const { description, framing = CAMERA_FRAMES, follows, viewCube = true } = props;
   const view = useContext(CameraViewContext);
   const scale = Math.max(1, framing / CAMERA_FRAMES);
   const track = useRef<PoseTrack | null>(null);
@@ -294,7 +296,7 @@ export default function SceneView(props: SceneViewProps) {
       ) : (
         <OrbitControls makeDefault />
       )}
-      {props.mode === "play" ? null : (
+      {props.mode === "play" || !viewCube ? null : (
         <GizmoHelper alignment="top-right" margin={[72, 72]}>
           <GizmoViewcube />
         </GizmoHelper>
