@@ -91,3 +91,12 @@ def test_a_tilted_distance_ray_looks_down_by_its_tilt():
         site = compiled.model.site(f"box:ray{index}").id
         looking = data.site_xmat[site].reshape(3, 3)[:, 2]
         assert looking[2] == pytest.approx(-0.5, abs=1e-6) and looking[0] > 0
+
+
+def test_a_static_part_without_a_collider_is_painted_on_and_never_touched():
+    marking = part("line", None, transform={"position": {"type": "vector", "value": [0, 0, 0.002]}}, mesh={})
+    wall = part("wall", None, transform={}, mesh={}, collider={})
+    model = compile_project(project_of(marking, wall)).model
+    line = model.geom("line")
+    assert (int(line.contype[0]), int(line.conaffinity[0])) == (0, 0)
+    assert int(model.geom("wall").contype[0]) == 1

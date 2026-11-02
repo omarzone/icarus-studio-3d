@@ -104,6 +104,9 @@ def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, floa
     collider = view(obj, "collider")
     if collider:
         attributes["solref"] = _fmt([0.02, 1 - 0.9 * collider.number("restitution")])
+    elif physics is None and shape != "plane":
+        # A static part without a collider is decoration painted on the world: nothing touches it.
+        attributes |= {"contype": "0", "conaffinity": "0"}
     ET.SubElement(body, "geom", attributes)
 
 
