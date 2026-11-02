@@ -238,6 +238,43 @@ export interface AttachmentUpload {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotLogLine".
+ */
+export interface AutopilotLogLine {
+  text: string;
+  time: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotStart".
+ */
+export interface AutopilotStart {
+  goal_success?: number;
+  max_iterations?: number;
+  max_minutes?: number;
+  mode: "ask" | "fix";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotStatus".
+ */
+export interface AutopilotStatus {
+  best_run_id?: string | null;
+  best_success?: number | null;
+  diagnosis_ids: string[];
+  finished_at?: string | null;
+  goal_success: number;
+  iteration: number;
+  log: AutopilotLogLine[];
+  max_iterations: number;
+  mode: "ask" | "fix";
+  project_id: string;
+  run_ids: string[];
+  started_at: string;
+  state: "running" | "waiting_approval" | "done" | "stopped" | "failed";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "BrainSpec".
  */
 export interface BrainSpec {
@@ -765,6 +802,229 @@ export interface DesignReport {
   checks: DesignCheck[];
   duration_ms: number;
   ok: boolean;
+}
+/**
+ * What the coach found in a run at one checkpoint, from the run's own data and frames.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "Diagnosis".
+ */
+export interface Diagnosis {
+  created_at: string;
+  /**
+   * @maxItems 16
+   */
+  evidence:
+    | []
+    | [DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ];
+  /**
+   * @maxItems 8
+   */
+  failure_groups:
+    | []
+    | [FailureGroup]
+    | [FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup];
+  hypothesis: string;
+  id: string;
+  next_step: "keep_training" | "stop_and_fix" | "done";
+  /**
+   * @maxItems 12
+   */
+  observations:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string, string];
+  project_id: string;
+  proposal_id?: string | null;
+  run_id: string;
+  step: number;
+  summary: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DiagnosisEvidence".
+ */
+export interface DiagnosisEvidence {
+  attachment_id?: string | null;
+  detail?: string | null;
+  kind: "metric" | "reward_term" | "episode" | "frame";
+  label: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "FailureGroup".
+ */
+export interface FailureGroup {
+  description: string;
+  /**
+   * @maxItems 6
+   */
+  frame_attachment_ids?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string];
+  label: string;
+  share: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1312,6 +1572,17 @@ export interface RunConfig {
   seed: number;
   threads: number;
   total_steps: number;
+  warm_start?: WarmStart | null;
+}
+/**
+ * Continue from a brain that already learned, instead of from zero; it must see and act the same way.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "WarmStart".
+ */
+export interface WarmStart {
+  run_id: string;
+  step: number;
 }
 /**
  * One server-sent event of GET /runs/{id}/events.
@@ -1422,6 +1693,7 @@ export interface StartRun {
   copies: number;
   seed?: number | null;
   total_steps: number;
+  warm_start?: WarmStart | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

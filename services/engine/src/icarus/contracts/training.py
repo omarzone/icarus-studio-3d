@@ -13,12 +13,20 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
+class WarmStart(_Model):
+    """Continue from a brain that already learned, instead of from zero; it must see and act the same way."""
+
+    run_id: str
+    step: int = Field(ge=0)
+
+
 class StartRun(_Model):
     """What the desktop or the copilot asks for when it starts training the current revision."""
 
     total_steps: int = Field(ge=10_000, le=MAX_STEPS)
     copies: int = Field(ge=1, le=MAX_COPIES)
     seed: int | None = Field(default=None, ge=0)
+    warm_start: WarmStart | None = None
 
 
 class RunConfig(_Model):
@@ -34,6 +42,7 @@ class RunConfig(_Model):
     checkpoint_steps: list[int]
     evaluation_episodes: int = Field(ge=1)
     threads: int = Field(ge=1)
+    warm_start: WarmStart | None = None
 
 
 RunState = Literal["starting", "running", "stopping", "done", "stopped", "failed"]

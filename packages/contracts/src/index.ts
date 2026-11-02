@@ -13,6 +13,9 @@ export type {
   AssetValue,
   AttachmentInfo,
   AttachmentUpload,
+  AutopilotLogLine,
+  AutopilotStart,
+  AutopilotStatus,
   BodySpec,
   BuildIdea,
   BuildStatus,
@@ -33,7 +36,10 @@ export type {
   DesignCheck,
   DesignIdea,
   DesignReport,
+  Diagnosis,
+  DiagnosisEvidence,
   DuplicateProject,
+  FailureGroup,
   HealthStatus,
   IdeaRequest,
   IdeaSet,
@@ -94,6 +100,7 @@ export type {
   ValidationErrorBody,
   ValidationIssue,
   VectorValue,
+  WarmStart,
 } from "./generated.ts";
 
 // Unions the generator inlines, named once from the generated types.
