@@ -18,7 +18,28 @@ describe("saved location", () => {
     before.getState().go("MOD-START-TRAINING");
 
     const after = savedLocation(storage, HOME);
-    expect(after).toEqual({ screen: "SCR-TRAIN", overlay: null, params: { project: "274ac06344d9" } });
+    expect(after).toEqual({
+      screen: "SCR-TRAIN",
+      overlay: null,
+      params: { project: "274ac06344d9" },
+      history: [HOME],
+    });
+  });
+
+  it("keeps the way back, so settings opened from a project still lead back to it after a reload", () => {
+    const storage = memoryStorage();
+    const before = createNavigationStore(HOME);
+    keepLocation(before, storage);
+    before.getState().go("SCR-WORLD", { project: "274ac06344d9" });
+    before.getState().go("SCR-SETTINGS-TRAINING");
+
+    const after = createNavigationStore(savedLocation(storage, HOME));
+    expect(after.getState().history).toEqual([
+      HOME,
+      { screen: "SCR-WORLD", overlay: null, params: { project: "274ac06344d9" } },
+    ]);
+    storage.setItem("icarus.location", JSON.stringify({ screen: "SCR-HOME", params: {}, history: [{ screen: 3 }] }));
+    expect(savedLocation(storage, HOME)).toEqual({ ...HOME, history: [] });
   });
 
   it("starts at home when nothing was saved or what was saved cannot be read", () => {

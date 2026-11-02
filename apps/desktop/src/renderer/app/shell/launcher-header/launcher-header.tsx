@@ -1,10 +1,11 @@
 // HDR-LAUNCHER
 import { tokens } from "@icarus/ui-tokens";
-import { Bell, Search } from "lucide-react";
+import { ArrowLeft, Bell, Search } from "lucide-react";
 import { buttonClass } from "../../../ui/button-styles.ts";
-import type { ScreenId } from "../../navigation/catalog-id.ts";
+import { ctaSlug, type ScreenId } from "../../navigation/catalog-id.ts";
 import { Act, GoTo } from "../../navigation/go-to.tsx";
-import { useNavigation } from "../../navigation/navigation-store.tsx";
+import { useNavigation, useNavigationStore } from "../../navigation/navigation-store.tsx";
+import { takeWayBack, wayBack } from "../../navigation/way-back.ts";
 import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 
 const PAGES = ["Home", "Projects", "Community"] as const;
@@ -30,6 +31,7 @@ export function LauncherHeader({ active, activeGoesTo, account, unread = false }
       className="title-bar col-span-full flex h-14 items-center gap-4.5 border-b border-line-subtle px-4.5"
     >
       <WindowControlsSpace side="start" />
+      <WayBackButton />
       <span className="text-headline font-semibold">Icarus Studio 3D</span>
       {PAGES.map((item) =>
         item === active && activeGoesTo ? (
@@ -98,5 +100,29 @@ export function LauncherHeader({ active, activeGoesTo, account, unread = false }
       </GoTo>
       <WindowControlsSpace side="end" />
     </header>
+  );
+}
+
+// Leaves settings and the launcher pages for the project they were opened from (or Home); Escape does the same.
+function WayBackButton() {
+  const screen = useNavigation((state) => state.screen);
+  const history = useNavigation((state) => state.history);
+  const store = useNavigationStore();
+  const way = wayBack({ screen, history });
+  if (!way) {
+    return null;
+  }
+  return (
+    <button
+      type="button"
+      data-cta={ctaSlug(way.label)}
+      data-goes-to={way.to}
+      title={`${way.label} (Esc)`}
+      onClick={() => takeWayBack(store.getState(), way)}
+      className={buttonClass("ghost", "-ml-1.5 gap-1.5 px-2")}
+    >
+      <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
+      {way.label}
+    </button>
   );
 }

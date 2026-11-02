@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { type NavigationLocation, NavigationProvider } from "./navigation/navigation-store.tsx";
+import { type NavigationLocation, NavigationProvider, type NavigationStart } from "./navigation/navigation-store.tsx";
 import { EngineQueryProvider } from "./runtime/engine-query.tsx";
 import { type RuntimeMode, RuntimeModeProvider } from "./runtime/port.tsx";
 
@@ -9,7 +9,7 @@ export function AppProviders({
   children,
 }: {
   mode: RuntimeMode;
-  initial: NavigationLocation;
+  initial: NavigationStart;
   children: ReactNode;
 }) {
   return (
