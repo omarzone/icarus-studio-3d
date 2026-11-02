@@ -1535,6 +1535,7 @@ export interface RunStatus {
   failure?: RunFailure | null;
   finished_at?: string | null;
   name: string;
+  phase?: ("practicing" | "updating" | "testing") | null;
   project_id: string;
   revision_number: number;
   run_id: string;
@@ -1543,6 +1544,7 @@ export interface RunStatus {
   step: number;
   steps_per_second: number;
   success_rate?: number | null;
+  testing_step?: number | null;
   total_steps: number;
 }
 /**
@@ -1597,7 +1599,20 @@ export interface SnapshotEvent {
 export interface TrainingSnapshot {
   copies: CopyPoses[];
   geoms: string[];
+  live_view?: ("classic" | "realtime" | "fast") | null;
+  motion?: MotionSegment[][] | null;
   step: number;
+}
+/**
+ * Contiguous recorded frames of one episode of one copy, as MuJoCo computed them.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionSegment".
+ */
+export interface MotionSegment {
+  episode: number;
+  frames: CopyPoses[];
+  times: number[];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

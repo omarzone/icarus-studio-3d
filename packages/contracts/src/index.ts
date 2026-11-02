@@ -56,6 +56,7 @@ export type {
   ModelConnection,
   ModelSettings,
   ModelSettingsPatch,
+  MotionSegment,
   NetworkInput,
   NetworkLayer,
   NetworkOutput,

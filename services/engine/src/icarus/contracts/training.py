@@ -48,6 +48,11 @@ class RunConfig(_Model):
 
 
 RunState = Literal["starting", "running", "stopping", "done", "stopped", "failed"]
+# What a running worker is doing: stepping the copies, updating the brain from them, or testing a checkpoint.
+RunPhase = Literal["practicing", "updating", "testing"]
+# How the live view plays the copies: one pose per snapshot eased ("classic"), recorded motion at 1x sim speed a
+# moment behind ("realtime"), or recorded motion sped up to keep pace with training ("fast").
+LiveViewMode = Literal["classic", "realtime", "fast"]
 
 
 class RunFailure(_Model):
@@ -75,6 +80,10 @@ class RunStatus(_Model):
     # Evaluation of the latest checkpoint: share of episodes that reached the goal, when the task has one.
     success_rate: float | None = None
     failure: RunFailure | None = None
+    # Only while the worker runs; old status files have none.
+    phase: RunPhase | None = None
+    # The checkpoint being tested while `phase` is "testing".
+    testing_step: int | None = None
 
 
 class MetricPoint(_Model):
@@ -130,12 +139,27 @@ class CopyPoses(_Model):
     rays: list[SceneRay] = []
 
 
+class MotionSegment(_Model):
+    """Contiguous recorded frames of one episode of one copy, as MuJoCo computed them."""
+
+    # Counts this copy's episodes; a new number is a cut, never motion to blend across.
+    episode: int
+    # Seconds of sim time since the episode started, increasing.
+    times: list[float]
+    frames: list[CopyPoses]
+
+
 class TrainingSnapshot(_Model):
     """The parallel copies as they are right now, sampled a few times per second while a run trains."""
 
     step: int
     geoms: list[str]
+    # Each copy's newest pose.
     copies: list[CopyPoses]
+    # Absent in snapshots written before the live view played recorded motion; those are "classic".
+    live_view: LiveViewMode | None = None
+    # Per copy, the frames recorded since the previous snapshot, oldest first.
+    motion: list[list[MotionSegment]] | None = None
 
 
 class LogLine(_Model):
