@@ -64,7 +64,26 @@ The copilot remembers facts that are expensive to rediscover, scoped and with th
 
 A first-class tool rather than prose: `compare(run_a, run_b)` evaluates both best brains on the same evaluation seeds (the coach's comparison) and returns a table of success, failure, return, episode length and per-term rewards with differences, plus `compare_revisions(a, b)` (what changed in the project). The coach and the chat use the same tool; Results shows the same table.
 
-## 6. Extensions without code
+## 6. Subagents
+
+The copilot can hand a self-contained job to a subagent that works in the background while the conversation goes on, and both the copilot and the person can talk to it.
+
+- **A subagent is an `agent_turn` task** (§2) running the same loop with its own budget, its own context (the brief, the project state, the skills it was given) and a scoped tool set (a design subagent gets `library`, `inspect_object`, `try`, `look`, `propose`; a training-watch subagent gets `read_run`, `look_episode`, `compare`; none gets `apply` unless the conversation is in autopilot).
+- **Spawning:** the copilot's `delegate(brief, skills, tools, budget)` tool starts one and returns its task id at once. Typical uses: design the environment while another subagent designs the body; watch a run and report at each checkpoint; try three reward variants on copies and compare.
+- **Talking to it:** `message_task(task_id, text)` from the copilot, and from the person through the chat (a subagent shows as a thread under the message that started it, with its live steps from the event bus). A message is queued and read at the subagent's next step. `task_result(task_id)` returns its final answer and proposal ids.
+- **Results come back as events** (`task_finished` with its summary and proposal ids); the copilot is told on its next turn and can merge the work (proposals stay ordinary proposals, applied through the one edit model).
+- **Limits:** at most 3 subagents per project at once, each with a step and time budget; subagents cannot spawn subagents; all writes still go through propose/apply and the autonomy mode of the conversation.
+
+## 7. Compaction everywhere
+
+The loop's compaction (in-turn pruning of old tool results and pictures, rolling summary of older messages with an identifier check, project state rebuilt live every turn) applies to every long-running agent:
+
+- **Subagents** compact their own context with the same rules and keep their brief and skill bodies pinned.
+- **Background tasks** that run for a long time (autopilot, training watch) keep a short running log of decisions instead of the full history; each iteration starts from live state (runs, revisions, diagnoses) plus that log.
+- **Summaries are never sources:** a number in a summary or log must still be read from a run or revision before it is cited.
+- Thresholds stay configurable per connection (context window learned from overflow errors).
+
+## 8. Extensions without code
 
 Community extension is declarative so that sharing never runs foreign code:
 
@@ -79,15 +98,16 @@ Community extension is declarative so that sharing never runs foreign code:
 
 All ship inside the existing bundle format (`BundleManifest`), validated on import, versioned, removable. New physics, new reward term implementations or new sensors stay engine code reviewed in this repository; an extension can only combine what the library already defines. Code plugins are out of scope: they would need a sandbox and would break the bundle invariant.
 
-## 7. Build order
+## 9. Build order
 
 1. Contract task: `EngineEventEnvelope` + `EngineEvent` union, `TaskInfo`.
 2. Event bus and `/events` SSE; copilot, tasks, training and projects publish; the desktop shows live steps.
 3. Task registry; autopilot, diagnosis, ideas and builds become tasks; `tasks` tool.
 4. Skills: loader, validation, `use_skill`, prompt catalog, checklists; the first eight built-in skills written and tested with the fake provider, then measured with the real model on the beginner scenarios (walker, race, parking).
-5. Memory and `remember`/`recall`; comparison tools.
-6. Extension kinds in bundles (with the community sprint).
+5. Subagents: `delegate`, `message_task`, `task_result`, chat threads.
+6. Memory and `remember`/`recall`; comparison tools.
+7. Extension kinds in bundles (with the community sprint).
 
-## 8. Testing
+## 10. Testing
 
 Every event kind has a test that the owning module publishes it; the SSE endpoint is tested with the existing TestClient streaming pattern; skills are tested by loading every built-in skill and by fake-provider turns that call `use_skill` and follow its checklist; memory is tested for scoping, sources and deletion. No test touches the network.
