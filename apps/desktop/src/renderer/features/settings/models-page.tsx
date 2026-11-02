@@ -14,6 +14,7 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { StatusPill } from "../../ui/status-pill.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { modelSettingsRequest } from "./model-settings-form.ts";
 import { SettingsLayout } from "./settings-layout.tsx";
 
 const CAPABILITIES: Record<ModelCapability, { label: string; purpose: string }> = {
@@ -43,30 +44,65 @@ function ModelsForm({ models }: { models: ModelSettings }) {
   const client = useQueryClient();
   const [endpoint, setEndpoint] = useState(models.endpoint);
   const [apiKey, setApiKey] = useState("");
-  const refresh = { onSuccess: () => client.invalidateQueries({ queryKey: ["settings", "models"] }) };
+  const [names, setNames] = useState<Partial<Record<ModelCapability, string>>>(() =>
+    Object.fromEntries(models.connections.map((connection) => [connection.capability, connection.model ?? ""])),
+  );
+  // Shown after Test saved a new address without a key, since the engine then has no key to test with.
+  const [keyNeeded, setKeyNeeded] = useState(false);
+  const request = modelSettingsRequest(models, { endpoint, apiKey, names });
+  // Save also leaves the page, so the result is handled on the promise; per-call callbacks would not run.
+  const refresh = () => client.invalidateQueries({ queryKey: ["settings", "models"] });
   const test = useEngineAction(settings.testModelConnection);
   const save = useEngineAction(settings.saveModelSettings);
   return (
     <>
       {models.connections.map((connection) => (
-        <ConnectionRow key={connection.capability} connection={connection} />
+        <ConnectionRow
+          key={connection.capability}
+          connection={connection}
+          name={names[connection.capability] ?? ""}
+          onName={(name) => setNames({ ...names, [connection.capability]: name })}
+        />
       ))}
       <div className="grid grid-cols-2 gap-3">
         <TextField label="Endpoint" mono value={endpoint} onChange={(event) => setEndpoint(event.target.value)} />
-        <TextField
-          label="API key"
-          mono
-          type="password"
-          autoComplete="off"
-          value={apiKey}
-          placeholder={`•••••••••••••••• ${models.apiKeyHint}`}
-          onChange={(event) => setApiKey(event.target.value)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <TextField
+            label="API key"
+            mono
+            type="password"
+            autoComplete="off"
+            value={apiKey}
+            placeholder={models.apiKeyHint ? `•••••••••••••••• ${models.apiKeyHint}` : "not set"}
+            onChange={(event) => {
+              setApiKey(event.target.value);
+              setKeyNeeded(false);
+            }}
+          />
+          {request.keyRequired ? (
+            <p className="text-meta leading-tight text-fg-tertiary">
+              Changing the address clears the saved key; enter the key for the new address
+            </p>
+          ) : keyNeeded ? (
+            <p role="alert" className="text-meta leading-tight text-warn">
+              Saved. Enter the key for the new address, then test the connection
+            </p>
+          ) : null}
+        </div>
       </div>
       <div className="flex gap-2">
         <Act
           cta="Test connection"
-          onClick={() => test.mutate(undefined, refresh)}
+          onClick={() => {
+            const { input, keyRequired } = request;
+            void save
+              .mutateAsync(input)
+              .then(() => {
+                setKeyNeeded(keyRequired);
+                return keyRequired ? undefined : test.mutateAsync(undefined);
+              })
+              .then(refresh, refresh);
+          }}
           className={buttonClass("secondary", "h-8.5 px-4 text-body")}
         >
           Test connection
@@ -74,7 +110,9 @@ function ModelsForm({ models }: { models: ModelSettings }) {
         <GoTo
           to="SCR-HOME"
           cta="Save"
-          onClick={() => save.mutate({ endpoint, apiKey }, refresh)}
+          onClick={() => {
+            void save.mutateAsync(request.input).then(refresh, () => undefined);
+          }}
           className={buttonClass("primary", "h-8.5 text-body")}
         >
           Save
@@ -84,7 +122,9 @@ function ModelsForm({ models }: { models: ModelSettings }) {
   );
 }
 
-function ConnectionRow({ connection }: { connection: ModelConnection }) {
+type RowProps = { connection: ModelConnection; name: string; onName: (name: string) => void };
+
+function ConnectionRow({ connection, name, onName }: RowProps) {
   const { label, purpose } = CAPABILITIES[connection.capability];
   return (
     <div className="grid grid-cols-[150px_minmax(0,1fr)_auto] items-center gap-3 rounded-card-sm bg-control px-3.5 py-3">
@@ -92,7 +132,20 @@ function ConnectionRow({ connection }: { connection: ModelConnection }) {
         <span className="leading-tight font-semibold">{label}</span>
         <span className="text-meta leading-tight text-fg-tertiary">{purpose}</span>
       </span>
-      <span className="font-mono text-ui leading-tight text-fg-secondary">{connection.model ?? "not set"}</span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <input
+          type="text"
+          aria-label={`${label} model`}
+          placeholder="not set"
+          spellCheck={false}
+          value={name}
+          onChange={(event) => onName(event.target.value)}
+          className="-mx-1 rounded-control bg-transparent px-1 font-mono text-ui leading-tight text-fg-secondary outline-none placeholder:text-fg-secondary hover:bg-fill-hover focus:bg-control-raised focus:text-fg"
+        />
+        {connection.detail && !connection.connected ? (
+          <span className="text-meta leading-tight text-warn">{connection.detail}</span>
+        ) : null}
+      </span>
       {connection.connected ? (
         <StatusPill tone="ok">Connected</StatusPill>
       ) : connection.required ? (

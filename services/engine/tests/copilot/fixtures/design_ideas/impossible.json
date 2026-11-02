@@ -1,0 +1,40 @@
+{
+  "match": [
+    "impossible"
+  ],
+  "replies": [
+    {
+      "content": {
+        "ideas": [
+          {
+            "title": "Hovercraft",
+            "world": "A frozen lake",
+            "body": "A hovercraft",
+            "learns": "To glide to a buoy",
+            "template": "hovercraft",
+            "operations": []
+          },
+          {
+            "title": "Impossible weight",
+            "world": "An open lot",
+            "body": "A car heavier than the library allows",
+            "learns": "To park",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "car",
+                "component": "physics_body",
+                "property": "mass",
+                "value": {
+                  "type": "number",
+                  "value": 50000
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,8 @@
+import type { SceneGeom } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createCopilotFixture } from "./copilot.fixture.ts";
+import { createEngineCopilot } from "./copilot-engine.ts";
 
 // The copilot conversation of a workspace: messages, proposals waiting for approval and suggestions.
 export type RichText = readonly { text: string; strong?: boolean }[];
@@ -9,7 +11,8 @@ export type CheckItem = { text: string; tone: "ok" | "warn" };
 
 export type ProposalChange = { kind: "diff"; label: string; from: string; to: string } | { kind: "add"; text: string };
 
-export type ProposalStatus = "open" | "applied" | "discarded";
+// "outdated" when the project moved on before the proposal was answered.
+export type ProposalStatus = "open" | "applied" | "discarded" | "outdated";
 
 export type Proposal = {
   id: string;
@@ -31,6 +34,8 @@ export type ChatMessage =
       role: "copilot";
       title?: string;
       text: RichText;
+      // How the copilot thought about it, shown on demand.
+      thinking?: string;
       checks?: readonly CheckItem[];
       // Inline actions under the answer; the first is the primary one.
       actions?: readonly Suggestion[];
@@ -100,13 +105,28 @@ export type Conversation = {
   autonomyNote?: string;
 };
 
+// The open proposal drawn over the viewport: what it adds or changes, in the engine's compiled scene.
+export type ProposalPreview = { id: string; revision?: number; geoms: readonly SceneGeom[] };
+
+export type MessageInput = {
+  key: string;
+  text: string;
+  // The object selected in the editor, so "this" means something.
+  selection?: string | null;
+  // The workspace the user is in ("World", "Train"…).
+  workspace?: string;
+};
+
+// The key is the project id in the app and a sample conversation in the prototype.
 export type CopilotPort = {
   getConversation: (key: string) => Promise<Conversation>;
-  sendMessage: (input: { key: string; text: string }) => Promise<Conversation>;
+  sendMessage: (input: MessageInput) => Promise<Conversation>;
   applyProposal: (input: { key: string; id: string }) => Promise<Conversation>;
   discardProposal: (input: { key: string; id: string }) => Promise<Conversation>;
   setAutonomy: (input: { key: string; mode: AutonomyMode }) => Promise<Conversation>;
   attachFile: (input: { key: string }) => Promise<void>;
+  // The proposal waiting for an answer, or null when there is none.
+  getPreview: (key: string) => Promise<ProposalPreview | null>;
 };
 
 const chatIds = [
@@ -126,31 +146,7 @@ const chatIds = [
 
 export const copilotPort = definePort<CopilotPort>({
   app: {
-    getConversation: pending({
-      key: "copilot.conversation",
-      summary: "The copilot conversation",
-      sprint: 6,
-      ids: [...chatIds],
-    }),
-    sendMessage: pending({ key: "copilot.send", summary: "Talking to the copilot", sprint: 6, ids: [...chatIds] }),
-    applyProposal: pending({
-      key: "copilot.apply",
-      summary: "Applying a change the copilot proposed",
-      sprint: 6,
-      ids: ["STA-WORLD-PROPOSAL", "POP-ADD-COMPONENT"],
-    }),
-    discardProposal: pending({
-      key: "copilot.discard",
-      summary: "Discarding a change the copilot proposed",
-      sprint: 6,
-      ids: ["STA-WORLD-PROPOSAL", "POP-ADD-COMPONENT"],
-    }),
-    setAutonomy: pending({
-      key: "copilot.autonomy",
-      summary: "Choosing when the copilot asks before changing things",
-      sprint: 6,
-      ids: [...chatIds],
-    }),
+    ...createEngineCopilot(),
     attachFile: pending({
       key: "copilot.attach",
       summary: "Attaching a file to the chat",

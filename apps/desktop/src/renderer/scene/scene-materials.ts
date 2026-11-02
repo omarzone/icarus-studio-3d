@@ -1,5 +1,5 @@
 // Scene colors come from the design tokens, read once from the document so the 3D view matches the theme.
-export type SceneColors = { background: string; grid: string; gridStrong: string; selected: string };
+export type SceneColors = { background: string; grid: string; gridStrong: string; selected: string; proposal: string };
 
 // Three.js reads #rrggbb only; tokens with an alpha channel (#rrggbbaa) keep their color and drop the alpha.
 function token(name: string, fallback: string): string {
@@ -13,5 +13,9 @@ export function sceneColors(): SceneColors {
     grid: token("--ic-line-subtle", "gray"),
     gridStrong: token("--ic-line", "gray"),
     selected: token("--ic-selected", "white"),
+    proposal: token("--ic-proposal", "lightblue"),
   };
 }
+
+// Ghosted proposed objects (tokens: scene.proposal is color.proposal at 0.45).
+export const PROPOSAL_OPACITY = 0.45;

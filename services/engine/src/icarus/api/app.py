@@ -9,9 +9,15 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from icarus import __version__
-from icarus.api import health, library, play, projects, runs
+from icarus.api import copilot, health, ideas, library, model_settings, play, projects, runs
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
+from icarus.copilot.architect import IdeaBook, UnknownIdeas
+from icarus.copilot.builds import BuildBoard, UnknownBuild
+from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
+from icarus.copilot.client import CopilotError, NotConnected
+from icarus.copilot.conversation_store import ConversationStore
+from icarus.copilot.settings import ModelSettingsStore, settings_dir
 from icarus.library.templates import UnknownTemplate
 from icarus.projects.operations import OperationError
 from icarus.projects.store import (
@@ -35,6 +41,7 @@ _CODES = {
     409: "conflict",
     422: "invalid",
     500: "internal",
+    503: "unavailable",
 }
 
 
@@ -100,6 +107,21 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(409, ApiError(code="conflict", message=message))
         case NotTrainable():
             return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
+        case NotConnected():
+            return _error(503, ApiError(code="not_connected", message=str(exc)))
+        case CopilotError():
+            return _error(502, ApiError(code="copilot_error", message=str(exc)))
+        case UnknownProposal():
+            return _error(404, ApiError(code="not_found", message=f"There is no proposal {exc.args[0]!r}"))
+        case ProposalOutdated():
+            message = "The project changed since this proposal was made. Ask the copilot again."
+            return _error(409, ApiError(code="outdated", message=message))
+        case ProposalClosed():
+            return _error(409, ApiError(code="conflict", message=f"This proposal was already {exc.args[0]}"))
+        case UnknownIdeas():
+            return _error(404, ApiError(code="not_found", message=f"There are no ideas {exc.args[0]!r}"))
+        case UnknownBuild():
+            return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
         case SettingsRejected():
             details = {exc.field: exc.message}
             return _error(422, ApiError(code="invalid", message=exc.message, details=details))
@@ -120,7 +142,9 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     supervisor.shutdown()
 
 
-def create_app(projects_root: Path | None = None, runs_root: Path | None = None) -> FastAPI:
+def create_app(
+    projects_root: Path | None = None, runs_root: Path | None = None, settings_root: Path | None = None
+) -> FastAPI:
     app = FastAPI(title="Icarus engine", version=__version__, lifespan=_lifespan)
     projects_folder = projects_root or projects_dir()
     runs_folder = runs_root or runs_dir()
@@ -128,11 +152,20 @@ def create_app(projects_root: Path | None = None, runs_root: Path | None = None)
     app.state.runs = RunStore(runs_folder)
     app.state.supervisor = Supervisor(app.state.runs)
     app.state.training_settings = TrainingSettingsStore(runs_folder, projects_folder)
+    app.state.model_settings = ModelSettingsStore(settings_root or settings_dir())
+    app.state.copilot = Copilot(
+        app.state.store, app.state.runs, ConversationStore(projects_folder), app.state.model_settings
+    )
+    app.state.ideas = IdeaBook()
+    app.state.builds = BuildBoard(app.state.store, app.state.ideas)
     app.include_router(health.router)
     app.include_router(library.router)
     app.include_router(projects.router)
     app.include_router(play.router)
     app.include_router(runs.router)
+    app.include_router(copilot.router)
+    app.include_router(ideas.router)
+    app.include_router(model_settings.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     for error in (
@@ -147,6 +180,12 @@ def create_app(projects_root: Path | None = None, runs_root: Path | None = None)
         RunInProgress,
         NotTrainable,
         SettingsRejected,
+        CopilotError,
+        UnknownProposal,
+        ProposalOutdated,
+        ProposalClosed,
+        UnknownIdeas,
+        UnknownBuild,
     ):
         app.add_exception_handler(error, _domain_error)
     return app

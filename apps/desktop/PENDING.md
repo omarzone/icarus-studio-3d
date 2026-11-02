@@ -15,21 +15,10 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `build.progress` | Progress of the project being built | `STA-WORLD-BUILDING` |
-| `copilot.apply` | Applying a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
 | `copilot.attach` | Attaching a file to the chat | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
-| `copilot.autonomy` | Choosing when the copilot asks before changing things | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
-| `copilot.conversation` | The copilot conversation | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
-| `copilot.discard` | Discarding a change the copilot proposed | `STA-WORLD-PROPOSAL`, `POP-ADD-COMPONENT` |
-| `copilot.send` | Talking to the copilot | `SCR-WORLD`, `STA-WORLD-EMPTY`, `STA-WORLD-EMPTY-NOGUIDE`, `STA-WORLD-BUILDING`, `STA-WORLD-PROPOSAL`, `SCR-IDEAS`, `SCR-PLAY`, `SCR-PLAY.b`, `SCR-TRAIN`, `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
-| `ideas.list` | Ideas generated from your description | `SCR-IDEAS` |
 | `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
 | `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
-| `ideas.use` | Building a project from an idea | `SCR-IDEAS` |
 | `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
-| `settings.models` | AI model connections | `SCR-SETTINGS-MODELS` |
-| `settings.models-save` | Saving AI model connections | `SCR-SETTINGS-MODELS` |
-| `settings.models-test` | Testing an AI model connection | `SCR-SETTINGS-MODELS` |
 
 ## Sprint 7
 

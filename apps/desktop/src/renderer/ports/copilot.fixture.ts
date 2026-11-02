@@ -191,5 +191,12 @@ export function createCopilotFixture(): CopilotPort {
     discardProposal: async ({ key, id }) => settle(key, id, "discarded"),
     setAutonomy: async ({ key, mode }) => save(key, { ...find(key), autonomy: mode }),
     attachFile: async () => undefined,
+    // Sample proposals have no compiled scene, so the preview draws no geoms.
+    getPreview: async (key) => {
+      const open = find(key).messages.find(
+        (message) => message.role === "proposal" && message.proposal.status === "open",
+      );
+      return open?.role === "proposal" ? { id: open.proposal.id, revision: open.proposal.revision, geoms: [] } : null;
+    },
   };
 }

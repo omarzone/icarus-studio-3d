@@ -3,20 +3,26 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ellipsis } from "lucide-react";
 import type { ReactNode } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
+import { sceneKeys } from "../../editor/scene-queries.ts";
+import { CopilotNotConnected } from "../../ports/copilot-connection.ts";
 import { type Conversation, copilotPort } from "../../ports/copilot-port.ts";
+import { workspaceOf } from "../../ports/copilot-views.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { useDockedPanel } from "../../ui/dock-slot.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
+import { EmptyState } from "../../ui/states.tsx";
 import { ChatTab } from "./chat-tab.tsx";
+import { copilotKey, previewKey, useConversationKey } from "./conversation-key.ts";
 import { HistoryTab } from "./history-tab.tsx";
 import type { ProposalRoutes } from "./proposal-card.tsx";
 import type { SuggestionRoutes } from "./suggestion-chips.tsx";
 
 export type ChatPanelProps = {
-  // Copilot port key of this workspace's conversation ("park-pilot", "ideas"…).
+  // Sample conversation of this workspace in the prototype ("park-pilot", "ideas"…); the app uses the open project's.
   conversation: string;
   // Composer placeholder for the workspace ("Describe a change to the world…").
   placeholder: string;
@@ -29,35 +35,17 @@ export type ChatPanelProps = {
   className?: string;
 };
 
-export const copilotKey = (conversation: string) => ["copilot", conversation] as const;
+export { copilotKey };
 
 export function ChatPanel({
-  conversation,
+  conversation: sample,
   placeholder,
   suggestionRoutes = {},
   proposalRoutes,
   tabs = <HistoryTab />,
   className = "flex-1",
 }: ChatPanelProps) {
-  const port = usePort(copilotPort);
-  const client = useQueryClient();
-  const key = copilotKey(conversation);
-  const query = useQuery({ queryKey: key, queryFn: () => port.getConversation(conversation) });
-  // Settling a proposal can also change other conversations of the project, so they refetch.
-  const update = {
-    onSuccess: (next: Conversation) => {
-      client.setQueryData(key, next);
-      void client.invalidateQueries({
-        queryKey: ["copilot"],
-        predicate: (cached) => cached.queryKey[1] !== conversation,
-      });
-    },
-  };
-  const send = useEngineAction(port.sendMessage);
-  const apply = useEngineAction(port.applyProposal);
-  const discard = useEngineAction(port.discardProposal);
-  const autonomy = useEngineAction(port.setAutonomy);
-  const attach = useEngineAction(port.attachFile);
+  const conversation = useConversationKey(sample);
   const docked = useDockedPanel();
   return (
     <Panel
@@ -78,21 +66,91 @@ export function ChatPanel({
         )
       }
     >
-      <QueryView query={query}>
-        {(data) => (
-          <ChatTab
-            conversation={data}
-            placeholder={placeholder}
-            suggestionRoutes={suggestionRoutes}
-            proposalRoutes={proposalRoutes}
-            onSend={(text) => send.mutate({ key: conversation, text }, update)}
-            onApply={(id) => apply.mutate({ key: conversation, id }, update)}
-            onDiscard={(id) => discard.mutate({ key: conversation, id }, update)}
-            onAttach={() => attach.mutate({ key: conversation })}
-            onAutonomy={(mode) => autonomy.mutate({ key: conversation, mode }, update)}
-          />
-        )}
-      </QueryView>
+      {conversation === null ? (
+        <EmptyState
+          title="No project open yet"
+          body="The copilot works on a project. Pick an idea or open a project to talk to it."
+        />
+      ) : (
+        <ProjectChat
+          conversation={conversation}
+          placeholder={placeholder}
+          suggestionRoutes={suggestionRoutes}
+          proposalRoutes={proposalRoutes}
+        />
+      )}
     </Panel>
+  );
+}
+
+type ProjectChatProps = Required<Pick<ChatPanelProps, "conversation" | "placeholder" | "suggestionRoutes">> &
+  Pick<ChatPanelProps, "proposalRoutes">;
+
+function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRoutes }: ProjectChatProps) {
+  const port = usePort(copilotPort);
+  const client = useQueryClient();
+  const screen = useNavigation((state) => state.screen);
+  const key = copilotKey(conversation);
+  const query = useQuery({ queryKey: key, queryFn: () => port.getConversation(conversation) });
+  // A copilot answer can change the project (applied or autopilot) and other conversations, so the rest is re-read.
+  const settled = (next: Conversation) => {
+    client.setQueryData(key, next);
+    void client.invalidateQueries({
+      predicate: (cached) => !(cached.queryKey[0] === "copilot" && cached.queryKey[1] === conversation),
+    });
+  };
+  // A refused answer (an outdated proposal, no model) shows the conversation as the engine has it now.
+  const refused = () => {
+    void client.invalidateQueries({ queryKey: key });
+    void client.invalidateQueries({ queryKey: previewKey(conversation) });
+  };
+  // The views may unmount (Apply also navigates), so results are handled on the promise, not per-call callbacks.
+  const run = <Args,>(action: { mutateAsync: (args: Args) => Promise<Conversation> }, args: Args) => {
+    void action.mutateAsync(args).then(settled, refused);
+  };
+  const send = useEngineAction(port.sendMessage);
+  // Resolves whether the copilot got the message, so the composer can give back the text of a failed one.
+  const sendText = (text: string) =>
+    send.isPending
+      ? Promise.resolve(false)
+      : send.mutateAsync({ key: conversation, text, selection: selection(), workspace: workspaceOf(screen) }).then(
+          (next) => {
+            settled(next);
+            return true;
+          },
+          () => {
+            refused();
+            return false;
+          },
+        );
+  const apply = useEngineAction(port.applyProposal);
+  const discard = useEngineAction(port.discardProposal);
+  const autonomy = useEngineAction(port.setAutonomy);
+  const attach = useEngineAction(port.attachFile);
+  // The object selected in the editor, read from the explorer's cache without asking the engine again.
+  const selection = () => {
+    const tree = client.getQueryData(sceneKeys.tree(conversation));
+    return typeof tree === "object" && tree !== null && "selected" in tree && typeof tree.selected === "string"
+      ? tree.selected
+      : null;
+  };
+  return (
+    <QueryView query={query}>
+      {(data) => (
+        <ChatTab
+          conversation={data}
+          placeholder={placeholder}
+          suggestionRoutes={suggestionRoutes}
+          proposalRoutes={proposalRoutes}
+          sending={send.isPending ? (send.variables?.text ?? null) : null}
+          notConnected={send.error instanceof CopilotNotConnected ? send.error.message : null}
+          onSend={sendText}
+          onApply={(id) => run(apply, { key: conversation, id })}
+          onDiscard={(id) => run(discard, { key: conversation, id })}
+          onAttach={() => attach.mutate({ key: conversation })}
+          onAutonomy={(mode) => run(autonomy, { key: conversation, mode })}
+        />
+      )}
+    </QueryView>
   );
 }

@@ -1,5 +1,6 @@
-import { Check } from "lucide-react";
-import type { ReactNode } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { Act } from "../../app/navigation/go-to.tsx";
 import type { CheckItem, RichText } from "../../ports/copilot-port.ts";
 
 export function RichTextView({ text }: { text: RichText }) {
@@ -35,10 +36,20 @@ type CopilotProps = {
   checks?: readonly CheckItem[];
   // Inline actions drawn at the end of the bubble.
   actions?: ReactNode;
+  // How the copilot thought about the answer, behind a toggle.
+  thinking?: string;
 };
 
 // Copilot bubble: grey, no avatar; a sentence, then a check list when the answer is structured.
-export function CopilotBubble({ title, text, checks, actions }: CopilotProps) {
+export function CopilotBubble({ title, text, checks, actions, thinking }: CopilotProps) {
+  if (thinking) {
+    return (
+      <div className="flex max-w-[calc(92%+28px)] flex-col gap-2 rounded-bubble bg-control px-3.5 py-2.75 text-body leading-normal">
+        <RichTextView text={text} />
+        <ThinkingToggle thinking={thinking} />
+      </div>
+    );
+  }
   if ((checks && checks.length > 0) || actions) {
     return (
       <div className="flex flex-col gap-2.5 rounded-bubble bg-control px-3.5 py-3 text-body leading-[1.55] [&>span]:leading-[1.55]">
@@ -88,5 +99,32 @@ export function CheckLine({ item, leading = "leading-tight" }: { item: CheckItem
       )}
       <span>{item.text}</span>
     </span>
+  );
+}
+
+function ThinkingToggle({ thinking }: { thinking: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Act
+        cta="Show thinking"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 self-start rounded-control px-1 py-0.5 text-ui text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80"
+      >
+        {open ? "Hide thinking" : "Show thinking"}
+        <ChevronDown size={12} strokeWidth={1.75} aria-hidden className={open ? "rotate-180" : ""} />
+      </Act>
+      {open ? <p className="text-ui leading-normal whitespace-pre-wrap text-fg-tertiary">{thinking}</p> : null}
+    </>
+  );
+}
+
+// While the copilot works on an answer.
+export function ThinkingBubble() {
+  return (
+    <div role="status" className="self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary">
+      <span className="animate-pulse">Thinking…</span>
+    </div>
   );
 }

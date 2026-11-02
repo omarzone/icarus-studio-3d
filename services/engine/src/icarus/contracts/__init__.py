@@ -1,5 +1,16 @@
 from pydantic import BaseModel
 
+from icarus.contracts.copilot import (
+    BuildIdea,
+    BuildStatus,
+    Conversation,
+    IdeaRequest,
+    IdeaSet,
+    ModelSettings,
+    ModelSettingsPatch,
+    SendMessage,
+    SetAutonomy,
+)
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
 from icarus.contracts.health import HealthStatus
@@ -45,6 +56,15 @@ MODELS: tuple[type[BaseModel], ...] = (
     RunEventEnvelope,
     TrainingSettings,
     TrainingSettingsPatch,
+    Conversation,
+    SendMessage,
+    SetAutonomy,
+    IdeaRequest,
+    IdeaSet,
+    BuildIdea,
+    BuildStatus,
+    ModelSettings,
+    ModelSettingsPatch,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

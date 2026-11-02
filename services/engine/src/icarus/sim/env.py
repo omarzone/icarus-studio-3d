@@ -17,6 +17,7 @@ from icarus.sim.model_state import (
 )
 from icarus.sim.poses import geom_poses, moving_geoms
 from icarus.sim.rewards import compose, inside_goal
+from icarus.sim.start_pose import place_start
 
 EPISODE_SECONDS = 30.0
 FRICTION_SPREAD = 0.2
@@ -63,6 +64,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         else:
             model.geom_friction[:, 0] = self._base_friction
         reset_world(self.world)
+        place_start(self.world, self.np_random)
         self._state = reward_state(self.world)
         self._start_episode()
         return observation(self.world), {}

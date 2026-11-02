@@ -6,7 +6,7 @@ import { type Group, type Mesh, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { isDeliberateClick } from "./pick.ts";
 import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
-import { sceneColors } from "./scene-materials.ts";
+import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
 
 type Vec3 = [number, number, number];
 
@@ -29,7 +29,12 @@ type PlayProps = {
 };
 
 // Width in metres the camera starts out framing (every copy of a training run); the default frames one world.
-export type SceneViewProps = { description: SceneDescription; framing?: number } & (EditProps | PlayProps);
+// `ghosts` are geoms of a copilot proposal that is not applied yet, drawn see-through in the proposal color.
+export type SceneViewProps = {
+  description: SceneDescription;
+  framing?: number;
+  ghosts?: readonly SceneGeom[];
+} & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
 const CAMERA_FRAMES = 12;
@@ -122,6 +127,27 @@ function EditGeoms({ description, selected, onSelect, onMove }: { description: S
           />
         </>
       ) : null}
+    </>
+  );
+}
+
+// Never picked: clicks go through a ghost to what is really there.
+function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: string }) {
+  return (
+    <>
+      {geoms.map((geom) => (
+        <mesh
+          key={geom.name}
+          position={toThreePosition(geom.position)}
+          quaternion={toThreeQuaternion(geom.quaternion)}
+          raycast={() => undefined}
+          renderOrder={1}
+        >
+          <GeomShape geom={geom} />
+          <meshStandardMaterial color={color} transparent opacity={PROPOSAL_OPACITY} depthWrite={false} />
+          <Edges color={color} />
+        </mesh>
+      ))}
     </>
   );
 }
@@ -257,6 +283,7 @@ export default function SceneView(props: SceneViewProps) {
       ) : (
         <EditGeoms {...props} />
       )}
+      {props.ghosts && props.ghosts.length > 0 ? <GhostGeoms geoms={props.ghosts} color={colors.proposal} /> : null}
       <OrbitControls makeDefault />
       {props.mode === "play" ? null : (
         <GizmoHelper alignment="top-right" margin={[72, 72]}>

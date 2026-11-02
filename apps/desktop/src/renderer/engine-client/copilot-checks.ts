@@ -1,0 +1,133 @@
+import type {
+  BuildStatus,
+  Conversation,
+  CopilotMessage,
+  CopilotProposal,
+  DesignIdea,
+  IdeaSet,
+  ModelConnection,
+  ModelSettings,
+} from "@icarus/contracts";
+import { has, isListOf, isRecord, isSceneDescription } from "./response-checks.ts";
+
+// Structural checks of copilot answers: the fields the app reads, not the whole schema.
+
+const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"];
+const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
+const STEP_STATES: readonly string[] = ["done", "running", "todo"];
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isOptional(value: Record<string, unknown>, key: string, kind: "string" | "number"): boolean {
+  const field = value[key];
+  return field === undefined || field === null || typeof field === kind;
+}
+
+function isMessage(value: unknown): value is CopilotMessage {
+  return (
+    isRecord(value) &&
+    has(value, "id", "string") &&
+    (value.role === "user" || value.role === "copilot") &&
+    has(value, "text", "string") &&
+    isOptional(value, "proposal_id", "string") &&
+    isOptional(value, "thinking", "string")
+  );
+}
+
+function isChange(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    has(value, "label", "string") &&
+    has(value, "after", "string") &&
+    isOptional(value, "before", "string")
+  );
+}
+
+function isProposal(value: unknown): value is CopilotProposal {
+  return (
+    isRecord(value) &&
+    has(value, "id", "string") &&
+    has(value, "base_revision", "number") &&
+    has(value, "summary", "string") &&
+    has(value, "explanation", "string") &&
+    Array.isArray(value.changes) &&
+    value.changes.every(isChange) &&
+    isListOf(value.warnings, isString) &&
+    typeof value.status === "string" &&
+    PROPOSAL_STATES.includes(value.status) &&
+    isOptional(value, "applied_revision", "number")
+  );
+}
+
+export function isConversation(value: unknown): value is Conversation {
+  return (
+    isRecord(value) &&
+    has(value, "project_id", "string") &&
+    (value.autonomy === "ask" || value.autonomy === "autopilot") &&
+    isListOf(value.messages, isMessage) &&
+    isListOf(value.proposals, isProposal) &&
+    isListOf(value.suggestions, isString)
+  );
+}
+
+function isIdea(value: unknown): value is DesignIdea {
+  return (
+    isRecord(value) &&
+    has(value, "id", "string") &&
+    has(value, "title", "string") &&
+    has(value, "world", "string") &&
+    has(value, "body", "string") &&
+    has(value, "learns", "string") &&
+    has(value, "estimate_minutes", "number") &&
+    has(value, "recommended", "boolean") &&
+    isSceneDescription(value.scene)
+  );
+}
+
+export function isIdeaSet(value: unknown): value is IdeaSet {
+  return isRecord(value) && has(value, "id", "string") && isListOf(value.ideas, isIdea);
+}
+
+export function isBuildStatus(value: unknown): value is BuildStatus {
+  return (
+    isRecord(value) &&
+    has(value, "build_id", "string") &&
+    isOptional(value, "project_id", "string") &&
+    has(value, "progress", "number") &&
+    has(value, "activity", "string") &&
+    has(value, "ready", "boolean") &&
+    isOptional(value, "error", "string") &&
+    Array.isArray(value.steps) &&
+    value.steps.every(
+      (step) =>
+        isRecord(step) &&
+        has(step, "id", "string") &&
+        has(step, "label", "string") &&
+        typeof step.status === "string" &&
+        STEP_STATES.includes(step.status),
+    )
+  );
+}
+
+function isConnection(value: unknown): value is ModelConnection {
+  return (
+    isRecord(value) &&
+    typeof value.capability === "string" &&
+    CAPABILITIES.includes(value.capability) &&
+    isOptional(value, "model", "string") &&
+    has(value, "required", "boolean") &&
+    has(value, "connected", "boolean") &&
+    isOptional(value, "detail", "string")
+  );
+}
+
+export function isModelSettings(value: unknown): value is ModelSettings {
+  return (
+    isRecord(value) &&
+    has(value, "endpoint", "string") &&
+    has(value, "api_key_hint", "string") &&
+    isListOf(value.connections, isConnection)
+  );
+}

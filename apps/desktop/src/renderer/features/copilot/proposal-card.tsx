@@ -51,12 +51,23 @@ export function ProposalCard({ proposal, routes = {}, onApply, onDiscard, classN
           {proposal.editable ? <ProposalAction label="Edit by hand" to={routes.edit} className={ghost} /> : null}
         </div>
       ) : (
-        <p className="text-ui text-fg-tertiary">
-          {proposal.status === "applied" ? "Applied as a new revision." : "Discarded. Nothing changed."}
-        </p>
+        <p className="text-ui text-fg-tertiary">{settledText(proposal)}</p>
       )}
     </div>
   );
+}
+
+function settledText(proposal: Proposal): string {
+  switch (proposal.status) {
+    case "open":
+      return "";
+    case "applied":
+      return "Applied as a new revision.";
+    case "discarded":
+      return "Discarded. Nothing changed.";
+    case "outdated":
+      return "The project changed since this was proposed, so it can no longer be applied. Ask again.";
+  }
 }
 
 function ProposalAction({

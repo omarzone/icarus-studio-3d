@@ -1,0 +1,22 @@
+{
+  "match": [
+    "how well",
+    "success rate"
+  ],
+  "replies": [
+    {
+      "content": {
+        "answer": "The car parks 87% of the time and averages 12.4 s per episode.",
+        "proposal": null,
+        "suggestions": []
+      }
+    },
+    {
+      "content": {
+        "answer": "It parks about 87.5% of the time.",
+        "proposal": null,
+        "suggestions": []
+      }
+    }
+  ]
+}

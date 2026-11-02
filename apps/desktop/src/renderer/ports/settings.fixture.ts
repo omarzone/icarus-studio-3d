@@ -45,6 +45,11 @@ const NOTIFICATIONS: NotificationSettings = {
   communityNews: false,
 };
 
+// A model name left out stays; an emptied one clears the capability.
+function renamed(model: string | null, name: string | undefined): string | null {
+  return name === undefined ? model : name.trim() || null;
+}
+
 export function createSettingsFixture(): SettingsPort {
   let models = MODELS;
   let privacy = PRIVACY;
@@ -52,8 +57,12 @@ export function createSettingsFixture(): SettingsPort {
   let notifications = NOTIFICATIONS;
   return {
     getModelSettings: async () => models,
-    saveModelSettings: async ({ endpoint, apiKey }) => {
-      models = { ...models, endpoint, apiKeyHint: apiKey === "" ? models.apiKeyHint : apiKey.slice(-4) };
+    saveModelSettings: async ({ endpoint, apiKey, models: names }) => {
+      const connections = models.connections.map((connection) => ({
+        ...connection,
+        model: renamed(connection.model, names[connection.capability]),
+      }));
+      models = { connections, endpoint, apiKeyHint: apiKey === "" ? models.apiKeyHint : apiKey.slice(-4) };
       return models;
     },
     testModelConnection: async () => models,

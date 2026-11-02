@@ -1,18 +1,27 @@
 import type {
+  BuildIdea,
+  BuildStatus,
   CheckpointInfo,
+  Conversation,
   EditOperation,
+  IdeaSet,
   LibraryCatalog,
   MetricPoint,
+  ModelSettings,
+  ModelSettingsPatch,
   ProjectState,
   ProjectSummary,
   Revision,
   Rollout,
   RunStatus,
   SceneDescription,
+  SendMessage,
+  SetAutonomy,
   StartRun,
   TrainingSettings,
   TrainingSettingsPatch,
 } from "@icarus/contracts";
+import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
 import { request } from "./request.ts";
 import {
   isLibraryCatalog,
@@ -38,6 +47,8 @@ const post = (body?: unknown): RequestInit => ({
 
 const at = (id: string) => `/projects/${encodeURIComponent(id)}`;
 const run = (id: string) => `/runs/${encodeURIComponent(id)}`;
+const proposal = (id: string) => `/proposals/${encodeURIComponent(id)}`;
+const put = (body: unknown): RequestInit => ({ method: "PUT", body: JSON.stringify(body) });
 
 // One function per engine route the desktop uses.
 export const engineApi = {
@@ -67,7 +78,23 @@ export const engineApi = {
   rollout: (runId: string, step: number): Promise<Rollout> => request(`${run(runId)}/rollouts/${step}`, {}, isRollout),
   trainingSettings: (): Promise<TrainingSettings> => request("/settings/training", {}, isTrainingSettings),
   saveTrainingSettings: (patch: TrainingSettingsPatch): Promise<TrainingSettings> =>
-    request("/settings/training", { method: "PUT", body: JSON.stringify(patch) }, isTrainingSettings),
+    request("/settings/training", put(patch), isTrainingSettings),
+  conversation: (id: string): Promise<Conversation> => request(`${at(id)}/conversation`, {}, isConversation),
+  sendMessage: (id: string, body: SendMessage): Promise<Conversation> =>
+    request(`${at(id)}/conversation/messages`, post(body), isConversation),
+  setAutonomy: (id: string, body: SetAutonomy): Promise<Conversation> =>
+    request(`${at(id)}/conversation/autonomy`, post(body), isConversation),
+  applyProposal: (id: string): Promise<Conversation> => request(`${proposal(id)}/apply`, post(), isConversation),
+  discardProposal: (id: string): Promise<Conversation> => request(`${proposal(id)}/discard`, post(), isConversation),
+  proposalScene: (id: string): Promise<SceneDescription> => request(`${proposal(id)}/scene`, {}, isSceneDescription),
+  createIdeas: (prompt: string): Promise<IdeaSet> => request("/ideas", post({ prompt }), isIdeaSet),
+  ideas: (id: string): Promise<IdeaSet> => request(`/ideas/${encodeURIComponent(id)}`, {}, isIdeaSet),
+  startBuild: (body: BuildIdea): Promise<BuildStatus> => request("/builds", post(body), isBuildStatus),
+  build: (id: string): Promise<BuildStatus> => request(`/builds/${encodeURIComponent(id)}`, {}, isBuildStatus),
+  modelSettings: (): Promise<ModelSettings> => request("/settings/models", {}, isModelSettings),
+  saveModelSettings: (patch: ModelSettingsPatch): Promise<ModelSettings> =>
+    request("/settings/models", put(patch), isModelSettings),
+  testModelSettings: (): Promise<ModelSettings> => request("/settings/models/test", post(), isModelSettings),
 };
 
 export type EngineApi = typeof engineApi;

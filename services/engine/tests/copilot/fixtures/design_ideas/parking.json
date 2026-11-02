@@ -1,0 +1,641 @@
+{
+  "match": [
+    "park"
+  ],
+  "replies": [
+    {
+      "reasoning": "A parking task maps to the parking car template. Three variations: a walled bay, the same lot at night, and loose crates in the way. All use library pieces and stay inside property ranges.",
+      "content": {
+        "ideas": [
+          {
+            "title": "Back into the bay",
+            "world": "A quiet lot with a parking bay walled on three sides",
+            "body": "A small red car with front steering and rear-wheel drive",
+            "learns": "To steer into the bay and stop inside it without touching the walls",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "car",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#d94f3d"
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "bay_wall_left",
+                  "name": "Bay wall left",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            12,
+                            2.6,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            3,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#9ca3af"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "bay_wall_right",
+                  "name": "Bay wall right",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            12,
+                            -2.6,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            3,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#9ca3af"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "bay_wall_back",
+                  "name": "Bay wall back",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            13.8,
+                            0,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.2,
+                            5.4,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#9ca3af"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "title": "Park by moonlight",
+            "world": "The same lot at night, lit by a dim blue moon, with two orange posts marking the spot",
+            "body": "The small car, unchanged, reading the lot with its five distance rays",
+            "learns": "To find the spot between the posts when there is little light to see by",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "intensity",
+                "value": {
+                  "type": "slider",
+                  "value": 0.25
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "sun",
+                "component": "light",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#9fb4ff"
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "ground",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#22252b"
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "post_left",
+                  "name": "Post left",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            10.5,
+                            2.2,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "cylinder"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.2,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#f0a63a"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "post_right",
+                  "name": "Post right",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            10.5,
+                            -2.2,
+                            0.5
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "cylinder"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.2,
+                            0.2,
+                            1
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#f0a63a"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "static"
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "title": "Crowded lot",
+            "world": "A lot with loose crates scattered between the car and its spot",
+            "body": "A lighter blue car that turns quicker",
+            "learns": "To weave between the crates and park without pushing them",
+            "template": "parking_car",
+            "operations": [
+              {
+                "op": "set_property",
+                "object": "car",
+                "component": "physics_body",
+                "property": "mass",
+                "value": {
+                  "type": "number",
+                  "value": 700
+                }
+              },
+              {
+                "op": "set_property",
+                "object": "car",
+                "component": "material",
+                "property": "color",
+                "value": {
+                  "type": "color",
+                  "value": "#3d7cc8"
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "crate_1",
+                  "name": "Crate 1",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            6,
+                            1.5,
+                            0.25
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.5,
+                            0.5,
+                            0.5
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#b08d57"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "dynamic"
+                        },
+                        "mass": {
+                          "type": "number",
+                          "value": 5
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              },
+              {
+                "op": "create_object",
+                "target": "world",
+                "object": {
+                  "id": "crate_2",
+                  "name": "Crate 2",
+                  "parent": null,
+                  "components": [
+                    {
+                      "id": "transform",
+                      "kind": "transform",
+                      "properties": {
+                        "position": {
+                          "type": "vector",
+                          "value": [
+                            8,
+                            -1.2,
+                            0.25
+                          ]
+                        },
+                        "rotation": {
+                          "type": "vector",
+                          "value": [
+                            0,
+                            0,
+                            0
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "mesh",
+                      "kind": "mesh",
+                      "properties": {
+                        "shape": {
+                          "type": "list",
+                          "value": "box"
+                        },
+                        "size": {
+                          "type": "vector",
+                          "value": [
+                            0.5,
+                            0.5,
+                            0.5
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "material",
+                      "kind": "material",
+                      "properties": {
+                        "color": {
+                          "type": "color",
+                          "value": "#b08d57"
+                        }
+                      }
+                    },
+                    {
+                      "id": "physics_body",
+                      "kind": "physics_body",
+                      "properties": {
+                        "mode": {
+                          "type": "choice",
+                          "value": "dynamic"
+                        },
+                        "mass": {
+                          "type": "number",
+                          "value": 5
+                        }
+                      }
+                    },
+                    {
+                      "id": "collider",
+                      "kind": "collider",
+                      "properties": {}
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
