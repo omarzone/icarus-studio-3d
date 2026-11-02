@@ -139,6 +139,8 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
         "control_rate_hz": round(1 / CONTROL_PERIOD),
         "best_step": status.best_step,
         "success_rate": status.success_rate,
+        # The step of the evaluation that measured success_rate; the run's own step is usually further on.
+        "success_measured_at_step": evaluations[-1].step if evaluations else None,
         "failure": status.failure.reason if status.failure else None,
         "evaluations": [
             {
@@ -199,7 +201,16 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
-RUN_HEADLINE = ("name", "state", "step", "total_steps", "recommended_steps", "far_below_recommended", "success_rate")
+RUN_HEADLINE = (
+    "name",
+    "state",
+    "step",
+    "total_steps",
+    "recommended_steps",
+    "far_below_recommended",
+    "success_rate",
+    "success_measured_at_step",
+)
 
 
 def _rounded(values: Any) -> Any:

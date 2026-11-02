@@ -247,6 +247,7 @@ _CODE_WORDS: dict[str, dict[Language, str]] = {
     "total_steps": {"en": "total steps", "es": "pasos totales"},
     "recommended_steps": {"en": "recommended steps", "es": "pasos recomendados"},
     "far_below_recommended": {"en": "far below the recommended steps", "es": "muy por debajo de lo recomendado"},
+    "success_measured_at_step": {"en": "success measured at step", "es": "éxito medido en el paso"},
     "control_rate_hz": {"en": "decisions per second", "es": "decisiones por segundo"},
     "latest_evaluation": {"en": "latest evaluation", "es": "última evaluación"},
     "latest_training": {"en": "latest training attempts", "es": "últimos intentos de entrenamiento"},
