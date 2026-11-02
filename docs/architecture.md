@@ -17,12 +17,12 @@ flowchart LR
     UI[renderer<br/>Viewport · Explorer · Properties · Copilot · Timeline]
   end
   subgraph Engine["services/engine (local Python)"]
-    API[FastAPI · HTTP + SSE]
+    API[FastAPI · HTTP + SSE + WebSocket]
     PROJ[projects<br/>document + revisions]
     OPS[edit operations<br/>apply · validate]
     DES[design<br/>spec → MJCF → physics tests]
-    COP[copilot<br/>architect · coach · motion · build]
-    RUN[experiments/runner]
+    COP[copilot<br/>agent loop · architect · coach · autopilot]
+    RUN[training supervisor]
     WRK[[training worker<br/>separate process]]
   end
   MODELS[(Model providers<br/>reasoning · vision · image · pose)]
@@ -80,17 +80,19 @@ icarus-studio-3d/
 │               ├── app/      # launcher and workspace shells, headers, routing, dock layout
 │               ├── editor/   # viewport, toolbar, gizmos, selection, explorer, inspector, property controls, undo
 │               ├── features/
-│               │   ├── copilot/         # chat, history, ideas, proposal previews, autopilot
+│               │   ├── copilot/         # chat, attachments, steps, scene views, action buttons, history, autopilot
+│               │   ├── ideas/           # three design ideas and live builds
 │               │   ├── world-studio/    # world tools, library, training copies
 │               │   ├── body-studio/     # rig, import, auto-rig, rig check
 │               │   ├── brain-studio/    # senses and actions, learning, brain shape, connectome activity
 │               │   ├── play/            # Play mode: tools, senses, decisions, vision, events
-│               │   ├── timeline/        # runs, metrics, results, failures, reference comparison, timelapse
+│               │   ├── train/           # runs, metrics, live copies, replay, coach messages, Diagnose now
+│               │   ├── results/         # runs, best brain, comparison, failure groups, diagnoses
 │               │   ├── motion-studio/   # reference video → motion → export
-│               │   ├── build/           # build targets, export, hardware, publish
-│               │   ├── projects/        # project list, project menu, rename, duplicate, delete
+│               │   ├── build-studio/    # build targets, export, hardware
+│               │   ├── home/ · projects/ · project/  # home, project list, project menu and dialogs
 │               │   ├── settings/        # AI models, profile, privacy, training, notifications
-│               │   └── community/       # browse, creation pages, report, profile, sign-in
+│               │   ├── community/ · account/ · notifications/ · moderation/
 │               ├── scene/    # R3F rendering of compiled models, rollouts and Play streams
 │               ├── engine-client/       # typed HTTP + SSE client for the engine
 │               ├── community-client/    # typed client for the community service
@@ -105,16 +107,17 @@ icarus-studio-3d/
 │   │   ├── src/icarus/
 │   │   │   ├── api/          # FastAPI routers
 │   │   │   ├── contracts/    # Pydantic models: the single contract
-│   │   │   ├── library/      # parts, joints, actuators, sensors, surfaces, reward terms, templates, hardware components
-│   │   │   ├── projects/     # project store, revisions, edit operations
-│   │   │   ├── design/       # spec → MJCF compiler, design tests
-│   │   │   ├── copilot/      # model client, capabilities, roles, prompts
-│   │   │   ├── experiments/  # run store, runner
-│   │   │   ├── sim/          # Gymnasium envs from specs, reward composition, randomization, rendering, scene export
-│   │   │   ├── training/     # worker, PPO, imitation, checkpoints, evaluation, rollouts
-│   │   │   ├── motion/       # pose extraction, retargeting, reference clips, animation export
-│   │   │   ├── hardware/     # profiles, parts lists, URDF/ONNX export, runtime package
-│   │   │   └── bundles/      # pack and unpack shareable bundles
+│   │   │   ├── library/      # components and property schemas, reward terms, templates
+│   │   │   ├── projects/     # project store, revisions, edit operations, validation
+│   │   │   ├── design/       # spec → MJCF compiler, sky, courses, design checks, scene export
+│   │   │   ├── copilot/      # model client, agent loop and tools, ideas, builds, coach, autopilot, skills, memory
+│   │   │   ├── sim/          # Gymnasium env, rewards, per-copy variation, Play, offscreen views
+│   │   │   ├── training/     # worker, supervisor, run store, evaluation, frames, failure groups, warm start
+│   │   │   ├── events.py     # in-process event bus
+│   │   │   ├── tasks.py      # background tasks registry
+│   │   │   ├── motion/       # planned: pose extraction, retargeting, animation export
+│   │   │   ├── hardware/     # planned: profiles, parts lists, URDF/ONNX export, runtime package
+│   │   │   └── bundles/      # planned: pack and unpack shareable bundles
 │   │   └── tests/
 │   └── community/            # online service: accounts, bundle storage, catalog
 ├── assets/
@@ -149,8 +152,12 @@ icarus-studio-3d/
 | `SceneDescription` | Bodies and geoms (type, size, material, mesh, skin) from the compiled model |
 | `RunConfig`, `RunStatus`, `MetricPoint`, `CheckpointInfo` | Training runs and their progress |
 | `Rollout` | `fps`, body names, per-frame body poses (position xyz, quaternion wxyz), episode metrics |
-| `CopilotMessage`, `CopilotProposal` | Conversation turns and proposed operations with explanations |
-| `Diagnosis` | Observations, evidence (frames, metrics), failure groups, hypotheses and proposed operations |
+| `CopilotMessage`, `CopilotProposal` | Conversation turns (with attachments, steps, scene views and action buttons) and proposed operations with explanations |
+| `Diagnosis`, `FailureGroup` | Observations, evidence (frames, metrics), failure groups, hypotheses, a recommendation and proposed operations |
+| `AutopilotStart`, `AutopilotStatus` | The autopilot loop: mode, goal, budget, iterations and log |
+| `WarmStart` | A run that continues from another run's checkpoint |
+| `EngineEventEnvelope`, `TaskInfo` | Engine events (turns, steps, views, proposals, revisions, runs, diagnoses, tasks) and background tasks |
+| `SceneZone`, `SceneSky` | Task zones (spawn, goal, marked areas) and the world sky in a `SceneDescription` |
 | `ObjectSpec`, `ComponentSpec` | Any object in a world or body as a list of typed components |
 | `PropertySchema` | A component property: one of the 12 property types, unit, range, default, expert flag, randomizable |
 | `DesignIdea` | One of the alternatives the copilot proposes before building, with its preview and estimates |
@@ -168,7 +175,7 @@ icarus-studio-3d/
 ### Processes
 
 - **API** (uvicorn) answers requests, applies operations, runs fast design tests, reads project and run directories and streams events. It never imports the training stack on a request path.
-- **Training worker** (`python -m icarus.training.worker <run_dir>`) is launched by `experiments/runner` as a subprocess with vectorized environments (`SubprocVecEnv`). It writes everything into its run directory and saves a final checkpoint when asked to stop. The runner executes one training run at a time per machine by default and queues the rest.
+- **Training worker** (`python -m icarus.training.worker <run_dir>`) is launched by `training/supervisor.py` as a subprocess with vectorized environments (`SubprocVecEnv`). It writes everything into its run directory and saves a final checkpoint when asked to stop. The supervisor executes one training run at a time per machine by default and queues the rest.
 
 ### Library
 
@@ -214,7 +221,8 @@ When a project starts from a sentence, the Architect first returns three `Design
 - `sim/` builds a Gymnasium environment from a compiled project: observations from the body's sensors, actions from its actuators, a reward composed from the task's reward terms, terminations from the task family.
 - Task families: **locomotion** (walk, run, climb, cross obstacles), **manipulation** (reach, grasp, sort, stack), **navigation** (go to target, park, follow path, avoid obstacles) and **imitation** (track a motion clip). New families are added to the library, not invented per project.
 - **Randomization** varies masses, friction, actuator strength and latency, and sensor noise within ranges set by the brain spec, to make policies robust and transferable.
-- `sim/render.py` renders frames offscreen for the copilot's vision; `sim/scene_export.py` produces the `SceneDescription` the viewport draws.
+- **Per-copy variation:** a *Randomize per copy* component on an object varies a world object's position, rotation, color and friction within set ranges, applied by `sim/variation.py` on every try, so each training copy sees a different world; `GET /projects/{id}/copies` lets the desktop preview them.
+- `sim/views.py` renders the compiled scene offscreen with MuJoCo from named cameras (with the task's zones drawn) for the copilot's vision and for the frames stored at every checkpoint; `design/scene.py` produces the `SceneDescription` the viewport draws, including the task zones (spawn, goal, marked areas) and the world sky (`design/sky.py`).
 - Every environment passes `gymnasium.utils.env_checker.check_env`.
 
 ### Brains
@@ -251,7 +259,9 @@ runs/<run_id>/
 ├── metrics.jsonl        # MetricPoint per line, append-only
 ├── checkpoints/<step>.zip
 ├── rollouts/<step>.json
+├── frames/<step>/       # rendered episode frames and episodes.json (how each episode ended)
 ├── diagnosis/<n>.json
+├── live.json            # latest poses of the parallel copies for the live view
 └── worker.log
 ```
 
@@ -282,17 +292,22 @@ Copilot roles, all producing typed outputs and, when they change a project, `Edi
 Rules for every role:
 
 - Roles that return one structured output request it with a JSON Schema derived from the target model, validate it with Pydantic, retry once with the validation error, and otherwise surface a readable error.
-- The chat copilot is an agent loop (`copilot/agent/`, ADR 006): each step is one model call with native tools (`inspect_object`, `read_run`, `library`, `look`, `try`, `propose`, `apply`, `train`) whose arguments are validated with Pydantic; a rejected call goes back to the model as the tool result. `try` applies operations to a copy and runs the design, placement and trainability checks; `look` renders the compiled scene offscreen with MuJoCo (`sim/views.py`) with the task's zones drawn. The turn ends on the `answer` tool, grounded like every other output, or on a forced answer when a budget (steps, tool calls, time, tokens) runs out. The autonomy mode, not the prompt, decides what may write: in ask mode the copilot proposes and offers a Train button; in autopilot it may apply and train. Steps, renders and buttons are stored on the copilot message. Older messages are folded into a rolling summary when the history outgrows its share of the model's context window.
+- The chat copilot is an agent loop (`copilot/agent/`, [ADR 006](./decisions/006-copilot-agent-loop.md), [plan](./plans/copilot-agent-harness.md)): each step is one model call with native tools (`inspect_object`, `read_run`, `library`, `look`, `try`, `propose`, `apply`, `train`, `coach`) whose arguments are validated with Pydantic; a rejected call goes back to the model as the tool result. `try` applies operations to a copy and runs the design, placement and trainability checks; `look` renders the compiled scene offscreen with MuJoCo (`sim/views.py`) with the task's zones drawn. The turn ends on the `answer` tool, grounded like every other output, or on a forced answer when a budget (steps, tool calls, time, tokens) runs out. The autonomy mode, not the prompt, decides what may write: in ask mode the copilot proposes and offers a Train button; in autopilot it may apply and train. Steps, renders and buttons are stored on the copilot message. Older messages are folded into a rolling summary when the history outgrows its share of the model's context window.
+- **Attachments:** images and short videos attached in the chat are stored per project (`POST /projects/{id}/attachments`); video is sampled into frames, and both reach the `vision` capability as part of the turn.
+- **From-scratch designs** are built by stages (world, bodies, task), each stage tested on top of the ones before, with placement and trainability checks.
+- **Harness extensions** ([plan](./plans/copilot-harness-extensions.md)): an in-process event bus (`events.py`) publishes turns, steps, views, proposals, revisions, run events, diagnoses and tasks; long work runs as background tasks (`tasks.py`) with cooperative cancelling and a final event; **skills** are Markdown procedures the copilot reads on demand (eight built in: diagnosing a brain, reward design, curriculum and warm start, sensors for a task, environment look, parking and navigation, race and obstacle course, walking robot); **memory** keeps notes scoped to a project or the person, always with their source (`remember`, `recall`); **comparison** tools compare two runs on the same evaluation seeds and two revisions. Their HTTP routes (`/events`, `/tasks`) and loop wiring are landing now; hooks, subagents and code-free extensions are planned.
 - Model reasoning is separated from the final answer in the client and can be shown as "how the copilot thought about it".
 - Any number the copilot cites about a run must exist in that run's data; otherwise the output is rejected.
 - No model output changes a project except through validated edit operations, and nothing a model returns is executed.
 
 ### Coach and autopilot
 
-1. At checkpoints (or when the user asks), the coach receives metric curves, checkpoint evaluations and frames rendered from rollouts.
-2. It returns a `Diagnosis`: what it observes, the evidence, its hypothesis (for example "spins in place to collect the alignment reward") and proposed operations.
-3. In **ask** mode the user reviews and applies the proposal. In **autopilot** mode the engine applies it, creates a revision, retrains and compares the new run against the previous one, until the goal is met or the iteration budget runs out.
-4. Every iteration stays in the revision log and the Training Timeline, so the evolution of the design is as visible as the learning of the brain.
+See [`plans/sprint-07-coach.md`](./plans/sprint-07-coach.md).
+
+1. At every checkpoint the worker stores frames of the first evaluation episodes (`runs/<id>/frames/<step>/`) and groups episodes by how they end (`training/failure_groups.py`). Watch rules in code (`training/progress_watch.py`: no progress, reward without success, instant failures) flag a run that is not learning.
+2. A diagnosis (`copilot/coach.py`, on request or when a rule fires) is an agent turn with the run tools plus `look_episode` that returns a `Diagnosis` grounded in the run's numbers: observations, evidence, failure groups, a hypothesis, a recommendation (`keep_training`, `stop_and_fix`, `done`) and, for a fix, a tested proposal.
+3. The user can review and apply the proposal. The **autopilot** (`copilot/autopilot.py`; mode `ask` waits for approval at each proposal, mode `fix` applies by itself) trains, watches, diagnoses, fixes and retrains, warm-starting from the best checkpoint when the fix keeps what the body senses and how it acts (`training/warm_start.py`), compares the new run with the previous one on the same seeds and keeps the best brain, until the goal success or the budget (iterations, minutes) runs out. Each step posts a copilot message with frames and buttons.
+4. Every iteration stays in the revision log and the run list, so the evolution of the design is as visible as the learning of the brain.
 
 ### Motion
 
@@ -313,29 +328,40 @@ Rules for every role:
 
 ### HTTP API
 
+Routes that exist today (`services/engine/src/icarus/api/`):
+
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/health` | Liveness for the desktop main process |
-| `GET` | `/library` | Components with their property schemas, reward terms, templates, connectomes, hardware components |
-| `POST` | `/copilot/ideas` | Three `DesignIdea`s with previews for a sentence |
+| `GET` | `/library` · `/library/templates/{id}/scene` | Components with their property schemas, reward terms, templates · a template's scene for thumbnails |
 | `GET` · `POST` | `/projects` | List · create |
-| `GET` | `/projects/{id}` | Current document, revision, `DesignReport` |
+| `GET` · `DELETE` | `/projects/{id}` | Current document, revision, `DesignReport` · delete |
 | `POST` | `/projects/{id}/operations` | Apply edit operations → new revision or validation errors |
 | `GET` | `/projects/{id}/revisions` | Revision history |
+| `POST` | `/projects/{id}/revisions/{n}/restore` · `/duplicate` | Restore a revision · duplicate the project |
 | `POST` | `/projects/{id}/undo` · `/redo` | Walk the revision log |
-| `GET` | `/projects/{id}/scene` | `SceneDescription` for the current revision |
-| `POST` | `/copilot/messages` | Send a message; streams replies and proposals (SSE) |
-| `POST` | `/projects/{id}/runs` | Start training the current revision |
-| `GET` | `/runs/{id}` · `/runs/{id}/events` | Status · SSE stream of metrics, checkpoints, diagnoses |
-| `POST` | `/runs/{id}/stop` | Request stop |
-| `GET` | `/runs/{id}/checkpoints` · `/runs/{id}/rollouts/{step}` | Timeline data |
-| `POST` | `/runs/{id}/diagnosis` | Ask the coach for a diagnosis |
-| `POST` | `/projects/{id}/autopilot` | Start or stop the autopilot loop with a budget |
-| `POST` | `/motion/clips` | Reference video → `MotionClip` |
+| `GET` | `/projects/{id}/scene` · `/projects/{id}/copies` | `SceneDescription` for the current revision · the training copies with their per-copy variation |
 | `WS` | `/projects/{id}/play` | Play session: `PlayCommand`s in, `PlayFrame`s and `PlayEvent`s out |
-| `POST` | `/runs/{id}/behavior-tests` | Run behavior tests against reference recordings |
-| `POST` | `/projects/{id}/export` | URDF/MJCF, ONNX, parts list, runtime, animation |
-| `POST` | `/bundles/pack` · `/bundles/unpack` | Create or open a bundle |
+| `POST` · `GET` | `/ideas` · `/ideas/{id}` | Three `DesignIdea`s with previews for a sentence |
+| `POST` · `GET` | `/builds` · `/builds/{id}` | Build a chosen idea, with progress |
+| `GET` | `/projects/{id}/conversation` | The project's copilot conversation |
+| `POST` | `/projects/{id}/conversation/messages` · `/autonomy` | Send a message (one agent turn) · set the autonomy mode |
+| `POST` · `GET` | `/proposals/{id}/apply` · `/discard` · `/scene` | Apply or discard a proposal · its preview scene |
+| `POST` | `/projects/{id}/attachments` | Attach an image or video to the chat |
+| `GET` | `/attachments/{id}/content` · `/frames/{index}` | An attachment · a sampled video frame |
+| `POST` · `GET` | `/projects/{id}/runs` | Start training the current revision (optionally warm-started) · list runs |
+| `GET` | `/runs/{id}` · `/runs/{id}/events` | Status · SSE stream of metrics, checkpoints and diagnoses |
+| `POST` | `/runs/{id}/stop` | Request stop |
+| `GET` | `/runs/{id}/metrics` · `/checkpoints` · `/rollouts/{step}` · `/scene` | Run data: curves, checkpoints, replays, the run's frozen scene |
+| `POST` · `GET` | `/runs/{id}/diagnosis` · `/runs/{id}/diagnoses` | Ask the coach for a diagnosis · every diagnosis of the run |
+| `GET` | `/runs/{id}/checkpoints/{step}/failures` | Failure groups of a checkpoint with their frames |
+| `POST` · `GET` · `DELETE` | `/projects/{id}/autopilot` | Start · status · stop the autopilot loop |
+| `GET` · `PUT` | `/settings/training` | Training settings |
+| `GET` · `PUT` · `POST` | `/settings/models` · `/settings/models/test` | Model connections per capability · test a connection |
+| `GET` | `/events` | Engine events stream (router built, not yet mounted) |
+| `GET` · `DELETE` | `/tasks` · `/tasks/{id}` | Background tasks · cancel one (router built, not yet mounted) |
+
+Planned: `POST /motion/clips`, `POST /runs/{id}/behavior-tests`, `POST /projects/{id}/export`, `POST /bundles/pack` · `/bundles/unpack`.
 
 ## Desktop studio
 
@@ -347,8 +373,8 @@ Every screen, module and tab has an identifier in [`docs/design/screens.md`](./d
 
 - **Header**: project menu, workspace switcher (World, Body, Motion, Brain, Train, Results, Build, plus the ones a project adds), Play, guide, Share and the next-step action.
 - **Left column**: Explorer (the object tree) over the Inspector (components and typed properties of the selection).
-- **Center**: workspace toolbar, viewport (orbit and fly camera, selection, gizmos with snapping, joint axes and limits, sensor rays and contacts, copilot ghosts) and a bottom panel per workspace (library, rig check, learning, metrics, timeline).
-- **Right column**: the copilot, always visible: chat with proposals previewed in the viewport and applied only on approval, and the project history.
+- **Center**: workspace toolbar, viewport (camera modes: free, follow, onboard and top, plus frame all; the task's spawn and goal zones and the world sky are drawn; selection, gizmos with snapping, joint axes and limits, sensor rays and contacts, copilot ghosts) and a bottom panel per workspace (library, rig check, learning, metrics, timeline).
+- **Right column**: the copilot, always visible: chat with attachments, the steps the copilot took, the scene views it rendered, action buttons, proposals previewed in the viewport and applied only on approval, and the project history. In Train the coach's messages and a *Diagnose now* action appear in the same chat; Results reads runs, comparisons, failure groups and diagnoses from the engine.
 - **Workspaces**: World, Body, Motion, Brain, Train, Results, Build; **Play** is a mode available from any of them; the launcher holds Home, Projects, Community, Profile and Settings.
 
 Implementation:
@@ -400,7 +426,7 @@ Each change belongs to one zone and only touches files in that zone:
 | `contracts` | `services/engine/src/icarus/contracts`, `packages/contracts` |
 | `design` | `icarus/library`, `icarus/projects`, `icarus/design`, `assets/` |
 | `sim` | `icarus/sim` |
-| `training` | `icarus/training`, `icarus/experiments` |
+| `training` | `icarus/training` |
 | `copilot` | `icarus/copilot` |
 | `motion` | `icarus/motion` |
 | `hardware` | `icarus/hardware`, `icarus/bundles` |

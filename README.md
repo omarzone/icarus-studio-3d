@@ -109,7 +109,9 @@ One contract is defined in Python with Pydantic and generated into TypeScript, s
 
 Icarus Studio 3D is in active development. The product, the architecture and the complete interface design are defined, and the code is landing zone by zone on top of them. This README is updated as each part becomes real; anything not built yet is described as a goal, never shown as a result.
 
-**Now real:** the foundation. The desktop app starts, supervises and restarts the local engine; the engine and the app share one generated contract; the interface is built from the design tokens; and every screen is checked against its design and its catalog entry by automated tests. A first measurement shows a car learning to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). The engine now owns real projects: created from a template, changed only through validated edit operations, compiled to MuJoCo and physically tested before every revision, with undo and redo over the HTTP API. The desktop editor now works on those projects: start one from a template, see it in a real 3D viewport, select and move objects, edit every property in the inspector, add components and library pieces, undo with the keyboard, and rename, duplicate, restore or delete projects.
+**Now real:** the first complete loop. The desktop app starts, supervises and restarts the local engine over one generated contract. Projects start from a template or from a sentence (three design ideas, then a staged build), change only through validated edit operations, and are compiled to MuJoCo and physically tested before every revision. The editor has a real 3D viewport with camera modes, task zones and a world sky, an inspector for every property, undo and project management. Play steps the physics live. Training runs PPO on the CPU with parallel copies that can vary per copy, live metrics, checkpoints and replays; a car learns to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). The copilot is an agent loop with tools: it inspects, looks at offscreen MuJoCo renders, reads attached images and videos, tries changes on a copy, proposes, applies and trains, depending on the autonomy mode. The coach reads checkpoint frames and failure groups, diagnoses runs from their real data, and the autopilot fixes and retrains, warm-starting when it can; Results compares runs on the same seeds.
+
+**Not built yet:** the Brain, Body, Motion and Build workspaces' engine work, connectome brains, hardware export, bundles and the community service. Their screens say so.
 
 ## Development
 
@@ -121,7 +123,6 @@ pnpm dev                           # run the desktop app and the engine
 pnpm check                         # lint, types and tests for everything
 ```
 
-These commands become available as the first application code lands.
 
 ## Repository
 

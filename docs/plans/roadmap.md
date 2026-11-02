@@ -22,6 +22,15 @@ Each sprint gets its own detailed task plan (`sprint-NN-<name>.md`) written when
 
 ## Sprints
 
+### Status
+
+| Sprint | Status |
+|---|---|
+| 1–6 | **Built** and merged |
+| 7 | **Mostly built**: coach, autopilot, warm start and Results on the engine; timelapse export and the measured *Done when* still open |
+| 8–14 | **Planned**: their screens open in the app and say what is not available yet; no engine work yet |
+| Beyond plan | **Built**: copilot agent loop and harness extensions (below Sprint 6 and 7) |
+
 Order follows dependencies: each sprint only needs what earlier sprints delivered. Sprints 1–7 form the first complete loop (describe → build → play → train → watch → diagnose → fix); 8–14 extend it to every workspace and service.
 
 ### Sprint 1 · Foundation
@@ -39,6 +48,8 @@ Monorepo, engine and desktop skeletons talking to each other, the contract pipel
 
 **Screens:** `SYS-ENGINE-DOWN`, shells only. **Demo:** the app opens, starts the engine, shows its health, and survives the engine being killed.
 
+**Status:** built.
+
 ### Sprint 2 · Project model and physics design
 
 The project document, edit operations, components with typed properties, the library, compilation to MuJoCo and design tests.
@@ -51,6 +62,8 @@ The project document, edit operations, components with typed properties, the lib
 
 **Demo:** create a project from a template over the API, edit a property, see validation reject an out-of-range value, undo.
 
+**Status:** built.
+
 ### Sprint 3 · Editor core and project management
 
 The desktop editor on top of the engine: viewport, explorer, inspector with the 12 property controls, toolbars, history and project management.
@@ -62,6 +75,8 @@ The desktop editor on top of the engine: viewport, explorer, inspector with the 
 
 **Demo:** open a template, select the car, change friction with the slider, add a component, undo it, rename and duplicate the project.
 
+**Status:** built, plus real scene thumbnails for templates and projects, camera modes (free, follow, onboard, top, frame all), drawing where the agent starts and where it must go, and the app keeping its place across reloads and engine restarts.
+
 ### Sprint 4 · Simulation and Play
 
 Environments built from projects, and Play mode.
@@ -72,15 +87,19 @@ Environments built from projects, and Play mode.
 
 **Demo:** press Play on the parking project, move a parked car in front of an untrained car, watch the senses react and the events log fill.
 
+**Status:** built. Scenes also carry the task zones (spawn, goal, marked areas) and a world sky; a *Randomize per copy* component varies objects between training copies; `sim/views.py` renders MuJoCo views offscreen.
+
 ### Sprint 5 · Training and the Training Timeline
 
 Real PPO training on the CPU, watched live.
 
-- `training/` worker subprocess with `SubprocVecEnv`, checkpoint schedule (0, 25k, 50k, 100k, 250k, 500k, 1M…), deterministic evaluation, rollouts, final checkpoint on stop; `experiments/` runner and queue; run store layout from the architecture.
+- `training/` worker subprocess with `SubprocVecEnv`, checkpoint schedule (0, 25k, 50k, 100k, 250k, 500k, 1M…), deterministic evaluation, rollouts, final checkpoint on stop; `training/supervisor.py` launching and stopping workers; run store layout from the architecture.
 - Run API and SSE events; supervisor with process-tree kill and phased shutdown.
 - `MOD-START-TRAINING`, `SCR-TRAIN` (`PNL-RUNS`, `PNL-METRICS`, `TAB-LIVE-TRAINING` with all parallel copies, `TAB-REPLAY` with `RolloutPlayer`), `MOD-STOP-RUN`, `STA-TRAIN-FAILED`, `SCR-SETTINGS-TRAINING`.
 
 **Demo:** train the parking car from zero, watch 16 copies learn, scrub any checkpoint, stop and keep the best brain.
+
+**Status:** built: worker, supervisor with process-tree stop, run store, live copies, replay in the run's own scene, failed runs keep their best brain.
 
 ### Sprint 6 · Copilot
 
@@ -93,6 +112,12 @@ The copilot that designs, explains and proposes, through the same edit operation
 
 **Demo:** type "a little car that learns to park itself", pick one of three ideas, watch it build, ask "make it night", apply the proposal.
 
+**Status:** built, and extended beyond this plan:
+
+- **Agent loop** ([ADR 006](../decisions/006-copilot-agent-loop.md), [plan](./copilot-agent-harness.md)): native tools (inspect, library, look, try, propose, apply, train), budgets, compaction, permissions by autonomy mode; answers carry the steps taken, the views rendered and action buttons.
+- From-scratch designs built by tested stages; chat attachments (images, video frames) read with the vision capability; answers in the person's language.
+- **Harness extensions** ([plan](./copilot-harness-extensions.md)): event bus, background tasks, skills with eight built-in procedures, memory and run/revision comparison are built; mounting `/events` and `/tasks` and offering skills, memory and comparison in the chat loop are landing now; hooks, subagents and code-free extensions are planned.
+
 ### Sprint 7 · Results, diagnosis and autopilot
 
 Judge brains fairly, understand failures with vision, and let the copilot iterate.
@@ -104,6 +129,8 @@ Judge brains fairly, understand failures with vision, and let the copilot iterat
 
 **Demo:** the full first loop: describe, build, play, train, compare, diagnose a failure, apply the fix, retrain, present the timelapse.
 
+**Status:** mostly built ([plan](./sprint-07-coach.md)). Built: checkpoint frames and failure groups, watch rules, diagnoses grounded in run data, the `coach` tool, the autopilot in `ask` and `fix` modes with warm starts and same-seed comparison, Results, Train coaching messages and *Diagnose now* on the engine. Open: `SCR-TIMELAPSE` on real runs with video export, and the measured *Done when* (autopilot beating training from zero) has not been run.
+
 ### Sprint 8 · Brain workspace
 
 Everything about what the agent perceives, does and is rewarded for.
@@ -112,6 +139,8 @@ Everything about what the agent perceives, does and is rewarded for.
 - `STA-BRAIN-NETWORK` (`PNL-BRAIN-SHAPE`, `TAB-NETWORK` with live activations from the policy), `MOD-BRAIN-SIZES` with estimates from measured budgets, brains from the community as a source (wired fully in Sprint 13).
 
 **Demo:** turn on two side sensors, raise a penalty, pick a bigger brain, train and see the network light up.
+
+**Status:** planned.
 
 ### Sprint 9 · Body workspace and import
 
@@ -123,6 +152,8 @@ Any body, built in Icarus or imported.
 
 **Demo:** import a humanoid model, auto-rig it, fix the failed check with the copilot, make it stand in Play.
 
+**Status:** planned.
+
 ### Sprint 10 · Motion from video
 
 Characters that copy a reference video under physics.
@@ -131,6 +162,8 @@ Characters that copy a reference video under physics.
 - `MOD-MOTION-VIDEO` (file, link, webcam, trim, who to copy, onto which character), `MOD-MOTION-TRACKING`, `SCR-MOTION` (`PNL-MOTION-COMPARE`, `PNL-CLIP-TIMELINE`), `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION`; Motion workspace tab appears with the first clip.
 
 **Demo:** upload a dance clip, track it, train the copy focusing on the hardest moment, export the animation.
+
+**Status:** planned.
 
 ### Sprint 11 · Connectome brains
 
@@ -142,6 +175,8 @@ Bodies driven by real wiring maps, with no training.
 
 **Demo:** load the connectome into the fly, drop sugar in Play, watch it walk there and its neurons fire, compare its walk with recordings.
 
+**Status:** planned.
+
 ### Sprint 12 · Build and hardware
 
 Taking creations out of Icarus.
@@ -151,6 +186,8 @@ Taking creations out of Icarus.
 - `SCR-BUILD` (`PNL-BUILD-TARGETS`, `PNL-BUILD-TARGET-VIEW`), sim-to-real randomization presets.
 
 **Demo:** export the parking brain to ONNX, run it with the runtime on a single-board computer reading real sensors.
+
+**Status:** planned.
 
 ### Sprint 13 · Community
 
@@ -165,6 +202,8 @@ Sharing, remixing and safety.
 
 **Demo:** publish the parking car, open its page from another account, remix it and retrain.
 
+**Status:** planned.
+
 ### Sprint 14 · Release
 
 Ship it.
@@ -174,6 +213,8 @@ Ship it.
 - Final documentation, README with real screenshots, release notes.
 
 **Demo:** install on a clean machine of each platform and complete the first loop without a terminal.
+
+**Status:** planned.
 
 ## Coverage
 
