@@ -21,6 +21,7 @@ from icarus.copilot.run_frames import RunFrames
 from icarus.tasks import Publisher
 from icarus.training.failure_groups import failure_groups
 from icarus.training.progress_watch import WatchFinding, checkpoint_results, watch
+from icarus.training.run_health import run_health
 from icarus.training.run_store import RunFolder
 
 DEFAULT_GOAL = 0.8
@@ -30,12 +31,15 @@ SHEETS_SHOWN = 2
 COACH_GUIDE = """
 
 You are now the coach of this project's training. Diagnose {run} at checkpoint {step:,} from its own data: the run
-brief below (evaluations, watch rules, how episodes ended), read_run, and look_episode for the recorded episodes
+brief below (evaluations, watch rules, how episodes ended, health facts from the worker log, the episode
+records and the reward balance, and coach_notes from an earlier look when present), read_run, and look_episode
+for the recorded episodes
 (episode 0 and 1; also earlier checkpoints when you compare). Base every claim on those numbers and pictures; cite
 no number that is not in them.
 Then decide the next step:
 - keep_training: the brain is still improving and the run has budget left.
-- stop_and_fix: a watch rule fired, or the numbers and pictures show the design keeps the brain from learning.
+- stop_and_fix: a watch rule fired, the coach notes name a design problem, or the numbers and pictures show the
+  design keeps the brain from learning. Do not wait for more steps when the design blocks the task.
   Find the cause in the reward terms (a term that dominates, one the brain exploits, a missing penalty) or in the
   world (goal too far, obstacles in the way), try a fix and propose it. Keep what the body senses and its motors
   unchanged when you can: the next run then continues from this brain instead of from zero. When the task is too
@@ -96,7 +100,12 @@ class Coach:
         return step
 
     def diagnose(
-        self, run_id: str, step: int | None = None, goal_success: float = DEFAULT_GOAL, autopilot: bool = False
+        self,
+        run_id: str,
+        step: int | None = None,
+        goal_success: float = DEFAULT_GOAL,
+        autopilot: bool = False,
+        notes: list[str] | None = None,
     ) -> Diagnosis:
         folder = self._runs.folder(run_id)
         checkpoint = self._step(folder, step)
@@ -105,12 +114,14 @@ class Coach:
                 raise CopilotBusy("The coach is already diagnosing this run.")
             self._busy.add(run_id)
         try:
-            return self._diagnose(folder, checkpoint, goal_success, autopilot)
+            return self._diagnose(folder, checkpoint, goal_success, autopilot, notes or [])
         finally:
             with self._guard:
                 self._busy.discard(run_id)
 
-    def _brief(self, folder: RunFolder, step: int, goal: float) -> tuple[dict[str, Any], list[WatchFinding]]:
+    def _brief(
+        self, folder: RunFolder, step: int, goal: float, notes: list[str]
+    ) -> tuple[dict[str, Any], list[WatchFinding]]:
         status = folder.status()
         state = self._projects.state(status.project_id)
         results = checkpoint_results(folder)
@@ -125,7 +136,11 @@ class Coach:
             ],
             "watch_rules": [finding.reason for finding in found],
             "episode_endings": [{"ending": g.label, "share": g.share, "description": g.description} for g in groups],
+            # What the worker log, the episode records and the reward balance say, with their numbers.
+            "health": [fact.text for fact in run_health(folder, step)],
         }
+        if notes:
+            brief["coach_notes"] = notes
         return brief, found
 
     def _client(self) -> tuple[ModelClient, Capability]:
@@ -133,11 +148,11 @@ class Coach:
         vision = capability_client(settings, "vision")
         return (vision, "vision") if vision else (copilot_client(settings), "reasoning")
 
-    def _diagnose(self, folder: RunFolder, step: int, goal: float, autopilot: bool) -> Diagnosis:
+    def _diagnose(self, folder: RunFolder, step: int, goal: float, autopilot: bool, notes: list[str]) -> Diagnosis:
         status = folder.status()
         project_id = status.project_id
         language = self._copilot.language(project_id)
-        brief, found = self._brief(folder, step, goal)
+        brief, found = self._brief(folder, step, goal, notes)
         brief_text = json.dumps(brief, ensure_ascii=False, separators=(",", ":"))
         state = self._projects.state(project_id)
         request = f"Diagnose {status.name} at checkpoint {step:,}."

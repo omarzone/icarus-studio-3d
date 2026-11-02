@@ -5,7 +5,8 @@ from icarus.sim.model_state import CONTROL_PERIOD
 from icarus.training.episodes import INSTANT_SECONDS, instant_share, success_share
 from icarus.training.run_store import RunFolder
 
-type WatchRule = Literal["stalled", "reward_hacking", "instant_failures", "goal_held"]
+# design_blocker: the coach's early look found something in the design that keeps the brain from the task.
+type WatchRule = Literal["stalled", "reward_hacking", "instant_failures", "goal_held", "design_blocker"]
 
 # Checkpoints a run gets to improve before it counts as stalled, and the evaluations that hold a goal.
 WINDOW = 3
@@ -127,3 +128,46 @@ def watch(results: list[CheckpointResult], goal_success: float) -> list[WatchFin
         return [held]
     found = [_stalled(results, goal_success), _hacking(results), _instant(results)]
     return [finding for finding in found if finding is not None]
+
+
+type TrendCall = Literal["early", "improving", "flat"]
+
+# Success gained per 100k steps that still counts as learning worth more steps.
+SUCCESS_SLOPE = 0.02
+
+
+@dataclass(frozen=True)
+class Trend:
+    call: TrendCall
+    # One sentence with the run's numbers: what the curve says about more steps against a fix.
+    reason: str
+
+
+def trend(results: list[CheckpointResult]) -> Trend:
+    """Whether more steps should help, from the slope of the last evaluations; a flat curve needs a fix instead."""
+    trained = [result for result in results if result.step > 0]
+    if len(trained) < 3:
+        return Trend("early", "Too few trained checkpoints yet to read the learning curve.")
+    first, last = trained[-min(len(trained), WINDOW)], trained[-1]
+    span = (last.step - first.step) / 100_000
+    success_slope = ((last.success or 0.0) - (first.success or 0.0)) / span if span > 0 else 0.0
+    best_before = max(result.episode_return for result in results if result.step < last.step)
+    steps = f"steps {first.step:,} to {last.step:,}"
+    if success_slope >= SUCCESS_SLOPE:
+        return Trend(
+            "improving",
+            f"Success rose {success_slope:.2f} per 100k steps between {steps}: more steps should help.",
+        )
+    if last.episode_return >= best_before + _gain(best_before) and (
+        (last.success or 0.0) > 0 or last.step < HACKING_MIN_STEP
+    ):
+        return Trend(
+            "improving",
+            f"Return reached {last.episode_return:.2f} at step {last.step:,}, above {best_before:.2f} before: the "
+            "brain is still learning.",
+        )
+    return Trend(
+        "flat",
+        f"Success moved {success_slope:.2f} per 100k steps between {steps} (return {first.episode_return:.2f} to "
+        f"{last.episode_return:.2f}): more steps alone are unlikely to help; a fix should.",
+    )

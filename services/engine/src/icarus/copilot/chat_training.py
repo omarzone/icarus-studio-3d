@@ -22,6 +22,8 @@ class TrainingRequest(BaseModel):
     copies: int | None = Field(default=None, ge=1, le=MAX_COPIES)
     # Continue from the best brain of the latest run that has one, when the body still senses and acts the same way.
     continue_from_best: bool = False
+    # The copilot watches the run, looks at its first checkpoints and fixes what blocks learning; on unless asked off.
+    coach: bool = True
 
 
 @dataclass(frozen=True)
@@ -65,7 +67,7 @@ class ChatTrainer:
         try:
             status = self._supervisor.start(
                 state,
-                StartRun(total_steps=steps, copies=copies, warm_start=warm),
+                StartRun(total_steps=steps, copies=copies, warm_start=warm, coach=request.coach),
                 settings.threads,
                 settings.use_graphics_card,
             )

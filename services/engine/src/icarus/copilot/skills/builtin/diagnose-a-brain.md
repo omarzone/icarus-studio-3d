@@ -3,9 +3,11 @@ name: diagnose-a-brain
 title: Diagnose a brain that does not learn and fix it
 when: A run finished or is training and the body falls, stalls, wanders, crashes or never succeeds.
 tools: [read_run, inspect_object, try, look, propose, train]
-version: 1
+version: 2
 ---
 Every explanation comes from the run's own data. When there is no run, say no training has run yet and offer one.
+Do not wait for a stall: the run brief's health facts and coach notes already name what blocks learning at the
+first checkpoints (reward paid without doing the task, objects touched, early endings, log errors). Act on them.
 
 1. **Read the run.** `read_run` with `status`, `evaluations`, `curve` and `failures`. Compare total steps with the
    recommended budget (1M for navigation, 2M for locomotion); when the run is far below it, say it is too short to
@@ -23,7 +25,9 @@ Every explanation comes from the run's own data. When there is no run, say no tr
    reward-design) or raise `forward_progress` / `progress_to_goal`.
 5. **Touches obstacles.** Check the body can see them: a `distance_ray` that reaches them from the start, tilted
    down for low ones. `look` with view `onboard` at the latest revision. Then consider `collision_penalty` = -20–-5,
-   or more room in the gaps.
+   or more room in the gaps. When the touched object stands at height 0.01 m or so (a painted line, a marking, a
+   floor decal), it is decoration that should not collide: remove its `collider` and `physics_body` instead of
+   adding penalties.
 6. **Times out.** Near the goal: the bonus needs a stop under 0.2 m/s inside the zone, so check the drive can brake
    (wheel `joint.damping`) and the zone radius fits the body. Far from the goal: the course is too long or too hard
    for 30 s; move the goal closer and train the easy version first (curriculum-and-warm-start).

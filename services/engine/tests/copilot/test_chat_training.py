@@ -10,7 +10,7 @@ from icarus.contracts.training import StartRun, WarmStart
 from icarus.copilot import fixture_provider
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
-from icarus.copilot.chat_training import ChatTrainer
+from icarus.copilot.chat_training import ChatTrainer, TrainingRequest
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.projects.store import ProjectStore
@@ -209,3 +209,21 @@ def test_continuing_without_a_trained_brain_says_so(copilot, runs, project_id, m
     answer = say(copilot, project_id, "train again from the best brain")
 
     assert runs.list_runs(project_id) == [] and "no trained brain to continue from" in answer.text
+
+
+class RecordingSupervisor(Supervisor):
+    def __init__(self, runs: RunStore) -> None:
+        super().__init__(runs)
+        self.started: list[StartRun] = []
+
+    def start(self, state, start, threads, use_graphics_card):
+        self.started.append(start)
+        return self.store.create(state, start, threads)
+
+
+def test_runs_the_chat_starts_are_coached_unless_the_person_asks_otherwise(tmp_path, store, runs, project_id):
+    supervisor = RecordingSupervisor(runs)
+    trainer = ChatTrainer(store, runs, supervisor, TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects"))
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1))
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1, coach=False))
+    assert [start.coach for start in supervisor.started] == [True, False]

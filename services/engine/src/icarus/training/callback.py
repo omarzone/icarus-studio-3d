@@ -4,7 +4,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 from icarus.training.progress import EpisodeTally, RunProgress
 
-SNAPSHOT_PERIOD = 0.5
+SNAPSHOT_PERIOD = 0.2
 
 
 class TrainingCallback(BaseCallback):

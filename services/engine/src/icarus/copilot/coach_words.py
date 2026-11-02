@@ -67,6 +67,50 @@ COACH_TEXTS: dict[str, dict[Language, str]] = {
     "nothing_best": {"en": "none yet", "es": "ninguno todavía"},
     "stopped": {"en": "The autopilot stopped.", "es": "El piloto automático se detuvo."},
     "failed": {"en": "The autopilot stopped: {reason}", "es": "El piloto automático se detuvo: {reason}"},
+    "moves": {"en": "The body moves", "es": "El cuerpo se mueve"},
+    "still": {"en": "The body barely moves", "es": "El cuerpo apenas se mueve"},
+    "ends_early": {"en": "Episodes end early", "es": "Los episodios terminan antes de tiempo"},
+    "runs_full": {"en": "Episodes run their full time", "es": "Los episodios duran todo su tiempo"},
+    "reward_ok": {"en": "The reward pays for the task", "es": "La recompensa paga por la tarea"},
+    "looked": {
+        "en": "Looked at {count} episode sheet(s) of step {step} with the vision model",
+        "es": "Miré {count} hoja(s) de episodios del paso {step} con el modelo de visión",
+    },
+    "read_facts": {
+        "en": "Read the facts of step {step} (no vision model connected)",
+        "es": "Leí los datos del paso {step} (no hay modelo de visión conectado)",
+    },
+    "no_summary": {"en": "Nothing to add from this look.", "es": "Nada que añadir de esta revisión."},
+    "fixing": {
+        "en": "This blocks learning, so I am preparing a tested fix now instead of waiting.",
+        "es": "Esto impide aprender, así que preparo ya un arreglo probado en vez de esperar.",
+    },
+    "early_title": {"en": "Early check · step {step}", "es": "Revisión temprana · paso {step}"},
+    "look_title": {"en": "Coach look · step {step}", "es": "Revisión del entrenador · paso {step}"},
+    "trial_start": {
+        "en": "Short trial {letter}: {name} trains {steps} steps from the same brain ({what}).",
+        "es": "Prueba corta {letter}: {name} entrena {steps} pasos desde el mismo cerebro ({what}).",
+    },
+    "trial_same": {"en": "same design, more steps", "es": "mismo diseño, más pasos"},
+    "trial_fix": {"en": "with the fix “{summary}”", "es": "con el arreglo “{summary}”"},
+    "trial_result": {
+        "en": "Trial comparison on the same evaluation seeds:\n{table}\nI keep {winner}.",
+        "es": "Comparación de las pruebas con las mismas semillas de evaluación:\n{table}\nMe quedo con {winner}.",
+    },
+    "trial_restored": {
+        "en": "More steps beat the fix, so I restored revision {revision} and keep training it.",
+        "es": "Más pasos ganaron al arreglo, así que restauré la revisión {revision} y sigo entrenándola.",
+    },
+    "trend_improving": {
+        "en": "The curve is still rising: more steps should help.",
+        "es": "La curva sigue subiendo: más pasos deberían ayudar.",
+    },
+    "trend_flat": {
+        "en": "The curve is flat: more steps alone are unlikely to help; a fix should.",
+        "es": "La curva está plana: más pasos solos difícilmente ayudarán; un arreglo sí.",
+    },
+    "trial_same_name": {"en": "more steps", "es": "más pasos"},
+    "trial_fix_name": {"en": "the fix", "es": "el arreglo"},
 }
 
 RULE_WORDS: dict[str, dict[Language, str]] = {
@@ -80,6 +124,10 @@ RULE_WORDS: dict[str, dict[Language, str]] = {
         "es": "sus episodios terminan en el primer segundo",
     },
     "goal_held": {"en": "it held the goal", "es": "mantuvo la meta"},
+    "design_blocker": {
+        "en": "the coach's early look found a design problem",
+        "es": "la revisión temprana del entrenador encontró un problema de diseño",
+    },
 }
 
 

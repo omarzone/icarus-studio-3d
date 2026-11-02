@@ -33,7 +33,7 @@ from icarus.training.supervisor import Supervisor
 router = APIRouter()
 
 POLL_PERIOD = 0.25
-SNAPSHOT_PERIOD = 0.5
+SNAPSHOT_PERIOD = 0.2
 KEEPALIVE_PERIOD = 15.0
 
 

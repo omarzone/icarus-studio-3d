@@ -80,7 +80,7 @@ def project(app) -> str:
     return client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
 
 
-def autopilot(app, trainer: ScriptedTrainer) -> Autopilot:
+def autopilot(app, trainer: ScriptedTrainer, trial_steps: int | None = None) -> Autopilot:
     pilot = Autopilot(
         app.state.store,
         app.state.runs,
@@ -90,6 +90,7 @@ def autopilot(app, trainer: ScriptedTrainer) -> Autopilot:
         app.state.coach,
         app.state.store.root / ".copilot",
         poll_seconds=0.01,
+        trial_steps=trial_steps,
     )
     app.state.autopilot = pilot
     return pilot
@@ -145,7 +146,7 @@ def test_fix_mode_stops_a_stalled_run_applies_the_fix_and_continues_warm_until_t
     head = app.state.store.state(project_id)
     assert head.revision.number == 2 and head.revision.author == "copilot"
     assert app.state.runs.folder(second).config().revision_number == 2
-    said = texts(app, project_id)[1:]  # after the opener of a new conversation
+    said = texts(app, project_id)
     assert said[0].startswith("Autopilot on") and any("Softer time penalty" in text for text in said)
     assert any(text.startswith("Done:") for text in said)
     assert any("stopped improving" in line.text.lower() or "not improved" in line.text for line in status.log)

@@ -15,10 +15,12 @@ from icarus.copilot.chat import Copilot, CopilotBusy, ProposalOutdated
 from icarus.copilot.client import CopilotError
 from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.coach_words import RULE_WORDS, coach_said, percent
+from icarus.copilot.fix_trials import TRIAL_STEPS, trial_table, trial_winner
 from icarus.copilot.language import Language
 from icarus.projects.files import write_atomic
 from icarus.projects.store import ProjectStore
 from icarus.training.progress_watch import CheckpointResult, WatchFinding, checkpoint_results, watch
+from icarus.training.run_comparison import compare_runs
 from icarus.training.run_store import TERMINAL_STATES, RunStore
 from icarus.training.schedule import RECOMMENDED_STEPS
 from icarus.training.settings import TrainingSettingsStore
@@ -54,6 +56,12 @@ class RunStarter(Protocol):
     def stop(self, run_id: str) -> RunStatus: ...
 
 
+class BlockerSource(Protocol):
+    """The coach watching runs: a design problem it found in one, which the loop stops the run for."""
+
+    def blocker(self, run_id: str) -> WatchFinding | None: ...
+
+
 @dataclass
 class _Best:
     run_id: str
@@ -72,6 +80,7 @@ class _Pilot:
     thread: threading.Thread | None = None
     deadline: float = 0.0
     best: _Best | None = None
+    held: str | None = None
 
 
 def best_of(results: list[CheckpointResult]) -> CheckpointResult | None:
@@ -95,6 +104,7 @@ class Autopilot:
         coach: Coach,
         folder: Path,
         poll_seconds: float = POLL_SECONDS,
+        trial_steps: int | None = TRIAL_STEPS,
     ) -> None:
         self._projects, self._runs, self._starter, self._settings = projects, runs, starter, settings
         self._copilot, self._coach = copilot, coach
@@ -102,6 +112,18 @@ class Autopilot:
         self._poll = poll_seconds
         self._pilots: dict[str, _Pilot] = {}
         self._lock = threading.Lock()
+        self._watcher: BlockerSource | None = None
+        # Steps of each short A/B trial when a run stalls in fix mode; None tries no alternatives.
+        self._trial_steps = trial_steps
+
+    def attach_watcher(self, watcher: BlockerSource) -> None:
+        self._watcher = watcher
+
+    def drives(self, project_id: str) -> bool:
+        """Whether a loop runs this project's training now, so the coach leaves the decisions to it."""
+        with self._lock:
+            pilot = self._pilots.get(project_id)
+            return pilot is not None and pilot.status.state in ("running", "waiting_approval")
 
     def _path(self, project_id: str) -> Path:
         return self._folder / f"{project_id}.autopilot.json"
@@ -187,12 +209,12 @@ class Autopilot:
             snapshot = pilot.status.model_dump_json(indent=2)
         write_atomic(self._path(pilot.status.project_id), snapshot)
 
-    def _say(self, pilot: _Pilot, text: str) -> None:
+    def _say(self, pilot: _Pilot, text: str, final: bool = False) -> None:
         """A step of the loop: a log line and a copilot message in the project's conversation."""
         self._note(pilot, text)
         language = pilot.language
         actions = [ChatAction(label=coach_said("watch_training", language), kind="navigate", target="SCR-TRAIN")]
-        if pilot.status.state in ("running", "waiting_approval"):
+        if not final and pilot.status.state in ("running", "waiting_approval"):
             stop = coach_said("stop_autopilot_message", language)
             actions.append(ChatAction(label=coach_said("stop_autopilot", language), kind="send", target=stop))
         message = CopilotMessage(
@@ -210,8 +232,9 @@ class Autopilot:
         self._finish(pilot, *ending)
 
     def _finish(self, pilot: _Pilot, state: Literal["done", "stopped", "failed"], text: str) -> None:
+        # The last message is posted before the state changes, so whoever waits for the end also finds it.
+        self._say(pilot, text, final=True)
         self._update(pilot, state=state, finished_at=datetime.now(UTC))
-        self._say(pilot, text)
 
     def _out_of_budget(self, pilot: _Pilot) -> bool:
         return pilot.stop.is_set() or time.monotonic() >= pilot.deadline
@@ -244,8 +267,11 @@ class Autopilot:
             if found:
                 why = ", ".join(RULE_WORDS[finding.rule][language] for finding in found)
                 self._say(pilot, coach_said("flagged", language, name=run.name, why=why))
-            if iteration < request.max_iterations and not self._coach_step(pilot, run, request):
+            if iteration < request.max_iterations and not self._coach_step(pilot, run, request, found):
                 return "stopped", coach_said("discarded", language)
+            if pilot.held is not None:
+                self._say(pilot, coach_said("held", language, name=pilot.held))
+                return "done", self._done_text(pilot, "done")
         if pilot.stop.is_set():
             return "stopped", coach_said("stopped", language)
         why = coach_said("budget_minutes" if time.monotonic() >= pilot.deadline else "budget_runs", language)
@@ -276,7 +302,9 @@ class Autopilot:
         settings = self._settings.get()
         warm = self._warm_start(pilot, state)
         steps = RECOMMENDED_STEPS[project.task.family] // ITERATION_SHARE
-        start = StartRun(total_steps=steps, copies=min(project.brain.copies, MAX_COPIES), warm_start=warm)
+        # Coached: the coach looks at its first checkpoints and flags a design problem before the watch rules would.
+        copies = min(project.brain.copies, MAX_COPIES)
+        start = StartRun(total_steps=steps, copies=copies, warm_start=warm, coach=True)
         try:
             run = self._starter.start(state, start, settings.threads, settings.use_graphics_card)
         except WarmStartRefused:
@@ -293,8 +321,15 @@ class Autopilot:
         return run
 
     def _watch_run(
-        self, pilot: _Pilot, run: RunStatus, lineage: list[CheckpointResult], repeats_first: bool
+        self,
+        pilot: _Pilot,
+        run: RunStatus,
+        lineage: list[CheckpointResult],
+        repeats_first: bool,
+        flags: bool = True,
     ) -> tuple[RunEnding, list[CheckpointResult], list[WatchFinding]]:
+        """Follow a run until it holds the goal, ends or runs out of time; with flags, also stop it for a watch rule
+        or for a design problem the coach found."""
         folder = self._runs.folder(run.run_id)
         goal, seen = pilot.status.goal_success, -1
         while True:
@@ -305,11 +340,15 @@ class Autopilot:
                 chained = lineage + (results[1:] if repeats_first else results)
                 if any(finding.rule == "goal_held" for finding in watch(chained, goal)):
                     return self._ended(folder.run_id, "held"), checkpoint_results(folder), []
-                found = watch(results, goal)
+                found = watch(results, goal) if flags else []
                 if found and status.state not in TERMINAL_STATES:
                     for finding in found:
                         self._note(pilot, f"{run.name}: {finding.reason}")
                     return self._ended(folder.run_id, "flagged"), checkpoint_results(folder), found
+            blocker = self._watcher.blocker(run.run_id) if self._watcher and flags else None
+            if blocker is not None and status.state not in TERMINAL_STATES:
+                self._note(pilot, f"{run.name}: {blocker.reason}")
+                return self._ended(folder.run_id, "flagged"), checkpoint_results(folder), [blocker]
             if status.state in TERMINAL_STATES:
                 ending: RunEnding = "failed" if status.state == "failed" else "ended"
                 return ending, results, []
@@ -349,10 +388,11 @@ class Autopilot:
             names = {"name": run.name, "previous": previous.name, "best": pilot.best.name}
             self._say(pilot, coach_said("compared", pilot.language, new=new, old=old, **names))
 
-    def _coach_step(self, pilot: _Pilot, run: RunStatus, request: AutopilotStart) -> bool:
+    def _coach_step(self, pilot: _Pilot, run: RunStatus, request: AutopilotStart, found: list[WatchFinding]) -> bool:
         """Diagnose the run and act on it; False when the person turned the coach's proposal down."""
+        notes = [finding.reason for finding in found]
         try:
-            diagnosis = self._coach.diagnose(run.run_id, goal_success=request.goal_success, autopilot=True)
+            diagnosis = self._coach.diagnose(run.run_id, goal_success=request.goal_success, autopilot=True, notes=notes)
         except (CopilotError, CopilotBusy, NothingToDiagnose) as error:
             # Without a diagnosis the loop keeps training the same design, continuing from the best brain.
             self._note(pilot, f"The coach could not diagnose {run.name}: {error}")
@@ -365,6 +405,9 @@ class Autopilot:
                 self._say(pilot, coach_said("no_fix", pilot.language))
             return True
         proposal = next(item for item in self._copilot.conversation(run.project_id).proposals if item.id == proposal_id)
+        stalled = any(finding.rule == "stalled" for finding in found)
+        if request.mode == "fix" and stalled and self._trial(pilot, proposal_id, proposal.summary):
+            return True
         if request.mode == "fix":
             try:
                 conversation = self._copilot.apply(proposal_id)
@@ -386,4 +429,60 @@ class Autopilot:
                 return current.status == "applied"
             pilot.stop.wait(self._poll)
         self._update(pilot, state="running")
+        return True
+
+    def _trial_run(self, pilot: _Pilot, warm: WarmStart, seed: int, what: str, letter: str) -> RunStatus:
+        """One short trial from the given brain on the current revision, followed to its end."""
+        state = self._projects.state(pilot.status.project_id)
+        settings = self._settings.get()
+        assert self._trial_steps is not None
+        copies = min(state.project.brain.copies, MAX_COPIES)
+        start = StartRun(total_steps=self._trial_steps, copies=copies, seed=seed, warm_start=warm, coach=True)
+        run = self._starter.start(state, start, settings.threads, settings.use_graphics_card)
+        self._update(pilot, run_ids=[*pilot.status.run_ids, run.run_id])
+        steps = f"{self._trial_steps:,}"
+        said = coach_said("trial_start", pilot.language, letter=letter, name=run.name, steps=steps, what=what)
+        self._say(pilot, said)
+        ending, results, _ = self._watch_run(pilot, run, [], True, flags=False)
+        self._record(pilot, run, results, None)
+        if ending == "held":
+            pilot.held = run.name
+        return self._runs.folder(run.run_id).status()
+
+    def _trial(self, pilot: _Pilot, proposal_id: str, summary: str) -> bool:
+        """Try more steps and the fix as two short runs from the best brain on one seed, and keep the better design.
+
+        False when no trial fits (no trained brain to continue from); the loop then applies the fix as usual.
+        """
+        project_id, language = pilot.status.project_id, pilot.language
+        state = self._projects.state(project_id)
+        warm = self._warm_start(pilot, state) if self._trial_steps else None
+        if warm is None or self._out_of_budget(pilot):
+            return False
+        seed = self._runs.folder(warm.run_id).config().seed
+        base = state.revision.number
+        same = self._trial_run(pilot, warm, seed, coach_said("trial_same", language), "A")
+        if pilot.held or self._out_of_budget(pilot):
+            return True
+        try:
+            conversation = self._copilot.apply(proposal_id)
+        except ProposalOutdated:
+            self._say(pilot, coach_said("no_fix", language))
+            return True
+        applied = next(item for item in conversation.proposals if item.id == proposal_id)
+        self._say(pilot, coach_said("applied", language, summary=summary, revision=applied.applied_revision))
+        # A fix that changes what the body senses or drives cannot continue from the same brain: no fair trial.
+        if warm_start_problem(self._runs, self._projects.state(project_id).project, warm):
+            return True
+        fixed = self._trial_run(pilot, warm, seed, coach_said("trial_fix", language, summary=summary), "B")
+        if pilot.held:
+            return True
+        comparison = compare_runs(self._runs, same.run_id, fixed.run_id)
+        names = (coach_said("trial_same_name", language), coach_said("trial_fix_name", language))
+        winner = trial_winner(comparison)
+        kept = names[0] if winner == "a" else names[1]
+        self._say(pilot, coach_said("trial_result", language, table=trial_table(comparison, names), winner=kept))
+        if winner == "a":
+            self._projects.restore(project_id, base)
+            self._say(pilot, coach_said("trial_restored", language, revision=base))
         return True

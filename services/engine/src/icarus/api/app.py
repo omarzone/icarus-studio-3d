@@ -45,6 +45,7 @@ from icarus.copilot.checkpoint_coach import CheckpointCoach
 from icarus.copilot.client import CopilotError, NotConnected
 from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.conversation_store import ConversationStore
+from icarus.copilot.early_look import EarlyLook, default_client
 from icarus.copilot.memory import CopilotMemory, memory_prompt
 from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
@@ -218,12 +219,12 @@ def _memory(projects_folder: Path, data_folder: Path):
 def _diagnosis_starter(registry: TaskRegistry, coach_: Coach, runs_: RunStore):
     """A watch rule fired at a coached checkpoint: the coach diagnoses it as a task."""
 
-    def start(run_id: str, step: int) -> None:
+    def start(run_id: str, step: int, notes: list[str]) -> None:
         status = runs_.folder(run_id).status()
 
         def work(context: TaskContext) -> None:
             context.progress(0.1, f"Diagnosing {status.name} at step {step:,}")
-            coach_.diagnose(run_id, step)
+            coach_.diagnose(run_id, step, notes=notes)
 
         registry.start("diagnosis", f"Diagnose {status.name} at step {step:,}", work, status.project_id)
 
@@ -281,7 +282,17 @@ def create_app(
     harness = Harness(publish, default_registry(), _memory(projects_folder, data_folder), hub, welcome=True)
     app.state.copilot.attach_harness(harness)
     starter = _diagnosis_starter(app.state.tasks, app.state.coach, app.state.runs)
-    checkpoints = CheckpointCoach(app.state.copilot, app.state.runs, starter)
+    checkpoints = CheckpointCoach(
+        app.state.copilot,
+        app.state.runs,
+        starter,
+        look=EarlyLook(default_client(app.state.model_settings)),
+        frames=app.state.run_frames,
+        piloted=app.state.autopilot.drives,
+        background=True,
+    )
+    app.state.autopilot.attach_watcher(checkpoints)
+    app.state.checkpoint_coach = checkpoints
     app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_run, publish, checkpoints.comment)
     app.state.supervisor.relay = app.state.run_relay
     app.state.ideas = IdeaBook()
