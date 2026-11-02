@@ -51,6 +51,8 @@ def test_the_latest_run_brings_its_status_and_evaluations(tmp_path):
     run = json.loads(project_context(state, runs, None, None))["latest_run"]
     assert run["name"] == "Run 1" and run["total_steps"] == 300_000
     assert run["evaluations"] == [{"step": 100_000, "episode_return": 3.5, "success_rate": 0.35, "failure_rate": 0.4}]
+    # The run goes on past its last evaluation; the success it reports says where it was measured.
+    assert run["success_measured_at_step"] == 100_000
 
 
 def test_the_design_reference_says_where_each_template_object_lives_and_how_to_add_one():
