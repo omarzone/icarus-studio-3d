@@ -9,6 +9,9 @@ from typing import TYPE_CHECKING, BinaryIO
 if TYPE_CHECKING:
     from icarus.training.supervisor import Supervisor
 
+# Open /events streams only end when the client leaves, so a stop must not wait on them forever.
+SHUTDOWN_GRACE_SECONDS = 3
+
 
 @dataclass(frozen=True)
 class EngineArgs:
@@ -51,7 +54,14 @@ def main(argv: list[str] | None = None) -> None:
     if args.projects_dir is not None:
         os.environ["ICARUS_PROJECTS_DIR"] = str(args.projects_dir)
     if not args.exit_with_stdin:
-        uvicorn.run("icarus.api.app:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
+        uvicorn.run(
+            "icarus.api.app:create_app",
+            factory=True,
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
+        )
         return
     # Native imports (MuJoCo) hang on Windows while another thread blocks reading stdin, so import first.
     from icarus.api.app import create_app
@@ -64,9 +74,16 @@ def main(argv: list[str] | None = None) -> None:
     )
     watch.start()
     if app is None:
-        uvicorn.run("icarus.api.app:create_app", factory=True, host=args.host, port=args.port, reload=True)
+        uvicorn.run(
+            "icarus.api.app:create_app",
+            factory=True,
+            host=args.host,
+            port=args.port,
+            reload=True,
+            timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
+        )
     else:
-        uvicorn.run(app, host=args.host, port=args.port)
+        uvicorn.run(app, host=args.host, port=args.port, timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS)
 
 
 if __name__ == "__main__":

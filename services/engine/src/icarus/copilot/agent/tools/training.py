@@ -55,6 +55,8 @@ def train(scope: TurnScope, args: TrainArgs) -> Observation:
     scope.reports.append(reply.text)
     if reply.acted:
         scope.side_effects.append(reply.text)
+        started = scope.services.runs.list_runs(scope.project_id) if args.action == "start" else []
+        scope.started_runs += [started[0].run_id] if started else []
     verb = step_said("training_started" if args.action == "start" else "training_stopped", scope.language)
     return Observation(reply.text, ok=reply.acted, summary=verb if reply.acted else reply.text.rstrip(".")[:200])
 

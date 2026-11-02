@@ -1,3 +1,4 @@
+import logging
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -6,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 from icarus.contracts.copilot import AgentStep, AttachmentInfo, Autonomy, CopilotProposal
+from icarus.contracts.events import EngineEvent
 from icarus.contracts.operations import EditOperation
 from icarus.contracts.project import ProjectState
 from icarus.copilot.attachments import AttachmentStore
@@ -19,9 +21,12 @@ from icarus.training.run_store import RunStore
 
 if TYPE_CHECKING:
     from icarus.copilot.agent.tools.coaching import Coaching
+    from icarus.copilot.hooks import HookRegistry
 
 type StepKind = Literal["inspect", "look", "try", "propose", "train", "library"]
 type Effect = Literal["read", "write"]
+
+log = logging.getLogger(__name__)
 
 OBSERVATION_CHARS = 6_000
 MAX_VIEWS = 4
@@ -102,7 +107,22 @@ class TurnScope:
     head_compiled: CompiledModel | None = None
     # The tools this turn may call by name; none means the chat's own set.
     tools: "dict[str, Tool[Any]] | None" = None
+    # The hook points this turn's calls pass through; none means the engine's default rules.
+    hooks: "HookRegistry | None" = None
+    # Where this turn's live events go (steps, views, proposals); none publishes nothing.
+    publish: Callable[[EngineEvent], None] | None = None
+    turn_id: str = ""
+    # Runs this turn started, for the message's run card.
+    started_runs: list[str] = field(default_factory=list)
     guard: threading.Lock = field(default_factory=threading.Lock)
+
+    def emit(self, event: EngineEvent) -> None:
+        if self.publish is None:
+            return
+        try:
+            self.publish(event)
+        except Exception:  # A broken listener must not break the person's turn.
+            log.exception("could not publish %s", event.type)
 
     def next_try_id(self) -> str:
         with self.guard:

@@ -3,10 +3,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from icarus.contracts.copilot import ChatAction
+from icarus.contracts.copilot import ChatAction, ChatSuggestion, CheckItem, PlanItem, SuggestionIntent
 from icarus.copilot.agent.tools.base import TurnScope
 from icarus.copilot.grounding import unsupported_numbers, without_unbacked
 from icarus.copilot.language import claims_change, points_to_apply, say
+from icarus.projects.document import all_objects
 from icarus.training.run_store import TERMINAL_STATES
 
 # Screens and states a navigate button may open, from docs/design/screens.md; Results joins once it works.
@@ -28,11 +29,14 @@ class _Output(BaseModel):
 class ActionDraft(_Output):
     label: str = Field(min_length=1, max_length=60, description="The button text, in the person's language.")
     # Apply and discard are added by the engine for an open proposal, never by the model.
-    kind: Literal["navigate", "send", "train"]
+    kind: Literal["navigate", "send", "train", "show", "dismiss", "apply_and_train"]
     target: str | None = Field(
         default=None,
         max_length=400,
-        description=f"navigate: one of {', '.join(WORKSPACES)}. send: the message to send. train: none.",
+        description=(
+            f"navigate: one of {', '.join(WORKSPACES)}. send: the message to send. show: the id of an object to "
+            "select and frame. train, dismiss, apply_and_train (apply this message's proposal, then train): none."
+        ),
     )
 
 
@@ -40,6 +44,26 @@ class FinalAnswer(_Output):
     answer: str = Field(min_length=1, max_length=4000, description="Your answer, in the person's language.")
     suggestions: list[str] = Field(default=[], max_length=3, description="Up to three short follow-up questions.")
     actions: list[ActionDraft] = Field(default=[], max_length=2, description="Up to two buttons under the answer.")
+    suggestion_intents: list[SuggestionIntent] = Field(
+        default=[],
+        max_length=3,
+        description="What each suggestion does, in the same order: ask sends it; the others also open its screen.",
+    )
+    title: str | None = Field(default=None, max_length=120, description="A short heading for the answer card.")
+    checks: list[CheckItem] = Field(
+        default=[], max_length=12, description="Checks you verified with tools this turn: ok or warn, one line each."
+    )
+    plan: list[PlanItem] = Field(
+        default=[], max_length=8, description="The changes of a next-step plan you propose, one per item."
+    )
+
+    def suggestion_items(self) -> list[ChatSuggestion]:
+        asks: list[SuggestionIntent] = ["ask"] * len(self.suggestions)
+        intents: list[SuggestionIntent] = [*self.suggestion_intents, *asks]
+        return [
+            ChatSuggestion(text=text[:120], intent=intent)
+            for text, intent in zip(self.suggestions, intents, strict=False)
+        ]
 
 
 def _unbacked(scope: TurnScope, text: str) -> list[str]:
@@ -64,7 +88,20 @@ def action_problem(scope: TurnScope, action: ActionDraft) -> str | None:
         case "send":
             if not action.target:
                 return "a send button needs the message to send in target"
+        case "show":
+            if action.target not in _object_ids(scope):
+                return f"show target {action.target!r} is not an object id of this project"
+        case "apply_and_train":
+            if scope.proposal is None or not _trainable(scope):
+                return "an apply_and_train button needs this turn's open proposal and a project that can train"
+        case "dismiss":
+            pass
     return None
+
+
+def _object_ids(scope: TurnScope) -> set[str]:
+    project = scope.state.project
+    return {body.id for body in project.bodies} | {item.id for item in all_objects(project)}
 
 
 def _false_claim(scope: TurnScope, text: str) -> bool:
@@ -105,6 +142,9 @@ def check(scope: TurnScope, final: FinalAnswer) -> list[str]:
             "you would change and ask whether to prepare it, without mentioning Apply."
         )
     problems += [problem for action in final.actions if (problem := action_problem(scope, action))]
+    for item in final.checks:
+        if found := _unbacked(scope, item.text):
+            problems.append(f"The check {item.text!r} cites numbers with no source: {', '.join(found)}")
     return problems
 
 
@@ -117,7 +157,20 @@ def degraded(scope: TurnScope, final: FinalAnswer) -> FinalAnswer:
         text = f"{say('nothing_proposed', scope.language)} {_without_phantom(text)}".strip()
     suggestions = [item for item in final.suggestions if not _unbacked(scope, item)]
     actions = [action for action in final.actions if action_problem(scope, action) is None]
-    return FinalAnswer(answer=text, suggestions=suggestions, actions=actions)
+    kept = [index for index, item in enumerate(final.suggestions) if not _unbacked(scope, item)]
+    intents: list[SuggestionIntent] = [
+        final.suggestion_intents[index] for index in kept if index < len(final.suggestion_intents)
+    ]
+    checks = [item for item in final.checks if not _unbacked(scope, item.text)]
+    return FinalAnswer(
+        answer=text,
+        suggestions=suggestions,
+        actions=actions,
+        suggestion_intents=intents if len(intents) == len(suggestions) else [],
+        title=final.title,
+        checks=checks,
+        plan=final.plan,
+    )
 
 
 def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[tuple[str, str]]) -> list[ChatAction]:

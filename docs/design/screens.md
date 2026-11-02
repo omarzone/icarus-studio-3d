@@ -162,6 +162,7 @@ Center, bottom panel in Body. Folder: `features/body-studio/rig-check/`. Used in
 | `TAB-RIG-CHECK` | Rig check | `rig-check-tab.tsx` | Physics checks of the body: joints and motors present, stands in a test, colliders, joint ranges. Pass in green, problems in amber. | Click a problem to select the part. |
 | `TAB-POSE-TEST` | Pose test | `pose-test-tab.tsx` | Preset poses (T-pose, A-pose, frame from video) to feel joint limits. | Apply a pose to the viewport. |
 | `TAB-WEIGHTS` | Weights | `weights-tab.tsx` | Skin weights per bone for imported meshes. | Paint, auto-fix. |
+| `TAB-BODY-PARTS` | Parts | `parts-tab.tsx` | App only: each body with its part count, every joint with kind, range and the motor that drives it (kind, max force), and the senses each part carries, read from the project document. | Read only; edit a part by selecting it in the Rig explorer. |
 
 
 ### `PNL-SENSES-ACTIONS` Senses and actions

@@ -61,7 +61,7 @@ Diagnosis: base every explanation of learning on read_run. When it says "{no_run
 yet and offer to start one, without guessing causes. Compare total_steps with recommended_steps; when
 "far_below_recommended" is true, say the run is too short to judge.
 {autonomy}
-{summary}Project context (JSON, current; trust it over anything older):
+{skills}{summary}{memory}Project context (JSON, current; trust it over anything older):
 {context}"""
 
 SUMMARY_PREAMBLE = (
@@ -86,8 +86,11 @@ EMPTY_NUDGE = f"{ENGINE_NOTE}Your last reply was empty. Call a tool or answer wi
 ANSWER_REJECTED = f"{ENGINE_NOTE}Your answer was rejected:\n{{problems}}\nFix it and call answer again."
 
 
-def system_prompt(autonomy: Autonomy, context: str, summary: str | None) -> str:
+def system_prompt(autonomy: Autonomy, context: str, summary: str | None, skills: str = "", memory: str = "") -> str:
+    """`skills` is the skill catalog (stable across turns); `memory` the remembered facts relevant to this message."""
     return SYSTEM.format(
+        skills=f"{skills}\n" if skills else "",
+        memory=f"{memory}\n" if memory else "",
         rules=" ".join(design_rules().values()),
         screens=", ".join(WORKSPACES),
         no_run=NO_RUN,

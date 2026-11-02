@@ -11,17 +11,20 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from icarus.contracts.copilot import AgentStep
+from icarus.contracts.events import EngineEvent, ProposalCreatedEvent, StepEvent, ViewTakenEvent
 from icarus.copilot.agent import answer
 from icarus.copilot.agent.answer import FinalAnswer
 from icarus.copilot.agent.budget import AgentLimits, TurnBudget, ceiling
 from icarus.copilot.agent.compaction import fit_step, prune_observations, retire_pictures, strip_pictures, truncate
 from icarus.copilot.agent.notes import PICTURES_NOTE
-from icarus.copilot.agent.permissions import permission
+from icarus.copilot.agent.permissions import Permission
 from icarus.copilot.agent.prompt import ANSWER_REJECTED, EMPTY_NUDGE, PROPOSE_STILL, RESTATE, WRAP_UP
 from icarus.copilot.agent.tokens import estimate
 from icarus.copilot.agent.tools import REGISTRY
 from icarus.copilot.agent.tools.base import Effect, Observation, Tool, TurnScope, tool_definition
+from icarus.copilot.builtin_hooks import default_registry
 from icarus.copilot.client import ContextOverflow, CopilotError, InputRejected, ModelClient, ToolCall, schema_problems
+from icarus.copilot.hooks import HookContext
 from icarus.copilot.language import say
 from icarus.copilot.step_words import STEP_TEXTS, step_said
 
@@ -40,6 +43,7 @@ NO_ROOM = (
     "in Settings"
 )
 STEP_LIMIT = 20
+CANCELLED = {"en": "The task was stopped", "es": "La tarea se detuvo"}
 
 
 def definitions(registry: dict[str, Tool[Any]] | None = None) -> list[dict[str, Any]]:
@@ -101,6 +105,24 @@ def _encoded(data: dict[str, Any]) -> list[str]:
     return hints
 
 
+def publish(scope: TurnScope, event: EngineEvent) -> None:
+    scope.emit(event)
+
+
+def _before_tool(scope: TurnScope, tool: str, args: BaseModel) -> tuple[Permission, str]:
+    """The before_tool hook point: a block denies the call, a suggestion offers it as a button instead."""
+    hooks = scope.hooks or default_registry()
+    fields = {"autonomy": scope.autonomy, "project_id": scope.project_id}
+    outcome = hooks.run(HookContext("before_tool", tool, args.model_dump(mode="json"), fields))
+    for event in outcome.events():
+        publish(scope, event)
+    if outcome.blocked:
+        return "deny", outcome.block_reason
+    if outcome.suggestions:
+        return "offer", outcome.suggestions[0]
+    return "allow", ""
+
+
 def _plan(scope: TurnScope, call: ToolCall, budget: TurnBudget, off: frozenset[str] | None, index: int) -> _Planned:
     """Parse, validate, permit and count one call; nothing runs here."""
     registry = scope.tools or REGISTRY
@@ -139,7 +161,7 @@ def _plan(scope: TurnScope, call: ToolCall, budget: TurnBudget, off: frozenset[s
         planned.result = _rejected(scope, tool, "You already did this twice; the result has not changed.", "repeated")
         return planned
     budget.repeated[key] += 1
-    allowed, why = permission(tool.name, args, scope.autonomy)
+    allowed, why = _before_tool(scope, tool.name, args)
     if allowed == "deny":
         planned.result = _rejected(scope, tool, why, "ask_mode")
         return planned
@@ -201,6 +223,7 @@ def _trains_after_applies(planned: list[_Planned]) -> list[_Planned]:
 def execute_batch(scope: TurnScope, calls: list[ToolCall], budget: TurnBudget, off: frozenset[str] | None) -> _Batch:
     """Run one step's calls; `off` names the only tools still allowed once a limit forced the answer."""
     others = [call for call in calls if call.name != ANSWER_TOOL]
+    views_before, proposal_before = len(scope.views), scope.proposal
     planned = _trains_after_applies([_plan(scope, call, budget, off, i) for i, call in enumerate(others)])
     for segment in _segments(planned):
         if len(segment) > 1 or segment[0].effect == "read":
@@ -232,9 +255,18 @@ def execute_batch(scope: TurnScope, calls: list[ToolCall], budget: TurnBudget, o
         batch.summaries[item.call.id] = result.summary
         if item.tool is not None:
             summary = result.summary or step_said("used", scope.language, tool=item.tool.name)
-            scope.steps.append(AgentStep(tool=item.tool.step, summary=summary[:200], ok=result.ok))
+            step = AgentStep(tool=item.tool.step, summary=summary[:200], ok=result.ok)
+            scope.steps.append(step)
+            publish(scope, StepEvent(type="step", turn_id=scope.turn_id, step=step))
         if result.image is not None and scope.can_see:
             batch.images.append((result.image_label or item.call.name, result.image))
+    for view in scope.views[views_before:]:
+        publish(scope, ViewTakenEvent(type="view_taken", turn_id=scope.turn_id, attachment_id=view.id))
+    if scope.proposal is not None and scope.proposal is not proposal_before:
+        created = ProposalCreatedEvent(
+            type="proposal_created", proposal_id=scope.proposal.id, summary=scope.proposal.summary[:200]
+        )
+        publish(scope, created)
     answers = [call for call in calls if call.name == ANSWER_TOOL]
     for extra in answers[:-1]:
         batch.messages.append(
@@ -304,7 +336,10 @@ def run_loop(
     limits: AgentLimits,
     window: int,
     on_overflow: Callable[[int], None] = lambda tokens: None,
+    inbox: Callable[[], list[str]] = list,
+    cancelled: Callable[[], bool] = lambda: False,
 ) -> LoopOutcome:
+    """`inbox` brings notes queued since the last step (a subagent's messages); `cancelled` ends the turn early."""
     budget = TurnBudget(limits, window)
     tools = definitions(scope.tools)
     transcript = list(messages)
@@ -317,6 +352,10 @@ def run_loop(
     spoken: FinalAnswer | None = None
     restating = False
     while True:
+        if cancelled():
+            outcome.final = engine_answer(scope, CANCELLED[scope.language])
+            return outcome
+        transcript += [note(text) for text in inbox()]
         retire_pictures(transcript, limits.images_kept)
         top = ceiling(budget.window, limits)
         if estimate(transcript, tools, budget.measured, budget.measured_messages) > limits.prune_ratio * top:

@@ -145,7 +145,7 @@ def test_fix_mode_stops_a_stalled_run_applies_the_fix_and_continues_warm_until_t
     head = app.state.store.state(project_id)
     assert head.revision.number == 2 and head.revision.author == "copilot"
     assert app.state.runs.folder(second).config().revision_number == 2
-    said = texts(app, project_id)
+    said = texts(app, project_id)[1:]  # after the opener of a new conversation
     assert said[0].startswith("Autopilot on") and any("Softer time penalty" in text for text in said)
     assert any(text.startswith("Done:") for text in said)
     assert any("stopped improving" in line.text.lower() or "not improved" in line.text for line in status.log)

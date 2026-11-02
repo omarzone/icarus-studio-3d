@@ -1,7 +1,9 @@
 import contextlib
 import json
 import threading
-from dataclasses import replace
+from collections.abc import Callable
+from dataclasses import dataclass, replace
+from typing import Any
 
 from icarus.contracts.copilot import (
     Autonomy,
@@ -12,25 +14,33 @@ from icarus.contracts.copilot import (
     CopilotProposal,
     SendMessage,
 )
+from icarus.contracts.events import EngineEvent, ProposalAppliedEvent
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
 from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.harness import SUBAGENT_NOTE, chat_tools, worker_tools
+from icarus.copilot.agent.loop import run_loop
+from icarus.copilot.agent.prompt import system_prompt
 from icarus.copilot.agent.summary_store import SummaryStore
-from icarus.copilot.agent.tools.base import ToolServices
+from icarus.copilot.agent.tools.base import Tool, ToolServices, TurnScope
 from icarus.copilot.agent.tools.coaching import Coaching
 from icarus.copilot.agent.turn import TurnSetup, new_message, run_turn
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.candidate import dry_run, new_proposal
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import InputRejected, ModelClient, ToolsRefused, capability_client, copilot_client
-from icarus.copilot.context import project_context
+from icarus.copilot.context import lean_context, project_context
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.grounding import UNSUPPORTED_ANSWER
+from icarus.copilot.hooks import HookRegistry
 from icarus.copilot.language import Language, detect
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.copilot.single_shot import AUTOPILOT, SYSTEM, ChatReply, ProposalDraft, Review, history_text
+from icarus.copilot.skill_tool import skill_catalog_text
+from icarus.copilot.subagents import SubagentJob, SubagentOutcome, Subagents
 from icarus.copilot.turn_media import TurnMedia, turn_media
+from icarus.copilot.welcome import welcome_message
 from icarus.design.scene import scene_description
 from icarus.projects.store import PROJECT_ID, ProjectStore
 from icarus.sim.views import ViewRenderer
@@ -75,6 +85,18 @@ def _retire_open(conversation: Conversation) -> None:
             proposal.status = "outdated"
 
 
+@dataclass(frozen=True)
+class Harness:
+    """What the engine app hands the chat: where events go, its hook points, project memory and the subagent hub."""
+
+    publish: Callable[[EngineEvent, str | None], None] | None = None
+    hooks: HookRegistry | None = None
+    memory: Callable[[TurnScope, str], str] | None = None
+    subagents: Subagents | None = None
+    # A new project's empty conversation opens with a copilot message and starter suggestions.
+    welcome: bool = False
+
+
 class Copilot:
     """The chat role: an agent turn per message, proposals validated by a try, applied through the project store."""
 
@@ -100,6 +122,8 @@ class Copilot:
         self._limits = limits or AgentLimits()
         self._busy: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
+        self._harness = Harness()
+        self._tools: dict[str, Tool[Any]] | None = None
 
     @property
     def services(self) -> ToolServices:
@@ -116,6 +140,15 @@ class Copilot:
     def attach_coaching(self, coaching: Coaching) -> None:
         """Hands the chat's tools the coach and the autopilot, which are built after the copilot they post through."""
         self._services = replace(self._services, coaching=coaching)
+
+    def attach_harness(self, harness: Harness) -> None:
+        """Turns on the harness extensions: their tools, the skill catalog, memory, hooks and live events."""
+        self._harness = harness
+        self._tools = chat_tools(harness.subagents)
+
+    def _publish(self, event: EngineEvent, project_id: str) -> None:
+        if self._harness.publish is not None:
+            self._harness.publish(event, project_id)
 
     def post(self, project_id: str, message: CopilotMessage, proposals: list[CopilotProposal]) -> Conversation:
         """A message the copilot sends on its own, such as the coach's diagnosis or an autopilot step."""
@@ -135,6 +168,11 @@ class Copilot:
     def conversation(self, project_id: str) -> Conversation:
         head = self._projects.state(project_id).revision.number
         with self._conversations.editing(project_id) as conversation:
+            if not conversation.messages and not conversation.proposals and self._harness.welcome:
+                opener, starters = welcome_message(self._projects.state(project_id).project)
+                conversation.messages.append(opener)
+                conversation.suggestions = [item.text for item in starters]
+                conversation.suggestion_items = starters
             for proposal in conversation.proposals:
                 if proposal.status == "open" and proposal.base_revision != head:
                     proposal.status = "outdated"
@@ -172,7 +210,7 @@ class Copilot:
         user_message = new_message("user", message.text, attachments=media.infos)
         if self._settings.refuses_tools(capability):
             return self._single_shot(project_id, message, media, client, sees, user_message)
-        setup = TurnSetup(self._services, self._settings, self._summaries, client, capability, self._limits)
+        setup = self._setup(client, capability)
         try:
             result = run_turn(setup, conversation, message, media)
         except ToolsRefused:
@@ -188,7 +226,60 @@ class Copilot:
             stored.messages += [user_message, result.message]
             stored.proposals += result.proposals
             stored.suggestions = result.suggestions
+            stored.suggestion_items = result.suggestion_items
         return self.conversation(project_id)
+
+    def _setup(self, client: ModelClient, capability: Capability) -> TurnSetup:
+        harness = self._harness
+        skills = skill_catalog_text() if self._tools is not None else ""
+        return TurnSetup(
+            self._services,
+            self._settings,
+            self._summaries,
+            client,
+            capability,
+            self._limits,
+            tools=self._tools,
+            hooks=harness.hooks,
+            publish=harness.publish,
+            skills=skills,
+            memory=harness.memory,
+        )
+
+    def subagent_loop(self, job: SubagentJob) -> SubagentOutcome:
+        """A subagent's turn: the loop with the job's brief, tools, skills and budget, outside the conversation."""
+        client = copilot_client(self._settings)
+        state = self._projects.state(job.project_id)
+        language = detect(job.brief)
+        scope = TurnScope(job.project_id, state, job.autonomy, self._services, request=job.brief, language=language)
+        available = worker_tools()
+        scope.tools = {name: available[name] for name in job.tools if name in available}
+        scope.hooks, scope.turn_id = self._harness.hooks, job.task_id
+
+        def forward(event: EngineEvent) -> None:
+            if event.type == "step":
+                job.progress(min(len(scope.steps) / max(job.budget.max_steps, 1), 0.95), event.step.summary)
+            self._publish(event, job.project_id)
+
+        scope.publish = forward
+        context = lean_context(state, self._runs, None, None, None)
+        scope.sources.append(context)
+        skills = skill_catalog_text() if job.skills else ""
+        system = f"{system_prompt(job.autonomy, context, None, skills)}\n{SUBAGENT_NOTE}"
+        wanted = f" Follow these skills: {', '.join(job.skills)}." if job.skills else ""
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": f"{job.brief}{wanted}"}]
+        limits = replace(self._limits, max_model_calls=job.budget.max_steps, wall_seconds=job.budget.max_seconds)
+        window = self._settings.context_tokens("reasoning") or limits.context_tokens
+        outcome = run_loop(
+            client, scope, messages, limits, window, inbox=job.next_messages, cancelled=lambda: job.token.cancelled
+        )
+        made = [*scope.applied, *([scope.proposal] if scope.proposal else [])]
+        if scope.proposal is not None:
+            with self._conversations.editing(job.project_id) as stored:
+                _retire_open(stored)
+                stored.proposals.append(scope.proposal)
+        answer = outcome.final.answer if outcome.final else (outcome.failure or "")
+        return SubagentOutcome(answer=answer, proposal_ids=tuple(item.id for item in made))
 
     def _single_shot(
         self,
@@ -291,6 +382,9 @@ class Copilot:
                 proposal.applied_revision = state.revision.number
         if outdated:
             raise ProposalOutdated(proposal_id)
+        revision = self._projects.state(project_id).revision.number
+        applied = ProposalAppliedEvent(type="proposal_applied", proposal_id=proposal_id, revision=revision)
+        self._publish(applied, project_id)
         return self.conversation(project_id)
 
     def discard(self, proposal_id: str) -> Conversation:

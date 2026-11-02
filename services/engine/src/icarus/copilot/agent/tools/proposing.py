@@ -2,10 +2,13 @@ import json
 
 from pydantic import Field
 
+from icarus.contracts.events import ProposalAppliedEvent
 from icarus.contracts.operations import OperationBatch
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TryResult, TurnScope
+from icarus.copilot.builtin_hooks import default_registry
 from icarus.copilot.candidate import dry_run, new_proposal
 from icarus.copilot.grounding import unsupported_numbers
+from icarus.copilot.hooks import HookContext
 from icarus.copilot.language import say
 from icarus.copilot.step_words import step_said
 from icarus.projects.operations import OperationError
@@ -73,6 +76,16 @@ def propose(scope: TurnScope, args: ProposeArgs) -> Observation:
     return Observation(text, summary=step_said("proposed", scope.language, summary=args.summary))
 
 
+def _before_apply(scope: TurnScope) -> str | None:
+    """The before_apply hook point for a change the copilot applies itself; a block is why it may not."""
+    hooks = scope.hooks or default_registry()
+    fields = {"autonomy": scope.autonomy, "actor": "copilot", "project_id": scope.project_id}
+    outcome = hooks.run(HookContext("before_apply", fields=fields))
+    for event in outcome.events():
+        scope.emit(event)
+    return outcome.block_reason if outcome.blocked else None
+
+
 def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
     tried = _passed(scope, args.try_id)
     if isinstance(tried, str):
@@ -91,6 +104,9 @@ def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
             summary=step_said("apply_failed", scope.language),
         )
     proposal = new_proposal(head.project, head.revision.number, args.summary, args.summary, tried.operations, [], False)
+    refused = _before_apply(scope)
+    if refused:
+        return Observation(refused, ok=False, summary=step_said("apply_failed", scope.language))
     try:
         state = services.projects.apply(
             scope.project_id, OperationBatch(operations=tried.operations, author="copilot", summary=args.summary)
@@ -101,6 +117,7 @@ def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
         )
     proposal.status, proposal.applied_revision = "applied", state.revision.number
     scope.applied.append(proposal)
+    scope.emit(ProposalAppliedEvent(type="proposal_applied", proposal_id=proposal.id, revision=state.revision.number))
     scope.state, scope.head_compiled, scope.proposal, scope.proposal_try = state, None, None, None
     revision = state.revision.number
     scope.side_effects.append(say("applied", scope.language, summary=args.summary, revision=revision))

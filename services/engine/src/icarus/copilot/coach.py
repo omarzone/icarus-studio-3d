@@ -6,6 +6,7 @@ from typing import Any
 
 from icarus.contracts.coach import Diagnosis, DiagnosisEvidence
 from icarus.contracts.copilot import AttachmentInfo, Capability, ChatAction, CopilotMessage
+from icarus.contracts.events import DiagnosisCreatedEvent
 from icarus.copilot.agent.answer import FinalAnswer
 from icarus.copilot.agent.ending import polished
 from icarus.copilot.agent.loop import merged_steps, run_loop
@@ -17,6 +18,7 @@ from icarus.copilot.coach_words import coach_said
 from icarus.copilot.context import lean_context, run_facts
 from icarus.copilot.language import Language, say
 from icarus.copilot.run_frames import RunFrames
+from icarus.tasks import Publisher
 from icarus.training.failure_groups import failure_groups
 from icarus.training.progress_watch import WatchFinding, checkpoint_results, watch
 from icarus.training.run_store import RunFolder
@@ -75,6 +77,10 @@ class Coach:
         self._projects, self._runs = services.projects, services.runs
         self._busy: set[str] = set()
         self._guard = threading.Lock()
+        self._publish: Publisher | None = None
+
+    def attach_publisher(self, publish: Publisher) -> None:
+        self._publish = publish
 
     def diagnoses(self, run_id: str) -> list[Diagnosis]:
         return self._runs.folder(run_id).diagnoses()
@@ -188,6 +194,9 @@ class Coach:
             steps=merged_steps(scope.steps),
         )
         self._copilot.post(project_id, message, [proposal] if proposal else [])
+        if self._publish is not None:
+            event = DiagnosisCreatedEvent(type="diagnosis_created", diagnosis_id=diagnosis.id, run_id=diagnosis.run_id)
+            self._publish(event, project_id)
         return diagnosis
 
     def _run(self, scope: CoachScope, messages: list[dict]) -> tuple[FinalAnswer | None, str | None]:
