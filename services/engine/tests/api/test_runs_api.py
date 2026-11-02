@@ -187,6 +187,7 @@ LOOK_EDITS = {
     ],
     "car color": [edit("car", "material", "color", {"type": "color", "value": "#d23b3b"})],
     "sun light": [edit("sun", "light", "intensity", {"type": "slider", "value": 2})],
+    "ray name": [edit("car", "distance_ray", "name", {"type": "text", "value": "Nose"})],
     "project name": [{"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}],
 }
 

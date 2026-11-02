@@ -3,8 +3,11 @@ from icarus.contracts.project import Project
 
 # Components that physics, senses and rewards never read (ADR 007: looks stay out of the simulation).
 LOOK_COMPONENTS = frozenset({"sky", "light"})
-# Properties of physical components that only change the drawing; the material's surface sets friction, so it stays.
-LOOK_PROPERTIES = {"material": frozenset({"color", "style", "transparency", "reflectance", "cast_shadow"})}
+# Properties that only change the drawing or a label; the material's surface sets friction, so it stays.
+LOOK_PROPERTIES = {
+    "material": frozenset({"color", "style", "transparency", "reflectance", "cast_shadow"}),
+    "distance_ray": frozenset({"name"}),
+}
 
 
 def _training_objects(objects: list[ObjectSpec]) -> list[dict[str, object]]:
