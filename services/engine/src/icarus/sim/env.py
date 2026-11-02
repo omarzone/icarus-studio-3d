@@ -16,7 +16,7 @@ from icarus.sim.model_state import (
     reset_world,
     reward_state,
 )
-from icarus.sim.poses import geom_poses, moving_geoms
+from icarus.sim.poses import geom_poses, live_rays, moving_geoms, pose_rows
 from icarus.sim.rewards import RewardState, compose, delivered, parked
 from icarus.sim.start_pose import place_start
 from icarus.sim.variation import WorldVariation
@@ -52,6 +52,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._state = reward_state(self.world)
         self._geoms = sorted(set(moving_geoms(self.world)) | self.variation.moved_geoms)
         self.moving_geoms = [self.world.model.geom(index).name for index in self._geoms]
+        # Training turns this on so each step's info carries the pose for the live view; evaluations leave it off.
+        self.live_recording = False
+        self._episode = 0
         self._start_episode()
 
     def _start_episode(self) -> None:
@@ -76,6 +79,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
             reset_world(self.world)
             place_start(self.world, self.np_random)
         self._state = reward_state(self.world)
+        self._episode += 1
         self._start_episode()
         return observation(self.world), {}
 
@@ -99,4 +103,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
             info["is_success"] = reached
             info["failed"] = not reached and (after.fallen or self._collided)
             info["episode_terms"] = dict(self._episode_terms)
+        if self.live_recording:
+            rows = pose_rows(self.world, self._geoms)
+            info["live_frame"] = (self._episode, round(float(self.world.data.time), 3), rows, live_rays(self.world))
         return observation(self.world), float(reward), terminated, truncated, info

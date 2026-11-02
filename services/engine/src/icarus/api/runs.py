@@ -33,7 +33,8 @@ from icarus.training.supervisor import Supervisor
 router = APIRouter()
 
 POLL_PERIOD = 0.25
-SNAPSHOT_PERIOD = 0.2
+# Live snapshots carry the frames since the previous one, so each must reach the view: check for one this often.
+SNAPSHOT_POLL_PERIOD = 0.05
 KEEPALIVE_PERIOD = 15.0
 
 
@@ -115,8 +116,20 @@ class _EventCursor:
         self.metrics = 0
         self.logs = 0
         self.status: RunStatus | None = None
-        self.snapshot_step: int | None = None
-        self.snapshot_sent = 0.0
+        self.snapshot_version: tuple[int, int, int] | None = None
+        self.finished = False
+
+    def poll_snapshot(self) -> list[RunEvent]:
+        """The live snapshot when the worker wrote a new one since the last poll."""
+        version = self.folder.snapshot_version()
+        if self.finished or version is None or version == self.snapshot_version:
+            return []
+        self.snapshot_version = version
+        try:
+            snapshot = self.folder.snapshot()
+        except (OSError, ValueError):
+            return []
+        return [SnapshotEvent(type="snapshot", snapshot=snapshot)] if snapshot is not None else []
 
     def poll(self) -> tuple[list[RunEvent], bool]:
         folder = self.folder
@@ -133,12 +146,8 @@ class _EventCursor:
         events += [LogEvent(type="log", line=line) for line in lines[self.logs :]]
         self.logs = len(lines)
         finished = status.state in TERMINAL_STATES
-        now = time.monotonic()
-        if not finished and now - self.snapshot_sent >= SNAPSHOT_PERIOD:
-            snapshot = folder.snapshot()
-            if snapshot is not None and snapshot.step != self.snapshot_step:
-                events.append(SnapshotEvent(type="snapshot", snapshot=snapshot))
-                self.snapshot_step, self.snapshot_sent = snapshot.step, now
+        events += self.poll_snapshot()
+        self.finished = finished
         if status != self.status:
             events.append(StatusEvent(type="status", status=status))
             self.status = status
@@ -147,8 +156,13 @@ class _EventCursor:
 
 async def _stream(cursor: _EventCursor) -> AsyncIterator[str]:
     quiet_since = time.monotonic()
+    polled = 0.0
     while True:
-        events, finished = await asyncio.to_thread(cursor.poll)
+        if time.monotonic() - polled >= POLL_PERIOD:
+            polled = time.monotonic()
+            events, finished = await asyncio.to_thread(cursor.poll)
+        else:
+            events, finished = await asyncio.to_thread(cursor.poll_snapshot), False
         for event in events:
             yield f"data: {RunEventEnvelope(event=event).model_dump_json()}\n\n"
         if finished:
@@ -159,7 +173,7 @@ async def _stream(cursor: _EventCursor) -> AsyncIterator[str]:
         elif now - quiet_since >= KEEPALIVE_PERIOD:
             quiet_since = now
             yield ": keepalive\n\n"
-        await asyncio.sleep(POLL_PERIOD)
+        await asyncio.sleep(SNAPSHOT_POLL_PERIOD)
 
 
 @router.get("/runs/{run_id}/events")

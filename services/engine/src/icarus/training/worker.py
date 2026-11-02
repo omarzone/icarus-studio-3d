@@ -13,6 +13,7 @@ from icarus.contracts.specs import BrainSpec
 from icarus.contracts.training import RunState
 from icarus.sim.env import ProjectEnv
 from icarus.training.copy_process import start_copies
+from icarus.training.experiment_switches import read_experiments
 from icarus.training.lifeline import watch_parent
 from icarus.training.progress import RunProgress
 from icarus.training.run_store import RunFolder
@@ -83,7 +84,9 @@ def train(run_dir: Path, device: Device = "cpu") -> RunState:
             progress.log("Stop requested before training started")
             progress.finish("stopped", 0)
             return "stopped"
-        geoms = ProjectEnv(progress.project).moving_geoms
+        sample = ProjectEnv(progress.project)
+        geoms, rays = sample.moving_geoms, len(sample.poses().rays)
+        live_view = read_experiments().live_view
         brain = progress.project.brain
         arguments = ppo_arguments(brain, config.copies)
         warm = config.warm_start
@@ -114,7 +117,7 @@ def train(run_dir: Path, device: Device = "cpu") -> RunState:
         progress.checkpoint(model, 0, 0)
         progress.stopping = progress.folder.stop_requested()
         if not progress.stopping:
-            model.learn(total_timesteps=config.total_steps, callback=TrainingCallback(progress, geoms))
+            model.learn(total_timesteps=config.total_steps, callback=TrainingCallback(progress, geoms, live_view, rays))
         step = model.num_timesteps
         final = step if progress.stopping else config.total_steps
         if not progress.has_checkpoint(final):

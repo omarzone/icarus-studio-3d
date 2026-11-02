@@ -45,6 +45,7 @@ Add dependencies with `uv add`, never `pip install`. Justify any new dependency 
 - **Reward:** composed only from library reward terms. Changing a term's implementation bumps its version; older runs are no longer comparable.
 - **Copilot:** agent steps use native tool calls whose arguments are validated with Pydantic; roles that return one structured output keep `response_format` with the target model's JSON Schema. Validate, retry **once** passing the error, then return a readable error. Split model reasoning from the final answer in the client, not in each caller. Numbers cited about a run must exist in that run's data.
 - **Windows:** `if __name__ == "__main__":` is mandatory in entrypoints that use `SubprocVecEnv` (spawn start method). Use `pathlib` for paths.
+- **Experiments:** a new switch is a field with its default on `Experiments` (`contracts/experiments.py`), read through `read_experiments()` (`training/experiment_switches.py`), which keeps the default for any missing or invalid value.
 - **Headless:** never open the MuJoCo viewer in tests or in the worker; use offscreen rendering.
 
 ## Traps that already cost us

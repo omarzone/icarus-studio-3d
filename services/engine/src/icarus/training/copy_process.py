@@ -19,7 +19,9 @@ def run_copy(remote: Connection, parent_remote: Connection, project_json: str) -
             command, data = remote.recv()
         except (EOFError, KeyboardInterrupt):
             return
-        if command == "step":
+        if command in ("step", "step_recorded"):
+            # The live view asks for a captured frame only on the steps it will show.
+            env.live_recording = command == "step_recorded"
             observation, reward, terminated, truncated, info = env.step(data)
             done = terminated or truncated
             info["TimeLimit.truncated"] = truncated and not terminated

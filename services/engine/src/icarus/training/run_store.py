@@ -220,7 +220,16 @@ class RunFolder:
         return number
 
     def write_snapshot(self, snapshot: TrainingSnapshot) -> None:
-        _write(self.path / "live.json", snapshot.model_dump_json())
+        # Empty rays and absent fields are left out: the file is rewritten several times a second.
+        _write(self.path / "live.json", snapshot.model_dump_json(exclude_defaults=True))
+
+    def snapshot_version(self) -> tuple[int, int, int] | None:
+        """Which live.json is there now (each write replaces the file), so a reader skips one it already has."""
+        try:
+            stat = (self.path / "live.json").stat()
+        except OSError:
+            return None
+        return (stat.st_ino, stat.st_mtime_ns, stat.st_size)
 
     def snapshot(self) -> TrainingSnapshot | None:
         path = self.path / "live.json"
