@@ -105,14 +105,24 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
         disabledReason={training.graphicsCard === null ? "No graphics card was found on this computer" : undefined}
         onChange={(value) => setTraining.mutate({ useGraphicsCard: value }, store)}
       />
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label="Keep checkpoints"
-          value={checkpoints}
-          onChange={(event) => setCheckpoints(event.target.value)}
-          onBlur={() => setTraining.mutate({ checkpoints }, store)}
-        />
-      </div>
+      {app ? (
+        // Checkpoints are not a choice in the app: every scheduled one stays with its run, in the data folder.
+        <div className="flex flex-col gap-1">
+          <span className="text-ui text-fg-secondary">Checkpoints</span>
+          <span className="text-body text-fg-tertiary">
+            Every scheduled checkpoint is kept with its run, inside the data folder shown in Storage.
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Keep checkpoints"
+            value={checkpoints}
+            onChange={(event) => setCheckpoints(event.target.value)}
+            onBlur={() => setTraining.mutate({ checkpoints }, store)}
+          />
+        </div>
+      )}
       <div className="flex items-center gap-3 rounded-card-sm bg-control px-3.5 py-3">
         {training.engine.healthy ? (
           <Check size={16} strokeWidth={1.75} className="text-ok" aria-hidden />
