@@ -1,8 +1,10 @@
+import type { FolderChoice } from "../../shared/storage-bridge.ts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AvatarTone } from "../ui/avatar.tsx";
 import { createSettingsFixture } from "./settings.fixture.ts";
 import { createEngineModelSettings, createEngineTrainingSettings } from "./settings-engine.ts";
+import { createEngineStorage } from "./storage-engine.ts";
 
 export type ModelCapability = "reasoning" | "vision" | "image" | "pose";
 
@@ -39,6 +41,30 @@ export type TrainingSettings = {
   engine: { version: string; healthy: boolean };
 };
 
+export type DataFolderMove = {
+  state: "idle" | "moving" | "done" | "failed";
+  folder: string | null;
+  progress: number;
+  text: string;
+  // What moved and what stayed where it was, one sentence each.
+  lines: string[];
+  // The new folder is saved; the engine uses it once it starts again.
+  restartNeeded: boolean;
+};
+
+export type StorageSettings = {
+  dataFolder: string;
+  projectsFolder: string;
+  runsFolder: string;
+  projectsBytes: number;
+  runsBytes: number;
+  freeBytes: number;
+  setByEnvironment: boolean;
+  move: DataFolderMove;
+};
+
+export type DataFolderCheck = { folder: string; problem: string | null; neededBytes: number; freeBytes: number };
+
 export type NotificationOption = "runFinished" | "copilotNeedsOk" | "remixOrComment" | "communityNews";
 
 export type NotificationSettings = Record<NotificationOption, boolean>;
@@ -60,6 +86,13 @@ export type SettingsPort = {
   getTraining: () => Promise<TrainingSettings>;
   setTraining: (patch: Partial<Omit<TrainingSettings, "engine" | "maxThreads">>) => Promise<TrainingSettings>;
   restartEngine: () => Promise<void>;
+  getStorage: () => Promise<StorageSettings>;
+  // Opens the native folder picker.
+  chooseDataFolder: () => Promise<FolderChoice>;
+  checkDataFolder: (folder: string) => Promise<DataFolderCheck>;
+  // Moving leaves nothing behind but what could not be verified; otherwise the old data stays where it is.
+  changeDataFolder: (input: { folder: string; moveData: boolean }) => Promise<DataFolderMove>;
+  getDataFolderMove: () => Promise<DataFolderMove>;
   getNotificationSettings: () => Promise<NotificationSettings>;
   setNotification: (input: { option: NotificationOption; value: boolean }) => Promise<NotificationSettings>;
 };
@@ -100,6 +133,7 @@ export const settingsPort = definePort<SettingsPort>({
     ...createEngineTrainingSettings(),
     // The main process restarts it; requests wait while it starts again.
     restartEngine: () => window.icarus.engine.restart(),
+    ...createEngineStorage(),
     getNotificationSettings: pending({
       key: "settings.notifications",
       summary: "Notification settings",

@@ -1,8 +1,10 @@
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tokens } from "@icarus/ui-tokens";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
+import { STORAGE_CHANNEL } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL } from "../shared/window-bridge.ts";
+import { folderChoice } from "./data-folder-choice.ts";
 import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
 import { isTitleBarHeight, resizeTitleBar, windowFrame } from "./window-frame.ts";
@@ -74,6 +76,15 @@ void app.whenReady().then(() => {
   ipcMain.handle(ENGINE_CHANNEL.status, () => engine.status);
   ipcMain.handle(ENGINE_CHANNEL.restart, () => engine.restart());
   const win = createWindow();
+  ipcMain.handle(STORAGE_CHANNEL.chooseFolder, async () =>
+    folderChoice(
+      await dialog.showOpenDialog(win, {
+        title: "Choose where Icarus keeps projects and runs",
+        properties: ["openDirectory", "createDirectory"],
+      }),
+      [app.getAppPath(), dirname(process.execPath), repoRoot],
+    ),
+  );
   ipcMain.on(WINDOW_CHANNEL.titleBarHeight, (_event, height: unknown) => {
     if (isTitleBarHeight(height)) {
       resizeTitleBar(win, process.platform, height);

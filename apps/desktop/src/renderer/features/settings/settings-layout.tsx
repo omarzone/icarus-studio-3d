@@ -11,6 +11,7 @@ const NAV: readonly { label: string; section: SettingsSection; to: ScreenId; par
   { label: "Privacy and safety", section: "privacy", to: "SCR-SETTINGS-PRIVACY" },
   { label: "Blocked people", section: "privacy", to: "SCR-SETTINGS-PRIVACY", params: { focus: "blocked" } },
   { label: "Training and hardware", section: "training", to: "SCR-SETTINGS-TRAINING" },
+  { label: "Storage", section: "training", to: "SCR-SETTINGS-TRAINING", params: { focus: "storage" } },
   { label: "Notifications", section: "notifications", to: "SCR-SETTINGS-NOTIFICATIONS" },
 ];
 

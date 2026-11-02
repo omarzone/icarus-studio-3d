@@ -1,5 +1,5 @@
 import type { ProjectFootprint } from "../../ports/projects-port.ts";
-import { formatBytes } from "./byte-size.ts";
+import { formatBytes } from "../../ui/byte-size.ts";
 
 const RUNS_LABEL = "Training runs and timelapses";
 
