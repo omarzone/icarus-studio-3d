@@ -113,10 +113,11 @@ def test_add_object_keeps_the_running_state_and_resends_the_scene(parking):
     assert texts(second) == ["You added Box 2"]
 
 
-def test_an_added_box_in_front_of_the_car_shortens_a_ray(parking):
+def test_an_added_wall_in_front_of_the_car_shortens_a_ray(parking):
     session = session_of(parking)
     before = session.frame().senses[2].value
-    session.apply(AddObjectCommand(tool="add_object", piece="box", position=(4.0, 0.0, 0.0)))
+    # A wall taller than the ray's height; a 0.5 m box only grazes a ray cast at 0.5 m and hits or misses by rounding.
+    session.apply(AddObjectCommand(tool="add_object", piece="wall", position=(4.0, 0.0, 0.0)))
     assert session.frame().senses[2].value < before
 
 
