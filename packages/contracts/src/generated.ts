@@ -332,9 +332,28 @@ export interface NetworkOutput {
  * via the `definition` "BrainSpec".
  */
 export interface BrainSpec {
+  algorithm?: "ppo";
   copies: number;
+  layers?: number[];
+  ppo?: PpoSpec;
   seed: number;
   template: string | null;
+  training_steps?: number | null;
+}
+/**
+ * PPO knobs; the defaults are the ones known to train navigation on CPU (ADR 001).
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PpoSpec".
+ */
+export interface PpoSpec {
+  batch_size?: number;
+  ent_coef?: number;
+  gae_lambda?: number;
+  gamma?: number;
+  learning_rate?: number;
+  n_epochs?: number;
+  n_steps?: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -791,14 +810,35 @@ export interface RemoveRewardTerm {
   term: string;
 }
 /**
+ * Changes the brain and how it practices; fields left out keep their value.
+ *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "SetBrain".
  */
 export interface SetBrain {
+  algorithm?: "ppo" | null;
   copies?: number | null;
+  layers?: number[] | null;
   op: "set_brain";
+  ppo?: PpoPatch | null;
   seed?: number | null;
   template?: string | null;
+  training_steps?: number | "recommended" | null;
+}
+/**
+ * PPO knobs to change; the ones left out keep their value.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PpoPatch".
+ */
+export interface PpoPatch {
+  batch_size?: number | null;
+  ent_coef?: number | null;
+  gae_lambda?: number | null;
+  gamma?: number | null;
+  learning_rate?: number | null;
+  n_epochs?: number | null;
+  n_steps?: number | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1569,6 +1609,7 @@ export interface IdeaSet {
  * via the `definition` "LibraryCatalog".
  */
 export interface LibraryCatalog {
+  brain_settings?: PropertySchema[];
   components: ComponentKindSpec[];
   pieces?: PieceInfo[];
   reward_terms: RewardTermInfo[];

@@ -4,7 +4,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
-from icarus.contracts.operations import EditOperation, RenameProject, SetProperty
+from icarus.contracts.operations import EditOperation, RenameProject, SetBrain, SetProperty
 from icarus.contracts.project import BrainSpec, Project, Revision, TaskSpec, WorldSpec
 from icarus.contracts.properties import NumberValue, PropertyValue
 
@@ -79,6 +79,35 @@ def test_older_documents_get_an_empty_description():
     data = sample_project().model_dump()
     del data["description"]
     assert Project.model_validate(data).description == ""
+
+
+def test_older_brains_keep_the_settings_they_trained_with():
+    data = sample_project().model_dump()
+    data["brain"] = {"template": None, "copies": 4, "seed": 2}
+    brain = Project.model_validate(data).brain
+    assert (brain.algorithm, brain.training_steps, brain.layers) == ("ppo", None, [256, 256])
+    assert (brain.ppo.learning_rate, brain.ppo.n_steps, brain.ppo.batch_size) == (3e-4, 1024, 2048)
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"algorithm": "sac"},
+        {"training_steps": 500},
+        {"layers": [4]},
+        {"ppo": {"learning_rate": 0.5}},
+        {"ppo": {"clip": 0.1}},
+    ],
+)
+def test_brain_settings_outside_what_trains_are_rejected(fields):
+    with pytest.raises(ValidationError):
+        OPERATION.validate_python({"op": "set_brain", **fields})
+
+
+def test_training_steps_can_go_back_to_the_recommended_budget():
+    operation = OPERATION.validate_python({"op": "set_brain", "training_steps": "recommended"})
+    assert isinstance(operation, SetBrain)
+    assert operation.training_steps == "recommended"
 
 
 def test_rename_carries_an_optional_description():
