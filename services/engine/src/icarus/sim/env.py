@@ -17,7 +17,7 @@ from icarus.sim.model_state import (
     reward_state,
 )
 from icarus.sim.poses import geom_poses, moving_geoms
-from icarus.sim.rewards import compose, parked
+from icarus.sim.rewards import compose, delivered, parked
 from icarus.sim.start_pose import place_start
 from icarus.sim.variation import WorldVariation
 
@@ -84,7 +84,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         for term, part in parts.items():
             self._episode_terms[term] += part
         self._collided = self._collided or after.colliding
-        reached = self.world.family == "navigation" and parked(after)
+        # A task that brings an object to the goal succeeds when the object rests there, wherever the agent is.
+        done = delivered(after) if self.world.carried is not None else parked(after)
+        reached = self.world.family == "navigation" and done
         terminated = after.fallen or reached
         truncated = float(self.world.data.time) >= EPISODE_SECONDS - 1e-9
         info: dict[str, Any] = {"reward_parts": parts}

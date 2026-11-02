@@ -3,7 +3,15 @@ from dataclasses import replace
 import pytest
 
 from icarus.library.rewards import REWARD_TERMS
-from icarus.sim.rewards import TERM_FUNCTIONS, RewardState, compose
+from icarus.sim.rewards import (
+    HEIGHT_GAIN_MAX,
+    OBJECT_REST_BONUS,
+    OBJECT_STEP_LIMIT,
+    TERM_FUNCTIONS,
+    RewardState,
+    compose,
+    delivered,
+)
 
 STILL = RewardState(
     position=(0.0, 0.0, 0.5),
@@ -89,3 +97,39 @@ def test_compose_sums_weighted_parts_and_rejects_unknown_terms():
     assert total == pytest.approx(3.5)
     with pytest.raises(ValueError):
         compose(["teleport"], [1.0], STILL, STILL)
+
+
+CRATE = replace(STILL, object_position=(5.0, 0.0, 0.25))
+
+
+def test_object_to_goal_pays_the_objects_progress_toward_the_goal():
+    closer = replace(CRATE, object_position=(6.0, 0.0, 0.25))
+    assert weighted("object_to_goal", CRATE, closer, 1) == pytest.approx(1.0)
+    assert weighted("object_to_goal", closer, CRATE, 1) == pytest.approx(-1.0)
+
+
+def test_object_to_goal_pays_a_bonus_once_the_object_comes_to_rest_inside_the_zone():
+    rolling = replace(CRATE, object_position=(9.5, 0.0, 0.25), object_speed=1.0)
+    resting = replace(rolling, object_speed=0.0)
+    assert weighted("object_to_goal", rolling, resting, 1) == pytest.approx(OBJECT_REST_BONUS)
+    assert weighted("object_to_goal", resting, resting, 1) == 0
+    assert delivered(resting) and not delivered(rolling)
+
+
+def test_object_to_goal_is_bounded_per_step_and_zero_without_an_object():
+    jumped = replace(CRATE, object_position=(8.5, 0.0, 0.25), object_speed=1.0)
+    assert weighted("object_to_goal", CRATE, jumped, 1) == pytest.approx(OBJECT_STEP_LIMIT)
+    assert weighted("object_to_goal", STILL, STILL, 1) == 0
+
+
+def test_height_gain_pays_the_height_above_the_start_clipped_to_its_limit():
+    start = replace(STILL, start_height=0.5)
+    assert weighted("height_gain", start, replace(start, position=(0.0, 0.0, 0.9)), 1) == pytest.approx(0.4)
+    assert weighted("height_gain", start, replace(start, position=(0.0, 0.0, 9.0)), 1) == pytest.approx(HEIGHT_GAIN_MAX)
+    assert weighted("height_gain", start, replace(start, position=(0.0, 0.0, 0.2)), 1) == 0
+
+
+def test_coverage_pays_one_for_each_newly_visited_cell_and_nothing_for_old_ones():
+    before = replace(STILL, visited=3)
+    assert weighted("coverage", before, replace(before, visited=4), 1) == pytest.approx(1.0)
+    assert weighted("coverage", before, before, 1) == 0

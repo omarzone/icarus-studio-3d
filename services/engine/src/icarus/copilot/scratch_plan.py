@@ -17,7 +17,7 @@ from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.library.templates import Part, Raw, solid
 
 Shape = Literal["box", "sphere", "capsule", "cylinder"]
-Surface = Literal["asphalt", "grass", "ice", "rubber", "wood", "metal"]
+Surface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
 PropRole = Literal["wall", "ramp", "platform", "shelf", "obstacle", "bump", "marking", "decoration", "movable"]
 Vector3 = tuple[float, float, float]
 Color = str

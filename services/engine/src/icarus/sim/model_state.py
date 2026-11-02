@@ -1,12 +1,14 @@
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, field
 from typing import Literal
 
 import mujoco
 import numpy as np
 
 from icarus.contracts.project import Project
+from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import TaskFamily
-from icarus.design.compiler import CompiledModel, compile_project
+from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch
 from icarus.design.components import view
 from icarus.projects.document import all_objects
 from icarus.sim.rewards import RewardState
@@ -22,6 +24,8 @@ GYRO_RANGE = 10.0
 FALL_HEIGHT = 0.4
 # Goal distances are observed in tens of metres so they sit near the -1..1 range the policy expects.
 GOAL_DISTANCE_SCALE = 10.0
+# Coverage grid side in metres when the term does not set one; matches the library default.
+COVERAGE_CELL = 0.5
 
 _KINDS: dict[int, SensorKind] = {
     int(mujoco.mjtSensor.mjSENS_RANGEFINDER): "ray",
@@ -85,6 +89,11 @@ class LiveWorld:
     limited_joints: list[tuple[int, float, float]]
     # A body with a balance sensor stands on legs: it falls by dropping, not only by turning over.
     legged: bool
+    # Body id of the world object the task brings to the goal, when a reward term names one.
+    carried: int | None = None
+    # Side of the ground grid the coverage term counts, and the cells entered since the last reset.
+    cell_size: float | None = None
+    visited: set[tuple[int, int]] = field(default_factory=set)
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -156,6 +165,23 @@ def _goal(project: Project, model: mujoco.MjModel) -> GoalInfo | None:
     return None
 
 
+def _carried(project: Project, model: mujoco.MjModel) -> int | None:
+    term = next((item for item in project.task.rewards if item.term == "object_to_goal"), None)
+    target = term.params.get("object") if term else None
+    if not isinstance(target, AssetValue) or not target.value:
+        return None
+    body = _name_id(model, mujoco.mjtObj.mjOBJ_BODY, target.value)
+    return body if body >= 0 else None
+
+
+def _cell_size(project: Project) -> float | None:
+    term = next((item for item in project.task.rewards if item.term == "coverage"), None)
+    if term is None:
+        return None
+    size = term.params.get("cell_size")
+    return float(size.value) if isinstance(size, NumberValue) else COVERAGE_CELL
+
+
 def build_world(project: Project) -> LiveWorld:
     compiled = compile_project(project)
     model = compiled.model
@@ -170,7 +196,9 @@ def build_world(project: Project) -> LiveWorld:
         index for index in range(model.ngeom) if model.body(int(model.geom_bodyid[index])).name in body_objects
     )
     ground = frozenset(
-        index for index in range(model.ngeom) if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE)
+        index
+        for index in range(model.ngeom)
+        if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or is_floor_patch(model, index)
     )
     agent_mass = float(model.body_subtreemass[agent]) if agent is not None else 10.0
     world = LiveWorld(
@@ -194,6 +222,8 @@ def build_world(project: Project) -> LiveWorld:
         joint_addresses=_joint_addresses(model, body_objects),
         limited_joints=_limited_joints(model, body_objects),
         legged=bool(project.bodies) and any(view(obj, "balance") for obj in project.bodies[0].objects),
+        carried=_carried(project, model),
+        cell_size=_cell_size(project),
     )
     reset_world(world)
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
@@ -203,6 +233,7 @@ def build_world(project: Project) -> LiveWorld:
 def reset_world(world: LiveWorld) -> None:
     mujoco.mj_resetData(world.model, world.data)
     mujoco.mj_forward(world.model, world.data)
+    world.visited.clear()
 
 
 def control_substeps(world: LiveWorld) -> int:
@@ -233,6 +264,25 @@ def agent_velocity(world: LiveWorld) -> np.ndarray:
     return velocity
 
 
+def body_velocity(world: LiveWorld, body: int) -> np.ndarray:
+    """Angular then linear velocity of a body in the world frame."""
+    velocity = np.zeros(6)
+    mujoco.mj_objectVelocity(world.model, world.data, mujoco.mjtObj.mjOBJ_BODY, body, velocity, 0)
+    return velocity
+
+
+def _carried_state(world: LiveWorld) -> np.ndarray:
+    """The carried object from the agent and the goal from the object, both on the ground in the agent's frame."""
+    if world.carried is None or world.agent is None:
+        return np.zeros(4)
+    data = world.data
+    frame = data.xmat[world.agent].reshape(3, 3).T
+    item = data.xpos[world.carried]
+    to_object = frame @ (item - data.xpos[world.agent])
+    to_goal = frame @ (data.site_xpos[world.goal.site] - item) if world.goal else np.zeros(3)
+    return np.array([*to_object[:2], *to_goal[:2]]) / GOAL_DISTANCE_SCALE
+
+
 def _navigation_state(world: LiveWorld) -> list[np.ndarray]:
     """Forward and side speed and turn rate, limited joints from -1 to 1, then goal distance and bearing."""
     velocity = agent_velocity(world)
@@ -245,6 +295,7 @@ def _navigation_state(world: LiveWorld) -> list[np.ndarray]:
         np.array([velocity[3], velocity[4], velocity[2]]),
         np.array(joints, dtype=float),
         np.array([distance / GOAL_DISTANCE_SCALE, np.cos(bearing), np.sin(bearing)]),
+        *([_carried_state(world)] if world.carried is not None else []),
     ]
 
 
@@ -308,6 +359,9 @@ def reward_state(world: LiveWorld) -> RewardState:
         case "none":
             fallen = False
     goal = data.site_xpos[world.goal.site] if world.goal else None
+    carried = data.xpos[world.carried] if world.carried is not None else None
+    if world.cell_size is not None:
+        world.visited.add((math.floor(position[0] / world.cell_size), math.floor(position[1] / world.cell_size)))
     return RewardState(
         position=(float(position[0]), float(position[1]), float(position[2])),
         forward=(float(rotation[0, 0]), float(rotation[1, 0])),
@@ -318,4 +372,8 @@ def reward_state(world: LiveWorld) -> RewardState:
         fallen=fallen,
         effort=float(np.sum(normalized_controls(world) ** 2)),
         speed=float(np.hypot(*agent_velocity(world)[3:5])),
+        object_position=(float(carried[0]), float(carried[1]), float(carried[2])) if carried is not None else None,
+        object_speed=float(np.hypot(*body_velocity(world, world.carried)[3:5])) if world.carried is not None else 0.0,
+        start_height=world.start_height,
+        visited=len(world.visited),
     )

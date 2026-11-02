@@ -79,23 +79,25 @@ def span(id: str, label: str, unit: str, lo: float, hi: float, default: tuple[fl
     )
 
 
-def choice(id: str, label: str, options: list[str], default: str) -> PropertySchema:
+def choice(id: str, label: str, options: list[str], default: str, *, hint: str | None = None) -> PropertySchema:
     return PropertySchema(
         id=id,
         label=label,
         type="choice",
         options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
         default=ChoiceValue(type="choice", value=default),
+        hint=hint,
     )
 
 
-def listing(id: str, label: str, options: list[str], default: str) -> PropertySchema:
+def listing(id: str, label: str, options: list[str], default: str, *, hint: str | None = None) -> PropertySchema:
     return PropertySchema(
         id=id,
         label=label,
         type="list",
         options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
         default=ListValue(type="list", value=default),
+        hint=hint,
     )
 
 

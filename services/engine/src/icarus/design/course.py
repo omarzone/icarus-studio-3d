@@ -5,7 +5,7 @@ import mujoco
 import numpy as np
 
 from icarus.contracts.project import Project
-from icarus.design.compiler import CompiledModel
+from icarus.design.compiler import CompiledModel, is_floor_patch
 from icarus.design.components import view
 
 # A world object this long along one side is a lane boundary, not an obstacle on the way.
@@ -53,7 +53,7 @@ def _object_extents(project: Project, compiled: CompiledModel, data: mujoco.MjDa
     world = {obj.id for obj in project.world.objects}
     found: dict[str, list[_Extent]] = {}
     for geom in range(model.ngeom):
-        if int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_PLANE):
+        if int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or is_floor_patch(model, geom):
             continue
         owner = owners.get(model.body(int(model.geom_bodyid[geom])).name)
         if owner in world:
