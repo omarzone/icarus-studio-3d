@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.contracts.coach import CoachFinding, FilmStrip
 from icarus.contracts.operations import EditOperation
 from icarus.contracts.scene import SceneDescription
 from icarus.contracts.specs import TaskFamily
@@ -163,6 +164,10 @@ class CopilotMessage(_Model):
     # A project build the message follows live.
     build_id: str | None = None
     run: RunCard | None = None
+    # The coach's pictures of one episode at a fixed interval.
+    film_strip: FilmStrip | None = None
+    # What the coach saw the body do, each with the design area to change.
+    findings: list[CoachFinding] = Field(default=[], max_length=8)
 
 
 class Conversation(_Model):

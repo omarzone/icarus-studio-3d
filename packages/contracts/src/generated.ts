@@ -453,6 +453,18 @@ export interface CheckpointInfo {
   success_rate?: number | null;
 }
 /**
+ * How the body moves in an episode and the part of the design to change for it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CoachFinding".
+ */
+export interface CoachFinding {
+  area: "reward" | "sensors" | "body" | "world" | "brain";
+  behavior: string;
+  change: string;
+  proposal_id?: string | null;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ComponentKindSpec".
  */
@@ -582,6 +594,20 @@ export interface CopilotMessage {
         CheckItem
       ];
   created_at: string;
+  film_strip?: FilmStrip | null;
+  /**
+   * @maxItems 8
+   */
+  findings?:
+    | []
+    | [CoachFinding]
+    | [CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding];
   id: string;
   /**
    * @maxItems 8
@@ -603,6 +629,30 @@ export interface CopilotMessage {
   text: string;
   thinking?: string | null;
   title?: string | null;
+}
+/**
+ * Pictures of one recorded evaluation episode at a fixed interval, rendered from its MuJoCo states.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "FilmStrip".
+ */
+export interface FilmStrip {
+  episode: number;
+  /**
+   * @maxItems 32
+   */
+  frames: FilmStripFrame[];
+  interval: number;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "FilmStripFrame".
+ */
+export interface FilmStripFrame {
+  attachment_id: string;
+  failure?: boolean;
+  time: number;
 }
 /**
  * One change of a next-step plan the copilot suggests.
@@ -1248,6 +1298,19 @@ export interface Diagnosis {
     | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
     | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
     | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup];
+  /**
+   * @maxItems 8
+   */
+  findings?:
+    | []
+    | [CoachFinding]
+    | [CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding]
+    | [CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding, CoachFinding];
   hypothesis: string;
   id: string;
   next_step: "keep_training" | "stop_and_fix" | "done";
