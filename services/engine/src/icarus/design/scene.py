@@ -136,7 +136,7 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
         lights=lights,
         zones=zones,
         sky=compiled.sky,
-        rays=ray_readings(model, data),
+        rays=ray_readings(model, data, compiled.ray_labels),
     )
 
 

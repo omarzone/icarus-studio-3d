@@ -3,7 +3,7 @@ name: curriculum-and-warm-start
 title: Train in stages and continue from a trained brain
 when: A task is too hard to learn at once, or the person wants to keep training or build on an earlier run.
 tools: [read_run, inspect_object, try, propose, train]
-version: 1
+version: 2
 ---
 There is no automatic curriculum: stages are revisions of the project, and each stage continues from the best
 brain of the one before. A continued run counts its own steps from 0, and its first evaluation is the inherited
@@ -12,7 +12,9 @@ brain.
 1. **Check a warm start is possible.** A brain is shaped by how many values the body senses and how many motors it
    drives. Continuing works after changes to rewards, weights, positions, goals, obstacles, randomization or looks.
    It fails after adding or removing a motor, a `distance_ray` (or changing `distance_ray.count`), a `balance` or a
-   `touch`; then train from zero and say why.
+   `touch`; then train from zero and say why. Turning rays with `distance_ray.heading` or `distance_ray.tilt` keeps
+   the size, but the brain must relearn what each ray means; renaming them with `distance_ray.name` changes nothing
+   it senses.
 2. **Make the easy stage.** Keep the final body and senses, and make the world forgiving: goal closer (4 to 6 m),
    `goal_zone.radius` larger, no `randomize`, `spawn_point.random_heading` off, fewer obstacles. Navigation still
    varies the start a little (±1.5 m to the side, ±35° of heading) even then. Train it with

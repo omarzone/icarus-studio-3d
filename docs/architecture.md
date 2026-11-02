@@ -159,7 +159,7 @@ icarus-studio-3d/
 | `EngineEventEnvelope`, `TaskInfo` | Engine events (turns, steps, views, proposals, revisions, runs, diagnoses, tasks) and background tasks |
 | `SceneZone`, `SceneSky` | Task zones (spawn, goal, marked areas) and the world sky in a `SceneDescription` |
 | `ObjectSpec`, `ComponentSpec` | Any object in a world or body as a list of typed components |
-| `PropertySchema` | A component property: one of the 12 property types, unit, range, default, expert flag, randomizable |
+| `PropertySchema` | A component property: one of the 13 property types, unit, range, default, expert flag, randomizable |
 | `DesignIdea` | One of the alternatives the copilot proposes before building, with its preview and estimates |
 | `PlayCommand`, `PlayFrame`, `PlayEvent` | Play mode: tool actions from the user, streamed states and the behavior log |
 | `BehaviorTest`, `ReferenceRecording` | Recorded real behavior and how a simulated run is measured against it |
@@ -202,7 +202,7 @@ icarus-studio-3d/
 Everything in a world or body is an **object made of components**, whether it comes from the library, from the copilot or from an imported file. This is what lets the same editor handle a car, a fly, a robot arm or anything a user imports.
 
 - **Components** come from the library: Transform, Mesh, Material, Light, Physics body, Collider, Joint, Motor, sensors (distance ray, camera, touch, balance, smell, sound), brains (learned, connectome, from the community), learning (goal, reward term, randomize per copy) and world pieces (spawn point, zone, wind, water).
-- Each component declares its properties with a `PropertySchema`. Every property has one of **12 types**: number, slider, range, choice, list, switch, color, vector, count, asset, panel and read-only. The type, unit, range and default are enough for the desktop to render the right control, for the copilot to know what it may change, and for validation to reject anything out of range.
+- Each component declares its properties with a `PropertySchema`. Every property has one of **13 types**: number, slider, range, choice, list, switch, color, vector, count, asset, panel, read-only and text. The type, unit, range and default are enough for the desktop to render the right control, for the copilot to know what it may change, and for validation to reject anything out of range.
 - Properties marked `expert` are grouped under *Expert settings*; properties marked `randomizable` can be varied per training copy.
 - Adding or removing a component, and changing a property, are edit operations like any other.
 

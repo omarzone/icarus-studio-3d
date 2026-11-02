@@ -1,4 +1,4 @@
-from icarus.contracts.properties import ChoiceValue, CountValue, NumberValue, SwitchValue
+from icarus.contracts.properties import ChoiceValue, CountValue, NumberValue, SwitchValue, TextValue
 from icarus.library.components import component_kind
 from icarus.library.properties import check_value
 
@@ -24,3 +24,8 @@ def test_a_value_of_another_type_is_refused():
 
 def test_ray_count_below_one_is_refused():
     assert check_value(schema("distance_ray", "count"), CountValue(type="count", value=0)) is not None
+
+
+def test_a_ray_name_on_two_lines_is_refused_and_a_plain_one_fits():
+    assert check_value(schema("distance_ray", "name"), TextValue(type="text", value="Front\nLeft")) is not None
+    assert check_value(schema("distance_ray", "name"), TextValue(type="text", value="Left 30°")) is None
