@@ -1461,6 +1461,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Project-level actions from the project name.
 - **Content:**
   - Rename, Duplicate, History (with current revision), Open project…, Project settings, Delete project…, Back to Home.
+  - In the app *Project settings* opens `SCR-SETTINGS-TRAINING`, whose training and hardware settings are shared by every project; its tooltip says so.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1523,6 +1524,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Copy the project, choosing what heavy data comes along.
 - **Content:**
   - New name and switches for world and body, trained brains, and training runs with their size.
+  - In the app runs stay in the engine's runs folder, so *Trained brains* and *Training runs* are dimmed and say how many runs stay with the original; no size is shown.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1612,6 +1614,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Set how many copies train in parallel and what changes between them.
 - **Content:**
   - Copies and layout, explanation, *Change on every try* switches with ranges, Preview copies, Done.
+  - In the app *Preview copies* shows every copy's first try in the World viewport and closes the popover; the design (and the gallery) open `SCR-TIMELAPSE`.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1812,6 +1815,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Destructive confirmation with exact consequences.
 - **Content:**
   - What gets deleted from this computer and its size, and what stays in the community. Red *Delete project*.
+  - In the app the project's runs stay in the engine's runs folder, and the dialog says how many; no size is shown.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1844,6 +1848,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** All local projects in one place.
 - **Content:**
   - Filter (all, training, drafts, published), Open a file, New project, project cards with status pills.
+  - In the app a project is *Training* while one of its runs is live; *Published* stays empty and says publishing is not available yet.
 - **Header:** `HDR-LAUNCHER` · active: **Projects**
 - **Page:** no tabbed panels
 

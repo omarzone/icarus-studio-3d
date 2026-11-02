@@ -2,12 +2,12 @@
 import { CloseOverlay } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { type ProjectFootprint, type ProjectSummary, projectsPort } from "../../ports/projects-port.ts";
+import { type ProjectSummary, projectsPort } from "../../ports/projects-port.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { formatBytes } from "./byte-size.ts";
 import { ActionButton, dialogButtonClass } from "./dialog-controls.tsx";
 import { DialogQuery } from "./dialog-query.tsx";
 import { useFootprint } from "./footprint.ts";
+import { deleteConsequences } from "./footprint-words.ts";
 import { useOpenProject, useRefreshAfterAction } from "./open-project.ts";
 
 export function DeleteProjectDialog() {
@@ -48,19 +48,11 @@ function DeleteConfirm({ project }: { project: ProjectSummary }) {
     >
       <p className="text-body text-fg-secondary">
         {footprint.data
-          ? consequences(project.name, footprint.data)
+          ? deleteConsequences(project.name, footprint.data)
           : footprint.isError
             ? `What ${project.name} keeps on this computer cannot be checked yet, so it cannot be deleted from here.`
             : `Checking what ${project.name} keeps on this computer.`}
       </p>
     </Dialog>
   );
-}
-
-function consequences(name: string, { trainingRuns, runsBytes }: ProjectFootprint): string {
-  const lost =
-    trainingRuns === 0
-      ? `${name} is deleted from this computer.`
-      : `${name} and its ${trainingRuns} training ${trainingRuns === 1 ? "run" : "runs"} (${formatBytes(runsBytes)}) are deleted from this computer.`;
-  return `${lost} Copies you published stay in the community until you remove them there.`;
 }

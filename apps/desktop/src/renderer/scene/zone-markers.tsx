@@ -1,9 +1,16 @@
 import type { SceneZone } from "@icarus/contracts";
 import { DoubleSide } from "three";
 import { ZONE_OPACITY } from "./scene-materials.ts";
-import { type ZoneTone, zoneMarker } from "./zone-marker.ts";
+import {
+  DISC_SEGMENTS,
+  RING_SEGMENTS,
+  SPAWN_RING_INNER,
+  SPAWN_RING_OPACITY,
+  type ZoneTone,
+  zoneMarker,
+} from "./zone-marker.ts";
 
-type ZoneColors = Record<ZoneTone, string>;
+export type ZoneColors = Record<ZoneTone, string>;
 
 const FLAT: [number, number, number] = [-Math.PI / 2, 0, 0];
 
@@ -14,15 +21,21 @@ function ZoneMesh({ zone, colors }: { zone: SceneZone; colors: ZoneColors }) {
     case "disc":
       return (
         <mesh position={marker.position} rotation={FLAT} raycast={() => undefined}>
-          <circleGeometry args={[marker.radius, 48]} />
+          <circleGeometry args={[marker.radius, DISC_SEGMENTS]} />
           <meshBasicMaterial color={color} transparent opacity={ZONE_OPACITY} depthWrite={false} />
         </mesh>
       );
     case "ring":
       return (
         <mesh position={marker.position} rotation={FLAT} raycast={() => undefined}>
-          <ringGeometry args={[marker.radius * 0.75, marker.radius, 32]} />
-          <meshBasicMaterial color={color} side={DoubleSide} transparent opacity={0.8} depthWrite={false} />
+          <ringGeometry args={[marker.radius * SPAWN_RING_INNER, marker.radius, RING_SEGMENTS]} />
+          <meshBasicMaterial
+            color={color}
+            side={DoubleSide}
+            transparent
+            opacity={SPAWN_RING_OPACITY}
+            depthWrite={false}
+          />
         </mesh>
       );
     case "box":

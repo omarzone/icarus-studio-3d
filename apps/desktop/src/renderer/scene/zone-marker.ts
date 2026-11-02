@@ -4,6 +4,11 @@ import { toThreePosition } from "./coordinates.ts";
 // Markers sit just above the ground so they read as painted on it, never inside the floor.
 const GROUND_LIFT = 0.01;
 const SPAWN_RING_RADIUS = 0.5;
+// The spawn ring's inner edge as a share of its radius, and its opacity: a ring needs more than a filled disc to read.
+export const SPAWN_RING_INNER = 0.75;
+export const SPAWN_RING_OPACITY = 0.8;
+export const DISC_SEGMENTS = 48;
+export const RING_SEGMENTS = 32;
 
 export type ZoneTone = "goal" | "spawn" | "area";
 

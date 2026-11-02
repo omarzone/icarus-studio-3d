@@ -59,9 +59,9 @@ export const PROJECTS_FIXTURE: readonly ProjectSummary[] = [
 ];
 
 const FOOTPRINTS_FIXTURE: Readonly<Record<string, ProjectFootprint>> = {
-  "park-pilot": { trainingRuns: 3, runsBytes: 1.8e9 },
-  "fruit-fly": { trainingRuns: 0, runsBytes: 0 },
-  "dance-copy": { trainingRuns: 2, runsBytes: 0.9e9 },
+  "park-pilot": { trainingRuns: 3, runsBytes: 1.8e9, runsFollowProject: true },
+  "fruit-fly": { trainingRuns: 0, runsBytes: 0, runsFollowProject: true },
+  "dance-copy": { trainingRuns: 2, runsBytes: 0.9e9, runsFollowProject: true },
 };
 
 export function createProjectsFixture(): ProjectsPort {
@@ -94,7 +94,8 @@ export function createProjectsFixture(): ProjectsPort {
     deleteProject: async (id) => {
       projects = projects.filter((item) => item.id !== id);
     },
-    getFootprint: async (id) => FOOTPRINTS_FIXTURE[find(id).id] ?? { trainingRuns: 0, runsBytes: 0 },
+    getFootprint: async (id) =>
+      FOOTPRINTS_FIXTURE[find(id).id] ?? { trainingRuns: 0, runsBytes: 0, runsFollowProject: true },
     createProject: async ({ name }) => {
       const created = { ...find("park-pilot"), id: `new-${projects.length}`, name, status: "draft" as const };
       projects = [...projects, created];

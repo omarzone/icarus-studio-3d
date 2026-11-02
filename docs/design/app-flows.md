@@ -22,13 +22,13 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Home | From the community strip | Panel says the community is not available yet | pending-honest | |
 | Launcher header | Home, Projects, Community | Navigate; Community pages are pending | works / pending-honest | |
 | Launcher header | Search creations, Bell, Avatar | Community, notifications and sign-in screens say not available yet | pending-honest | |
-| Projects | Filters All · Training · Drafts · Published | Filter the list; every app project is a draft today, so Training and Published are always empty | confusing | Not fixed: needs run and publish status in the project list (engine zone) |
+| Projects | Filters All · Training · Drafts · Published | Filter the list; a project with a live run (starting, running or stopping) shows as *Training · Run N at P%*; Published is empty and its empty state says publishing is not available yet | works | Every project was a draft, so Training and Published were always empty → the list reads each project's runs; Published says why it is empty |
 | Projects | Project card | Opens the project in World | works | |
 | Projects | *Open a file* | Opens `MOD-IMPORT` (pending); tooltip added | pending-honest | |
 | Projects | *New project* | Creates an empty project with the checklist | works | Reopened the last project when one was in the route → starts clean; tooltip added |
 | Project menu | Rename, Duplicate, History, Delete project…, Open project…, Back to Home | Work against the engine | works | |
-| Duplicate, Delete dialogs | Training runs line | Always say the project has no training runs (the footprint is not read from the engine yet) | confusing | Not fixed: follow-up |
-| Project menu | Project settings | Opens the global Training and hardware settings | confusing | Label promises per-project settings; follow-up: rename or scope |
+| Duplicate, Delete dialogs | Training runs line | Count the project's real runs. Runs live in the engine's runs folder, not in the project: Delete says they stay in the runs folder, and Duplicate dims *Trained brains* and *Training runs* with *N runs stay with the original*. No size is shown because the engine does not measure it | works | Always said there were no runs → real run count and what happens to the runs |
+| Project menu | Project settings | Opens `SCR-SETTINGS-TRAINING` as `screens.md` says; the tooltip says these training and hardware settings are shared by every project | works | Label promised per-project settings → kept the design's label and destination, tooltip says the settings are shared |
 | Workspace header | Workspace tabs | Navigate; each explains its workspace on hover | works | No tooltips → one-line purpose per tab |
 | Workspace header | Play | Enters Play; tooltip *Try it live… nothing changes the project* | works | No explanation of Play vs Train → tooltip |
 | Workspace header | Train (primary) / Stop while training | Opens `MOD-START-TRAINING` / `MOD-STOP-RUN`; tooltip *Practice: the brain learns over many tries…* | works | No explanation → tooltip |
@@ -90,9 +90,9 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 
 ## Counts
 
-Rows of the inventory after the fixes (72): **works 42**, **pending-honest 25**, **confusing 4**, **broken 1**. A row whose status depends on the page, like the launcher links, counts once as works.
+Rows of the inventory after the fixes (72): **works 45**, **pending-honest 25**, **confusing 1**, **broken 1**. A row whose status depends on the page, like the launcher links, counts once as works.
 
-Before the fixes, 34 rows were broken or confusing; 29 are fixed and 5 remain (Projects filters, the runs line of Duplicate and Delete, *Project settings*, the inspector *auto* chip, Play's *Chat options*).
+Before the fixes, 34 rows were broken or confusing; 32 are fixed and 2 remain (the inspector *auto* chip, Play's *Chat options*).
 
 ## Changes against the design catalog
 
@@ -105,10 +105,13 @@ Recorded in `screens.md` as app-side notes:
 - `PNL-VIEWPORT` `+` and *Lit* are not available yet; Game view draws the world.
 - `TAB-WHAT-IT-DECIDES` *Use another brain* and `TAB-WHAT-HAPPENED` jumps are not available yet.
 - `SCR-SETTINGS-TRAINING` Restart engine restarts in place.
+- `POP-TRAINING-COPIES` *Preview copies* shows every copy's first try in the World viewport and closes the popover instead of opening `SCR-TIMELAPSE`; the inventory and the gallery keep the design's link.
+- `POP-PROJECT-MENU` *Project settings* keeps its label and destination; its tooltip says the settings are shared by every project.
+- `SCR-PROJECTS` filters by live runs; the Training and Published filters have their own empty states.
+- `MOD-DUPLICATE`, `MOD-DELETE-PROJECT` say what happens to the project's runs, which stay in the runs folder; no size is shown.
 
 ## Follow-ups
 
-- Project list status (training, published) and the footprint of runs for Duplicate and Delete: the list and footprint need run data per project.
-- *Project settings* in the project menu opens global settings.
+- Published status arrives with the community; deleting or duplicating a project's runs, and their size on disk, need engine support (runs live apart from projects).
 - Play's *Chat options* button (copilot zone).
 - Results is the natural place after training and is entirely pending: it should at least list runs and their best brains, which the training API already serves.

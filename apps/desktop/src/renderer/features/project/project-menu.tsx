@@ -9,7 +9,7 @@ import { revisionsPort } from "../../ports/revisions-port.ts";
 import { Popover } from "../../ui/popover.tsx";
 import { useOpenProject } from "./open-project.ts";
 
-type Item = { label: string; to: RouteId; icon: LucideIcon; meta?: string };
+type Item = { label: string; to: RouteId; icon: LucideIcon; meta?: string; hint?: string };
 
 export function ProjectMenu() {
   const project = useOpenProject();
@@ -26,7 +26,13 @@ export function ProjectMenu() {
     { label: "Duplicate", to: "MOD-DUPLICATE", icon: Copy },
     { label: "History", to: "MOD-HISTORY", icon: History, meta: current.data },
     { label: "Open project…", to: "SCR-PROJECTS", icon: FolderOpen, meta: "Ctrl O" },
-    { label: "Project settings", to: "SCR-SETTINGS-TRAINING", icon: Settings },
+    // The design's label; the page it opens holds the training and hardware settings every project uses.
+    {
+      label: "Project settings",
+      to: "SCR-SETTINGS-TRAINING",
+      icon: Settings,
+      hint: "Training and hardware settings, shared by every project",
+    },
     { label: "Delete project…", to: "MOD-DELETE-PROJECT", icon: Trash2 },
   ];
   const [active, setActive] = useState(0);
@@ -41,6 +47,7 @@ export function ProjectMenu() {
               to={item.to}
               cta={item.meta ? `${item.label}\n${item.meta}` : item.label}
               role="menuitem"
+              title={item.hint}
               onFocus={() => setActive(index)}
               className={`flex items-center gap-2.5 rounded-control px-2.5 py-2.25 text-left text-body leading-4 text-fg active:opacity-80 ${
                 index === active ? "bg-control hover:bg-control-raised" : "hover:bg-fill-hover"

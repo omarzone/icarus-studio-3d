@@ -6,10 +6,10 @@ import { useNotices } from "../../app/runtime/notices.ts";
 import { usePort } from "../../app/runtime/port.tsx";
 import { type ProjectSummary, projectsPort } from "../../ports/projects-port.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { formatBytes } from "./byte-size.ts";
 import { ActionButton, dialogButtonClass, SwitchRow, TextField } from "./dialog-controls.tsx";
 import { DialogQuery } from "./dialog-query.tsx";
 import { useFootprint } from "./footprint.ts";
+import { runsSwitchLabel } from "./footprint-words.ts";
 import { useOpenProject, useRefreshAfterAction } from "./open-project.ts";
 
 const PARTS = ["design", "brains", "runs"] as const;
@@ -34,9 +34,11 @@ function DuplicateForm({ project }: { project: ProjectSummary }) {
   // Runs are heavy, so they stay behind unless asked for.
   const [include, setInclude] = useState<Record<Part, boolean>>({ design: true, brains: true, runs: false });
   const toggle = (part: Part) => (checked: boolean) => setInclude((current) => ({ ...current, [part]: checked }));
-  const runsSize = footprint.data && footprint.data.runsBytes > 0 ? ` · ${formatBytes(footprint.data.runsBytes)}` : "";
+  // The engine copies the design only; runs and the brains saved in them stay with the original.
+  const runsStay = footprint.data !== undefined && !footprint.data.runsFollowProject && footprint.data.trainingRuns > 0;
+  const stayTitle = runsStay ? "Runs and their brains stay with the original project" : undefined;
   const trimmed = name.trim();
-  const parts = PARTS.filter((part) => include[part]);
+  const parts = PARTS.filter((part) => include[part] && (part === "design" || !runsStay));
   return (
     <Dialog
       title={`Duplicate ${project.name}`}
@@ -66,12 +68,21 @@ function DuplicateForm({ project }: { project: ProjectSummary }) {
       <TextField label="New name" value={name} onChange={(event) => setName(event.target.value)} autoFocus />
       <div className="flex flex-col gap-2.5">
         <SwitchRow label="World and body" cta="World and body" checked={include.design} onChange={toggle("design")} />
-        <SwitchRow label="Trained brains" cta="Trained brains" checked={include.brains} onChange={toggle("brains")} />
         <SwitchRow
-          label={`Training runs and timelapses${runsSize}`}
+          label="Trained brains"
+          cta="Trained brains"
+          checked={include.brains && !runsStay}
+          onChange={toggle("brains")}
+          disabled={runsStay}
+          title={stayTitle}
+        />
+        <SwitchRow
+          label={footprint.data ? runsSwitchLabel(footprint.data) : "Training runs and timelapses"}
           cta="Training runs and timelapses"
-          checked={include.runs}
+          checked={include.runs && !runsStay}
           onChange={toggle("runs")}
+          disabled={runsStay}
+          title={stayTitle}
         />
       </div>
     </Dialog>

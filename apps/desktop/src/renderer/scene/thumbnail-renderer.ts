@@ -22,6 +22,7 @@ import { AMBIENT_INTENSITY, floorDepth, GEOM_ROUGHNESS, sceneColors, sceneLight 
 import { skyLook } from "./scene-sky.ts";
 import { createSkyDome } from "./sky-dome.ts";
 import { sceneBounds, thumbnailCamera, topCamera } from "./thumbnail-framing.ts";
+import { zoneMesh } from "./zone-mesh.ts";
 
 const WIDTH = 720;
 const HEIGHT = 360;
@@ -109,6 +110,13 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
     scene.add(mesh);
     return mesh;
   });
+  // Where the task starts and ends, as the viewport paints it, so a parking card shows where it parks.
+  const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal };
+  const zones = (description.zones ?? []).map((zone) => {
+    const mesh = zoneMesh(zone, zoneColors);
+    scene.add(mesh);
+    return mesh;
+  });
   const camera = new PerspectiveCamera(framing.fov, width / height, framing.near, framing.far);
   camera.position.set(...framing.position);
   camera.lookAt(...framing.target);
@@ -120,7 +128,7 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   } finally {
     dome?.geometry.dispose();
     dome?.material.dispose();
-    for (const mesh of meshes) {
+    for (const mesh of [...meshes, ...zones]) {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }

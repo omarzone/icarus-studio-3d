@@ -2,7 +2,7 @@ import type { SceneDescription } from "@icarus/contracts";
 import type { ScreenId } from "../app/navigation/catalog-id.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
-import { projectView } from "./project-views.ts";
+import { projectFootprint, projectView, withRuns } from "./project-views.ts";
 import { createProjectsFixture } from "./projects.fixture.ts";
 
 // View types the screens need; the engine implementation maps @icarus/contracts types onto them.
@@ -25,8 +25,10 @@ export type ProjectSummary = {
 // What a project keeps on this computer, for the duplicate and delete dialogs.
 export type ProjectFootprint = {
   trainingRuns: number;
-  // Size of the training runs and timelapses, in bytes.
-  runsBytes: number;
+  // Size of the training runs and timelapses in bytes; null when it is not measured.
+  runsBytes: number | null;
+  // Deleting the project deletes its runs and duplicating can copy them; when false they stay where they are.
+  runsFollowProject: boolean;
 };
 
 export type ProjectsPort = {
@@ -43,7 +45,12 @@ export type ProjectsPort = {
 
 export const projectsPort = definePort<ProjectsPort>({
   app: {
-    listProjects: async () => (await engineApi.listProjects()).map(projectView),
+    // One runs request per project, in parallel; a project whose runs cannot be read still lists as it is.
+    listProjects: async () => {
+      const projects = (await engineApi.listProjects()).map(projectView);
+      const runs = await Promise.all(projects.map((project) => engineApi.runs(project.id).catch(() => [])));
+      return projects.map((project, index) => withRuns(project, runs[index] ?? []));
+    },
     getProject: async (id) => {
       const state = await engineApi.project(id);
       return projectView({ ...state.project, revision: state.revision.number });
@@ -56,7 +63,7 @@ export const projectsPort = definePort<ProjectsPort>({
       );
       return projectView({ ...state.project, revision: state.revision.number });
     },
-    // Runs are not copied yet: there are none until training lands.
+    // The engine copies the design only; runs and their brains stay with the original.
     duplicateProject: async ({ id, name }) => {
       const state = await engineApi.duplicateProject(id, name);
       return projectView({ ...state.project, revision: state.revision.number });
@@ -64,7 +71,7 @@ export const projectsPort = definePort<ProjectsPort>({
     deleteProject: async (id) => {
       await engineApi.deleteProject(id);
     },
-    getFootprint: async () => ({ trainingRuns: 0, runsBytes: 0 }),
+    getFootprint: async (id) => projectFootprint(await engineApi.runs(id)),
     createProject: async ({ template, name }) => {
       const state = await engineApi.createProject(name, template);
       return projectView({ ...state.project, revision: state.revision.number });

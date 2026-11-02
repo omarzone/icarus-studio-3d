@@ -14,12 +14,24 @@ import { Segmented } from "../../ui/segmented.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { type PillTone, StatusPill } from "../../ui/status-pill.tsx";
 
+type Empty = { title: string; body: string };
+
+const NO_MATCH: Empty = { title: "Nothing here", body: "No project matches this filter." };
+
 const FILTERS = [
-  { label: "All", statuses: null },
-  { label: "Training", statuses: ["training"] },
-  { label: "Drafts", statuses: ["draft"] },
-  { label: "Published", statuses: ["published"] },
-] as const satisfies readonly { label: string; statuses: readonly ProjectStatus[] | null }[];
+  { label: "All", statuses: null, empty: NO_MATCH },
+  {
+    label: "Training",
+    statuses: ["training"],
+    empty: { title: "Nothing training", body: "Projects with a training run in progress show here." },
+  },
+  { label: "Drafts", statuses: ["draft"], empty: NO_MATCH },
+  {
+    label: "Published",
+    statuses: ["published"],
+    empty: { title: "Nothing published", body: "Publishing to the community is not available yet." },
+  },
+] as const satisfies readonly { label: string; statuses: readonly ProjectStatus[] | null; empty: Empty }[];
 
 type Filter = (typeof FILTERS)[number]["label"];
 
@@ -35,7 +47,8 @@ export function ProjectsScreen() {
   const projects = usePort(projectsPort);
   const query = useQuery({ queryKey: ["projects"], queryFn: projects.listProjects });
   const [filter, setFilter] = useState<Filter>("All");
-  const statuses = FILTERS.find((item) => item.label === filter)?.statuses ?? null;
+  const active = FILTERS.find((item) => item.label === filter);
+  const statuses = active?.statuses ?? null;
   return (
     <LauncherPage active="Projects">
       <div className="flex flex-col gap-4.5 pt-1.5">
@@ -82,6 +95,7 @@ export function ProjectsScreen() {
           {(list) => (
             <ProjectGrid
               scene={projects.projectScene}
+              empty={active?.empty ?? NO_MATCH}
               projects={list.filter((project) => statuses === null || statuses.some((s) => s === project.status))}
             />
           )}
@@ -93,9 +107,9 @@ export function ProjectsScreen() {
 
 type Scene = ProjectsPort["projectScene"];
 
-function ProjectGrid({ projects, scene }: { projects: readonly ProjectSummary[]; scene: Scene }) {
+function ProjectGrid({ projects, scene, empty }: { projects: readonly ProjectSummary[]; scene: Scene; empty: Empty }) {
   if (projects.length === 0) {
-    return <EmptyState title="Nothing here" body="No project matches this filter." />;
+    return <EmptyState title={empty.title} body={empty.body} />;
   }
   return (
     <div className="grid grid-cols-3 gap-4">
