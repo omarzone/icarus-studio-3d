@@ -111,7 +111,8 @@ export type CopyPoses = ReadonlyMap<string, CopyPose>;
 // The parallel copies of the selected run as the engine samples them while it trains.
 export type LiveCopies =
   | { kind: "connecting" }
-  | { kind: "message"; title: string; body: string }
+  // `starting`: the run is booting; the view shows it working, not a still message.
+  | { kind: "message"; title: string; body: string; starting?: boolean }
   | {
       kind: "live";
       scene: SceneDescription;

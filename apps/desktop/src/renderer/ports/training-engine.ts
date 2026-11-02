@@ -225,7 +225,12 @@ export function createEngineTrainingPort(
           show(
             endedEarlier
               ? { kind: "message", ...ended(run) }
-              : { kind: "message", title: `${run.name} is starting`, body: "The copies appear once they are running." },
+              : {
+                  kind: "message",
+                  title: `${run.name} is starting`,
+                  body: "The copies appear once they are running.",
+                  starting: true,
+                },
           );
           connection = open(run.run_id, {
             onStatus: (status) => {
@@ -263,7 +268,7 @@ export function createEngineTrainingPort(
             onLog: (line) => {
               // Until the copies show, the newest line says what the worker is doing, so the wait never looks stuck.
               if (shown.kind === "message" && !endedEarlier && line.level === "info") {
-                show({ kind: "message", title: `${run.name} is starting`, body: line.text });
+                show({ kind: "message", title: `${run.name} is starting`, body: line.text, starting: true });
               }
               lines.push(line);
               lines.splice(0, Math.max(0, lines.length - MAX_LOG_LINES));

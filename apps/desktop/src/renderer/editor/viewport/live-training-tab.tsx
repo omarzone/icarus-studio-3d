@@ -9,6 +9,7 @@ import { RayViewContext } from "../../scene/ray-lines.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
+import { RunStarting } from "./run-starting.tsx";
 import { useLiveCopies } from "../training-queries.ts";
 import { ViewportSurface, type ViewportSurfaceProps } from "./viewport-surface.tsx";
 
@@ -46,7 +47,11 @@ function LiveState({ live, onReconnect }: { live: LiveCopies; onReconnect: () =>
     case "connecting":
       return <LoadingState label="Connecting to the run" />;
     case "message":
-      return <EmptyState title={live.title} body={live.body} />;
+      return live.starting ? (
+        <RunStarting title={live.title} body={live.body} />
+      ) : (
+        <EmptyState title={live.title} body={live.body} />
+      );
     case "closed":
       return (
         <ErrorState
