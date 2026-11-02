@@ -1,6 +1,10 @@
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { brainNetworkApi } from "../engine-client/brain-network-api.ts";
+import { engineApi } from "../engine-client/engine-api.ts";
 import { createBrainFixture } from "./brain.fixture.ts";
+import { createEngineBrainPort } from "./brain-engine.ts";
+import { createEngineNetwork } from "./brain-network-engine.ts";
 import type { CheckFact, LiveReadings } from "./progress-step.ts";
 
 // View types of the brain workspace: what the brain senses and does, how it is rewarded, its shape and activity.
@@ -21,6 +25,8 @@ export type RewardTerm = {
   kind: RewardKind;
   proposed?: boolean;
 };
+// A reward term the task could add: it fits the task family and is not in the reward yet.
+export type RewardOption = { term: string; name: string; detail: string; weight: number };
 export type CurriculumStage = { id: string; name: string; detail: string; active: boolean };
 export type Learning = {
   reward: readonly RewardTerm[];
@@ -92,6 +98,9 @@ export type BrainPort = {
   toggleOutput: (input: { brain: string; id: string }) => Promise<SensesActions>;
   getLearning: (brain: string) => Promise<Learning>;
   setRewardWeight: (input: { brain: string; id: string; weight: number }) => Promise<Learning>;
+  getRewardOptions: (brain: string) => Promise<RewardOption[]>;
+  addRewardTerm: (input: { brain: string; term: string }) => Promise<Learning>;
+  removeRewardTerm: (input: { brain: string; id: string }) => Promise<Learning>;
   getReadings: (brain: string) => Promise<LiveReadings>;
   getShape: (brain: string) => Promise<BrainShape>;
   setLayerSize: (input: { brain: string; id: string; neurons: number }) => Promise<BrainShape>;
@@ -114,12 +123,7 @@ const connectome = ["STA-BRAIN-CONNECTOME", "MOD-BRAIN-SOURCE"] as const;
 
 export const brainPort = definePort<BrainPort>({
   app: {
-    getSensesActions: pending({
-      key: "brain.sensesActions",
-      summary: "What the brain senses and what it can do",
-      sprint: 8,
-      ids: [...learned],
-    }),
+    ...createEngineBrainPort(engineApi),
     toggleInput: pending({
       key: "brain.toggleInput",
       summary: "Turning a sense on or off",
@@ -129,18 +133,6 @@ export const brainPort = definePort<BrainPort>({
     toggleOutput: pending({
       key: "brain.toggleOutput",
       summary: "Turning an action on or off",
-      sprint: 8,
-      ids: [...learned],
-    }),
-    getLearning: pending({
-      key: "brain.learning",
-      summary: "The reward, goal and curriculum",
-      sprint: 8,
-      ids: [...learned],
-    }),
-    setRewardWeight: pending({
-      key: "brain.setRewardWeight",
-      summary: "Changing a reward weight",
       sprint: 8,
       ids: [...learned],
     }),
@@ -165,12 +157,7 @@ export const brainPort = definePort<BrainPort>({
     }),
     toggleRule: pending({ key: "brain.toggleRule", summary: "Changing an episode rule", sprint: 8, ids: [...network] }),
     addLayer: pending({ key: "brain.addLayer", summary: "Adding a layer to the brain", sprint: 8, ids: [...network] }),
-    getNetwork: pending({
-      key: "brain.network",
-      summary: "The live diagram of the network",
-      sprint: 8,
-      ids: ["STA-BRAIN-NETWORK"],
-    }),
+    ...createEngineNetwork({ ...engineApi, ...brainNetworkApi }),
     getSizes: pending({
       key: "brain.sizes",
       summary: "Brain sizes with their training estimates",

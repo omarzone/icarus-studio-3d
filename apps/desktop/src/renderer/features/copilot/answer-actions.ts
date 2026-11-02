@@ -5,8 +5,12 @@ import type { AnswerAction } from "../../ports/copilot-port.ts";
 export type ActionPlan =
   | { do: "go"; to: RouteId }
   // `used` once the proposal was applied, discarded or outdated: the button stays, disabled.
-  | { do: "apply" | "discard"; id: string; used: boolean }
-  | { do: "send"; text: string };
+  | { do: "apply" | "discard" | "apply_and_train"; id: string; used: boolean }
+  | { do: "send"; text: string }
+  // Select an object and frame it in the World view.
+  | { do: "show"; target: string }
+  // Hide this answer's options.
+  | { do: "dismiss" };
 
 export type ActionContext = {
   // The proposal the answer made, if any.
@@ -15,6 +19,7 @@ export type ActionContext = {
 };
 
 const TRAINING_DIALOG: RouteId = "MOD-START-TRAINING";
+const WORLD: RouteId = "SCR-WORLD";
 
 // Only places a person can be sent from the chat: screens, their states, dialogs and popovers.
 function isRouteId(value: string): value is RouteId {
@@ -44,5 +49,18 @@ export function planAction(action: AnswerAction, { proposal, knownRoute }: Actio
       const text = action.target?.trim() ?? "";
       return { do: "send", text: text === "" ? action.label : text };
     }
+    case "show": {
+      const target = action.target?.trim() ?? "";
+      if (target !== "") {
+        return { do: "show", target };
+      }
+      return knownRoute(WORLD) ? { do: "go", to: WORLD } : null;
+    }
+    case "dismiss":
+      return { do: "dismiss" };
+    case "apply_and_train":
+      return proposal && knownRoute(TRAINING_DIALOG)
+        ? { do: "apply_and_train", id: proposal.id, used: !proposal.open }
+        : null;
   }
 }

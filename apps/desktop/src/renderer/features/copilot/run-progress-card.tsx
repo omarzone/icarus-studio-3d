@@ -1,5 +1,35 @@
+import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { usePort } from "../../app/runtime/port.tsx";
 import type { GoalState, RunProgress } from "../../ports/copilot-port.ts";
+import { runCardProgress } from "../../ports/copilot-views.ts";
+import { trainingPort } from "../../ports/training-port.ts";
+import { trainingKeys } from "../train/use-training.ts";
+
+const RUN_POLL_MS = 2000;
+
+// A run an answer is about, read again every 2 s while it trains; nothing is drawn once the project lost it.
+export function LiveRunCard({ runId }: { runId: string }) {
+  const project = useNavigation((state) => state.params.project) ?? "";
+  const port = usePort(trainingPort);
+  const runs = useQuery({
+    queryKey: trainingKeys.runs(project),
+    queryFn: () => port.listRuns(project),
+    enabled: project !== "",
+    refetchInterval: (query) =>
+      query.state.data?.runs.some((run) => run.id === runId && run.status === "running") ? RUN_POLL_MS : false,
+  });
+  const run = runs.data?.runs.find((item) => item.id === runId);
+  if (runs.isPending && project !== "") {
+    return (
+      <div role="status" className="rounded-bubble bg-control p-3.5 text-ui text-fg-tertiary">
+        Reading the run…
+      </div>
+    );
+  }
+  return run ? <RunProgressCard progress={runCardProgress(run)} /> : null;
+}
 
 // A training run as the copilot reports it: progress bar and its goals, done, running or still to do.
 export function RunProgressCard({ progress }: { progress: RunProgress }) {

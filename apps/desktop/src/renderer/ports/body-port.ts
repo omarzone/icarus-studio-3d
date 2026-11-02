@@ -1,6 +1,8 @@
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
 import { createBodyFixture } from "./body.fixture.ts";
+import { createEngineBodyPort } from "./body-engine.ts";
 import type { CheckFact, ProgressStep } from "./progress-step.ts";
 
 // View types of the body workspace: the rig's physics checks, test poses, skin weights, import and auto-rig.
@@ -22,10 +24,22 @@ export type ImportPreview = {
   formats: string;
 };
 
+// A body's parts tree summarized: each joint with its range and motor, and the senses it carries.
+export type BodyJoint = { id: string; part: string; kind: string; range: string; motor?: string };
+export type BodySensor = { id: string; part: string; label: string };
+export type BodyParts = {
+  id: string;
+  name: string;
+  parts: number;
+  joints: readonly BodyJoint[];
+  sensors: readonly BodySensor[];
+};
+
 export type AutoRigProgress = { file: string; percent: number; steps: readonly ProgressStep[] };
 
 export type BodyPort = {
   getRigCheck: (body: string) => Promise<RigCheck>;
+  getParts: (body: string) => Promise<readonly BodyParts[]>;
   applyPose: (input: { body: string; id: string }) => Promise<void>;
   fixProblems: (body: string) => Promise<RigCheck>;
   getWeights: (body: string) => Promise<BoneWeights>;
@@ -38,11 +52,9 @@ export type BodyPort = {
   cancelAutoRig: (body: string) => Promise<void>;
 };
 
-const rig = ["SCR-BODY", "STA-BODY-CHECK-FAILED", "MOD-AUTO-RIG"] as const;
-
 export const bodyPort = definePort<BodyPort>({
   app: {
-    getRigCheck: pending({ key: "body.rigCheck", summary: "The physics checks of the body", sprint: 9, ids: [...rig] }),
+    ...createEngineBodyPort(engineApi),
     applyPose: pending({ key: "body.applyPose", summary: "Trying a test pose", sprint: 9, ids: ["SCR-BODY"] }),
     fixProblems: pending({
       key: "body.fixProblems",

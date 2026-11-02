@@ -101,6 +101,7 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
   const port = usePort(copilotPort);
   const client = useQueryClient();
   const screen = useNavigation((state) => state.screen);
+  const go = useNavigation((state) => state.go);
   const key = copilotKey(conversation);
   const query = useQuery({ queryKey: key, queryFn: () => port.getConversation(conversation) });
   // A copilot answer can change the project (applied or autopilot) and other conversations, so the rest is re-read.
@@ -183,6 +184,12 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
           onSend={sendText}
           onApply={(id) => run(apply, { key: conversation, id })}
           onDiscard={(id) => run(discard, { key: conversation, id })}
+          onApplyAndTrain={(id) =>
+            void apply.mutateAsync({ key: conversation, id }).then((next) => {
+              settled(next);
+              go("MOD-START-TRAINING");
+            }, refused)
+          }
           onUpload={upload}
           onAutonomy={(mode) => run(autonomy, { key: conversation, mode })}
         />

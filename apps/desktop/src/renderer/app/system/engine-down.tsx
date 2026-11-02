@@ -20,8 +20,8 @@ export function EngineDown({ reason, lastLog, onRestart, onCopy }: Props) {
         </span>
         <h1 className="m-0 text-title-1 font-semibold">The Icarus engine stopped</h1>
         <p className="m-0 text-body text-fg-secondary">
-          Your projects are saved. Training runs pause until the engine is back. This usually happens after the computer
-          sleeps.
+          Your projects are saved. A run that was training has stopped and keeps its last checkpoint. This usually
+          happens after the computer sleeps.
         </p>
         <div className="flex gap-2">
           <button

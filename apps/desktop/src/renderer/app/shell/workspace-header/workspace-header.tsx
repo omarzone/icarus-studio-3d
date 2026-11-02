@@ -10,6 +10,7 @@ import { useRuntimeMode } from "../../runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 import { GuideButton } from "./guide-button.tsx";
 import { PLAY_PURPOSE, primaryPurpose, WORKSPACE_PURPOSES } from "./header-purposes.ts";
+import { TasksIndicator } from "./tasks-indicator.tsx";
 
 export type Workspace = "World" | "Body" | "Motion" | "Brain" | "Train" | "Results" | "Build";
 
@@ -113,6 +114,7 @@ export function WorkspaceHeader({
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3.5">
         {layoutMenu}
+        {mode === "app" && openProject ? <TasksIndicator project={openProject} /> : null}
         {mode === "app" && openProject ? (
           <GuideButton project={openProject} label={guide} />
         ) : (

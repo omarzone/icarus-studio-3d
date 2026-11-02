@@ -86,7 +86,12 @@ describe("start plan", () => {
   it("keeps the steps and copies within what the engine accepts", () => {
     const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 10, copies: 500 } });
     expect(plan).toMatchObject({ steps: 10_000, copies: 64 });
-    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64 });
+    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64, coach: false });
+  });
+
+  it("asks the engine to coach the run when the copilot coach switch is on", () => {
+    const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { coach: true } });
+    expect(startRequest(plan).coach).toBe(true);
   });
 });
 
@@ -107,6 +112,24 @@ describe("live view and console", () => {
       result: "The first one is saved at step 0",
     });
     expect(liveView(status(), [checkpoint(25_000, null, 184.24)]).result).toBe("Return 184.2");
+  });
+
+  it("fills the episode bar from the latest checkpoint's recorded episode", () => {
+    const frame = (time: number) => ({ positions: [], quaternions: [], reward: 0, time });
+    const rollout = {
+      step: 250_000,
+      seed: 0,
+      outcome: "success",
+      episode_return: 1,
+      geoms: [],
+      frames: [frame(0.2), frame(1.8)],
+    };
+    expect(liveView(status(), [checkpoint(250_000, 0.714)], rollout).episode).toEqual({
+      at: "0:00.0",
+      length: "0:01.6",
+      played: 0,
+    });
+    expect(liveView(status(), [checkpoint(250_000, 0.714)]).episode).toBeUndefined();
   });
 
   it("writes log lines with the time since the run started", () => {

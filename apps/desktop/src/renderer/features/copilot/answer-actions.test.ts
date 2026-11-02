@@ -64,4 +64,22 @@ describe("answer actions", () => {
     expect(planAction(action("send"), context())).toEqual({ do: "send", text: "Do it" });
     expect(planAction(action("send", "   "), context())).toEqual({ do: "send", text: "Do it" });
   });
+
+  it("selects the object to show, or opens the World view when it names none", () => {
+    expect(planAction(action("show", " car "), context())).toEqual({ do: "show", target: "car" });
+    expect(planAction(action("show"), context())).toEqual({ do: "go", to: "SCR-WORLD" });
+  });
+
+  it("hides the answer's options to dismiss", () => {
+    expect(planAction(action("dismiss"), context())).toEqual({ do: "dismiss" });
+  });
+
+  it("applies the proposal then opens the start training dialog", () => {
+    expect(planAction(action("apply_and_train"), context({ id: "p1", open: true }))).toEqual({
+      do: "apply_and_train",
+      id: "p1",
+      used: false,
+    });
+    expect(planAction(action("apply_and_train"), context())).toBeNull();
+  });
 });

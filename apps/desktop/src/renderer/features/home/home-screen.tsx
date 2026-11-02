@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { communityPort } from "../../ports/community-port.ts";
+import { projectsPort } from "../../ports/projects-port.ts";
 import { templatesPort } from "../../ports/templates-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { LauncherPage } from "../../ui/launcher-page.tsx";
@@ -17,9 +18,10 @@ import { TemplateCards } from "./template-cards.tsx";
 export function HomeScreen() {
   const screen = useNavigation((state) => state.screen);
   const overlay = useNavigation((state) => state.overlay);
-  const firstLaunch = screen === "STA-HOME-EMPTY";
+  const noProjectsYet = useNoProjectsYet(screen === "SCR-HOME");
+  const firstLaunch = screen === "STA-HOME-EMPTY" || noProjectsYet;
   // The bare front door is drawn for a signed-out visitor, as in its reference; dialogs over it show the account.
-  const signedOut = screen === "SCR-HOME" && overlay === null;
+  const signedOut = screen === "SCR-HOME" && overlay === null && !noProjectsYet;
   return (
     <LauncherPage active="Home" activeGoesTo="SCR-HOME" signedOut={signedOut}>
       <div className="flex flex-col gap-4.5">
@@ -32,6 +34,14 @@ export function HomeScreen() {
       </div>
     </LauncherPage>
   );
+}
+
+// In the app, Home is the first-launch state while the engine lists no projects.
+function useNoProjectsYet(onHome: boolean): boolean {
+  const app = useRuntimeMode() === "app";
+  const projects = usePort(projectsPort);
+  const query = useQuery({ queryKey: ["projects", "list"], queryFn: projects.listProjects, enabled: app && onHome });
+  return app && onHome && query.data?.length === 0;
 }
 
 function Templates() {

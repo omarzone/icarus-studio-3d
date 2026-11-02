@@ -15,7 +15,9 @@ import type {
   Proposal,
   ProposalChange,
   RichText,
+  RunProgress,
 } from "./copilot-port.ts";
+import type { RunSummary } from "./training-port.ts";
 
 // Pure mappings from the engine's conversation documents onto the chat's view types.
 
@@ -111,7 +113,9 @@ function copilotMessage(
     role: "copilot",
     text: [{ text: message.text }],
     markdown: message.text,
+    ...(message.title ? { title: message.title } : {}),
     ...(message.thinking ? { thinking: message.thinking } : {}),
+    ...((message.checks ?? []).length > 0 ? { checks: message.checks } : {}),
     ...(actions.length > 0 ? { answerActions: actions } : {}),
     ...(steps.length > 0 ? { steps } : {}),
     ...(views.length > 0 ? { views } : {}),
@@ -119,22 +123,82 @@ function copilotMessage(
   };
 }
 
+// "100k steps", "1.5M steps": where in a run the following messages belong.
+export function milestoneText(step: number): string {
+  if (step >= 1_000_000) {
+    return `${Number((step / 1_000_000).toFixed(1))}M steps`;
+  }
+  if (step >= 1000) {
+    return `${Number((step / 1000).toFixed(1))}k steps`;
+  }
+  return `${step} steps`;
+}
+
+// The cards an answer brings after its text: the build it started, the run it is about and the plan it suggests.
+function cardsOf(message: EngineMessage): ChatMessage[] {
+  const cards: ChatMessage[] = [];
+  if (message.build_id) {
+    cards.push({ id: `build-${message.id}`, role: "build", scene: message.build_id });
+  }
+  if (message.run) {
+    cards.push({ id: `run-${message.id}`, role: "run", runId: message.run.run_id });
+  }
+  const plan = message.plan ?? [];
+  if (plan.length > 0) {
+    cards.push({
+      id: `plan-${message.id}`,
+      role: "plan",
+      plan: {
+        title: "Next run, if you agree",
+        items: plan.map((item) => ({ mark: item.mark, label: item.label, detail: item.detail })),
+        actions: [],
+      },
+    });
+  }
+  return cards;
+}
+
 export function conversationView(conversation: EngineConversation, links: AttachmentLinks | null = null): Conversation {
   const proposals = new Map(conversation.proposals.map((proposal) => [proposal.id, proposal]));
+  let milestone: number | null = null;
   const messages = conversation.messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user") {
       return [userMessage(message, links)];
     }
+    const step = message.run?.milestone_step;
+    const divider: ChatMessage[] =
+      typeof step === "number" && step !== milestone
+        ? [{ id: `milestone-${message.id}`, role: "milestone", text: milestoneText(step) }]
+        : [];
+    if (typeof step === "number") {
+      milestone = step;
+    }
     const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;
     const answer = copilotMessage(message, proposal, links);
-    return proposal
-      ? [answer, { id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
-      : [answer];
+    const card: ChatMessage[] = proposal
+      ? [{ id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
+      : [];
+    return [...divider, answer, ...cardsOf(message), ...card];
   });
+  const items = conversation.suggestion_items ?? [];
   return {
     messages,
-    suggestions: conversation.suggestions.map((text) => ({ text, intent: "ask" })),
+    suggestions:
+      items.length > 0
+        ? items.map((item) => ({ text: item.text, intent: item.intent ?? "ask" }))
+        : conversation.suggestions.map((text) => ({ text, intent: "ask" })),
     autonomy: conversation.autonomy,
+  };
+}
+
+// The run card of an answer from the run as the engine reports it now; goals stay empty until runs have stages.
+export function runCardProgress(run: RunSummary): RunProgress {
+  const running = run.status === "running";
+  return {
+    title: run.name,
+    meta: running ? "training" : run.detail,
+    done: run.status === "done" ? 1 : (run.progress ?? 0),
+    goals: [],
   };
 }
 

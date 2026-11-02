@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import type { EngineStatus } from "../../shared/engine-bridge.ts";
+import { RememberWorkspace } from "../features/project/last-workspace.ts";
 import { AppProviders, HOME } from "./app-providers.tsx";
 import { Router } from "./navigation/router.tsx";
 import { RememberLocation, savedLocation } from "./navigation/saved-location.tsx";
+import { useOpenProjectShortcut } from "./shell/open-project-shortcut.ts";
 import { EngineDown } from "./system/engine-down.tsx";
 
 export function App() {
@@ -26,7 +28,14 @@ export function App() {
   return (
     <AppProviders mode="app" initial={savedLocation(window.sessionStorage, HOME)}>
       <RememberLocation storage={window.sessionStorage} />
+      <RememberWorkspace />
+      <AppShortcuts />
       <Router />
     </AppProviders>
   );
+}
+
+function AppShortcuts() {
+  useOpenProjectShortcut();
+  return null;
 }

@@ -100,4 +100,9 @@ describe("options under copilot answers", () => {
     ];
     expect(answerOptions(messages, null).size).toBe(0);
   });
+
+  it("collapse to Apply and train once its proposal was applied", () => {
+    const messages = [offer("a1", [button("Apply and train", "apply_and_train")], false), proposalCard("applied")];
+    expect(answerOptions(messages, null).get("a1")).toEqual({ show: "chosen", label: "Apply and train" });
+  });
 });

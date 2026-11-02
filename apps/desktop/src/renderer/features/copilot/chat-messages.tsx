@@ -140,23 +140,36 @@ function ThinkingToggle({ thinking }: { thinking: string }) {
 
 const DOT_DELAYS = ["[animation-delay:-320ms]", "[animation-delay:-160ms]", ""] as const;
 
-// While the copilot works on an answer; its steps arrive with the answer. The dots bounce, or only pulse
-// when the system asks for reduced motion.
-export function ThinkingBubble() {
+// While the copilot works on an answer: its steps so far as they arrive (the open project's event stream), then the
+// latest one beside the dots. The dots bounce, or only pulse when the system asks for reduced motion.
+export function ThinkingBubble({ steps = [] }: { steps?: readonly { summary: string }[] }) {
+  const latest = steps.at(-1);
   return (
-    <div
-      role="status"
-      className="flex items-center gap-2 self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary"
-    >
-      Working…
-      <span aria-hidden className="flex items-center gap-1">
-        {DOT_DELAYS.map((delay) => (
-          <span
-            key={delay}
-            className={`size-1 rounded-full bg-current motion-safe:animate-bounce motion-reduce:animate-pulse ${delay}`}
-          />
-        ))}
-      </span>
+    <div className="flex max-w-[92%] min-w-0 flex-col gap-1 self-start">
+      {steps.slice(0, -1).map((step, index) => (
+        <span
+          // biome-ignore lint/suspicious/noArrayIndexKey: live steps of a turn are only appended, never reordered.
+          key={index}
+          className="flex items-center gap-1.5 px-1 text-meta text-fg-tertiary"
+        >
+          <Check size={12} strokeWidth={1.75} aria-hidden className="shrink-0" />
+          <span className="truncate">{step.summary}</span>
+        </span>
+      ))}
+      <div
+        role="status"
+        className="flex min-w-0 items-center gap-2 self-start rounded-bubble bg-control px-3.5 py-2.75 text-body text-fg-tertiary"
+      >
+        <span className="truncate">{latest ? latest.summary : "Working…"}</span>
+        <span aria-hidden className="flex shrink-0 items-center gap-1">
+          {DOT_DELAYS.map((delay) => (
+            <span
+              key={delay}
+              className={`size-1 rounded-full bg-current motion-safe:animate-bounce motion-reduce:animate-pulse ${delay}`}
+            />
+          ))}
+        </span>
+      </div>
     </div>
   );
 }

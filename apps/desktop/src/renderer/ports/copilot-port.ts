@@ -54,9 +54,18 @@ export type AttachmentInput = {
   text?: string;
 };
 
-export type AnswerActionKind = "navigate" | "train" | "apply" | "discard" | "send";
+export type AnswerActionKind =
+  | "navigate"
+  | "train"
+  | "apply"
+  | "discard"
+  | "send"
+  | "show"
+  | "dismiss"
+  | "apply_and_train";
 
-// A button the copilot put under its answer; `target` is a screen id (navigate) or the message to send.
+// A button the copilot put under its answer; `target` is a screen id (navigate), an object id (show) or the message
+// to send.
 export type AnswerAction = { label: string; kind: AnswerActionKind; target: string | null };
 
 export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library";
@@ -101,6 +110,8 @@ export type ChatMessage =
   | { id: string; role: "milestone"; text: string }
   // Live progress of a training run with its goals.
   | { id: string; role: "progress"; progress: RunProgress }
+  // A training run of the project the answer is about, read live from the engine.
+  | { id: string; role: "run"; runId: string }
   // Changes the copilot suggests for the next step, with the actions that take them.
   | { id: string; role: "plan"; plan: NextStepPlan };
 

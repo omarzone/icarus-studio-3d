@@ -36,4 +36,23 @@ describe("copilot conversation checks", () => {
     expect(isConversation(withAnswer({ steps: [{ tool: "look", summary: "Looked", ok: "yes" }] }))).toBe(false);
     expect(isConversation(withAnswer({ steps: "looked" }))).toBe(false);
   });
+
+  it("accepts titles, check lists, plans, build and run cards and suggestion intents", () => {
+    const answer = withAnswer({
+      title: "Body checks",
+      checks: [{ text: "Wheels touch the ground", tone: "ok" }],
+      plan: [{ mark: "change", label: "Reward", detail: "less for speed" }],
+      build_id: "b1",
+      run: { run_id: "r1", milestone_step: 100000 },
+      actions: [{ label: "Apply and train", kind: "apply_and_train" }],
+    });
+    expect(isConversation({ ...answer, suggestion_items: [{ text: "Why?", intent: "diagnose" }] })).toBe(true);
+  });
+
+  it("rejects malformed cards and unknown suggestion intents", () => {
+    expect(isConversation(withAnswer({ checks: [{ text: "Fine", tone: "great" }] }))).toBe(false);
+    expect(isConversation(withAnswer({ plan: [{ mark: "remove", label: "x", detail: "y" }] }))).toBe(false);
+    expect(isConversation(withAnswer({ run: { milestone_step: 3 } }))).toBe(false);
+    expect(isConversation({ ...withAnswer({}), suggestion_items: [{ text: "Hack", intent: "exec" }] })).toBe(false);
+  });
 });

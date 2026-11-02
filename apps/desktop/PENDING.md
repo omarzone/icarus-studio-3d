@@ -26,13 +26,9 @@ Every action below is reachable in the interface and shows *Not available yet* u
 |---|---|---|
 | `brain.addLayer` | Adding a layer to the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
 | `brain.chooseSize` | Choosing a brain size | `MOD-BRAIN-SIZES` |
-| `brain.learning` | The reward, goal and curriculum | `SCR-BRAIN` |
-| `brain.network` | The live diagram of the network | `STA-BRAIN-NETWORK` |
 | `brain.readings` | What the brain senses right now | `SCR-BRAIN`, `STA-BRAIN-CONNECTOME` |
-| `brain.sensesActions` | What the brain senses and what it can do | `SCR-BRAIN` |
 | `brain.setDecisionsPerSecond` | Changing how often the brain decides | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
 | `brain.setLayerSize` | Changing a layer size | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `brain.setRewardWeight` | Changing a reward weight | `SCR-BRAIN` |
 | `brain.shape` | The shape of the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
 | `brain.sizes` | Brain sizes with their training estimates | `MOD-BRAIN-SIZES` |
 | `brain.toggleInput` | Turning a sense on or off | `SCR-BRAIN` |
@@ -52,7 +48,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `body.import` | Reading a model to import | `MOD-IMPORT` |
 | `body.importAndRig` | Importing and auto-rigging a model | `MOD-IMPORT` |
 | `body.importStatic` | Importing a model as a static mesh | `MOD-IMPORT` |
-| `body.rigCheck` | The physics checks of the body | `SCR-BODY`, `STA-BODY-CHECK-FAILED`, `MOD-AUTO-RIG` |
 | `body.setImportKind` | Choosing what kind of file to import | `MOD-IMPORT` |
 | `body.weights` | Skin weights per bone | `SCR-BODY` |
 

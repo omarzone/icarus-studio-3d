@@ -1,6 +1,8 @@
 // TAB-CHAT
 import { Paperclip } from "lucide-react";
 import { type DragEvent, useRef, useState } from "react";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useLiveSteps } from "../../app/runtime/live-turn.ts";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import type { AutonomyMode, ChatAttachment, ChatMessage, Conversation } from "../../ports/copilot-port.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
@@ -15,11 +17,12 @@ import { Composer } from "./composer.tsx";
 import { MessageAttachments, SceneViewsStrip } from "./message-attachments.tsx";
 import { PlanCard } from "./plan-card.tsx";
 import { ProposalCard, type ProposalRoutes } from "./proposal-card.tsx";
-import { MilestoneDivider, RunProgressCard } from "./run-progress-card.tsx";
+import { LiveRunCard, MilestoneDivider, RunProgressCard } from "./run-progress-card.tsx";
 import { SuggestionChips, type SuggestionRoutes } from "./suggestion-chips.tsx";
 import { visibleSuggestions } from "./suggestion-visibility.ts";
 import { useComposerAttachments } from "./use-composer-attachments.ts";
 import { useStickToBottom } from "./use-stick-to-bottom.ts";
+import { WelcomeCard } from "./welcome-card.tsx";
 
 // The message on its way to the copilot, shown until the answer arrives.
 export type SendingMessage = { text: string; attachments: readonly ChatAttachment[] };
@@ -42,6 +45,8 @@ export type ChatTabProps = {
   onUpload: (file: ReadFile) => Promise<ChatAttachment>;
   onApply: (id: string) => void;
   onDiscard: (id: string) => void;
+  // Applies a proposal, then opens the start training dialog; only the app offers it.
+  onApplyAndTrain?: (id: string) => void;
   onAutonomy: (mode: AutonomyMode) => void;
 };
 
@@ -57,6 +62,7 @@ export function ChatTab(props: ChatTabProps) {
   useStickToBottom(list, `${conversation.messages.length}:${sending?.text ?? ""}`, Boolean(sending));
   // The prototype shows every suggestion of the sample, as the design does.
   const app = useRuntimeMode() === "app";
+  const liveSteps = useLiveSteps(useNavigation((state) => state.params.project));
   const suggestions = app ? visibleSuggestions(conversation, Boolean(sending)) : conversation.suggestions;
   // Likewise its options stay under every sample answer; in the app only the newest unanswered answer keeps them.
   const options = app ? answerOptions(conversation.messages, sending?.text ?? null) : null;
@@ -99,6 +105,9 @@ export function ChatTab(props: ChatTabProps) {
           className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 pt-2 [mask-image:linear-gradient(to_bottom,transparent_0,black_56px)]"
         >
           <div className="mt-auto flex min-w-0 flex-col gap-3.5">
+            {app && conversation.messages.length === 0 && !sending ? (
+              <WelcomeCard onSend={(text) => void props.onSend(text)} />
+            ) : null}
             {conversation.messages.map((message) => (
               <Message key={message.id} message={message} options={options?.get(message.id) ?? LIVE} {...props} />
             ))}
@@ -106,7 +115,7 @@ export function ChatTab(props: ChatTabProps) {
               <>
                 {sending.attachments.length > 0 ? <MessageAttachments attachments={sending.attachments} /> : null}
                 <UserBubble text={sending.text} />
-                <ThinkingBubble />
+                <ThinkingBubble steps={liveSteps} />
               </>
             ) : null}
           </div>
@@ -156,6 +165,7 @@ function Message({
   acting,
   onApply,
   onDiscard,
+  onApplyAndTrain,
   onSend,
 }: ChatTabProps & { message: ChatMessage; options: OptionsState }) {
   switch (message.role) {
@@ -192,6 +202,7 @@ function Message({
                   onSend={(text) => void onSend(text)}
                   onApply={onApply}
                   onDiscard={onDiscard}
+                  onApplyAndTrain={onApplyAndTrain}
                 />
               ) : undefined
             }
@@ -216,6 +227,8 @@ function Message({
       return <MilestoneDivider text={message.text} />;
     case "progress":
       return <RunProgressCard progress={message.progress} />;
+    case "run":
+      return <LiveRunCard runId={message.runId} />;
     case "plan":
       return (
         <PlanCard

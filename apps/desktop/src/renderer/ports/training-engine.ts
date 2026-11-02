@@ -109,7 +109,11 @@ export function createEngineTrainingPort(
     },
     getLiveView: async (project) => {
       const run = await requireRun(project);
-      return liveView(run, await api.checkpoints(run.run_id));
+      const checkpoints = await api.checkpoints(run.run_id);
+      const latest = checkpoints.at(-1);
+      // A checkpoint whose episode is not recorded yet leaves the episode bar out.
+      const rollout = latest ? await api.rollout(run.run_id, latest.step).catch(() => undefined) : undefined;
+      return liveView(run, checkpoints, rollout);
     },
     getMetrics: async (project) => {
       const { run } = await selectedRun(project);

@@ -37,7 +37,9 @@ function proposalStatus(messages: readonly ChatMessage[], id: string): ProposalS
 function chosen(options: readonly Option[], kind: Option["kind"] | null, reply: string | null): OptionsState {
   const key = reply === null ? null : normalized(reply);
   const pick = options.find((option) =>
-    kind ? option.kind === kind : option.sends !== null && normalized(option.sends) === key,
+    kind
+      ? option.kind === kind || (kind === "apply" && option.kind === "apply_and_train")
+      : option.sends !== null && normalized(option.sends) === key,
   );
   return pick ? { show: "chosen", label: pick.label } : { show: "none" };
 }

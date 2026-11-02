@@ -13,6 +13,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { type PillTone, StatusPill } from "../../ui/status-pill.tsx";
+import { lastWorkspace, workspaceStorage } from "../project/last-workspace.ts";
 
 type Empty = { title: string; body: string };
 
@@ -124,7 +125,7 @@ function ProjectCard({ project, scene }: { project: ProjectSummary; scene: Scene
   const votes = project.votes === undefined ? "" : ` ·\n${project.votes}`;
   return (
     <GoTo
-      to={project.lastScreen ?? "SCR-WORLD"}
+      to={project.lastScreen ?? lastWorkspace(workspaceStorage(), project.id)}
       params={{ project: project.id }}
       cta={`${project.name}\n${project.statusLine}${votes}`}
       className="flex flex-col overflow-hidden rounded-card bg-control text-left hover:bg-control-raised active:opacity-80"

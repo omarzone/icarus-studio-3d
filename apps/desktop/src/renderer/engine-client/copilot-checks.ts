@@ -3,6 +3,8 @@ import type {
   AttachmentInfo,
   BuildStatus,
   ChatAction,
+  ChatSuggestion,
+  CheckItem,
   Conversation,
   CopilotMessage,
   CopilotProposal,
@@ -10,6 +12,7 @@ import type {
   IdeaSet,
   ModelConnection,
   ModelSettings,
+  PlanItem,
 } from "@icarus/contracts";
 import { has, isListOf, isRecord, isSceneDescription } from "./response-checks.ts";
 
@@ -19,7 +22,28 @@ const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"]
 const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
 const STEP_STATES: readonly string[] = ["done", "running", "todo"];
 const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view"];
-const ACTION_KINDS: readonly string[] = ["navigate", "train", "apply", "discard", "send"];
+const ACTION_KINDS: readonly string[] = [
+  "navigate",
+  "train",
+  "apply",
+  "discard",
+  "send",
+  "show",
+  "dismiss",
+  "apply_and_train",
+];
+const SUGGESTION_INTENTS: readonly string[] = [
+  "ask",
+  "propose-change",
+  "explain",
+  "diagnose",
+  "compare",
+  "train-run",
+  "stop-run",
+  "play",
+  "show",
+  "share",
+];
 const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library"];
 
 function isString(value: unknown): value is string {
@@ -53,13 +77,42 @@ function isChatAction(value: unknown): value is ChatAction {
   );
 }
 
-function isAgentStep(value: unknown): value is AgentStep {
+export function isAgentStep(value: unknown): value is AgentStep {
   return (
     isRecord(value) &&
     typeof value.tool === "string" &&
     AGENT_TOOLS.includes(value.tool) &&
     has(value, "summary", "string") &&
     (value.ok === undefined || typeof value.ok === "boolean")
+  );
+}
+
+function isCheckItem(value: unknown): value is CheckItem {
+  return isRecord(value) && has(value, "text", "string") && (value.tone === "ok" || value.tone === "warn");
+}
+
+function isPlanItem(value: unknown): value is PlanItem {
+  return (
+    isRecord(value) &&
+    (value.mark === "add" || value.mark === "change") &&
+    has(value, "label", "string") &&
+    has(value, "detail", "string")
+  );
+}
+
+function isRunCard(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (isRecord(value) && has(value, "run_id", "string") && isOptional(value, "milestone_step", "number"))
+  );
+}
+
+function isSuggestionItem(value: unknown): value is ChatSuggestion {
+  return (
+    isRecord(value) &&
+    has(value, "text", "string") &&
+    (value.intent === undefined || (typeof value.intent === "string" && SUGGESTION_INTENTS.includes(value.intent)))
   );
 }
 
@@ -73,7 +126,12 @@ function isMessage(value: unknown): value is CopilotMessage {
     isOptional(value, "thinking", "string") &&
     (value.attachments === undefined || isListOf(value.attachments, isAttachmentInfo)) &&
     (value.actions === undefined || isListOf(value.actions, isChatAction)) &&
-    (value.steps === undefined || isListOf(value.steps, isAgentStep))
+    (value.steps === undefined || isListOf(value.steps, isAgentStep)) &&
+    isOptional(value, "title", "string") &&
+    isOptional(value, "build_id", "string") &&
+    (value.checks === undefined || isListOf(value.checks, isCheckItem)) &&
+    (value.plan === undefined || isListOf(value.plan, isPlanItem)) &&
+    isRunCard(value.run)
   );
 }
 
@@ -109,7 +167,8 @@ export function isConversation(value: unknown): value is Conversation {
     (value.autonomy === "ask" || value.autonomy === "autopilot") &&
     isListOf(value.messages, isMessage) &&
     isListOf(value.proposals, isProposal) &&
-    isListOf(value.suggestions, isString)
+    isListOf(value.suggestions, isString) &&
+    (value.suggestion_items === undefined || isListOf(value.suggestion_items, isSuggestionItem))
   );
 }
 
