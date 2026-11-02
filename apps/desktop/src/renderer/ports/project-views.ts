@@ -24,7 +24,18 @@ export function relativeTime(iso: string, now: Date): string {
   return `${Math.floor(elapsed / DAY)} days ago`;
 }
 
-export function projectView(summary: Pick<EngineSummary, "id" | "name" | "description" | "revision">): ProjectSummary {
+// The time of a save: the clock time when it was today, else how long ago ("yesterday", "3 days ago").
+export function savedTime(iso: string, now: Date): string {
+  const saved = new Date(iso);
+  if (saved.toDateString() !== now.toDateString()) {
+    return relativeTime(iso, now);
+  }
+  return `${String(saved.getHours()).padStart(2, "0")}:${String(saved.getMinutes()).padStart(2, "0")}`;
+}
+
+type SummaryFields = Pick<EngineSummary, "id" | "name" | "description" | "revision"> & { updated_at?: string };
+
+export function projectView(summary: SummaryFields): ProjectSummary {
   return {
     id: summary.id,
     name: summary.name,
@@ -32,6 +43,7 @@ export function projectView(summary: Pick<EngineSummary, "id" | "name" | "descri
     status: "draft",
     statusLine: `Revision ${summary.revision} · design checks passed`,
     revision: `rev ${summary.revision}`,
+    updatedAt: summary.updated_at,
   };
 }
 
@@ -61,6 +73,7 @@ export function revisionViews(revisions: readonly Revision[], current: number, n
       change: revision.summary,
       author: revision.author === "copilot" ? "copilot" : "you",
       when: relativeTime(revision.created_at, now),
+      savedAt: savedTime(revision.created_at, now),
       current: revision.number === current,
     }));
 }

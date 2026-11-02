@@ -1,7 +1,9 @@
 // SCR-PLAY · SCR-PLAY.b
+import { useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
+import type { PlayBrainPick } from "../../ports/play-port.ts";
 import { useProjectName } from "../../ui/project-name.ts";
 import { NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
@@ -27,7 +29,9 @@ export function PlayScreen() {
 }
 
 function PlaySession({ config, project }: { config: PlayConfig; project: { id: string; name: string } }) {
-  const connection = usePlayConnection(project.id);
+  // The brain picked with Use another brain, for this Play session only.
+  const [chosen, choose] = useState<PlayBrainPick>();
+  const connection = usePlayConnection(project.id, chosen);
   const layout = usePlayLayout(project.id).data;
   // Only the app names the brain in the header; the prototype keeps its design.
   const brain = usePlayBrain(project.id);
@@ -38,7 +42,11 @@ function PlaySession({ config, project }: { config: PlayConfig; project: { id: s
       left={
         <>
           <SensesPanel project={project.id} className={layout?.vision ? "flex-1" : "flex-none"} />
-          {layout?.vision ? <VisionPanel project={project.id} /> : <DecisionsPanel project={project.id} />}
+          {layout?.vision ? (
+            <VisionPanel project={project.id} />
+          ) : (
+            <DecisionsPanel project={project.id} onChooseBrain={choose} />
+          )}
         </>
       }
       center={

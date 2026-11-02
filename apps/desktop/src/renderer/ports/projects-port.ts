@@ -20,6 +20,8 @@ export type ProjectSummary = {
   lastScreen?: ScreenId;
   // Community votes once published.
   votes?: number;
+  // When the newest revision was saved (ISO time); absent in sample data.
+  updatedAt?: string;
 };
 
 // What a project keeps on this computer, for the duplicate and delete dialogs.

@@ -1,6 +1,14 @@
 import type { ProjectSummary as EngineSummary, Revision, TemplateInfo } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { projectFootprint, projectView, relativeTime, revisionViews, templateView, withRuns } from "./project-views.ts";
+import {
+  projectFootprint,
+  projectView,
+  relativeTime,
+  revisionViews,
+  savedTime,
+  templateView,
+  withRuns,
+} from "./project-views.ts";
 import { status } from "./testdata/training-runs.ts";
 
 const now = new Date("2026-11-01T12:00:00Z");
@@ -60,6 +68,14 @@ it("describes a project by its revision", () => {
     status: "draft",
     statusLine: "Revision 4 · design checks passed",
     revision: "rev 4",
+  });
+});
+
+describe("savedTime", () => {
+  it("shows the clock time of a save made today and how long ago otherwise", () => {
+    const now = new Date(2026, 10, 2, 18, 0);
+    expect(savedTime(new Date(2026, 10, 2, 9, 5).toISOString(), now)).toBe("09:05");
+    expect(savedTime(new Date(2026, 10, 1, 17, 0).toISOString(), now)).toBe("yesterday");
   });
 });
 

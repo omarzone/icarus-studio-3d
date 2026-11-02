@@ -12,6 +12,8 @@ export type RevisionSummary = {
   author: RevisionAuthor;
   // Relative time as the engine reports it ("2 min ago", "yesterday").
   when: string;
+  // When it was saved: the clock time today ("14:32"), else how long ago.
+  savedAt?: string;
   current: boolean;
 };
 

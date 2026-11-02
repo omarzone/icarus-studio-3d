@@ -1,8 +1,16 @@
-import type { PlayCommand, PlayFrame, PlayReading, PlaySessionInfo, PlayToolInfo } from "@icarus/contracts";
+import type {
+  PlayBrainOption,
+  PlayCommand,
+  PlayFrame,
+  PlayReading,
+  PlaySessionInfo,
+  PlayToolInfo,
+} from "@icarus/contracts";
 import {
   type LiveBar,
   PLACED_PIECE,
   type PlayAction,
+  type PlayBrain,
   type PlayEvent,
   type PlaySession,
   type PlayTool,
@@ -106,9 +114,24 @@ export function playSession({ info, frame, events, selectedTool }: SessionParts)
       bars: senseBars(frame.senses),
       note: `Reward ${formatValue(frame.reward)} · episode return ${formatValue(frame.episode_return)}`,
     },
-    decisions: { bars: decisionBars(frame.actions), brain: info.brain },
+    decisions: {
+      bars: decisionBars(frame.actions),
+      brain: info.brain,
+      playing: info.run_id && typeof info.step === "number" ? { runId: info.run_id, step: info.step } : undefined,
+    },
     events,
   };
+}
+
+export function playBrains(options: readonly PlayBrainOption[]): PlayBrain[] {
+  return options.map((option) => ({
+    runId: option.run_id,
+    step: option.step,
+    label: option.label,
+    fits: option.fits,
+    reason: option.reason ?? undefined,
+    isDefault: option.default,
+  }));
 }
 
 // The world settings the toggling tools change; the next command depends on them.
