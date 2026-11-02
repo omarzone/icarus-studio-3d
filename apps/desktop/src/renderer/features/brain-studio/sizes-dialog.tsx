@@ -85,7 +85,7 @@ function SizeCard({ size, onUse }: { size: BrainSize; onUse: () => Promise<void>
       </div>
       <ActionButton
         cta={`Use ${size.label}`}
-        to="STA-brain-NETWORK"
+        to="STA-BRAIN-NETWORK"
         run={onUse}
         className={
           size.recommended

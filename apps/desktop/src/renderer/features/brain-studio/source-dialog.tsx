@@ -44,7 +44,7 @@ function Source({ brain }: { brain: string }) {
           </GoTo>
           <ActionButton
             cta="Load into the fly"
-            to="STA-brain-CONNECTOME"
+            to="STA-BRAIN-CONNECTOME"
             disabled={selected === null}
             title={selected === null ? "Choose what drives the body first" : undefined}
             run={() => port.loadSource({ brain, id: selected ?? "" })}

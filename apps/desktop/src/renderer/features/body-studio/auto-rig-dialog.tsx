@@ -37,7 +37,7 @@ function AutoRig({ body }: { body: string }) {
           <ActionButton cta="Cancel" run={() => port.cancelAutoRig(body)} className={dialogButtonClass("secondary")}>
             Cancel
           </ActionButton>
-          <GoTo to="STA-body-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>
+          <GoTo to="STA-BODY-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>
             See result
           </GoTo>
         </>
