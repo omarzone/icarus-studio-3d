@@ -54,6 +54,18 @@ The short version:
 - **Honestly pending:** Body rig and import (Sprint 9), Motion (Sprint 10), every Brain panel (Sprint 8 and 11), Build and export (Sprint 12), and everything community, account, share, publish and notifications (Sprint 13).
 - **The biggest silent gaps:** chat cards the design leans on (check lists, run progress, milestones, next-run plan, welcome) cannot come from the engine because `CopilotMessage` has no fields for them; suggestion chips never navigate; the Brain workspace's readings card and network diagram vanish instead of saying "not available yet"; the "Let the copilot coach" switch is never sent; and the Engine down page promises runs "pause" when they do not.
 
+### Diagnosis: body rig, motion and connectome
+
+Three workspaces the design leans on have no engine work yet. Each now has a plan with its building blocks, contract changes, tasks, tests and approvals.
+
+| Pillar | Design IDs | App today | Engine today | Main blocker | Plan |
+|---|---|---|---|---|---|
+| Body rig and import | `SCR-BODY`, `TAB-RIG-VIEW`, `TAB-MESH-VIEW`, `PNL-RIG-CHECK`, `MOD-IMPORT`, `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` | Rig explorer, inspector, Parts and Rig check (from the real `DesignReport`) work; import, auto-rig, poses, weights, rig and mesh views are pending or missing | Primitive parts only, no mesh assets, no importers, humanoid with 12 single-axis hinges, rest-stability check only, failing bodies rejected by the store | Mesh intake and a skin drawn over a physical body; a candidate state for failing auto-rig results | [`sprint-09-body-rig.md`](../plans/sprint-09-body-rig.md) |
+| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Every panel and dialog renders from fixtures; every `motion-port.ts` method is pending | No `motion/` package, `pose` capability never called, no imitation family or tracking rewards | A local pose estimator (the privacy note is untrue without one), joint-angle retargeting, imitation training time on CPU | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
+| Connectome brain | `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME`, `PNL-BRAIN-ACTIVITY`, `STA-RESULTS-REFERENCE` | Prototype only (fly fixtures); Sprint 11 brain port methods are pending | Brains are PPO or random; no connectome data, spiking simulator, fly body, taste or looming senses, behavior tests | The brain-only connectome has no leg motor neurons, so legs need a descending interface and gait generator; simulation speed on CPU; data and model licenses | [`sprint-11-connectome.md`](../plans/sprint-11-connectome.md) |
+
+Two design lines change once these are real: `MOD-IMPORT` lists `.fbx` but no permissive FBX reader or writer exists, so FBX is shown as not available yet in import and in `MOD-EXPORT-ANIMATION`; and `MOD-BRAIN-SOURCE` says "Motor neurons drive the leg and wing joints · 92% matched", which the data cannot support. That line becomes the real count of descending neurons driving the gait generator. Motion needs Sprint 9's dance-ready humanoid, and the fly body arrives through Sprint 9's MJCF import, so Sprint 9 comes first.
+
 ## 2. Per screen group
 
 Every reference render in `docs/design/reference/` (62 IDs) and every screen in `screens.md` has at least one row. `regions.json` in that folder is panel geometry for the visual tests, not a screen. Rows marked (added) or (corrected) came from a completeness pass against the renders and the code.

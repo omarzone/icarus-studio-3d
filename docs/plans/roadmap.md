@@ -152,7 +152,7 @@ Any body, built in Icarus or imported.
 
 **Demo:** import a humanoid model, auto-rig it, fix the failed check with the copilot, make it stand in Play.
 
-**Status:** planned.
+**Status:** planned ([plan](./sprint-09-body-rig.md)).
 
 ### Sprint 10 · Motion from video
 
@@ -163,7 +163,7 @@ Characters that copy a reference video under physics.
 
 **Demo:** upload a dance clip, track it, train the copy focusing on the hardest moment, export the animation.
 
-**Status:** planned.
+**Status:** planned ([plan](./sprint-10-motion.md)).
 
 ### Sprint 11 · Connectome brains
 
@@ -175,7 +175,7 @@ Bodies driven by real wiring maps, with no training.
 
 **Demo:** load the connectome into the fly, drop sugar in Play, watch it walk there and its neurons fire, compare its walk with recordings.
 
-**Status:** planned.
+**Status:** planned ([plan](./sprint-11-connectome.md)).
 
 ### Sprint 12 · Build and hardware
 
