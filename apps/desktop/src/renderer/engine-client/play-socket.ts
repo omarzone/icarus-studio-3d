@@ -26,13 +26,20 @@ export type PlayHandlers = {
 
 export type PlayConnection = { send: (command: PlayCommand) => void; close: () => void };
 
-export type PlayOptions = { url?: EngineUrl; socket?: PlaySocketConstructor };
+// The trained brain to play instead of the one the engine picks.
+export type PlayBrainChoice = { runId: string; step: number };
+
+export type PlayOptions = { url?: EngineUrl; socket?: PlaySocketConstructor; brain?: PlayBrainChoice };
 
 export type OpenPlay = (projectId: string, handlers: PlayHandlers, options?: PlayOptions) => PlayConnection;
 
-function playAddress(base: string, projectId: string): string {
+function playAddress(base: string, projectId: string, brain: PlayBrainChoice | undefined): string {
   const address = new URL(`/projects/${encodeURIComponent(projectId)}/play`, base);
   address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
+  if (brain) {
+    address.searchParams.set("run", brain.runId);
+    address.searchParams.set("step", String(brain.step));
+  }
   return address.toString();
 }
 
@@ -86,7 +93,7 @@ export const openPlay: OpenPlay = (projectId, handlers, options = {}) => {
       if (closed) {
         return;
       }
-      const created = new Socket(playAddress(base, projectId));
+      const created = new Socket(playAddress(base, projectId, options.brain));
       socket = created;
       created.onopen = () => {
         open = true;

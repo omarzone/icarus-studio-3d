@@ -65,6 +65,7 @@ export type {
   PanelValue,
   PieceInfo,
   PlanItem,
+  PlayBrainOption,
   PlayCommandEnvelope,
   PlayEvent,
   PlayFrame,

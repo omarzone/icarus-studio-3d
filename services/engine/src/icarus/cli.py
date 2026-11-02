@@ -41,6 +41,21 @@ def parse_args(argv: list[str]) -> EngineArgs:
     )
 
 
+def move_legacy_runs() -> None:
+    """Runs used to live inside the engine's source folder, where a reinstall deletes them; move them to the user's.
+
+    A configured runs folder (tests, a temporary app) never receives them, so they cannot vanish with it.
+    """
+    from icarus.training.run_relocation import relocate_runs
+    from icarus.training.run_store import LEGACY_RUNS_DIR, RUNS_DIR_ENV, runs_dir
+
+    if os.environ.get(RUNS_DIR_ENV):
+        return
+    target = runs_dir()
+    for line in relocate_runs(LEGACY_RUNS_DIR, target).lines(LEGACY_RUNS_DIR, target):
+        print(line, file=sys.stderr, flush=True)
+
+
 def exit_when_stdin_closes(stdin: BinaryIO, supervisor: "Supervisor | None") -> None:
     """Exit once the parent closes stdin, first stopping the run in training so no worker outlives the engine."""
     stdin.read()
@@ -57,6 +72,7 @@ def main(argv: list[str] | None = None) -> None:
     prepare_rendering()
     if args.projects_dir is not None:
         os.environ["ICARUS_PROJECTS_DIR"] = str(args.projects_dir)
+    move_legacy_runs()
     if not args.exit_with_stdin:
         uvicorn.run(
             "icarus.api.app:create_app",

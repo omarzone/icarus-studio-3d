@@ -17,6 +17,7 @@ const WORKSPACES: readonly ScreenId[] = [
 const DEFAULT: ScreenId = "SCR-WORLD";
 
 const keyOf = (project: string): string => `icarus.workspace.${project}`;
+const openedKeyOf = (project: string): string => `icarus.opened.${project}`;
 
 // Where a project opens: the workspace it was left in, World when unknown.
 export function lastWorkspace(storage: WorkspaceStorage | null, project: string): ScreenId {
@@ -28,14 +29,31 @@ export function lastWorkspace(storage: WorkspaceStorage | null, project: string)
   }
 }
 
-export function keepLastWorkspace(store: StoreApi<NavigationState>, storage: WorkspaceStorage): () => void {
-  return store.subscribe(({ screen, params }) => {
+// When a project was last opened (milliseconds since the epoch), null when unknown.
+export function lastOpened(storage: WorkspaceStorage | null, project: string): number | null {
+  try {
+    const saved = Number(storage?.getItem(openedKeyOf(project)));
+    return Number.isFinite(saved) && saved > 0 ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+export function keepLastWorkspace(
+  store: StoreApi<NavigationState>,
+  storage: WorkspaceStorage,
+  now: () => number = Date.now,
+): () => void {
+  return store.subscribe(({ screen, params }, previous) => {
     const project = params.project;
     if (!project || !WORKSPACES.includes(screen)) {
       return;
     }
     try {
       storage.setItem(keyOf(project), screen);
+      if (previous.params.project !== project || !WORKSPACES.includes(previous.screen)) {
+        storage.setItem(openedKeyOf(project), String(now()));
+      }
     } catch {
       // Storage can be full or blocked; projects then open in World.
     }

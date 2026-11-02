@@ -45,8 +45,8 @@ export type PlaySession = {
   // Hint near the cursor while placing an object ("Click to place: Sugar").
   placing?: string;
   senses: { bars: readonly LiveBar[]; note?: string };
-  // Outputs of a learned brain and which brain is playing.
-  decisions?: { bars: readonly LiveBar[]; brain: string };
+  // Outputs of a learned brain and which brain is playing (`playing`: its run and checkpoint, when trained).
+  decisions?: { bars: readonly LiveBar[]; brain: string; playing?: PlayBrainPick };
   // What each eye or camera sees, when the body has vision.
   vision?: readonly CompoundEye[];
   // Connectome brains show their live neuron activity (read from the brain port).
@@ -81,6 +81,13 @@ export type PlayAction =
   | { tool: "shuffle" }
   | { tool: "pause"; paused: boolean };
 
+// A trained brain: one run's checkpoint.
+export type PlayBrainPick = { runId: string; step: number };
+
+// A trained brain Play could use ("Run 3 · 500k steps · revision 12 · 80% success"); one that does not fit the body
+// says why. `isDefault` is the one Play picks when none is chosen.
+export type PlayBrain = PlayBrainPick & { label: string; fits: boolean; reason?: string; isDefault: boolean };
+
 export type PlayListener = {
   onUpdate: (session: PlaySession, live: PlayLive) => void;
   // The session ended or could not start; Reconnect connects again.
@@ -93,8 +100,11 @@ export type PlayPort = {
   getSession: (project: string) => Promise<PlaySession>;
   selectTool: (input: { project: string; tool: PlayToolId }) => Promise<PlaySession>;
   setSpeed: (input: { project: string; speed: string }) => Promise<PlaySession>;
-  // Streams the live session while Play is open; the returned function disconnects.
-  connect: (project: string, listener: PlayListener) => () => void;
+  // Streams the live session while Play is open, with `brain` instead of the default one; the returned function
+  // disconnects.
+  connect: (project: string, listener: PlayListener, brain?: PlayBrainPick) => () => void;
+  // Every trained brain of the project, newest first.
+  brains: (project: string) => Promise<readonly PlayBrain[]>;
   send: (input: { project: string; action: PlayAction }) => Promise<void>;
 };
 

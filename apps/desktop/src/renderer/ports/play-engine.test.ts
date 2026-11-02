@@ -1,6 +1,6 @@
 import type { PlayCommand } from "@icarus/contracts";
 import { describe, expect, it, vi } from "vitest";
-import type { PlayHandlers } from "../engine-client/play-socket.ts";
+import type { PlayHandlers, PlayOptions } from "../engine-client/play-socket.ts";
 import { isPlayFrame, isPlayMessageEnvelope } from "../engine-client/response-checks.ts";
 import { createEnginePlayPort } from "./play-engine.ts";
 import type { PlayLive, PlaySession } from "./play-port.ts";
@@ -231,5 +231,47 @@ describe("engine play port", () => {
     engine().onFrame(frame);
     expect(updates).toHaveLength(0);
     await expect(port.send({ project: "p", action: { tool: "reset" } })).rejects.toThrow("Play is not running");
+  });
+});
+
+describe("play brains", () => {
+  const option = {
+    run_id: "run-1",
+    step: 25000,
+    revision_number: 3,
+    label: "Run 1 · 25k steps · revision 3 · 80% success",
+    success_rate: 0.8,
+    fits: false,
+    reason: "The body changed: 14 senses now, 13 then",
+    default: false,
+  };
+
+  it("lists the engine's brains, keeping why one cannot play", async () => {
+    const port = createEnginePlayPort(vi.fn(), {
+      playBrains: async () => [option, { ...option, run_id: "run-2", fits: true, reason: null, default: true }],
+    });
+    await expect(port.brains("p")).resolves.toEqual([
+      { runId: "run-1", step: 25000, label: option.label, fits: false, reason: option.reason, isDefault: false },
+      { runId: "run-2", step: 25000, label: option.label, fits: true, reason: undefined, isDefault: true },
+    ]);
+  });
+
+  it("opens Play with the chosen brain and names the run that plays", () => {
+    let handlers: PlayHandlers | undefined;
+    const open = vi.fn((_project: string, given: PlayHandlers, _options?: PlayOptions) => {
+      handlers = given;
+      return { send: () => undefined, close: () => undefined };
+    });
+    const updates: PlaySession[] = [];
+    const listener = {
+      onUpdate: (session: PlaySession) => updates.push(session),
+      onClosed: () => undefined,
+      onError: () => undefined,
+    };
+    createEnginePlayPort(open).connect("p", listener, { runId: "run-1", step: 25000 });
+    expect(open.mock.calls[0]?.[2]).toEqual({ brain: { runId: "run-1", step: 25000 } });
+    handlers?.onReady({ ...info, brain: "Trained brain: Run 1 at 25,000 steps", run_id: "run-1", step: 25000 });
+    handlers?.onFrame(frame);
+    expect(updates.at(-1)?.decisions?.playing).toEqual({ runId: "run-1", step: 25000 });
   });
 });

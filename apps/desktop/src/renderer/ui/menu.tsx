@@ -6,7 +6,8 @@ import { useAnchoredStyle } from "./anchored.ts";
 import { useDismiss } from "./dismiss.ts";
 
 export type MenuEntry =
-  | { label: string; hint?: string; icon?: LucideIcon; checked?: boolean; run: () => void }
+  // A `disabled` entry stays visible and dimmed, its hint saying why it cannot be picked.
+  | { label: string; hint?: string; icon?: LucideIcon; checked?: boolean; disabled?: boolean; run: () => void }
   | { divider: true; key: string };
 
 type Props = {
@@ -81,11 +82,15 @@ export function MenuSurface({ ref, label, entries, style, onPick, body }: Surfac
             cta={entry.label}
             role={entry.checked === undefined ? "menuitem" : "menuitemcheckbox"}
             aria-checked={entry.checked}
+            aria-disabled={entry.disabled || undefined}
             onClick={() => {
+              if (entry.disabled) {
+                return;
+              }
               onPick();
               entry.run();
             }}
-            className="flex w-full items-start gap-2.5 rounded-control px-2.5 py-2 text-left hover:bg-fill-hover"
+            className="flex w-full items-start gap-2.5 rounded-control px-2.5 py-2 text-left hover:bg-fill-hover aria-disabled:cursor-default aria-disabled:opacity-50 aria-disabled:hover:bg-transparent"
           >
             {hasChecks ? (
               <span className="mt-0.5 grid size-3.5 shrink-0 place-items-center">

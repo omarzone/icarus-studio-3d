@@ -67,6 +67,14 @@ describe("openPlay", () => {
     expect(socket.url).toBe("ws://127.0.0.1:9000/projects/my%20project/play");
   });
 
+  it("asks for a chosen brain by its run and checkpoint", async () => {
+    FakeSocket.last = undefined;
+    openPlay("p", handlers(), { url, socket: FakeSocket, brain: { runId: "run-1", step: 25000 } });
+    const latest = (): FakeSocket | undefined => FakeSocket.last;
+    await vi.waitFor(() => expect(latest()).toBeDefined());
+    expect(latest()?.url).toBe("ws://127.0.0.1:9000/projects/p/play?run=run-1&step=25000");
+  });
+
   it("routes ready, frame and event messages", async () => {
     const { calls, socket } = await connected();
     socket.receive(play.ready);

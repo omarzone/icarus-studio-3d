@@ -1837,6 +1837,22 @@ export interface PauseCommand {
   tool: "pause";
 }
 /**
+ * A trained brain Play can use: the best checkpoint of one ended run of the project.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayBrainOption".
+ */
+export interface PlayBrainOption {
+  default: boolean;
+  fits: boolean;
+  label: string;
+  reason?: string | null;
+  revision_number: number;
+  run_id: string;
+  step: number;
+  success_rate?: number | null;
+}
+/**
  * What the desktop sends over the Play WebSocket: one command.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2023,7 +2039,9 @@ export interface PlaySessionInfo {
   brain: string;
   project_id: string;
   revision_number: number;
+  run_id?: string | null;
   scene: SceneDescription;
+  step?: number | null;
   tools: PlayToolInfo[];
 }
 /**

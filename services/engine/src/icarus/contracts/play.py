@@ -144,8 +144,28 @@ class PlaySessionInfo(_Model):
     revision_number: int
     # Which brain is playing, in words ("Untrained brain: random actions").
     brain: str
+    # The run and checkpoint of the trained brain playing; none for the untrained brain.
+    run_id: str | None = None
+    step: int | None = None
     tools: list[PlayToolInfo]
     scene: SceneDescription
+
+
+class PlayBrainOption(_Model):
+    """A trained brain Play can use: the best checkpoint of one ended run of the project."""
+
+    run_id: str
+    step: int
+    revision_number: int
+    # In words ("Run 3 · 500k steps · revision 12 · 80% success").
+    label: str
+    success_rate: float | None = None
+    # Whether its senses and motors match the body as it is now.
+    fits: bool
+    # Why it cannot play, when it does not fit ("The body changed: 41 senses now, 37 then").
+    reason: str | None = None
+    # The brain Play picks when none is chosen.
+    default: bool
 
 
 class PlayReady(_Model):

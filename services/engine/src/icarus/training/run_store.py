@@ -32,6 +32,8 @@ from icarus.training.schedule import checkpoint_steps
 
 RUNS_DIR_ENV = "ICARUS_RUNS_DIR"
 ENGINE_ROOT = Path(__file__).resolve().parents[3]
+# Where runs lived before they moved next to the projects; the engine moves them out of it on start.
+LEGACY_RUNS_DIR = ENGINE_ROOT / "runs"
 RUN_ID = re.compile(r"^run-\d{8}T\d{6}Z-[0-9a-f]{4}$")
 FRAME_NAME = re.compile(r"^e\d-(start|middle|failure|end|sheet)\.png$")
 TERMINAL_STATES: frozenset[RunState] = frozenset({"done", "stopped", "failed"})
@@ -57,7 +59,7 @@ class RunMeta(BaseModel):
 
 def runs_dir() -> Path:
     configured = os.environ.get(RUNS_DIR_ENV)
-    return Path(configured) if configured else ENGINE_ROOT / "runs"
+    return Path(configured) if configured else Path.home() / "Icarus Studio" / "runs"
 
 
 def _version(package: str) -> str | None:
