@@ -42,8 +42,8 @@ NO_ROOM = (
 STEP_LIMIT = 20
 
 
-def definitions() -> list[dict[str, Any]]:
-    tools = [tool_definition(tool.name, tool.description, tool.args) for tool in REGISTRY.values()]
+def definitions(registry: dict[str, Tool[Any]] | None = None) -> list[dict[str, Any]]:
+    tools = [tool_definition(tool.name, tool.description, tool.args) for tool in (registry or REGISTRY).values()]
     finish = "End the turn: your answer to the person, follow-up suggestions and buttons. Always finish with it."
     return [*tools, tool_definition(ANSWER_TOOL, finish, FinalAnswer)]
 
@@ -103,10 +103,11 @@ def _encoded(data: dict[str, Any]) -> list[str]:
 
 def _plan(scope: TurnScope, call: ToolCall, budget: TurnBudget, off: frozenset[str] | None, index: int) -> _Planned:
     """Parse, validate, permit and count one call; nothing runs here."""
-    tool = REGISTRY.get(call.name)
+    registry = scope.tools or REGISTRY
+    tool = registry.get(call.name)
     planned = _Planned(call, tool)
     if tool is None:
-        listed = ", ".join([*REGISTRY, ANSWER_TOOL])
+        listed = ", ".join([*registry, ANSWER_TOOL])
         text = "The tool name was empty; call a tool from your list or answer." if not call.name else ""
         planned.result = Observation(text or f"No tool named `{call.name}`. Available: {listed}", ok=False)
         return planned
@@ -305,7 +306,7 @@ def run_loop(
     on_overflow: Callable[[int], None] = lambda tokens: None,
 ) -> LoopOutcome:
     budget = TurnBudget(limits, window)
-    tools = definitions()
+    tools = definitions(scope.tools)
     transcript = list(messages)
     outcome = LoopOutcome(None)
     summaries: dict[str, str] = {}

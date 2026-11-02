@@ -6,8 +6,11 @@ import numpy as np
 
 from icarus.contracts.project import Project
 from icarus.contracts.training import LogLine, MetricPoint, RunConfig, RunFailure, RunState, TrainingSnapshot
+from icarus.sim.env import EPISODE_SECONDS
 from icarus.sim.policy import CheckpointPolicy
-from icarus.training.evaluation import evaluate
+from icarus.training import episode_frames
+from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
+from icarus.training.evaluation import Evaluation, evaluate
 from icarus.training.run_store import RunFolder
 
 LOG_DETAIL_LINES = 12
@@ -69,6 +72,7 @@ class RunProgress:
         self._saved: set[int] = set()
         self.last_step = 0
         self._snapshot_warned = False
+        self._frames_warned = False
 
     def elapsed(self) -> float:
         return max(0.0, (datetime.now(UTC) - self.started_at).total_seconds())
@@ -104,6 +108,11 @@ class RunProgress:
         policy = CheckpointPolicy(model, f"Checkpoint {step}")
         result = evaluate(self.project, policy, self.config.evaluation_episodes, step)
         self.folder.write_rollout(result.rollout)
+        has_goal = result.success_rate is not None
+        records = self._pictured(step, result)
+        self.folder.write_episodes(
+            CheckpointEpisodes(step=step, has_goal=has_goal, episode_seconds=EPISODE_SECONDS, episodes=records)
+        )
         self.folder.append_metric(result.metric(step, self.elapsed()))
         rank = (result.success_rate if result.success_rate is not None else 0.0, result.episode_return)
         if self._best is None or rank > self._best:
@@ -116,6 +125,30 @@ class RunProgress:
         if result.success_rate is not None:
             summary += f", reached the goal in {_percent(result.success_rate)}"
         self.log(f"{summary}, failed in {_percent(result.failure_rate)}")
+
+    def _pictured(self, step: int, result: Evaluation) -> list[EpisodeRecord]:
+        """The episode records, with pictures of the first ones; pictures are for people, so failing them never
+        stops training."""
+        records = list(result.episodes)
+        if result.world is None or not result.states:
+            return records
+        try:
+            rendered = episode_frames.render_frames(result.world, result.states)
+            for index, files in enumerate(rendered):
+                names = []
+                for moment, png in files.items():
+                    name = f"e{index}-{moment}.png"
+                    self.folder.write_frame(step, name, png)
+                    names.append(name)
+                frames = [name for name in names if not name.endswith("-sheet.png")]
+                sheet = next((name for name in names if name.endswith("-sheet.png")), None)
+                records[index] = records[index].model_copy(update={"frames": frames, "sheet": sheet})
+        except Exception as error:  # noqa: BLE001 - any render failure is a warning, never a failed run
+            if not self._frames_warned:
+                self._frames_warned = True
+                self.log(f"Episode pictures could not be rendered ({error}); training goes on", "warn")
+            return list(result.episodes)
+        return records
 
     def train_point(self, tally: EpisodeTally, step: int) -> None:
         if tally.returns:

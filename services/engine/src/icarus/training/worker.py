@@ -71,21 +71,30 @@ def train(run_dir: Path, ppo: PpoSettings = DEFAULT_PPO, device: Device = "cpu")
             progress.finish("stopped", 0)
             return "stopped"
         geoms = ProjectEnv(progress.project).moving_geoms
-        layers = list(ppo.layers)
-        model = PPO(
-            "MlpPolicy",
-            env,
-            learning_rate=ppo.learning_rate,
-            n_steps=ppo.n_steps,
-            batch_size=min(ppo.batch_size, ppo.n_steps * config.copies),
-            n_epochs=ppo.n_epochs,
-            gamma=ppo.gamma,
-            gae_lambda=ppo.gae_lambda,
-            policy_kwargs={"net_arch": {"pi": layers, "vf": layers}, "activation_fn": torch.nn.Tanh},
-            seed=config.seed,
-            device=actual_device,
-            verbose=0,
-        )
+        batch_size = min(ppo.batch_size, ppo.n_steps * config.copies)
+        warm = config.warm_start
+        if warm is not None:
+            source = RunFolder(run_dir.parent / warm.run_id)
+            # Loading with the new copies checks that they see and act the way the saved brain does.
+            model = PPO.load(source.checkpoint_path(warm.step), env=env, device=actual_device, batch_size=batch_size)
+            model.set_random_seed(config.seed)
+            progress.log(f"Continuing from {source.stored_status().name} at step {warm.step:,}")
+        else:
+            layers = list(ppo.layers)
+            model = PPO(
+                "MlpPolicy",
+                env,
+                learning_rate=ppo.learning_rate,
+                n_steps=ppo.n_steps,
+                batch_size=batch_size,
+                n_epochs=ppo.n_epochs,
+                gamma=ppo.gamma,
+                gae_lambda=ppo.gae_lambda,
+                policy_kwargs={"net_arch": {"pi": layers, "vf": layers}, "activation_fn": torch.nn.Tanh},
+                seed=config.seed,
+                device=actual_device,
+                verbose=0,
+            )
         progress.log(
             f"Training {config.total_steps:,} steps with {config.copies} "
             f"cop{'y' if config.copies == 1 else 'ies'} on the {actual_device.upper()}, {config.threads} threads"

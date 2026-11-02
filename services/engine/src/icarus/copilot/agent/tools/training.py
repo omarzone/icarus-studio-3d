@@ -16,6 +16,10 @@ class TrainArgs(ToolArgs):
         default=None, ge=10_000, le=MAX_STEPS, description="Steps to train; none uses the recommended budget."
     )
     copies: int | None = Field(default=None, ge=1, le=MAX_COPIES, description="Parallel copies; none uses the brain's.")
+    continue_from_best: bool = Field(
+        default=False,
+        description="Start: continue from the best brain trained so far instead of from zero, when the person asks.",
+    )
 
 
 def _status(scope: TurnScope) -> Observation:
@@ -41,7 +45,12 @@ def _status(scope: TurnScope) -> Observation:
 def train(scope: TurnScope, args: TrainArgs) -> Observation:
     if args.action == "status":
         return _status(scope)
-    request = TrainingRequest(action=args.action, total_steps=args.total_steps, copies=args.copies)
+    request = TrainingRequest(
+        action=args.action,
+        total_steps=args.total_steps,
+        copies=args.copies,
+        continue_from_best=args.continue_from_best,
+    )
     reply = scope.services.trainer.act(scope.project_id, request, scope.language)
     scope.reports.append(reply.text)
     if reply.acted:

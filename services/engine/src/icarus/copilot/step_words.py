@@ -98,6 +98,21 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "reason_too_long": {"en": "it took too long", "es": "tardó demasiado"},
     "verb_act": {"en": "act", "es": "actuar"},
     "used": {"en": "Used {tool}", "es": "Usé {tool}"},
+    "episode_seen": {
+        "en": "Watched episode {episode} at step {step}",
+        "es": "Miré el episodio {episode} en el paso {step}",
+    },
+    "episode_missing": {"en": "Looked for an episode that was not recorded", "es": "Busqué un episodio sin grabar"},
+    "diagnosed": {"en": "Wrote the diagnosis", "es": "Escribí el diagnóstico"},
+    "diagnosis_unbacked": {
+        "en": "The diagnosis cited numbers that are not in the run",
+        "es": "El diagnóstico citaba números que no están en el entrenamiento",
+    },
+    "coach_asked": {"en": "Asked the coach to look at {name}", "es": "Le pedí al entrenador que revise {name}"},
+    "autopilot_started": {"en": "Started the autopilot", "es": "Arranqué el piloto automático"},
+    "autopilot_stopped": {"en": "Stopped the autopilot", "es": "Detuve el piloto automático"},
+    "autopilot_checked": {"en": "Checked the autopilot", "es": "Revisé el piloto automático"},
+    "coach_refused": {"en": "The coach could not act: {reason}", "es": "El entrenador no pudo actuar: {reason}"},
 }
 
 

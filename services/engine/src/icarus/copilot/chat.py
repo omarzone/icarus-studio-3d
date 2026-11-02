@@ -1,6 +1,7 @@
 import contextlib
 import json
 import threading
+from dataclasses import replace
 
 from icarus.contracts.copilot import (
     Autonomy,
@@ -17,6 +18,7 @@ from icarus.contracts.scene import SceneDescription
 from icarus.copilot.agent.budget import AgentLimits
 from icarus.copilot.agent.summary_store import SummaryStore
 from icarus.copilot.agent.tools.base import ToolServices
+from icarus.copilot.agent.tools.coaching import Coaching
 from icarus.copilot.agent.turn import TurnSetup, new_message, run_turn
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.candidate import dry_run, new_proposal
@@ -25,7 +27,7 @@ from icarus.copilot.client import InputRejected, ModelClient, ToolsRefused, capa
 from icarus.copilot.context import project_context
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.grounding import UNSUPPORTED_ANSWER
-from icarus.copilot.language import detect
+from icarus.copilot.language import Language, detect
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.copilot.single_shot import AUTOPILOT, SYSTEM, ChatReply, ProposalDraft, Review, history_text
 from icarus.copilot.turn_media import TurnMedia, turn_media
@@ -98,6 +100,37 @@ class Copilot:
         self._limits = limits or AgentLimits()
         self._busy: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
+
+    @property
+    def services(self) -> ToolServices:
+        return self._services
+
+    @property
+    def settings(self) -> ModelSettingsStore:
+        return self._settings
+
+    @property
+    def limits(self) -> AgentLimits:
+        return self._limits
+
+    def attach_coaching(self, coaching: Coaching) -> None:
+        """Hands the chat's tools the coach and the autopilot, which are built after the copilot they post through."""
+        self._services = replace(self._services, coaching=coaching)
+
+    def post(self, project_id: str, message: CopilotMessage, proposals: list[CopilotProposal]) -> Conversation:
+        """A message the copilot sends on its own, such as the coach's diagnosis or an autopilot step."""
+        with self._conversations.editing(project_id) as stored:
+            if proposals:
+                _retire_open(stored)
+            stored.messages.append(message)
+            stored.proposals += proposals
+        return self.conversation(project_id)
+
+    def language(self, project_id: str) -> Language:
+        """The language of the person's latest message, for what the copilot writes on its own."""
+        conversation = self.conversation(project_id)
+        latest = next((item for item in reversed(conversation.messages) if item.role == "user"), None)
+        return detect(latest.text) if latest else "en"
 
     def conversation(self, project_id: str) -> Conversation:
         head = self._projects.state(project_id).revision.number

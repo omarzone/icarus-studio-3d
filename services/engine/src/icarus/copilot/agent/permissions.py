@@ -27,6 +27,7 @@ def permission(tool: str, args: BaseModel, autonomy: Autonomy) -> tuple[Permissi
         return "allow", ""
     if tool == "apply":
         return "deny", APPLY_DENIED
-    if tool == "train" and getattr(args, "action", None) == "start":
+    # Continuing from the best brain is only asked for by the person (the coach's button), so it starts at once.
+    if tool == "train" and getattr(args, "action", None) == "start" and not getattr(args, "continue_from_best", False):
         return "offer", TRAIN_OFFERED
     return "allow", ""

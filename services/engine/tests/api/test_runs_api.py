@@ -50,7 +50,7 @@ def events(lines: Iterator[str]) -> Iterator[dict]:
 def stored_run(app: FastAPI, client: TestClient) -> RunFolder:
     """A run created on disk without a worker, so a test can write its files by hand."""
     state = app.state.store.state(new_project(client))
-    return app.state.runs.folder(app.state.runs.create(state, StartRun(**START), threads=1).run_id)
+    return app.state.runs.folder(app.state.runs.create(state, StartRun.model_validate(START), threads=1).run_id)
 
 
 def metric(kind, step) -> MetricPoint:

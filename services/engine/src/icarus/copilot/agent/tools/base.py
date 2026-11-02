@@ -1,7 +1,7 @@
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,6 +16,9 @@ from icarus.design.compiler import CompiledModel
 from icarus.projects.store import ProjectStore
 from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore
+
+if TYPE_CHECKING:
+    from icarus.copilot.agent.tools.coaching import Coaching
 
 type StepKind = Literal["inspect", "look", "try", "propose", "train", "library"]
 type Effect = Literal["read", "write"]
@@ -63,6 +66,8 @@ class ToolServices:
     trainer: ChatTrainer
     attachments: AttachmentStore
     views: ViewRenderer
+    # The coach and the autopilot for the chat's coach tool; none until attached.
+    coaching: "Coaching | None" = None
 
 
 @dataclass
@@ -95,6 +100,8 @@ class TurnScope:
     can_see: bool = True
     view_slots: int = 0
     head_compiled: CompiledModel | None = None
+    # The tools this turn may call by name; none means the chat's own set.
+    tools: "dict[str, Tool[Any]] | None" = None
     guard: threading.Lock = field(default_factory=threading.Lock)
 
     def next_try_id(self) -> str:

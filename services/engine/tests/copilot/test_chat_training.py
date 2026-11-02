@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from icarus.contracts.copilot import SendMessage
-from icarus.contracts.training import StartRun
+from icarus.contracts.training import StartRun, WarmStart
 from icarus.copilot import fixture_provider
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
@@ -182,3 +182,30 @@ def test_the_agent_prompt_teaches_tools_training_diagnosis_clearances_guidance_a
     assert "language of the person's message" in system and "plain everyday words" in system
     assert "would you like something like this, or like that?" in system and "SCR-TRAIN" in system
     assert "Autonomy: ask" in system and '"latest_run":"No training has run for this project yet"' in system
+
+
+CONTINUE = tool_step("train", action="start", total_steps=10_000, copies=1, continue_from_best=True)
+
+
+def test_asking_to_continue_from_the_best_brain_starts_a_warm_run_even_in_ask_mode(
+    copilot, store, runs, project_id, monkeypatch, tmp_path
+):
+    script(monkeypatch, tmp_path, default=[CONTINUE, answering("Continuing.")])
+    earlier = runs.create(store.state(project_id), StartRun(total_steps=10_000, copies=1), threads=1)
+    folder = runs.folder(earlier.run_id)
+    folder.checkpoint_path(25_000).write_bytes(b"brain")
+    folder.write_status(folder.stored_status().model_copy(update={"state": "done", "best_step": 25_000}))
+
+    say(copilot, project_id, "train again from the best brain")
+
+    latest = runs.list_runs(project_id)[0]
+    assert latest.run_id != earlier.run_id
+    assert runs.folder(latest.run_id).config().warm_start == WarmStart(run_id=earlier.run_id, step=25_000)
+
+
+def test_continuing_without_a_trained_brain_says_so(copilot, runs, project_id, monkeypatch, tmp_path):
+    script(monkeypatch, tmp_path, default=[CONTINUE, answering("Continuing.")])
+
+    answer = say(copilot, project_id, "train again from the best brain")
+
+    assert runs.list_runs(project_id) == [] and "no trained brain to continue from" in answer.text

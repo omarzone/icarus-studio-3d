@@ -89,21 +89,38 @@ def _camera(camera: CameraSpec) -> mujoco.MjvCamera:
     return free
 
 
+def render_pixels(
+    renderer: mujoco.Renderer, data: mujoco.MjData, camera: CameraSpec, zones: list[SceneZone]
+) -> np.ndarray:
+    """A state MuJoCo already computed, seen from a free camera, with zones drawn over it, as RGB pixels."""
+    renderer.update_scene(data, _camera(camera))
+    _zone_geoms(renderer.scene, zones)
+    return renderer.render()
+
+
 def render_view(
     renderer: mujoco.Renderer, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone]
 ) -> bytes:
     """The compiled initial state MuJoCo computes, seen from a free camera, with zones drawn over it, as PNG."""
     data = mujoco.MjData(compiled.model)
     mujoco.mj_forward(compiled.model, data)
-    renderer.update_scene(data, _camera(camera))
-    _zone_geoms(renderer.scene, zones)
-    pixels = renderer.render()
+    pixels = render_pixels(renderer, data, camera, zones)
     if is_blank(pixels):
         raise BlankPicture(f"every pixel is close to {pixels.reshape(-1, 3).mean(axis=0).round().tolist()}")
     return encode_png(pixels)
 
 
-def _release(renderer: mujoco.Renderer) -> None:
+def open_renderer(model: mujoco.MjModel, width: int, height: int) -> mujoco.Renderer:
+    """An offscreen renderer on the calling thread, which then owns its OpenGL context."""
+    model.vis.global_.offwidth = max(model.vis.global_.offwidth, width)
+    model.vis.global_.offheight = max(model.vis.global_.offheight, height)
+    try:
+        return mujoco.Renderer(model, height, width)
+    except Exception as error:  # MuJoCo raises plain errors when no GL backend loads.
+        raise RenderUnavailable(str(error)) from error
+
+
+def release_renderer(renderer: mujoco.Renderer) -> None:
     """Free a renderer inside its own GL context: freed in another one, it deletes that context's buffers."""
     context = getattr(renderer, "_gl_context", None)
     if context is not None:
@@ -125,16 +142,11 @@ class ViewRenderer:
         if key in self._renderers:
             self._renderers.move_to_end(key)
             return self._renderers[key][1]
-        model.vis.global_.offwidth = max(model.vis.global_.offwidth, width)
-        model.vis.global_.offheight = max(model.vis.global_.offheight, height)
-        try:
-            renderer = mujoco.Renderer(model, height, width)
-        except Exception as error:  # MuJoCo raises plain errors when no GL backend loads.
-            raise RenderUnavailable(str(error)) from error
+        renderer = open_renderer(model, width, height)
         self._renderers[key] = (model, renderer)
         while len(self._renderers) > RENDERERS_KEPT:
             _, (_, oldest) = self._renderers.popitem(last=False)
-            _release(oldest)
+            release_renderer(oldest)
         return renderer
 
     def _render(self, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone]) -> bytes:
@@ -151,7 +163,7 @@ class ViewRenderer:
     def close(self) -> None:
         def release() -> None:
             for _, renderer in self._renderers.values():
-                _release(renderer)
+                release_renderer(renderer)
             self._renderers.clear()
 
         self._thread.submit(release).result()

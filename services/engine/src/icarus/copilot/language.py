@@ -182,6 +182,10 @@ TEXTS: dict[str, dict[Language, str]] = {
         "es": "{name} ya está entrenando, así que no empecé otro. Pídeme que lo detenga primero.",
     },
     "train_refused": {"en": "I did not start training: {reason}.", "es": "No empecé a entrenar: {reason}."},
+    "train_no_brain": {
+        "en": "There is no trained brain to continue from yet, so I did not start training.",
+        "es": "Todavía no hay un cerebro entrenado desde el que continuar, así que no empecé a entrenar.",
+    },
     "train_started": {
         "en": "I started {name}: {steps} steps with {copies} copies.",
         "es": "Empecé {name}: {steps} pasos con {copies} copias.",

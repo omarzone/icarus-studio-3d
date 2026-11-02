@@ -10,16 +10,20 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from icarus import __version__
-from icarus.api import attachments, copilot, health, ideas, library, model_settings, play, projects, runs
+from icarus.api import attachments, coach, copilot, health, ideas, library, model_settings, play, projects, runs
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
+from icarus.copilot.agent.tools.coaching import Coaching
 from icarus.copilot.architect import IdeaBook, NoValidIdeas, UnknownIdeas
 from icarus.copilot.attachments import AttachmentRejected, AttachmentStore, UnknownAttachment
+from icarus.copilot.autopilot import Autopilot, AutopilotBusy, NoAutopilot
 from icarus.copilot.builds import BuildBoard, UnknownBuild
 from icarus.copilot.chat import Copilot, CopilotBusy, ProposalClosed, ProposalOutdated, UnknownProposal
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import CopilotError, NotConnected
+from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.conversation_store import ConversationStore
+from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
 from icarus.library.templates import UnknownTemplate
 from icarus.projects.operations import OperationError
@@ -34,7 +38,7 @@ from icarus.projects.store import (
 from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore, UnknownRun, runs_dir
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
-from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor
+from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor, WarmStartRefused
 
 PROJECTS_DIR_ENV = "ICARUS_PROJECTS_DIR"
 
@@ -111,6 +115,12 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(409, ApiError(code="conflict", message=message))
         case NotTrainable():
             return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
+        case WarmStartRefused():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
+        case NothingToDiagnose() | AutopilotBusy():
+            return _error(409, ApiError(code="conflict", message=str(exc)))
+        case NoAutopilot():
+            return _error(404, ApiError(code="not_found", message="The autopilot has not run for this project"))
         case NotConnected():
             return _error(503, ApiError(code="not_connected", message=str(exc)))
         case NoValidIdeas():
@@ -151,6 +161,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     supervisor: Supervisor = app.state.supervisor
     supervisor.recover()
     yield
+    app.state.autopilot.shutdown()
     supervisor.shutdown()
 
 
@@ -167,15 +178,28 @@ def create_app(
     app.state.model_settings = ModelSettingsStore(settings_root or settings_dir())
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.attachments = AttachmentStore(projects_folder)
+    conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
         app.state.store,
         app.state.runs,
-        ConversationStore(projects_folder),
+        conversations,
         app.state.model_settings,
         trainer,
         app.state.attachments,
         ViewRenderer(),
     )
+    app.state.run_frames = RunFrames(app.state.attachments)
+    app.state.coach = Coach(app.state.copilot, app.state.run_frames)
+    app.state.autopilot = Autopilot(
+        app.state.store,
+        app.state.runs,
+        app.state.supervisor,
+        app.state.training_settings,
+        app.state.copilot,
+        app.state.coach,
+        conversations.folder,
+    )
+    app.state.copilot.attach_coaching(Coaching(app.state.coach, app.state.autopilot))
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
     # The app window loads from files when packaged ("null") and from the local dev server in development.
@@ -193,6 +217,7 @@ def create_app(
     app.include_router(runs.router)
     app.include_router(copilot.router)
     app.include_router(attachments.router)
+    app.include_router(coach.router)
     app.include_router(ideas.router)
     app.include_router(model_settings.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
@@ -218,6 +243,10 @@ def create_app(
         UnknownBuild,
         UnknownAttachment,
         AttachmentRejected,
+        WarmStartRefused,
+        NothingToDiagnose,
+        AutopilotBusy,
+        NoAutopilot,
     ):
         app.add_exception_handler(error, _domain_error)
     return app
