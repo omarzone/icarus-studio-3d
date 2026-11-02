@@ -27,6 +27,7 @@ Never break `main`: it always passes `pnpm check`. Do not commit, push or merge 
 - **Frontends express intent and render state.** The engine owns validation, orchestration, training, storage and model calls. The API process never trains; the worker subprocess does.
 - **Reproducible runs.** Every run freezes its project revision, seed, versions and git revision. Changing a reward or environment creates a new revision instead of silently altering old results.
 - **Bundles carry data, never code.** Anything shared through the community is validated on import against the library and contract versions.
+- **Experiments switch through one file.** Every experimental or not-yet-default behavior is switched in `experiments.json` in the settings folder, declared with its default in the `Experiments` model (`services/engine/src/icarus/contracts/experiments.py`); a missing file or key keeps the default. Never switch one through a UI control, an environment variable or a hardcoded flag. Document each switch and its values in `docs/architecture.md` ("Experiments file"); promoting a switch to default or removing it is a normal change.
 - **Scope follows `VISION.md`.** If a change does not strengthen worlds, bodies, brains or projects, propose it in your report instead of building it.
 
 # Contracts and Zones

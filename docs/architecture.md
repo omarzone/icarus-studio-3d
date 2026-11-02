@@ -248,6 +248,11 @@ A `BehaviorTest` replays a scripted situation and measures the simulated body ag
 - At every checkpoint the worker saves the policy, runs deterministic evaluation episodes with fixed seeds, records the first one as a `Rollout` and stores its metrics.
 - For walking bodies each evaluation episode also records gait signals measured by MuJoCo (root height, tilt, drift, each foot's ground contact and lift-offs, joints at their limits, action change), which `training/run_health.py` turns into facts the coach quotes; the locomotion gait reward terms answer them.
 - Checkpoint 0 is the untrained policy, so every run carries its own before/after baseline.
+- The live view replays what the copies really did. Copies capture a pose only on the steps the view will show; a few times a second the worker writes `live.json` with each copy's frames since the previous write, in contiguous episode segments, within about 100 KB/s. `status.json` names the worker's phase (practicing, updating the brain, testing a checkpoint), so the view always shows a run moving.
+
+### Experiments file
+
+Behaviors still being compared before one becomes the default are switched in `experiments.json` in the settings folder (`~/.icarus`, `ICARUS_SETTINGS_DIR` overrides it), declared in the `Experiments` model (`contracts/experiments.py`) and read by `training/experiment_switches.py`. A missing file, key or invalid value keeps the default. Switches today: `live_view` — `"realtime"` (default: recorded motion at 1x sim speed, about 3 s behind), `"fast"` (recorded motion sped up to keep pace with training) or `"classic"` (one pose per snapshot, eased). The worker reads it when a run starts and the snapshots say which mode they were recorded for.
 
 ### Run store
 
@@ -264,7 +269,7 @@ runs/<run_id>/
 ├── rollouts/<step>.json
 ├── frames/<step>/       # rendered episode frames and episodes.json (how each episode ended)
 ├── diagnosis/<n>.json
-├── live.json            # latest poses of the parallel copies for the live view
+├── live.json            # the copies' newest poses and recorded frames for the live view
 └── worker.log
 ```
 
