@@ -90,13 +90,20 @@ export function CameraRig({ description, mode, frame, track, include, far }: Pro
 
   useFrame(({ camera }, delta) => {
     const orbit = controls.current;
-    const followed = chase.current;
     const anchorNow = latest.current.anchor;
-    if (!orbit || !followed || !anchorNow || (mode !== "follow" && mode !== "onboard")) {
+    if (!orbit || !anchorNow || (mode !== "follow" && mode !== "onboard")) {
       return;
     }
     const agent = agentNow();
     if (!agent) {
+      return;
+    }
+    const followed = chase.current;
+    // The view was framed before the agent existed (a live run before its first snapshot): start chasing it now.
+    if (!followed) {
+      chase.current = { position: agent.position, yaw: agent.yaw };
+      const pose = mode === "follow" ? chaseCamera(agent, anchorNow.reach) : onboardCamera(agent, anchorNow);
+      place(camera, orbit, pose, far);
       return;
     }
     if (mode === "onboard") {
