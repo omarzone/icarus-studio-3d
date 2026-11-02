@@ -38,6 +38,7 @@ export function formatPropertyValue(value: PropertyValue): string {
     case "asset":
     case "panel":
     case "readonly":
+    case "text":
       return value.value;
     case "switch":
       return value.value ? "on" : "off";

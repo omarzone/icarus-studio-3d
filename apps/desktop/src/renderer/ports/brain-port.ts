@@ -9,8 +9,19 @@ import type { CheckFact, LiveReadings } from "./progress-step.ts";
 
 // View types of the brain workspace: what the brain senses and does, how it is rewarded, its shape and activity.
 
-export type SenseInput = { id: string; name: string; detail: string; enabled: boolean; proposed?: boolean };
-export type ActionOutput = { id: string; name: string; detail: string; enabled: boolean };
+export type SenseInput = {
+  id: string;
+  name: string;
+  detail: string;
+  enabled: boolean;
+  proposed?: boolean;
+  // The sensor carries its own name, which the brain, Play and the view show.
+  renamable?: boolean;
+  removable?: boolean;
+  // Why its switch cannot change, when it cannot.
+  lockedReason?: string;
+};
+export type ActionOutput = { id: string; name: string; detail: string; enabled: boolean; lockedReason?: string };
 export type SensesActions = { inputs: readonly SenseInput[]; outputs: readonly ActionOutput[] };
 
 // Goal terms are the main reward, rewards help, penalties punish mistakes, costs nudge (time, energy).
@@ -95,6 +106,9 @@ export type Wiring = {
 export type BrainPort = {
   getSensesActions: (brain: string) => Promise<SensesActions>;
   toggleInput: (input: { brain: string; id: string }) => Promise<SensesActions>;
+  addInput: (brain: string) => Promise<SensesActions>;
+  removeInput: (input: { brain: string; id: string }) => Promise<SensesActions>;
+  renameInput: (input: { brain: string; id: string; name: string }) => Promise<SensesActions>;
   toggleOutput: (input: { brain: string; id: string }) => Promise<SensesActions>;
   getLearning: (brain: string) => Promise<Learning>;
   setRewardWeight: (input: { brain: string; id: string; weight: number }) => Promise<Learning>;

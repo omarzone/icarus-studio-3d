@@ -1,4 +1,4 @@
-import type { ComponentSpec, EditOperation, LibraryCatalog, Project } from "@icarus/contracts";
+import type { ComponentSpec, EditOperation, LibraryCatalog, ObjectSpec, Project } from "@icarus/contracts";
 import type {
   ActionOutput,
   Learning,
@@ -8,6 +8,7 @@ import type {
   SenseInput,
   SensesActions,
 } from "./brain-port.ts";
+import { nextComponentId } from "./scene-views.ts";
 
 type Family = Project["task"]["family"];
 type RewardTermInfo = LibraryCatalog["reward_terms"][number];
@@ -44,10 +45,26 @@ function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+// Mirrors the engine's ray directions (design/sensors.py): above zero turns left.
+export function rayDirection(heading: number): string {
+  const degrees = Math.round(((((heading + 180) % 360) + 360) % 360) - 180);
+  if (degrees === 0) {
+    return "ahead";
+  }
+  if (Math.abs(degrees) === 180) {
+    return "behind";
+  }
+  return degrees > 0 ? `${degrees}° left` : `${-degrees}° right`;
+}
+
 function senseDetail(component: ComponentSpec): string | null {
   switch (component.kind) {
-    case "distance_ray":
-      return `${propertyOf(component, "count") ?? "?"} rays · ${propertyOf(component, "range") ?? "?"} m`;
+    case "distance_ray": {
+      const heading = propertyOf(component, "heading");
+      const direction = rayDirection(typeof heading === "number" ? heading : 0);
+      const count = propertyOf(component, "count") ?? "?";
+      return `${count} ${count === 1 ? "ray" : "rays"} · ${propertyOf(component, "range") ?? "?"} m · ${direction}`;
+    }
     case "balance":
       return `${propertyOf(component, "includes") ?? "accel+gyro"}`;
     case "touch":
@@ -56,6 +73,22 @@ function senseDetail(component: ComponentSpec): string | null {
       return null;
   }
 }
+
+// Mirrors the engine's ray names: the name given, else the part's name, numbered after the part's first rays.
+function senseName(obj: ObjectSpec, component: ComponentSpec, label: string): string {
+  if (component.kind !== "distance_ray") {
+    return label;
+  }
+  const given = `${propertyOf(component, "name") ?? ""}`.trim();
+  if (given) {
+    return given;
+  }
+  const order = obj.components.filter((item) => item.kind === "distance_ray").indexOf(component);
+  return order === 0 ? `${obj.name} distance` : `${obj.name} distance ${order + 1}`;
+}
+
+const INPUT_LOCKED = "Every sensor on the body feeds the brain; remove the sensor to stop it";
+const OUTPUT_LOCKED = "The brain drives every motor of the body; remove the motor in Body to stop it";
 
 // What the brain senses (the body's sensors) and what it moves (the body's motors).
 export function sensesActions(project: Project, catalog: LibraryCatalog): SensesActions {
@@ -67,19 +100,92 @@ export function sensesActions(project: Project, catalog: LibraryCatalog): Senses
       const sense = senses.get(component.kind);
       if (sense) {
         const extra = senseDetail(component);
-        const detail = extra ? `${obj.name} · ${extra}` : obj.name;
-        inputs.push({ id: `${obj.id}/${component.id}`, name: sense.label, detail, enabled: true });
+        inputs.push({
+          id: `${obj.id}/${component.id}`,
+          name: senseName(obj, component, sense.label),
+          detail: extra ? `${obj.name} · ${extra}` : obj.name,
+          enabled: true,
+          renamable: sense.properties.some((schema) => schema.id === "name" && schema.type === "text"),
+          removable: true,
+          lockedReason: INPUT_LOCKED,
+        });
       }
       if (component.kind === "motor") {
         const kind = capitalized(`${propertyOf(component, "kind") ?? "position"}`);
         const force = propertyOf(component, "max_force");
         const detail = force === null ? kind : `${kind} · up to ${force} N`;
-        outputs.push({ id: `${obj.id}/${component.id}`, name: obj.name, detail, enabled: true });
+        outputs.push({
+          id: `${obj.id}/${component.id}`,
+          name: obj.name,
+          detail,
+          enabled: true,
+          lockedReason: OUTPUT_LOCKED,
+        });
       }
     }
   }
   return { inputs, outputs };
 }
+
+function agentPart(project: Project): ObjectSpec {
+  // The agent is the first body's root part, as the engine reads it (sim/model_state.py).
+  const root = project.bodies[0]?.objects.find((obj) => obj.parent === null);
+  if (!root) {
+    throw new Error("Add a body before giving it senses");
+  }
+  return root;
+}
+
+function inputComponent(project: Project, id: string): { obj: ObjectSpec; component: ComponentSpec } {
+  const [objectId, componentId] = id.split("/");
+  const obj = project.bodies.flatMap((body) => body.objects).find((item) => item.id === objectId);
+  const component = obj?.components.find((item) => item.id === componentId);
+  if (!obj || !component) {
+    throw new Error("That sensor is no longer on the body");
+  }
+  return { obj, component };
+}
+
+// One more ray on the agent's root part: a single ray straight ahead, named so its reading is told apart.
+export function addRayOperation(project: Project, catalog: LibraryCatalog): EditOperation {
+  const kind = catalog.components.find((item) => item.kind === "distance_ray");
+  if (!kind) {
+    throw new Error("The library has no distance ray");
+  }
+  const part = agentPart(project);
+  const id = nextComponentId(
+    part.components.map((item) => item.id),
+    "distance_ray",
+  );
+  const rays = part.components.filter((item) => item.kind === "distance_ray").length;
+  const properties: ComponentSpec["properties"] = Object.fromEntries(
+    kind.properties.map((schema) => [schema.id, schema.default]),
+  );
+  properties.count = { type: "count", value: 1 };
+  if (kind.properties.some((schema) => schema.id === "name")) {
+    properties.name = { type: "text", value: `Ray ${rays + 1}` };
+  }
+  return { op: "add_component", object: part.id, component: { id, kind: "distance_ray", properties } };
+}
+
+export function removeInputOperation(project: Project, id: string): EditOperation {
+  const { obj, component } = inputComponent(project, id);
+  return { op: "remove_component", object: obj.id, component: component.id };
+}
+
+export function renameInputOperation(project: Project, id: string, name: string): EditOperation {
+  const { obj, component } = inputComponent(project, id);
+  return {
+    op: "set_property",
+    object: obj.id,
+    component: component.id,
+    property: "name",
+    value: { type: "text", value: name.trim().slice(0, RAY_NAME_MAX) },
+  };
+}
+
+// Mirrors the engine's TextValue limit.
+const RAY_NAME_MAX = 40;
 
 function termInfo(catalog: LibraryCatalog, term: string): RewardTermInfo | undefined {
   return catalog.reward_terms.find((info) => info.term === term);

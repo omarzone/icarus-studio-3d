@@ -163,6 +163,8 @@ export function toViewValue(schema: PropertySchema, value: EngineValue): Propert
       return { type: "readonly", value: value.value };
     case "readonly":
       return { type: "readonly", value: value.value };
+    case "text":
+      return { type: "text", value: value.value };
   }
 }
 
@@ -186,6 +188,8 @@ export function toContractValue(view: PropertyValue): EngineValue {
       return { type: "asset", value: view.value };
     case "readonly":
       return { type: "readonly", value: view.value };
+    case "text":
+      return { type: "text", value: view.value };
     case "range":
       return { type: "range", low: view.low, high: view.high };
     case "vector":

@@ -17,6 +17,7 @@ export function WhatItCanDoTab({
           name={output.name}
           detail={output.detail}
           enabled={output.enabled}
+          lockedReason={output.lockedReason}
           onToggle={() => onToggle(output.id)}
         />
       ))}

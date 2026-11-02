@@ -24,7 +24,7 @@ Electron · electron-vite · React · strict TypeScript · React Three Fiber + d
 - `src/renderer/scene/`: only draws a `SceneDescription` and applies `Rollout` or simulate-mode frames. Never computes physics or invents motion.
 - `src/renderer/features/<feature>/`: one folder per feature with its own components, hooks and state. Features do not import each other; shared code moves up to `ui/` or `scene/`.
 - **One module, one folder; one tab, one file.** Every panel (`PNL-…`) and header (`HDR-…`) in [`docs/design/screens.md`](../../docs/design/screens.md) is a folder at the path listed there, and every tab (`TAB-…`) is one file named after it (`reward-tab.tsx`). Screens (`SCR-…`) compose modules; states (`STA-…`) reuse their screen with different data; dialogs (`MOD-…`) and popovers (`POP-…`) live with the feature that opens them. Put the ID in a one-line comment at the top of the file.
-- `src/renderer/editor/inspector/`: renders properties from their `PropertySchema` type with the 12 property controls. Never write a custom inspector for one component.
+- `src/renderer/editor/inspector/`: renders properties from their `PropertySchema` type with the 13 property controls. Never write a custom inspector for one component.
 
 ## Screens, ports and pending actions
 

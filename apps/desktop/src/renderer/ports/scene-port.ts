@@ -70,7 +70,7 @@ export type SceneSection = { label: string; objects: readonly SceneObject[] };
 
 export type SceneTree = { selected: string | null; sections: readonly SceneSection[] };
 
-// The 12 property types of the style guide, each with exactly one control.
+// The 13 property types of the style guide, each with exactly one control.
 export type PropertyType =
   | "number"
   | "slider"
@@ -83,7 +83,8 @@ export type PropertyType =
   | "count"
   | "asset"
   | "panel"
-  | "readonly";
+  | "readonly"
+  | "text";
 
 // The 6 states every property can be in.
 export type PropertyState = "default" | "changed" | "proposed" | "out-of-range" | "mixed" | "locked";
@@ -107,7 +108,8 @@ export type PropertyValue =
   | { type: "count"; value: number; min: number; max: number }
   | { type: "asset"; value: string; icon?: SceneIcon }
   | { type: "panel"; value: string; panel: PropertyPanel }
-  | { type: "readonly"; value: string };
+  | { type: "readonly"; value: string }
+  | { type: "text"; value: string };
 
 export type Property = {
   id: string;
