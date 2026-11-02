@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
+import { PlayTab, type PlayView } from "./play-tab.tsx";
 import { SceneTab } from "./scene-tab.tsx";
 import { ViewportSurface } from "./viewport-surface.tsx";
 
@@ -12,10 +13,11 @@ export type ViewportTab = { id: string; label: string };
 export type ViewportPanelProps = {
   // What the view shows, read by assistive technology ("Parking lot under a dusk sky").
   label: string;
-  // Tabs of the view; "scene" and "game-view" have their own tab files, other ids draw a plain surface.
+  // Tabs of the view; "scene", "game-view" and "play" have their own tab files, other ids draw a plain surface.
   tabs?: readonly ViewportTab[];
   // View options on the right of the tab bar (Lit, Perspective, speed).
   viewOptions?: readonly string[];
+  onViewOption?: (option: string) => void;
   // Plain note before the view options ("Tools follow its senses").
   note?: string;
   // PNL-TOOLBAR strip drawn between the tab bar and the view.
@@ -25,6 +27,8 @@ export type ViewportPanelProps = {
   tint?: "proposal";
   // Project whose compiled scene the view draws; workspaces without an engine scene leave it out.
   scene?: string;
+  // The live world the "play" tab draws.
+  play?: PlayView;
   className?: string;
 };
 
@@ -39,11 +43,13 @@ export function ViewportPanel({
   label,
   tabs = DEFAULT_VIEWPORT_TABS,
   viewOptions = DEFAULT_OPTIONS,
+  onViewOption,
   note,
   toolbar,
   overlays,
   tint,
   scene,
+  play,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
@@ -74,6 +80,7 @@ export function ViewportPanel({
             <Act
               key={option}
               cta={option}
+              onClick={() => onViewOption?.(option)}
               className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg"
             >
               {option}
@@ -88,6 +95,8 @@ export function ViewportPanel({
           <SceneTab {...surface} />
         ) : active === "game-view" ? (
           <GameViewTab {...surface} />
+        ) : active === "play" ? (
+          <PlayTab {...surface} play={play} />
         ) : (
           <ViewportSurface {...surface} />
         )}

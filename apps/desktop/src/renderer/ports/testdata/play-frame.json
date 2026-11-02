@@ -1,0 +1,346 @@
+{
+  "ready": {
+    "message": {
+      "type": "ready",
+      "session": {
+        "project_id": "0123456789ab",
+        "revision_number": 1,
+        "brain": "Untrained brain: random actions",
+        "tools": [
+          {
+            "id": "move",
+            "label": "Move"
+          },
+          {
+            "id": "push",
+            "label": "Push"
+          },
+          {
+            "id": "add-object",
+            "label": "Add object"
+          },
+          {
+            "id": "light",
+            "label": "Light"
+          },
+          {
+            "id": "wind",
+            "label": "Wind"
+          },
+          {
+            "id": "slow",
+            "label": "Slow"
+          },
+          {
+            "id": "reset",
+            "label": "Reset"
+          }
+        ],
+        "scene": {
+          "revision": 1,
+          "bodies": [
+            {
+              "name": "ground",
+              "parent": null,
+              "position": [0.0, 0.0, 0.0],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "sun",
+              "parent": null,
+              "position": [0.0, 0.0, 10.0],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "spawn",
+              "parent": null,
+              "position": [0.0, 0.0, 0.0],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "car",
+              "parent": null,
+              "position": [0.0, 0.0, 0.5],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "steer_left",
+              "parent": "car",
+              "position": [1.3, 1.05, 0.3],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "wheel_front_left",
+              "parent": "steer_left",
+              "position": [1.3, 1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0]
+            },
+            {
+              "name": "wheel_rear_left",
+              "parent": "car",
+              "position": [-1.3, 1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0]
+            },
+            {
+              "name": "steer_right",
+              "parent": "car",
+              "position": [1.3, -1.05, 0.3],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            },
+            {
+              "name": "wheel_front_right",
+              "parent": "steer_right",
+              "position": [1.3, -1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0]
+            },
+            {
+              "name": "wheel_rear_right",
+              "parent": "car",
+              "position": [-1.3, -1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0]
+            },
+            {
+              "name": "goal",
+              "parent": null,
+              "position": [12.0, 0.0, 0.0],
+              "quaternion": [1.0, 0.0, 0.0, 0.0]
+            }
+          ],
+          "geoms": [
+            {
+              "name": "ground",
+              "body": "ground",
+              "shape": "plane",
+              "size": [100.0, 100.0, 0.0],
+              "position": [0.0, 0.0, 0.0],
+              "quaternion": [1.0, 0.0, 0.0, 0.0],
+              "color": "#3a3f47"
+            },
+            {
+              "name": "car",
+              "body": "car",
+              "shape": "box",
+              "size": [4.0, 1.8, 0.6],
+              "position": [0.0, 0.0, 0.5],
+              "quaternion": [1.0, 0.0, 0.0, 0.0],
+              "color": "#c8553d"
+            },
+            {
+              "name": "steer_left",
+              "body": "steer_left",
+              "shape": "sphere",
+              "size": [0.12, 0.12, 0.12],
+              "position": [1.3, 1.05, 0.3],
+              "quaternion": [1.0, 0.0, 0.0, 0.0],
+              "color": "#2b2d31"
+            },
+            {
+              "name": "wheel_front_left",
+              "body": "wheel_front_left",
+              "shape": "cylinder",
+              "size": [0.6, 0.6, 0.25],
+              "position": [1.3, 1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0],
+              "color": "#1f2023"
+            },
+            {
+              "name": "wheel_rear_left",
+              "body": "wheel_rear_left",
+              "shape": "cylinder",
+              "size": [0.6, 0.6, 0.25],
+              "position": [-1.3, 1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0],
+              "color": "#1f2023"
+            },
+            {
+              "name": "steer_right",
+              "body": "steer_right",
+              "shape": "sphere",
+              "size": [0.12, 0.12, 0.12],
+              "position": [1.3, -1.05, 0.3],
+              "quaternion": [1.0, 0.0, 0.0, 0.0],
+              "color": "#2b2d31"
+            },
+            {
+              "name": "wheel_front_right",
+              "body": "wheel_front_right",
+              "shape": "cylinder",
+              "size": [0.6, 0.6, 0.25],
+              "position": [1.3, -1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0],
+              "color": "#1f2023"
+            },
+            {
+              "name": "wheel_rear_right",
+              "body": "wheel_rear_right",
+              "shape": "cylinder",
+              "size": [0.6, 0.6, 0.25],
+              "position": [-1.3, -1.05, 0.3],
+              "quaternion": [0.7071067811865476, 0.7071067811865476, 0.0, 0.0],
+              "color": "#1f2023"
+            }
+          ],
+          "lights": [
+            {
+              "name": "sun",
+              "position": [0.0, 0.0, 10.0],
+              "direction": [0.2822162605150792, 0.18814417367671948, -0.9407208683835974],
+              "intensity": 1.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  "frame": {
+    "message": {
+      "type": "frame",
+      "frame": {
+        "time": 2.0000000000000013,
+        "step": 1000,
+        "speed": 1.0,
+        "paused": false,
+        "geoms": [
+          {
+            "name": "ground",
+            "position": [0.0, 0.0, 0.0],
+            "quaternion": [1.0, 0.0, 0.0, 0.0]
+          },
+          {
+            "name": "car",
+            "position": [-0.03024585507883582, 0.0027366560512404985, 0.4998642232318841],
+            "quaternion": [0.9999992387779516, 4.231241995622831e-6, -2.1844461737547088e-6, 0.0012338641908353452]
+          },
+          {
+            "name": "steer_left",
+            "position": [1.2671599454563114, 1.0559431969336137, 0.29987879631198155],
+            "quaternion": [0.9972248438968935, 4.059943857004809e-6, -2.4883869854833236e-6, 0.074448711823246]
+          },
+          {
+            "name": "wheel_front_left",
+            "position": [1.2671599454563114, 1.0559431969336137, 0.29987879631198155],
+            "quaternion": [0.7002995827288477, 0.7070727740339057, 0.007208026059212487, 0.09786026267146417]
+          },
+          {
+            "name": "wheel_rear_left",
+            "position": [-1.332832137930498, 1.049527108073405, 0.2998674100524793],
+            "quaternion": [0.7064760691919976, 0.7065534025014099, -0.028044927476193422, 0.029788170732002687]
+          },
+          {
+            "name": "steer_right",
+            "position": [1.2723421711518128, -1.0440504088236564, 0.2998610364294294],
+            "quaternion": [0.9980189721595183, 4.088443557866295e-6, -2.44127900611451e-6, 0.0629136804437856]
+          },
+          {
+            "name": "wheel_front_right",
+            "position": [1.2723421711518128, -1.0440504088236564, 0.2998610364294294],
+            "quaternion": [0.7047911600003691, 0.7063934934269146, 0.03181444952390189, 0.05714450131853136]
+          },
+          {
+            "name": "wheel_rear_right",
+            "position": [-1.3276499122349965, -1.0504664976838651, 0.29984965016992715],
+            "quaternion": [0.7069878644363116, 0.706960094897954, 0.014548290804763058, -0.012803554050290163]
+          }
+        ],
+        "senses": [
+          {
+            "id": "car:ray0",
+            "label": "Car distance 1",
+            "value": 10.0,
+            "min": 0.0,
+            "max": 10.0,
+            "unit": "m"
+          },
+          {
+            "id": "car:ray1",
+            "label": "Car distance 2",
+            "value": 10.0,
+            "min": 0.0,
+            "max": 10.0,
+            "unit": "m"
+          },
+          {
+            "id": "car:ray2",
+            "label": "Car distance 3",
+            "value": 10.0,
+            "min": 0.0,
+            "max": 10.0,
+            "unit": "m"
+          },
+          {
+            "id": "car:ray3",
+            "label": "Car distance 4",
+            "value": 10.0,
+            "min": 0.0,
+            "max": 10.0,
+            "unit": "m"
+          },
+          {
+            "id": "car:ray4",
+            "label": "Car distance 5",
+            "value": 10.0,
+            "min": 0.0,
+            "max": 10.0,
+            "unit": "m"
+          }
+        ],
+        "actions": [
+          {
+            "id": "steer_left:motor",
+            "label": "Front left steering",
+            "value": -0.14566624688133706,
+            "min": -0.610865,
+            "max": 0.610865,
+            "unit": "rad"
+          },
+          {
+            "id": "wheel_rear_left:motor",
+            "label": "Rear left wheel",
+            "value": -0.14045187764284672,
+            "min": -1.0,
+            "max": 1.0,
+            "unit": null
+          },
+          {
+            "id": "steer_right:motor",
+            "label": "Front right steering",
+            "value": -0.013622843147151675,
+            "min": -0.610865,
+            "max": 0.610865,
+            "unit": "rad"
+          },
+          {
+            "id": "wheel_rear_right:motor",
+            "label": "Rear right wheel",
+            "value": 0.9529246438720891,
+            "min": -1.0,
+            "max": 1.0,
+            "unit": null
+          }
+        ],
+        "reward": -0.008710680016355212,
+        "episode_return": -0.43024616634787965,
+        "status": {
+          "title": "Playing",
+          "detail": "12.0 m to the parking spot"
+        }
+      }
+    }
+  },
+  "event": {
+    "message": {
+      "type": "event",
+      "event": {
+        "time": 2.0000000000000013,
+        "kind": "user",
+        "text": "You pushed Car with 10 N·s"
+      }
+    }
+  },
+  "error": {
+    "message": {
+      "type": "error",
+      "message": "There is no object 'no_such_object' in this world"
+    }
+  }
+}

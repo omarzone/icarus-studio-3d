@@ -24,6 +24,36 @@ function draft07Tuples(node) {
   return node;
 }
 
+// Field titles would become type names ("revision" → `Revision`) and collide with models; only models keep names.
+function dropFieldTitles(schema) {
+  // `node` is always a schema; maps of schemas (properties, $defs) are walked by their values.
+  const strip = (node, isModel) => {
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        strip(item, false);
+      }
+      return;
+    }
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    if (!isModel) {
+      delete node.title;
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if ((key === "$defs" || key === "properties") && value && typeof value === "object") {
+        for (const child of Object.values(value)) {
+          strip(child, key === "$defs");
+        }
+      } else if (typeof value === "object") {
+        strip(value, false);
+      }
+    }
+  };
+  strip(schema, true);
+  return schema;
+}
+
 export async function generate() {
   const schemaPath = join(mkdtempSync(join(tmpdir(), "icarus-contracts-")), "schema.json");
   execFileSync(
@@ -33,7 +63,7 @@ export async function generate() {
       stdio: "inherit",
     },
   );
-  const schema = draft07Tuples(JSON.parse(readFileSync(schemaPath, "utf8")));
+  const schema = dropFieldTitles(draft07Tuples(JSON.parse(readFileSync(schemaPath, "utf8"))));
   const ts = await compile(schema, "IcarusContracts", {
     bannerComment: BANNER,
     unreachableDefinitions: true,

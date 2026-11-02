@@ -1,6 +1,12 @@
 import type {
   ApiError,
   LibraryCatalog,
+  PlayEvent,
+  PlayFrame,
+  PlayMessage,
+  PlayMessageEnvelope,
+  PlayReading,
+  PlaySessionInfo,
   ProjectState,
   ProjectSummary,
   Revision,
@@ -114,6 +120,77 @@ export function isSceneDescription(value: unknown): value is SceneDescription {
     Array.isArray(value.geoms) &&
     value.geoms.every(isGeom)
   );
+}
+
+function isReading(value: unknown): value is PlayReading {
+  return (
+    has(value, "id", "string") &&
+    has(value, "label", "string") &&
+    has(value, "value", "number") &&
+    has(value, "min", "number") &&
+    has(value, "max", "number")
+  );
+}
+
+function isPose(value: unknown): boolean {
+  return (
+    isRecord(value) && has(value, "name", "string") && isTriple(value.position, 3) && isTriple(value.quaternion, 4)
+  );
+}
+
+export function isPlaySessionInfo(value: unknown): value is PlaySessionInfo {
+  return (
+    isRecord(value) &&
+    has(value, "project_id", "string") &&
+    has(value, "brain", "string") &&
+    isListOf(value.tools, (tool): tool is { id: string; label: string } => {
+      return has(tool, "id", "string") && has(tool, "label", "string");
+    }) &&
+    isSceneDescription(value.scene)
+  );
+}
+
+export function isPlayFrame(value: unknown): value is PlayFrame {
+  return (
+    isRecord(value) &&
+    has(value, "time", "number") &&
+    has(value, "speed", "number") &&
+    has(value, "paused", "boolean") &&
+    has(value, "reward", "number") &&
+    has(value, "episode_return", "number") &&
+    has(value.status, "title", "string") &&
+    has(value.status, "detail", "string") &&
+    Array.isArray(value.geoms) &&
+    value.geoms.every(isPose) &&
+    isListOf(value.senses, isReading) &&
+    isListOf(value.actions, isReading)
+  );
+}
+
+export function isPlayEvent(value: unknown): value is PlayEvent {
+  return has(value, "time", "number") && has(value, "kind", "string") && has(value, "text", "string");
+}
+
+function isPlayMessage(value: unknown): value is PlayMessage {
+  if (!isRecord(value)) {
+    return false;
+  }
+  switch (value.type) {
+    case "ready":
+      return isPlaySessionInfo(value.session);
+    case "frame":
+      return isPlayFrame(value.frame);
+    case "event":
+      return isPlayEvent(value.event);
+    case "error":
+      return has(value, "message", "string");
+    default:
+      return false;
+  }
+}
+
+export function isPlayMessageEnvelope(value: unknown): value is PlayMessageEnvelope {
+  return isRecord(value) && isPlayMessage(value.message);
 }
 
 export function isNothing(value: unknown): value is undefined {

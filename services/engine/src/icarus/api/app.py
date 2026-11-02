@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from icarus import __version__
-from icarus.api import health, library, projects
+from icarus.api import health, library, play, projects
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.library.templates import UnknownTemplate
@@ -102,6 +102,7 @@ def create_app(projects_root: Path | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(library.router)
     app.include_router(projects.router)
+    app.include_router(play.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     for error in (

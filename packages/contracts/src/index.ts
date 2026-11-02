@@ -1,4 +1,4 @@
-import type { OperationBatch, Properties } from "./generated.ts";
+import type { ComponentSpec, OperationBatch, PlayCommandEnvelope, PlayMessageEnvelope } from "./generated.ts";
 
 export type {
   AddComponent,
@@ -23,6 +23,15 @@ export type {
   OperationBatch,
   PanelValue,
   PieceInfo,
+  PlayCommandEnvelope,
+  PlayEvent,
+  PlayFrame,
+  PlayGeomPose,
+  PlayMessageEnvelope,
+  PlayReading,
+  PlaySessionInfo,
+  PlayStatus,
+  PlayToolInfo,
   Project,
   ProjectState,
   ProjectSummary,
@@ -47,5 +56,7 @@ export type {
 } from "./generated.ts";
 
 // Unions the generator inlines, named once from the generated types.
-export type PropertyValue = Properties[string];
+export type PropertyValue = ComponentSpec["properties"][string];
 export type EditOperation = OperationBatch["operations"][number];
+export type PlayCommand = PlayCommandEnvelope["command"];
+export type PlayMessage = PlayMessageEnvelope["message"];
