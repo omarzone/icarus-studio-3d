@@ -1,7 +1,7 @@
 import math
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import mujoco
 import numpy as np
@@ -11,6 +11,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
+from icarus.design.looks import GeomLook, geom_looks
 from icarus.design.sensors import add_actuator, add_sensors
 from icarus.design.sky import add_sky, world_sky
 from icarus.design.surfaces import SURFACE_FRICTION
@@ -35,6 +36,8 @@ class CompiledModel:
     objects: dict[str, str]
     # How the world looks around it; None when the world has no sky object.
     sky: SceneSky | None = None
+    # Object id → how its geom is drawn; never part of the physics.
+    looks: dict[str, GeomLook] = field(default_factory=dict)
 
 
 def _fmt(values) -> str:
@@ -252,7 +255,7 @@ def compile_project(project: Project) -> CompiledModel:
     except ValueError as error:
         raise CompileError(_readable(str(error), project)) from error
     objects = {obj.id: obj.id for obj in all_objects(project)}
-    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project))
+    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project), looks=geom_looks(project))
 
 
 __all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "to_mjcf"]

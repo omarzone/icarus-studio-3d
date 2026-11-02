@@ -1,5 +1,5 @@
 from icarus.contracts.library import PieceInfo
-from icarus.library.templates import Part, solid
+from icarus.library.parts import Part, solid
 
 
 def _static(part: Part) -> Part:
@@ -17,7 +17,7 @@ _PIECES = [
         "Box obstacle",
         "box",
         "A movable crate to push or avoid.",
-        solid("box", "Box", None, (3, 0, 0.25), "box", (0.5, 0.5, 0.5), 5, "#b08d57"),
+        solid("box", "Box", None, (3, 0, 0.25), "box", (0.5, 0.5, 0.5), 5, "#b08d57", style="crate"),
     ),
     _piece(
         "ramp",
@@ -31,21 +31,21 @@ _PIECES = [
         "Wall",
         "walls",
         "A fixed wall that blocks the way.",
-        _static(solid("wall", "Wall", None, (3, 0, 0.5), "box", (0.2, 3, 1), 1, "#9ca3af")),
+        _static(solid("wall", "Wall", None, (3, 0, 0.5), "box", (0.2, 3, 1), 1, "#9ca3af", style="wall")),
     ),
     _piece(
         "post",
         "Post",
         "target",
         "A fixed post to steer around.",
-        _static(solid("post", "Post", None, (3, 0, 0.5), "cylinder", (0.2, 0.2, 1), 1, "#f0a63a")),
+        _static(solid("post", "Post", None, (3, 0, 0.5), "cylinder", (0.2, 0.2, 1), 1, "#f0a63a", style="post")),
     ),
     _piece(
         "ball",
         "Ball",
         "goal",
         "A light ball that rolls.",
-        solid("ball", "Ball", None, (3, 0, 0.15), "sphere", (0.3, 0.3, 0.3), 0.5, "#d9534f"),
+        solid("ball", "Ball", None, (3, 0, 0.15), "sphere", (0.3, 0.3, 0.3), 0.5, "#d9534f", style="ball"),
     ),
 ]
 

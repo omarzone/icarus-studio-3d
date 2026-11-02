@@ -95,7 +95,7 @@ def listing(id: str, label: str, options: list[str], default: str, *, hint: str 
         id=id,
         label=label,
         type="list",
-        options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
+        options=[PropertyOption(value=option, label=option.replace("_", " ").capitalize()) for option in options],
         default=ListValue(type="list", value=default),
         hint=hint,
     )

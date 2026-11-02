@@ -129,6 +129,18 @@ def test_the_car_touching_a_wall_is_an_agent_event(parking):
     assert "Car touched Wall" in [event.text for event in events]
 
 
+def test_play_events_speak_the_persons_language(parking):
+    session = PlaySession(parking, 1, RandomPolicy(6, seed=0), seed=0, language="es")
+    assert texts(session.apply(AddObjectCommand(tool="add_object", piece="wall", position=(2.4, 0.0, 0.0)))) == [
+        "Agregaste Wall"
+    ]
+    assert texts(session.apply(PushCommand(tool="push", object="car", direction=(1.0, 0.0, 0.0), speed=3.0)))[
+        0
+    ].startswith("Empujaste Car con")
+    assert "Car tocó Wall" in [event.text for event in session.step_realtime(0.4)]
+    assert texts(session.apply(ResetCommand(tool="reset"))) == ["Episodio reiniciado"]
+
+
 def test_shuffle_moves_props_and_needs_one(parking):
     session = session_of(parking)
     assert isinstance(session.apply(ShuffleCommand(tool="shuffle"))[0], PlayErrorMessage)
@@ -173,3 +185,15 @@ def test_commands_out_of_physical_bounds_are_refused_by_the_contract():
     ):
         with pytest.raises(ValidationError):
             build()
+
+
+def test_the_frame_draws_each_distance_sensor_with_the_reading_it_shows(parking):
+    session = session_of(parking)
+    session.step_realtime(0.3)
+    frame = session.frame()
+    senses = {reading.id: reading for reading in frame.senses}
+    assert [ray.sensor for ray in frame.rays] == [f"car:ray{index}" for index in range(5)]
+    for ray in frame.rays:
+        reading = senses[ray.sensor]
+        assert ray.label == reading.label
+        assert (ray.distance if ray.distance is not None else ray.range) == pytest.approx(reading.value, abs=1e-3)

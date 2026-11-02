@@ -5,6 +5,7 @@ import numpy as np
 
 from icarus.contracts.scene import SceneBody, SceneDescription, SceneGeom, SceneLight, SceneZone
 from icarus.design.compiler import CompiledModel
+from icarus.design.ray_readings import ray_readings
 
 Shape = Literal["plane", "box", "sphere", "capsule", "cylinder"]
 
@@ -95,15 +96,19 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
             continue
         quaternion = np.zeros(4)
         mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
+        name = model.geom(index).name
+        look = compiled.looks.get(name)
         geoms.append(
             SceneGeom(
-                name=model.geom(index).name,
+                name=name,
                 body=model.body(int(model.geom_bodyid[index])).name,
                 shape=shape,
                 size=_extents(shape, model.geom_size[index]),
                 position=_vector(data.geom_xpos[index]),
                 quaternion=_quat(quaternion),
                 color=_hex(model.geom_rgba[index]),
+                style=look.style if look else None,
+                surface=look.surface if look else None,
             )
         )
     lights = [
@@ -116,7 +121,15 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
         for index in range(model.nlight)
     ]
     zones = _zones(model, data)
-    return SceneDescription(revision=revision, bodies=bodies, geoms=geoms, lights=lights, zones=zones, sky=compiled.sky)
+    return SceneDescription(
+        revision=revision,
+        bodies=bodies,
+        geoms=geoms,
+        lights=lights,
+        zones=zones,
+        sky=compiled.sky,
+        rays=ray_readings(model, data),
+    )
 
 
 def object_extents(compiled: CompiledModel, object_ids: list[str]) -> tuple[float, float, float] | None:

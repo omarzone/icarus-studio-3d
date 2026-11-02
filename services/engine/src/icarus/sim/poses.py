@@ -2,6 +2,7 @@ import mujoco
 import numpy as np
 
 from icarus.contracts.training import CopyPoses
+from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
 from icarus.sim.model_state import LiveWorld
 
@@ -17,8 +18,9 @@ def moving_geoms(world: LiveWorld) -> list[int]:
     ]
 
 
-def geom_poses(world: LiveWorld, geoms: list[int]) -> CopyPoses:
-    """World positions and wxyz quaternions of the given geoms as MuJoCo computed them."""
+def geom_poses(world: LiveWorld, geoms: list[int], rays: bool = False) -> CopyPoses:
+    """World positions and wxyz quaternions of the given geoms as MuJoCo computed them, with the distance sensors
+    when the view draws them."""
     data = world.data
     quaternion = np.zeros(4)
     positions: list[tuple[float, float, float]] = []
@@ -29,4 +31,5 @@ def geom_poses(world: LiveWorld, geoms: list[int]) -> CopyPoses:
         mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
         w, i, j, k = (float(value) for value in quaternion)
         quaternions.append((w, i, j, k))
-    return CopyPoses(positions=positions, quaternions=quaternions)
+    readings = ray_readings(world.model, world.data, {s.id: s.label for s in world.sensors}) if rays else []
+    return CopyPoses(positions=positions, quaternions=quaternions, rays=readings)

@@ -1,6 +1,7 @@
 from icarus.contracts.library import ComponentGroupName, ComponentKindSpec
 from icarus.contracts.objects import ComponentSpec
 from icarus.contracts.properties import PropertySchema
+from icarus.contracts.scene import GEOM_STYLES, GEOM_SURFACES
 from icarus.library.properties import (
     choice,
     color,
@@ -17,11 +18,17 @@ from icarus.library.properties import (
 # Furthest a randomized object may move per axis on each try, in metres.
 POSITION_RANGE_MAX = 50.0
 
-SURFACES = ["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
+SURFACES = GEOM_SURFACES
 # Friction is what the physics uses; the kind names the look, and these values and colors match each kind.
 SURFACE_HINT = (
     "Friction and look: asphalt 1 dark grey, concrete 0.9 light grey, grass 0.6 green, snow 0.3 white, "
     "ice 0.05 pale blue, rubber 1.2 black, wood 0.7 brown, metal 0.5 steel"
+)
+# The style only changes the drawing, never the collider: the drawing stays inside the part's shape.
+STYLE_HINT = (
+    "How the part is drawn inside its shape: car_body (box: shell, cabin, windows, lights), wheel (cylinder: tire and "
+    "rim), shell and joint (robot body and limbs), crate, wall, curb, post, cone, lamp_post, tree, ball, marking "
+    "(paint on the ground, usually a static part without a collider)"
 )
 SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 
@@ -65,7 +72,11 @@ _KINDS = [
         "Material",
         "material",
         "Shape",
-        [color("color", "Color", "#8a8f98"), listing("surface", "Surface", SURFACES, "rubber", hint=SURFACE_HINT)],
+        [
+            color("color", "Color", "#8a8f98"),
+            listing("surface", "Surface", SURFACES, "rubber", hint=SURFACE_HINT),
+            listing("style", "Style", GEOM_STYLES, "plain", hint=STYLE_HINT),
+        ],
         unique=True,
     ),
     _kind(

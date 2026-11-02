@@ -221,3 +221,13 @@ def test_full_steering_reaches_its_limit_and_turns_the_car_on_a_tight_circle(par
     assert np.sign(np.arctan2(forward[1], forward[0])) == steer
     chassis = model.geom("car").id
     assert all(chassis not in (contact.geom1, contact.geom2) for contact in data.contact[: data.ncon])
+
+
+def test_each_copy_reports_where_its_distance_sensors_look_for_the_live_view():
+    env = ProjectEnv(project_from("parking_car"))
+    env.reset(seed=0)
+    env.step(np.zeros(len(env.world.actuators), dtype=np.float32))
+    rays = env.poses().rays
+    car = env.world.data.xpos[env.world.agent]
+    assert [ray.sensor for ray in rays] == [f"car:ray{index}" for index in range(5)]
+    assert all(np.linalg.norm(np.subtract(ray.origin, car)) < 3 for ray in rays)

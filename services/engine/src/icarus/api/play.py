@@ -13,6 +13,7 @@ from icarus.contracts.play import (
     PlayReady,
 )
 from icarus.contracts.project import Project
+from icarus.copilot.language import Language
 from icarus.design.compiler import CompileError, compile_project
 from icarus.projects.store import ProjectStore, UnknownProject
 from icarus.sim.model_state import build_world, observation
@@ -54,10 +55,10 @@ def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
     return RandomPolicy(compile_project(project).model.nu, project.brain.seed, label)
 
 
-def _open_session(store: ProjectStore, runs: RunStore, project_id: str) -> PlaySession:
+def _open_session(store: ProjectStore, runs: RunStore, project_id: str, language: Language) -> PlaySession:
     state = store.state(project_id)
     brain = _brain(runs, state.project, state.revision.number)
-    return PlaySession(state.project, state.revision.number, brain, state.project.brain.seed)
+    return PlaySession(state.project, state.revision.number, brain, state.project.brain.seed, language)
 
 
 async def _receive(websocket: WebSocket, inbox: asyncio.Queue[Inbound]) -> None:
@@ -105,7 +106,8 @@ async def play(websocket: WebSocket, project_id: str) -> None:
     await websocket.accept()
     try:
         state = websocket.app.state
-        session = await asyncio.to_thread(_open_session, state.store, state.runs, project_id)
+        language = await asyncio.to_thread(state.copilot.language, project_id)
+        session = await asyncio.to_thread(_open_session, state.store, state.runs, project_id, language)
     except UnknownProject:
         await _send(websocket, _error(f"There is no project {project_id!r}"))
         await websocket.close(code=UNKNOWN_PROJECT)

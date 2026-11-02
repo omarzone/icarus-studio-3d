@@ -28,6 +28,8 @@ from icarus.contracts.play import (
     WindCommand,
 )
 from icarus.contracts.project import Project
+from icarus.copilot.language import Language, say
+from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
 from icarus.sim.model_state import (
     apply_action,
@@ -81,8 +83,9 @@ def _vector(values) -> tuple[float, float, float]:
 class PlaySession:
     """One live world stepped in real time with a brain. It works on its own copy and never changes the project."""
 
-    def __init__(self, project: Project, revision: int, brain: Policy, seed: int) -> None:
+    def __init__(self, project: Project, revision: int, brain: Policy, seed: int, language: Language = "en") -> None:
         self.revision = revision
+        self.language: Language = language
         self.brain = brain
         self.world = build_world(project.model_copy(deep=True))
         self.speed = 1.0
@@ -115,6 +118,9 @@ class PlaySession:
     def _name(self, object_id: str | None) -> str:
         return self.world.object_names.get(object_id or "", object_id or "")
 
+    def _text(self, key: str, **values: object) -> str:
+        return say(key, self.language, **values)
+
     def _event(self, text: str, kind: EventKind = "user") -> PlayEvent:
         return PlayEvent(time=float(self.world.data.time), kind=kind, text=text)
 
@@ -143,12 +149,14 @@ class PlaySession:
         now = touching(self.world)
         for geom in sorted(now - self._touching):
             other = self._name(self.world.model.geom(geom).name)
-            events.append(self._event(f"{agent} touched {other}", "agent"))
+            events.append(self._event(self._text("play_touched", agent=agent, other=other), "agent"))
         if self.world.goal and inside_goal(after) and not inside_goal(before):
             goal = self._name(self.world.goal.object)
-            events.append(self._event(f"{agent} reached the {goal[:1].lower()}{goal[1:]}", "agent"))
+            events.append(
+                self._event(self._text("play_reached", agent=agent, goal=f"{goal[:1].lower()}{goal[1:]}"), "agent")
+            )
         if after.fallen and not before.fallen:
-            events.append(self._event(f"{agent} fell over", "agent"))
+            events.append(self._event(self._text("play_fell", agent=agent), "agent"))
         self._state, self._touching = after, now
         self._act()
         return events
@@ -171,7 +179,7 @@ class PlaySession:
         match command:
             case MoveCommand():
                 move_body(world, body_id(world, command.object), command.position)
-                return [self._say(f"You moved {self._name(command.object)}")]
+                return [self._say(self._text("play_moved", name=self._name(command.object)))]
             case PushCommand():
                 body = body_id(world, command.object)
                 direction = np.array(command.direction, dtype=float)
@@ -182,41 +190,41 @@ class PlaySession:
                 impulse = direction / length * command.speed * float(world.model.body_subtreemass[body])
                 apply_impulse(world, body, impulse)
                 magnitude = _amount(float(np.linalg.norm(impulse)))
-                return [self._say(f"You pushed {self._name(command.object)} with {magnitude} N·s")]
+                return [self._say(self._text("play_pushed", name=self._name(command.object), impulse=magnitude))]
             case AddObjectCommand():
                 self.world, name = add_piece(world, command.piece, command.position)
                 self.world.model.light_diffuse[:] = world.model.light_diffuse
                 self._observe()
-                return [self._ready(), self._say(f"You added {name}")]
+                return [self._ready(), self._say(self._text("play_added", name=name))]
             case LightCommand():
                 world.model.light_diffuse[:] = self._base_diffuse * command.intensity
-                return [self._ready(), self._say(f"You set the light to {command.intensity * 100:.0f}%")]
+                return [self._ready(), self._say(self._text("play_light", percent=f"{command.intensity * 100:.0f}"))]
             case WindCommand():
                 world.model.opt.wind[:] = command.velocity
                 speed = math.hypot(*command.velocity)
                 # Wind only pushes bodies through air, so air gets its density while wind blows.
                 world.model.opt.density = AIR_DENSITY if speed > 0 else 0.0
-                text = f"You set the wind to {_amount(speed)} m/s" if speed > 0 else "You stopped the wind"
+                text = self._text("play_wind", speed=_amount(speed)) if speed > 0 else self._text("play_wind_off")
                 return [self._say(text)]
             case SpeedCommand():
                 self.speed = command.speed
-                return [self._say(f"You set the speed to {command.speed:g}×")]
+                return [self._say(self._text("play_speed", speed=f"{command.speed:g}"))]
             case PauseCommand():
                 self.paused = command.paused
-                return [self._say("You paused the simulation" if command.paused else "You resumed the simulation")]
+                return [self._say(self._text("play_paused" if command.paused else "play_resumed"))]
             case ResetCommand():
                 self._restart()
-                return [self._say("Episode reset", "world")]
+                return [self._say(self._text("play_reset"), "world")]
             case ShuffleCommand():
                 count = shuffle_props(world, self._rng, SHUFFLE_REACH)
                 self._observe()
-                return [self._say(f"You shuffled {count} prop{'' if count == 1 else 's'}")]
+                return [self._say(self._text("play_shuffled_one" if count == 1 else "play_shuffled", count=count))]
             case TouchCommand():
                 body = body_id(world, command.object)
                 if not any(sensor.id == f"{command.object}:touch" for sensor in world.sensors):
                     raise ToolRejected(f"{self._name(command.object)} has no touch sensor to poke")
                 apply_impulse(world, body, np.array([0.0, 0.0, -POKE]))
-                return [self._say(f"You poked {self._name(command.object)}")]
+                return [self._say(self._text("play_poked", name=self._name(command.object)))]
 
     def tools(self) -> list[PlayToolInfo]:
         tools = [PlayToolInfo(id=id, label=label) for id, label in _CORE_TOOLS]
@@ -304,4 +312,5 @@ class PlaySession:
             reward=self.reward,
             episode_return=self.episode_return,
             status=self._status(),
+            rays=ray_readings(model, data, {sensor.id: sensor.label for sensor in self.world.sensors}),
         )

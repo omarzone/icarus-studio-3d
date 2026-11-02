@@ -1,81 +1,22 @@
-from dataclasses import dataclass, field
-
-from pydantic import TypeAdapter
+from dataclasses import dataclass
 
 from icarus.contracts.library import TemplateInfo
-from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.operations import AddBody, CreateObject, EditOperation, SetRewardTerm, SetTaskFamily
-from icarus.contracts.properties import PropertyValue
 from icarus.contracts.specs import BodySpec, RewardTermSpec, TaskFamily
-from icarus.library.components import component_kind, default_component
+from icarus.library.parts import Part, Raw, decoration, hinge, motor, solid
 from icarus.library.rewards import REWARD_TERMS
 
-_VALUE = TypeAdapter(PropertyValue)
-
-Raw = float | int | bool | str | tuple[float, ...]
+__all__ = ["TEMPLATES", "Part", "Raw", "UnknownTemplate", "solid", "template_operations"]
 
 
 class UnknownTemplate(KeyError):
     pass
 
 
-def _component(kind: str, overrides: dict[str, Raw]) -> ComponentSpec:
-    component = default_component(kind, kind)
-    schemas = {schema.id: schema for schema in component_kind(kind).properties}
-    for prop, raw in overrides.items():
-        schema = schemas[prop]
-        if schema.type == "range" and isinstance(raw, tuple):
-            component.properties[prop] = _VALUE.validate_python({"type": "range", "low": raw[0], "high": raw[1]})
-        else:
-            component.properties[prop] = _VALUE.validate_python({"type": schema.type, "value": raw})
-    return component
-
-
-@dataclass
-class Part:
-    id: str
-    name: str
-    parent: str | None
-    components: dict[str, dict[str, Raw]] = field(default_factory=dict)
-
-    def spec(self) -> ObjectSpec:
-        return ObjectSpec(
-            id=self.id,
-            name=self.name,
-            parent=self.parent,
-            components=[_component(kind, overrides) for kind, overrides in self.components.items()],
-        )
-
-
-def solid(
-    id: str,
-    name: str,
-    parent: str | None,
-    position: tuple[float, float, float],
-    shape: str,
-    size: tuple[float, float, float],
-    mass: float,
-    color: str,
-    *,
-    rotation: tuple[float, float, float] = (0, 0, 0),
-    extra: dict[str, dict[str, Raw]] | None = None,
-) -> Part:
-    components: dict[str, dict[str, Raw]] = {
-        "transform": {"position": position, "rotation": rotation},
-        "mesh": {"shape": shape, "size": size},
-        "material": {"color": color},
-        "physics_body": {"mode": "dynamic", "mass": mass},
-        "collider": {},
-    }
-    return Part(id, name, parent, components | (extra or {}))
-
-
-def _hinge(axis: tuple[float, float, float], limits: tuple[float, float], anchor=(0.0, 0.0, 0.0)) -> dict[str, Raw]:
-    return {"kind": "hinge", "axis": axis, "limits": limits, "anchor": anchor}
-
-
-def _motor(kind: str, max_force: float) -> dict[str, Raw]:
-    return {"kind": kind, "max_force": max_force}
+SHELL = "#f1f1f1"
+JOINT = "#8b9098"
+# Painted lines a few millimetres proud of the ground.
+PAINT = 0.01
 
 
 def _world(sky: str) -> list[Part]:
@@ -110,6 +51,7 @@ def _car() -> list[Part]:
             900,
             "#c8553d",
             extra={"distance_ray": {"range": 10, "count": 5}},
+            style="car_body",
         )
     ]
     # Wide enough that a front wheel at full lock clears the body.
@@ -125,20 +67,21 @@ def _car() -> list[Part]:
                 (0.12, 0.12, 0.12),
                 4,
                 "#2b2d31",
-                extra={"joint": _hinge((0, 0, 1), (-35, 35)), "motor": _motor("position", 2000)},
+                extra={"joint": hinge((0, 0, 1), (-35, 35)), "motor": motor("position", 2000)},
+                style="joint",
             )
         )
         wheels: list[tuple[str, str, str, tuple[float, float, float], dict[str, Raw] | None]] = [
             (f"wheel_front_{side}", f"Front {side} wheel", knuckle, (0.0, 0.0, 0.0), None),
-            (f"wheel_rear_{side}", f"Rear {side} wheel", "car", (-1.3, y, -0.2), _motor("torque", 400)),
+            (f"wheel_rear_{side}", f"Rear {side} wheel", "car", (-1.3, y, -0.2), motor("torque", 400)),
         ]
-        for id, name, parent, position, motor in wheels:
-            extra: dict[str, dict[str, Raw]] = {"joint": _hinge((0, 0, 1), (-180, 180))}
+        for id, name, parent, position, drive in wheels:
+            extra: dict[str, dict[str, Raw]] = {"joint": hinge((0, 0, 1), (-180, 180))}
             extra["collider"] = {"friction": 1.2}
-            if motor:
+            if drive:
                 # Drag on the driven axle caps the top speed near 1.6 m/s and brakes the car when the drive is off.
                 extra["joint"] = extra["joint"] | {"damping": 80}
-                extra["motor"] = motor
+                extra["motor"] = drive
             parts.append(
                 solid(
                     id,
@@ -152,10 +95,42 @@ def _car() -> list[Part]:
                     # Turned so the wheel axis points left and a positive drive rolls the car forward.
                     rotation=(-90, 0, 0),
                     extra=extra,
+                    style="wheel",
                 )
             )
     parts.append(
         Part("goal", "Parking spot", None, {"transform": {"position": (12, 0, 0)}, "goal_zone": {"radius": 1.5}})
+    )
+    return parts
+
+
+def _lot_markings() -> list[Part]:
+    """Painted bays around the parking spot: lines only, nothing the car can touch or its rays can see."""
+    white = "#e8eaed"
+    parts = [
+        decoration(
+            f"bay_line_{index}",
+            f"Bay line {index + 1}",
+            None,
+            (12, y, PAINT / 2),
+            "box",
+            (5, 0.12, PAINT),
+            white,
+            style="marking",
+        )
+        for index, y in enumerate((-6.5, -3.9, -1.3, 1.3, 3.9, 6.5))
+    ]
+    parts.append(
+        decoration(
+            "bay_end_line",
+            "Bay end line",
+            None,
+            (14.5, 0, PAINT / 2),
+            "box",
+            (0.12, 13.12, PAINT),
+            white,
+            style="marking",
+        )
     )
     return parts
 
@@ -170,8 +145,9 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
             "capsule",
             (0.09, 0.09, 0.4),
             5,
-            "#8a8f98",
-            extra={"joint": _hinge((0, 1, 0), (-60, 60), (0, 0, 0.2)), "motor": _motor("position", 150)},
+            JOINT,
+            extra={"joint": hinge((0, 1, 0), (-60, 60), (0, 0, 0.2)), "motor": motor("position", 150)},
+            style="joint",
         ),
         solid(
             f"shin_{side}",
@@ -181,8 +157,9 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
             "capsule",
             (0.08, 0.08, 0.4),
             3,
-            "#8a8f98",
-            extra={"joint": _hinge((0, 1, 0), (0, 120), (0, 0, 0.2)), "motor": _motor("position", 150)},
+            JOINT,
+            extra={"joint": hinge((0, 1, 0), (0, 120), (0, 0, 0.2)), "motor": motor("position", 150)},
+            style="joint",
         ),
         solid(
             f"foot_{side}",
@@ -194,22 +171,36 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
             1,
             "#2b2d31",
             extra={
-                "joint": _hinge((0, 1, 0), (-45, 45), (-0.04, 0, 0.02)),
-                "motor": _motor("position", 60),
+                "joint": hinge((0, 1, 0), (-45, 45), (-0.04, 0, 0.02)),
+                "motor": motor("position", 60),
                 "touch": {"radius": 0.06},
             },
+            style="shell",
         ),
     ]
 
 
 def _walker() -> list[Part]:
-    torso = solid("torso", "Torso", None, (0, 0, 1.0), "box", (0.3, 0.3, 0.4), 10, "#4f7cac", extra={"balance": {}})
+    torso = solid(
+        "torso", "Torso", None, (0, 0, 1.0), "box", (0.3, 0.3, 0.4), 10, SHELL, extra={"balance": {}}, style="shell"
+    )
     return [torso, *_leg("left", 0.12, "torso", -0.35), *_leg("right", -0.12, "torso", -0.35)]
 
 
 def _humanoid() -> list[Part]:
     parts = [
-        solid("pelvis", "Pelvis", None, (0, 0, 1.0), "box", (0.25, 0.3, 0.2), 8, "#4f7cac", extra={"balance": {}}),
+        solid(
+            "pelvis",
+            "Pelvis",
+            None,
+            (0, 0, 1.0),
+            "box",
+            (0.25, 0.3, 0.2),
+            8,
+            SHELL,
+            extra={"balance": {}},
+            style="shell",
+        ),
         solid(
             "chest",
             "Chest",
@@ -218,8 +209,9 @@ def _humanoid() -> list[Part]:
             "box",
             (0.25, 0.3, 0.45),
             15,
-            "#4f7cac",
-            extra={"joint": _hinge((0, 1, 0), (-30, 45), (0, 0, -0.2)), "motor": _motor("position", 100)},
+            SHELL,
+            extra={"joint": hinge((0, 1, 0), (-30, 45), (0, 0, -0.2)), "motor": motor("position", 100)},
+            style="shell",
         ),
         solid(
             "head",
@@ -229,8 +221,9 @@ def _humanoid() -> list[Part]:
             "sphere",
             (0.22, 0.22, 0.22),
             4,
-            "#d9b48f",
-            extra={"joint": _hinge((0, 1, 0), (-30, 30), (0, 0, -0.1)), "motor": _motor("position", 20)},
+            SHELL,
+            extra={"joint": hinge((0, 1, 0), (-30, 30), (0, 0, -0.1)), "motor": motor("position", 20)},
+            style="shell",
         ),
     ]
     for side, y in (("left", 0.25), ("right", -0.25)):
@@ -243,8 +236,9 @@ def _humanoid() -> list[Part]:
                 "capsule",
                 (0.08, 0.08, 0.3),
                 2,
-                "#8a8f98",
-                extra={"joint": _hinge((0, 1, 0), (-90, 90), (0, 0, 0.15)), "motor": _motor("position", 60)},
+                JOINT,
+                extra={"joint": hinge((0, 1, 0), (-90, 90), (0, 0, 0.15)), "motor": motor("position", 60)},
+                style="joint",
             ),
             solid(
                 f"forearm_{side}",
@@ -254,8 +248,9 @@ def _humanoid() -> list[Part]:
                 "capsule",
                 (0.07, 0.07, 0.28),
                 1.5,
-                "#8a8f98",
-                extra={"joint": _hinge((0, 1, 0), (-120, 0), (0, 0, 0.14)), "motor": _motor("position", 40)},
+                JOINT,
+                extra={"joint": hinge((0, 1, 0), (-120, 0), (0, 0, 0.14)), "motor": motor("position", 40)},
+                style="joint",
             ),
         ]
     return parts + _leg("left", 0.09, "pelvis", -0.35) + _leg("right", -0.09, "pelvis", -0.35)
@@ -268,6 +263,8 @@ class _Template:
     parts: list[Part]
     rewards: list[str]
     sky: str
+    # World parts the template adds beyond ground, sun, spawn and sky.
+    dressing: tuple[Part, ...] = ()
 
 
 def _template(id: str, label: str, description: str, family: TaskFamily) -> TemplateInfo:
@@ -291,6 +288,7 @@ def _templates() -> dict[str, _Template]:
             _car(),
             ["reach_goal", "progress_to_goal", "collision_penalty", "time_penalty"],
             "day",
+            tuple(_lot_markings()),
         ),
         "walker_robot": _Template(
             _template("walker_robot", "Walker robot", "A torso on two jointed legs that learns to walk.", "locomotion"),
@@ -320,7 +318,8 @@ def template_operations(template_id: str) -> list[EditOperation]:
     if template is None:
         raise UnknownTemplate(template_id)
     operations: list[EditOperation] = [
-        CreateObject(op="create_object", target="world", object=part.spec()) for part in _world(template.sky)
+        CreateObject(op="create_object", target="world", object=part.spec())
+        for part in [*_world(template.sky), *template.dressing]
     ]
     if template.body:
         body_id, body_name = template.body

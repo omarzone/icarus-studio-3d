@@ -1,8 +1,12 @@
+from datetime import UTC, datetime
+
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from icarus.api.app import create_app
+from icarus.contracts.copilot import CopilotMessage
+from icarus.copilot.conversation_store import ConversationStore
 
 
 def files_of(root) -> dict[str, bytes]:
@@ -44,6 +48,19 @@ def test_a_play_session_streams_frames_takes_commands_and_survives_bad_ones(tmp_
         assert next_of(socket, "event")["event"]["text"] == "You added Box"
         assert next_of(socket, "frame")["frame"]["time"] > times[-1]
     assert files_of(tmp_path) == stored
+
+
+def test_play_speaks_the_language_of_the_persons_latest_message(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
+    with ConversationStore(tmp_path).editing(project_id) as conversation:
+        conversation.messages.append(
+            CopilotMessage(id="m1", role="user", text="hola, quiero ver cómo se mueve", created_at=datetime.now(UTC))
+        )
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        socket.receive_json()
+        socket.send_json({"command": {"tool": "add_object", "piece": "box", "position": [4, 0, 0]}})
+        assert next_of(socket, "event")["event"]["text"] == "Agregaste Box"
 
 
 def test_an_unknown_project_sends_an_error_and_closes_with_4404(tmp_path):

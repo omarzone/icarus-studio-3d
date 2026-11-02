@@ -60,7 +60,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     def poses(self) -> CopyPoses:
         """Where this copy's moving geoms are right now, for the live view of training."""
-        return geom_poses(self.world, self._geoms)
+        return geom_poses(self.world, self._geoms, rays=True)
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
