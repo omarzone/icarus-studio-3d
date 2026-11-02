@@ -28,7 +28,7 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Projects | Project card | Opens the project in World | works | |
 | Projects | *Open a file* | Opens `MOD-IMPORT` (pending); tooltip added | pending-honest | |
 | Projects | *New project* | Creates an empty project with the checklist | works | Reopened the last project when one was in the route → starts clean; tooltip added |
-| Project menu | Rename, Duplicate, History, Delete project…, Open project…, Back to Home | Work against the engine | works | |
+| Project menu | Rename, Duplicate, History, Delete project…, Open project…, Close project (the design's *Back to Home*) | Work against the engine; Close project returns Home with no project open | works | |
 | Duplicate, Delete dialogs | Training runs line | Count the project's real runs. Runs live in the engine's runs folder, not in the project: Delete says they stay in the runs folder, and Duplicate dims *Trained brains* and *Training runs* with *N runs stay with the original*. No size is shown because the engine does not measure it | works | Always said there were no runs → real run count and what happens to the runs |
 | Project menu | Project settings | Opens `SCR-SETTINGS-TRAINING` as `screens.md` says; the tooltip says these training and hardware settings are shared by every project | works | Label promised per-project settings → kept the design's label and destination, tooltip says the settings are shared |
 | Workspace header | Workspace tabs | Navigate; each explains its workspace on hover | works | No tooltips → one-line purpose per tab |
@@ -83,7 +83,7 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Play | Record | Dimmed, *not available yet* | pending-honest | Opened the pending timelapse screen |
 | Play | Tool bar (Move, Push, Add object, Light, Wind, Slow, Reset…) | Act on the live world | works | |
 | Play | Speed, Pause/Resume, Reconnect | Work | works | |
-| Play | *Use another brain* | Dimmed, *not available yet*: Play runs the best brain of the revision | pending-honest | Opened the pending Results workspace |
+| Play | *Use another brain* | Lists every finished run's best brain; one that does not fit the body is dimmed with the reason; picking one restarts Play with it | works | Opened the pending Results workspace |
 | Play | What happened lines | Plain text | works | Were buttons that did nothing (jump to a recording that does not exist) |
 | Play | Chat ⋯ *Chat options* | Does nothing (Play's chat is not docked) | broken | Not fixed here: copilot zone, left to the chat work |
 | Settings | AI models | Real model connections | works | |
@@ -110,7 +110,7 @@ Recorded in `screens.md` as app-side notes:
 - `PNL-TOOLBAR` tooltips; Terrain, Sky and Light select their object; Agent and Goal ask the copilot; tools with nothing behind them are dimmed.
 - `PNL-EXPLORER` `+` is a library menu; `PNL-INSPECTOR` `···` offers Remove.
 - `PNL-VIEWPORT` `+` and *Lit* are not available yet; Game view draws the world.
-- `TAB-WHAT-IT-DECIDES` *Use another brain* and `TAB-WHAT-HAPPENED` jumps are not available yet.
+- `TAB-WHAT-HAPPENED` jumps are not available yet.
 - `SCR-SETTINGS-TRAINING` Restart engine restarts in place.
 - `POP-TRAINING-COPIES` *Preview copies* shows every copy's first try in the World viewport and closes the popover instead of opening `SCR-TIMELAPSE`; the inventory and the gallery keep the design's link.
 - `POP-PROJECT-MENU` *Project settings* keeps its label and destination; its tooltip says the settings are shared by every project.

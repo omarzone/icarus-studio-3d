@@ -660,7 +660,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | PNL-PLAY-SENSES | Hover for meaning | missing | built | Per-sensor explanation |
 | PNL-PLAY-DECISIONS | Live outputs | works | built | Raw values, not "14° R" |
 | PNL-PLAY-DECISIONS | Which brain is playing | works | built | Nothing |
-| PNL-PLAY-DECISIONS | "Use another brain" | pending | planned | Brain selection on the Play socket |
+| PNL-PLAY-DECISIONS | "Use another brain" | works | built | Nothing |
 | PNL-PLAY-DECISIONS | No learned brain state | works | built | Nothing |
 | PNL-PLAY-VISION | What each eye or camera sees | fixture-only | planned | Vision field in `PlayFrame` (Sprint 11) |
 | PNL-BRAIN-ACTIVITY | Activity strip in Play | fixture-only | planned | Connectome simulator |

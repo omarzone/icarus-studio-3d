@@ -52,6 +52,7 @@ Top bar of every project workspace. Always visible while a project is open. Fold
 - **Play** button: enters `SCR-PLAY` for the current project (tooltip: try it live, nothing changes the project). Disabled (35% opacity, tooltip *Available once the project exists*) until a design exists.
 - **Guide** pill: shows *Getting started n/N* while the guide is active, or *Guide* when hidden; opens the guide (`STA-WORLD-EMPTY`). In the app it opens the getting-started checklist in place instead (has a body, a goal, rewards, a trained brain), each open step with a one-click action and a *Next* button; see [`app-flows.md`](./app-flows.md).
 - Every workspace tab, Play, Share and the primary action explain themselves on hover in one line.
+- In the app a quiet **Saved** pill (*Saved 14:32*) says every change is already saved as a revision, with the time of the newest one; it opens `MOD-HISTORY`. There is no manual save.
 - **Share** opens `MOD-SHARE`. The **primary action** is always the next step of the project: *Train* → `MOD-START-TRAINING`, *Stop* while training → `MOD-STOP-RUN`, *Publish* in Build → `MOD-PUBLISH`, *Train copy* in Motion → `MOD-MOTION-TRAIN`, *Run test* for reference brains. Disabled before a design exists.
 
 ### `HDR-LAUNCHER` Launcher header
@@ -332,7 +333,7 @@ Left column in Play (learned brains). Folder: `features/play/decisions/`. Used i
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS` (in the app: dimmed, *not available yet*; Play runs the best brain of the revision). |
+| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS` (in the app: a menu of every finished run's best brain, *Run 3 · 500k steps · revision 12 · 80% success*; the one playing is checked, one that no longer fits the body is dimmed with the reason, *The body changed: 41 senses now, 37 then*; picking one restarts this Play session with it). |
 
 
 ### `PNL-PLAY-VISION` Vision
@@ -548,6 +549,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
   - Hero with a live 3D scene behind it, the headline, a subtitle and a prompt field with a send button. Under the field: *Press enter to see 3 ideas →*.
   - **Start from**: template cards (empty world, examples from the library) and a dashed *Import your own* card.
   - **From the community**: Featured / Recent / Most voted switch, four creation cards with thumbnail, votes, author and a *Remix* pill, and *View all*.
+  - In the app, between the hero and *Start from*: **Recent projects**, up to four cards of the projects opened or edited last (thumbnail, name, status line) that open the project in its last workspace, and *All projects* → `SCR-PROJECTS`. Hidden while there are no projects (`STA-HOME-EMPTY`).
 - **Note:** Template cards open the template as a new project. The prototype opens the same example project for every vehicle and robot template.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Page:** no tabbed panels
@@ -1465,6 +1467,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Content:**
   - Rename, Duplicate, History (with current revision), Open project…, Project settings, Delete project…, Back to Home.
   - In the app *Project settings* opens `SCR-SETTINGS-TRAINING`, whose training and hardware settings are shared by every project; its tooltip says so.
+  - In the app *Back to Home* reads **Close project**: it returns to `SCR-HOME` with no project open. Every change is already saved, so nothing asks to save first.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
