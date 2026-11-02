@@ -89,6 +89,7 @@ class Supervisor:
         self._stop_timeout = stop_timeout
         self._lock = threading.Lock()
         self._worker: _Worker | None = None
+        self._held: str | None = None
 
     def recover(self) -> None:
         """Runs still marked as training belong to an engine that closed; end any worker it left behind."""
@@ -100,6 +101,11 @@ class Supervisor:
                     end_worker(pid, folder.path)
                 details = [line.text for line in folder.log()[-CONSOLE_LINES:]]
                 self._end(folder, RunFailure(reason="The engine closed while this run was training.", details=details))
+
+    def hold(self, reason: str | None) -> None:
+        """Refuse new runs with this reason until it is cleared with None (the data folder moving)."""
+        with self._lock:
+            self._held = reason
 
     def active_run(self) -> str | None:
         with self._lock:
@@ -115,6 +121,8 @@ class Supervisor:
         ):
             raise WarmStartRefused(problem)
         with self._lock:
+            if self._held is not None:
+                raise NotTrainable(self._held)
             # A worker whose run already ended may still be closing its copies; it no longer holds the slot.
             if self._worker is not None and self._worker.folder.stored_status().state not in TERMINAL_STATES:
                 raise RunInProgress(self._worker.folder.run_id)

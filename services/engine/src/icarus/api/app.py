@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -25,6 +24,7 @@ from icarus.api import (
     project_runs,
     projects,
     runs,
+    storage,
     tasks,
 )
 from icarus.contracts import ApiError
@@ -65,12 +65,12 @@ from icarus.projects.store import (
 )
 from icarus.run_relay import CoachedSupervisor, RunRelay
 from icarus.sim.views import ViewRenderer
+from icarus.storage.data_folder import projects_dir, runs_dir
+from icarus.storage.data_folder_move import DataFolderMover, MoveRefused
 from icarus.tasks import TaskContext, TaskRegistry
-from icarus.training.run_store import RunStore, UnknownRun, runs_dir
+from icarus.training.run_store import TERMINAL_STATES, RunStore, UnknownRun
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
 from icarus.training.supervisor import NotTrainable, RunInProgress, WarmStartRefused
-
-PROJECTS_DIR_ENV = "ICARUS_PROJECTS_DIR"
 
 _CODES = {
     400: "bad_request",
@@ -174,16 +174,15 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(422, ApiError(code="invalid", message=str(exc)))
         case UnknownBuild():
             return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
+        case MoveRefused():
+            return _error(
+                409 if exc.conflict else 422, ApiError(code="conflict" if exc.conflict else "invalid", message=str(exc))
+            )
         case SettingsRejected():
             details = {exc.field: exc.message}
             return _error(422, ApiError(code="invalid", message=exc.message, details=details))
         case _:
             raise exc
-
-
-def projects_dir() -> Path:
-    configured = os.environ.get(PROJECTS_DIR_ENV)
-    return Path(configured) if configured else Path.home() / "Icarus Studio" / "projects"
 
 
 @asynccontextmanager
@@ -230,6 +229,22 @@ def _diagnosis_starter(registry: TaskRegistry, coach_: Coach, runs_: RunStore):
         registry.start("diagnosis", f"Diagnose {status.name} at step {step:,}", work, status.project_id)
 
     return start
+
+
+def _training_now(runs_: RunStore, supervisor: CoachedSupervisor, autopilot: Autopilot):
+    """Why the data folder cannot move now: a run is training or the autopilot drives a project."""
+
+    def reason() -> str | None:
+        run_id = supervisor.active_run()
+        if run_id is not None:
+            status = runs_.folder(run_id).status()
+            if status.state not in TERMINAL_STATES:
+                return f"{status.name} is training. Stop it before moving the data folder."
+        if autopilot.driving():
+            return "The autopilot is training a project. Stop it before moving the data folder."
+        return None
+
+    return reason
 
 
 def create_app(
@@ -297,6 +312,13 @@ def create_app(
     app.state.checkpoint_coach = checkpoints
     app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_run, publish, checkpoints.comment)
     app.state.supervisor.relay = app.state.run_relay
+    app.state.data_folder = DataFolderMover(
+        projects_folder,
+        runs_folder,
+        _training_now(app.state.runs, app.state.supervisor, app.state.autopilot),
+        app.state.supervisor.hold,
+        data_folder,
+    )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
     # The app window loads from files when packaged ("null") and from the local dev server in development.
@@ -322,6 +344,7 @@ def create_app(
     app.include_router(brain.router)
     app.include_router(notes.router)
     app.include_router(project_runs.router)
+    app.include_router(storage.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     for error in (
@@ -349,6 +372,7 @@ def create_app(
         NothingToDiagnose,
         AutopilotBusy,
         NoAutopilot,
+        MoveRefused,
     ):
         app.add_exception_handler(error, _domain_error)
     return app

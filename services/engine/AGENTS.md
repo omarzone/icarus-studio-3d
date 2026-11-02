@@ -30,6 +30,7 @@ Add dependencies with `uv add`, never `pip install`. Justify any new dependency 
 | `training/` | Worker, PPO, imitation, checkpoints, evaluation, rollouts | serve HTTP |
 | `motion/` | Pose extraction calls, retargeting, motion clips, animation export | train |
 | `hardware/` | Hardware profiles, parts lists, URDF/MJCF/ONNX export, runtime package | talk to physical devices during tests |
+| `storage/` | The data folder holding projects and runs, its usage, and moving it with verified copies | train or edit project data |
 | `bundles/` | Pack, unpack and validate shareable bundles | execute bundle content |
 | `api/` | Thin routers: parse, delegate, respond | contain business logic |
 

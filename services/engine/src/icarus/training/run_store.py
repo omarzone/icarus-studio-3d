@@ -30,7 +30,6 @@ from icarus.projects.files import append_line, write_atomic
 from icarus.training.episodes import CheckpointEpisodes
 from icarus.training.schedule import checkpoint_steps
 
-RUNS_DIR_ENV = "ICARUS_RUNS_DIR"
 ENGINE_ROOT = Path(__file__).resolve().parents[3]
 # Where runs lived before they moved next to the projects; the engine moves them out of it on start.
 LEGACY_RUNS_DIR = ENGINE_ROOT / "runs"
@@ -55,11 +54,6 @@ class RunMeta(BaseModel):
     git_revision: str | None
     python: str
     created_at: datetime
-
-
-def runs_dir() -> Path:
-    configured = os.environ.get(RUNS_DIR_ENV)
-    return Path(configured) if configured else Path.home() / "Icarus Studio" / "runs"
 
 
 def _version(package: str) -> str | None:

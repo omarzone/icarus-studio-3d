@@ -127,6 +127,11 @@ class Autopilot:
             pilot = self._pilots.get(project_id)
             return pilot is not None and pilot.status.state in ("running", "waiting_approval")
 
+    def driving(self) -> list[str]:
+        """The projects whose training a loop runs now."""
+        with self._lock:
+            return [key for key, pilot in self._pilots.items() if pilot.status.state in ("running", "waiting_approval")]
+
     def _path(self, project_id: str) -> Path:
         return self._folder / f"{project_id}.autopilot.json"
 
