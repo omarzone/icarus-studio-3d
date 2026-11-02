@@ -22,12 +22,15 @@ Environment design: the world must look like the request, not just work. Choose 
 colors, then build the layout from props with roles: walls and shelves (tall static boxes) that frame the space,
 ramps (static thin boxes tilted around y, e.g. rotation (0, -12, 0), their low end at ground level), platforms,
 bumps and rocks for rough ground (small static boxes or spheres no taller than a fifth of the body's leg or wheel),
-floor markings and lane lines (static boxes 0.01 to 0.02 m tall lying on the ground, z = half their height),
-decoration, and movable crates or balls (movable true, a real mass). Put props at z = half their height so they
-rest on the ground. Give the ground a fitting surface, color and friction (snow: white and friction about 0.3;
-ice: 0.05; warehouse floor: grey concrete look on asphalt). Areas are labelled floor regions with no physical
-effect. Lamps are point lights above the scene. Keep the space free where the body starts and along the path it
-must take, keep props at least 1 m from the body's start, and keep the whole scene within about 30 m.
+floor markings and lane lines (role "marking": boxes 0.01 to 0.02 m tall lying on the ground, z = half their
+height; markings never collide, they are paint the body drives over, so painted field and court lines are
+markings), decoration, and movable crates or balls (movable true, a real mass). Put props at z = half their height
+so they rest on the ground. Give the ground a fitting surface, color and friction (snow: white and friction about
+0.3; ice: 0.05; warehouse floor: concrete). Areas are labelled floor regions with no physical effect. Lamps are
+point lights above the scene. Keep the space free where the body starts and along the path it must take, keep props
+at least 1 m from the body's start, and keep the whole scene within about 30 m. Give parts and props a style that
+fits them (car_body, wheel, shell, joint; wall, crate, curb, post, cone, lamp_post, tree, ball, marking): the style
+only changes the drawing inside the shape, and plain draws the bare shape.
 
 Body: one root part (parent null) is the agent; the first body is the one that learns. Every other part names its
 parent and has a position relative to the parent's center; give it a joint to move (hinge or slide, anchor relative
@@ -35,7 +38,8 @@ to its own center, at the edge where it meets the parent) and a motor to drive i
 parent. Position motors (max_force 20 to 300) hold a leg joint at an angle within limits like (-60, 60). Torque
 motors spin wheels: give each driven wheel max_force about 0.6 x body mass (kg) x wheel radius (m) x 10, and its
 joint damping about a twentieth of that, or the wheels cannot move the body. Use a stable stance: at least three
-contact points (three or four wheels, or a caster ball welded under the chassis), or legs spread wider than the
+contact points (three or four wheels, or a caster: a sphere under the chassis on a ball joint, limits
+(-180, 180), small damping and no motor, so it turns freely instead of dragging), or legs spread wider than the
 torso is tall, unless the request is a balancer. Parts of the body must not overlap each other except a child with
 its own parent. The lowest point of the body rests on the ground (about z = 0): the root part's z equals the
 distance from its center down to the bottom of its wheels or feet. Masses: a 1 m robot weighs 10 to 60 kg, a wheel
@@ -45,8 +49,12 @@ react to, give it rays that see them from the start: tilt them down (negative ti
 are lower than the part that carries the rays, so the rays meet them before the ground.
 
 Task: navigation trains the body to reach the goal (the world must have a goal at least 4 m from the start, on
-open ground); locomotion trains it to move forward along +x without falling. Only these two exist: nothing
-rewards moving another object, and nothing can fly or swim. Use only these reward terms, of the task's family,
+open ground); locomotion trains it to move forward along +x without falling. Navigation also covers pushing:
+object_to_goal brings a movable prop into the goal (give the reward "object" = that prop's id, place the prop
+between the start and the goal, and keep progress_to_goal small so the body does not drive past it), and
+coverage rewards cleaning or exploring new ground (optional "cell_size" in metres). Locomotion also covers
+jumping and standing up with height_gain. Nothing can fly or swim. Leave "object" and "cell_size" null for every
+other term. Use only these reward terms, of the task's family,
 with weights inside their ranges: {terms}. Terms paid every step (heading_alignment, stay_upright) add up over
 600 steps, so keep them small (0.1 to 0.3) or a body that stands still earns more than one that succeeds.
 Use 8 to 16 copies.

@@ -14,7 +14,7 @@ from icarus.contracts.copilot import (
     CopilotProposal,
     SendMessage,
 )
-from icarus.contracts.events import EngineEvent, ProposalAppliedEvent
+from icarus.contracts.events import EngineEvent, MessagePostedEvent, ProposalAppliedEvent
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
@@ -157,11 +157,12 @@ class Copilot:
                 _retire_open(stored)
             stored.messages.append(message)
             stored.proposals += proposals
+        self._publish(MessagePostedEvent(type="message_posted", message_id=message.id, role=message.role), project_id)
         return self.conversation(project_id)
 
     def language(self, project_id: str) -> Language:
         """The language of the person's latest message, for what the copilot writes on its own."""
-        conversation = self.conversation(project_id)
+        conversation = self._conversations.read(project_id)
         latest = next((item for item in reversed(conversation.messages) if item.role == "user"), None)
         return detect(latest.text) if latest else "en"
 

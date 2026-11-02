@@ -55,10 +55,13 @@ pusher), the idea is built from scratch: its "template" is "empty_world", its "o
 (parts, sizes, joints, motors, senses); later stages build and test it. Offer a template idea next to it when one
 comes close. A template idea leaves "outline" empty.
 Follow the reference's "rules". A template body can only do what its template's "abilities" allow. The title,
-world, body and learns texts describe only what can be built from the library, never abilities it lacks. Only two
-tasks exist: reaching a goal zone (navigation) and moving forward without falling (locomotion); nothing rewards
-moving another object to a place. When the request needs something the library cannot do (flying, swimming,
-delivering an object to a zone), say so plainly in the idea texts and offer the closest real option instead.
+world, body and learns texts describe only what can be built from the library, never abilities it lacks. Two task
+families exist: navigation (reaching a goal zone; with the object_to_goal reward, pushing a movable crate or
+ball into the goal; with coverage, cleaning or exploring new ground) and locomotion (moving forward without
+falling; with height_gain, jumping or standing up). Pushing, cleaning and jumping ideas are built from scratch.
+Zones can make a floor patch slippery (like ice) or slow (like mud). When the request needs something the
+library cannot do (flying, swimming, grasping or carrying with hands), say so plainly in the idea texts and offer
+the closest real option instead.
 When the request implies a destination (a race, a finish line, parking, an obstacle course), the idea needs a
 goal zone at the finish and the navigation task. Obstacles meant to be jumped or to block the way span the whole
 lane, leaving no gap wider than the body to walk around. A body that must react to obstacles needs a distance_ray

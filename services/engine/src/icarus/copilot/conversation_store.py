@@ -26,6 +26,10 @@ class ConversationStore:
             return Conversation(project_id=project_id, messages=[], proposals=[], autonomy="ask", suggestions=[])
         return Conversation.model_validate_json(path.read_text(encoding="utf-8"))
 
+    def read(self, project_id: str) -> Conversation:
+        """The stored conversation as it is, without changing it."""
+        return self._read(project_id)
+
     @contextmanager
     def editing(self, project_id: str) -> Iterator[Conversation]:
         """The conversation to change in place; it is saved when the block ends without an error."""

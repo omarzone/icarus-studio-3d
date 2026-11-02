@@ -11,7 +11,16 @@ from icarus.contracts.operations import (
     SetRewardTerm,
     SetTaskFamily,
 )
-from icarus.contracts.properties import ColorValue, ListValue, SliderValue, VectorValue
+from icarus.contracts.properties import (
+    AssetValue,
+    ColorValue,
+    ListValue,
+    NumberValue,
+    PropertyValue,
+    SliderValue,
+    VectorValue,
+)
+from icarus.contracts.scene import GeomStyle
 from icarus.contracts.specs import BodySpec, RewardTermSpec
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.library.templates import Part, Raw, solid
@@ -33,7 +42,8 @@ class _Plan(BaseModel):
 
 
 class PlanJoint(_Plan):
-    kind: Literal["hinge", "slide"]
+    # A ball joint turns freely on every axis, like a caster.
+    kind: Literal["hinge", "slide", "ball"]
     # In the part's own frame, after its rotation.
     axis: Vector3
     # Degrees for a hinge (-180..180 spins freely, like a wheel), metres for a slide.
@@ -66,6 +76,8 @@ class PlanPart(_Plan):
     rotation: Vector3
     mass: float = Field(gt=0, le=10_000)
     color: Color = Field(pattern=_COLOR)
+    # How the part is drawn inside its shape (car_body on a box, wheel on a cylinder, shell, joint); never physics.
+    style: GeomStyle = "plain"
     friction: float = Field(ge=0, le=2)
     joint: PlanJoint | None
     motor: PlanMotor | None
@@ -94,6 +106,8 @@ class PlanProp(_Plan):
     mass: float = Field(gt=0, le=10_000)
     color: Color = Field(pattern=_COLOR)
     surface: Surface
+    # How the prop is drawn inside its shape (wall, crate, cone, post, lamp_post, tree, curb, marking); never physics.
+    style: GeomStyle = "plain"
 
 
 class PlanArea(_Plan):
@@ -135,6 +149,10 @@ class PlanWorld(_Plan):
 class PlanReward(_Plan):
     term: str
     weight: float
+    # The movable prop object_to_goal brings to the goal.
+    object: str | None = Field(default=None, pattern=_ID)
+    # The ground grid coverage counts, in metres.
+    cell_size: float | None = Field(default=None, ge=0.1, le=5)
 
 
 class PlanTask(_Plan):
@@ -164,12 +182,18 @@ def _create(target: str, part: Part) -> CreateObject:
 
 
 def _prop(prop: PlanProp) -> Part:
-    part = solid(prop.id, prop.name, None, prop.position, prop.shape, prop.size, prop.mass, prop.color)
+    part = solid(
+        prop.id, prop.name, None, prop.position, prop.shape, prop.size, prop.mass, prop.color, style=prop.style
+    )
     part.components["transform"]["rotation"] = prop.rotation
     part.components["material"]["surface"] = prop.surface
     part.components["collider"] = {"friction": SURFACE_FRICTION[prop.surface]}
     if not prop.movable:
         part.components["physics_body"] = {"mode": "static"}
+    if prop.role == "marking":
+        # Paint on the floor: a collider would count as a collision and end every try that drives over it.
+        part.components["physics_body"] = {"mode": "static"}
+        del part.components["collider"]
     return part
 
 
@@ -248,6 +272,7 @@ def _part(part: PlanPart) -> Part:
         part.color,
         rotation=part.rotation,
         extra=extra,
+        style=part.style,
     )
 
 
@@ -256,10 +281,21 @@ def body_operations(body: PlanBody) -> list[EditOperation]:
     return operations + [_create(body.id, _part(part)) for part in _ordered(body.parts)]
 
 
+def _params(reward: PlanReward) -> dict[str, PropertyValue]:
+    params: dict[str, PropertyValue] = {}
+    if reward.object is not None:
+        params["object"] = AssetValue(type="asset", value=reward.object)
+    if reward.cell_size is not None:
+        params["cell_size"] = NumberValue(type="number", value=reward.cell_size)
+    return params
+
+
 def task_operations(task: PlanTask) -> list[EditOperation]:
     operations: list[EditOperation] = [SetTaskFamily(op="set_task_family", family=task.family)]
     operations += [
-        SetRewardTerm(op="set_reward_term", term=RewardTermSpec(term=reward.term, weight=reward.weight))
+        SetRewardTerm(
+            op="set_reward_term", term=RewardTermSpec(term=reward.term, weight=reward.weight, params=_params(reward))
+        )
         for reward in task.rewards
     ]
     return [*operations, SetBrain(op="set_brain", copies=task.copies)]

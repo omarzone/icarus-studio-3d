@@ -198,6 +198,22 @@ TEXTS: dict[str, dict[Language, str]] = {
         "en": "I asked {names} to stop; it keeps its best checkpoint.",
         "es": "Pedí a {names} que se detenga; conserva su mejor punto guardado.",
     },
+    "play_touched": {"en": "{agent} touched {other}", "es": "{agent} tocó {other}"},
+    "play_reached": {"en": "{agent} reached the {goal}", "es": "{agent} llegó a {goal}"},
+    "play_fell": {"en": "{agent} fell over", "es": "{agent} se cayó"},
+    "play_moved": {"en": "You moved {name}", "es": "Moviste {name}"},
+    "play_pushed": {"en": "You pushed {name} with {impulse} N·s", "es": "Empujaste {name} con {impulse} N·s"},
+    "play_added": {"en": "You added {name}", "es": "Agregaste {name}"},
+    "play_light": {"en": "You set the light to {percent}%", "es": "Pusiste la luz al {percent}%"},
+    "play_wind": {"en": "You set the wind to {speed} m/s", "es": "Pusiste el viento a {speed} m/s"},
+    "play_wind_off": {"en": "You stopped the wind", "es": "Detuviste el viento"},
+    "play_speed": {"en": "You set the speed to {speed}×", "es": "Pusiste la velocidad a {speed}×"},
+    "play_paused": {"en": "You paused the simulation", "es": "Pausaste la simulación"},
+    "play_resumed": {"en": "You resumed the simulation", "es": "Reanudaste la simulación"},
+    "play_reset": {"en": "Episode reset", "es": "Episodio reiniciado"},
+    "play_shuffled_one": {"en": "You shuffled {count} prop", "es": "Moviste al azar {count} objeto"},
+    "play_shuffled": {"en": "You shuffled {count} props", "es": "Moviste al azar {count} objetos"},
+    "play_poked": {"en": "You poked {name}", "es": "Tocaste {name}"},
 }
 
 # Codes the person should never read, in plain words: run states, task families, sensors and reward terms.

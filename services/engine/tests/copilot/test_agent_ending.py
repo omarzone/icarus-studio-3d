@@ -1,7 +1,7 @@
 import pytest
 
 from icarus.contracts.copilot import SendMessage
-from icarus.copilot.agent.ending import listed_options
+from icarus.copilot.agent.ending import button_label, listed_options
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
 from icarus.copilot.chat_training import ChatTrainer, TrainerReply, TrainingRequest
@@ -100,9 +100,13 @@ def test_an_answer_that_claims_a_proposed_change_was_made_is_sent_back_then_corr
 def test_listed_options_become_send_buttons_and_results_screens_are_not_offered(copilot, project_id, monkeypatch):
     options = "¿Qué prefieres?\n\n1. **Entrenar ahora**\n2. **Verlo en 3D** antes de entrenar\n3. Hacerlo más fácil"
     results = [{"label": "Resultados", "kind": "navigate", "target": "SCR-RESULTS"}]
-    bodies = model(monkeypatch, [answer_call(options, actions=results), answer_call(options)])
+    world = [{"label": "**Ver el `mundo`**", "kind": "navigate", "target": "SCR-WORLD"}]
+    bodies = model(monkeypatch, [answer_call(options, actions=results), answer_call("¿Qué prefieres?", actions=world)])
     answer = say(copilot, project_id, "hola")
     assert "SCR-RESULTS" in str(bodies[1]["messages"][-1]["content"])
+    assert [(action.kind, action.label) for action in answer.actions] == [("navigate", "Ver el mundo")]
+    bodies = model(monkeypatch, [answer_call(options)])
+    answer = say(copilot, project_id, "hola")
     assert [(action.kind, action.target) for action in answer.actions] == [
         ("send", "Entrenar ahora"),
         ("send", "Verlo en 3D"),
@@ -209,11 +213,23 @@ def test_bold_option_lines_from_a_real_answer_become_send_buttons():
     options = listed_options(QA_OPTIONS)
     assert [label for label, _ in options] == [
         "Ponerle 3 ojos al frente para que vea las vallas a distancia",
-        "Cambiar la tarea para que gane un premio grande al llegar a",
+        "Cambiar la tarea para que gane un premio grande al llegar a…",
         "Entrenar así como está y ver qué pasa",
     ]
     assert options[0][1] == "Opción A: Ponerle 3 ojos al frente para que vea las vallas a distancia."
     assert all(len(label) <= 60 for label, _ in options)
+
+
+def test_option_labels_lose_markdown_and_are_cut_at_a_word_with_an_ellipsis():
+    answer = (
+        "¿Cómo seguimos?\n"
+        "1. Sí, **continuar desde el mejor cerebro guardado y darle `200000` pasos más**\n"
+        "2. Empezar de *cero* con __otra__ recompensa"
+    )
+    labels = [label for label, _ in listed_options(answer)]
+    assert labels == ["Sí, continuar desde el mejor cerebro guardado y darle…", "Empezar de cero con otra recompensa"]
+    assert button_label("**continuar desde el mejor cerebro**") == "continuar desde el mejor cerebro"
+    assert all(len(label) <= 60 for label in labels)
 
 
 def test_option_headings_and_english_options_become_send_buttons_and_never_more_than_four():

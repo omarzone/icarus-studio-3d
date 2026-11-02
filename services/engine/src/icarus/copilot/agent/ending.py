@@ -24,6 +24,18 @@ OPTION_MESSAGE_CHARS = 400
 _PRESS_APPLY = re.compile(r"[^.!?\n]*\b(?:Apply|Aplicar)\b[^.!?\n]*[.!?]?\s*")
 
 
+_EMPHASIS = re.compile(r"\*\*|__|[*`]|(?<!\w)_|_(?!\w)")
+
+
+def button_label(text: str) -> str:
+    """Button text: no markdown emphasis or code marks, cut at a word with an ellipsis to fit the button."""
+    plain = " ".join(_EMPHASIS.sub("", text).split()).strip(" ,;:.")
+    if len(plain) <= LABEL_CHARS:
+        return plain
+    cut = plain.rfind(" ", 0, LABEL_CHARS)
+    return f"{plain[: cut if cut > 0 else LABEL_CHARS - 1].rstrip(' ,;:.')}…"
+
+
 def _label(item: str) -> str:
     bold = _BOLD.match(item.strip())
     text = bold.group(1) if bold else re.split(r"\s+[-–—(]|:\s", item.strip(), maxsplit=1)[0]
@@ -32,10 +44,7 @@ def _label(item: str) -> str:
 
 def _short(text: str) -> str:
     """A button label: the option's first clause, cut at a word to fit the button."""
-    clause = re.split(r"\s+[(–—]|\s-\s", text.strip(), maxsplit=1)[0].strip(" *_:.")
-    if len(clause) <= LABEL_CHARS:
-        return clause
-    return clause[: clause.rfind(" ", 0, LABEL_CHARS + 1)].rstrip(" ,;:")
+    return button_label(re.split(r"\s+[(–—]|\s-\s", text.strip(), maxsplit=1)[0])
 
 
 def named_options(answer: str) -> list[tuple[str, str]]:
@@ -72,7 +81,7 @@ def _plain_list(answer: str) -> list[tuple[str, str]]:
                 break
             items.append(found.group(1))
         if 2 <= len(items) <= MAX_OPTIONS and all(len(item) <= OPTION_CHARS for item in items):
-            return [(label[:LABEL_CHARS], label) for item in items if (label := _label(item))]
+            return [(button_label(label), label) for item in items if (label := _label(item))]
         return []
     return []
 
