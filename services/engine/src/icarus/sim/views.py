@@ -2,6 +2,7 @@ import struct
 import threading
 import zlib
 from collections import OrderedDict
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -161,6 +162,12 @@ class ViewRenderer:
     ) -> bytes:
         with self._lock:
             future = self._thread.submit(self._render, compiled, camera, zones)
+        return future.result(timeout)
+
+    def run[T](self, task: Callable[[], T], timeout: float | None = None) -> T:
+        """Any other offscreen render, on the same thread; the task opens and releases its own renderer."""
+        with self._lock:
+            future = self._thread.submit(task)
         return future.result(timeout)
 
     def close(self) -> None:

@@ -7,7 +7,10 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.copilot.behavior_judgment import GaitFinding, behavior_guide
 from icarus.copilot.client import ModelClient, capability_client, copilot_client
+from icarus.copilot.film_strips import SHEET_LAYOUT as STRIP_LAYOUT
+from icarus.copilot.film_strips import FilmStrips, PublishedStrip
 from icarus.copilot.grounding import unsupported_numbers, without_unbacked
 from icarus.copilot.language import Language
 from icarus.copilot.settings import ModelSettingsStore
@@ -25,10 +28,19 @@ learning in MuJoCo. Look at this checkpoint early and decide, from the pictures 
 itself keeps the brain from learning the task. At step 0 the brain is untrained and acts at random: do not judge its
 skill, judge the design (an object in the way or one it collides with although it is decoration, a goal out of reach,
 a reward that pays for something other than the task, episodes that end before anything can be learned).
-Each picture is a 2x2 sheet of one episode in time order: top left start, top right middle, bottom row the failure
-moment (when there is one) and the end; the camera follows the body and zones are drawn over the scene.
+{pictures} The camera follows the body and zones are drawn over the scene.
+{behavior}
+Report each behavior you see in gait, with the area to change and what to change; when the body already moves the
+way the task needs, report moves_well. An untrained brain moves at random: then report only what the design forces
+(a body that cannot stand up, legs too weak to lift it, a part that drags by its shape). After the first
+checkpoints a gait that will not do the task (crawling, hopping, dragging a leg) is a problem too: more steps
+reinforce it.
 Set problem to true only when the design must change before more training can help, and name the blocker. Write
 every text in {language}, plainly, for a beginner. Cite only numbers that appear in the facts."""
+SHEETS_TEXT = """Each picture is a 2x2 sheet of one episode in time order: top left start, top right middle,
+bottom row the failure moment (when there is one) and the end."""
+STRIP_TEXT = """The first picture is {layout}; the facts give its frame times. The next one is a 2x2 sheet of an
+episode: start, middle, failure moment and end."""
 
 
 class EarlyCheck(BaseModel):
@@ -48,6 +60,7 @@ class EarlyCheck(BaseModel):
     reward_note: str = Field(default="", max_length=300)
     problem: bool = Field(description="True only when the design must change before more training can help.")
     summary: str = Field(min_length=1, max_length=500, description="Two short sentences for the person.")
+    gait: list[GaitFinding] = Field(default=[], max_length=5, description="How the body moves, behavior by behavior.")
 
 
 @dataclass(frozen=True)
@@ -56,6 +69,8 @@ class LookResult:
     # Pictures the model was sent, by frame name; empty when no vision model is connected.
     looked_at: list[str]
     facts_text: str
+    # The film strip it watched, when the episode states were kept and rendered.
+    strip: PublishedStrip | None = None
 
 
 def look_facts(
@@ -96,37 +111,62 @@ def default_client(settings: ModelSettingsStore) -> ClientChoice:
     return choose
 
 
+def _picture(png: bytes) -> dict[str, object]:
+    return {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64.b64encode(png).decode()}"}}
+
+
+def _texts(check: EarlyCheck) -> list[str]:
+    texts = [check.summary, check.why_it_ends, check.blocker, check.reward_note]
+    return texts + [text for item in check.gait for text in (item.seen, item.change)]
+
+
 class EarlyLook:
-    def __init__(self, choose: ClientChoice) -> None:
+    def __init__(self, choose: ClientChoice, strips: FilmStrips | None = None) -> None:
         self._choose = choose
+        self._strips = strips
 
     def look(self, folder: RunFolder, step: int, facts: dict, language: Language) -> LookResult:
         client, sees = self._choose()
+        strip = self._strips.strip(folder, step) if sees and self._strips else None
+        if strip is not None:
+            facts = facts | {"film_strip": strip.facts()}
         text = json.dumps(facts, ensure_ascii=False, separators=(",", ":"))
         sheets = self._sheets(folder, step) if sees else []
+        if strip is not None:
+            sheets = sheets[:1]
         content: list[dict[str, object]] = [{"type": "text", "text": f"Early check of step {step:,}. Facts: {text}"}]
-        for name in sheets:
-            png = folder.frame_path(step, name).read_bytes()
-            url = f"data:image/png;base64,{base64.b64encode(png).decode()}"
-            content.append({"type": "image_url", "image_url": {"url": url}})
+        if strip is not None:
+            content.append(_picture(strip.sheet))
+        content += [_picture(folder.frame_path(step, name).read_bytes()) for name in sheets]
         sources = [text]
 
         def grounded(check: EarlyCheck) -> list[str]:
-            texts = (check.summary, check.why_it_ends, check.blocker, check.reward_note)
-            unbacked = [number for item in texts for number in unsupported_numbers(item, sources, sources)]
+            unbacked = [number for item in _texts(check) for number in unsupported_numbers(item, sources, sources)]
             return [f"These numbers are not in the facts: {', '.join(unbacked)}"] if unbacked else []
 
-        system = EARLY_CHECK_PROMPT.format(language=LANGUAGE_NAMES[language])
+        pictures = STRIP_TEXT.format(layout=STRIP_LAYOUT) if strip is not None else SHEETS_TEXT
+        system = EARLY_CHECK_PROMPT.format(
+            language=LANGUAGE_NAMES[language], pictures=pictures, behavior=behavior_guide()
+        )
         reply = client.ask("early_check", EarlyCheck, system, content, check=grounded)
         check = reply.value
         if reply.problems:
+            gait = [
+                item.model_copy(
+                    update={
+                        name: without_unbacked(getattr(item, name), sources, sources) for name in ("seen", "change")
+                    }
+                )
+                for item in check.gait
+            ]
             check = check.model_copy(
                 update={
                     name: without_unbacked(getattr(check, name), sources, sources)
                     for name in ("summary", "why_it_ends", "blocker", "reward_note")
                 }
+                | {"gait": [item for item in gait if item.seen]}
             )
-        return LookResult(check, sheets, text)
+        return LookResult(check, sheets, text, strip)
 
     def _sheets(self, folder: RunFolder, step: int) -> list[str]:
         episodes = folder.episodes(step)

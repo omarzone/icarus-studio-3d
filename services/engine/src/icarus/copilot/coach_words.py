@@ -91,11 +91,26 @@ COACH_TEXTS: dict[str, dict[Language, str]] = {
         "en": "Short trial {letter}: {name} trains {steps} steps from the same brain ({what}).",
         "es": "Prueba corta {letter}: {name} entrena {steps} pasos desde el mismo cerebro ({what}).",
     },
+    "trial_cold_start": {
+        "en": "Short trial {letter}: {name} trains {steps} steps from zero ({what}).",
+        "es": "Prueba corta {letter}: {name} entrena {steps} pasos desde cero ({what}).",
+    },
+    "trial_cold": {
+        "en": "The fix changes what the body senses or drives, so the current brain cannot continue with it: {why} "
+        "Both trials train from zero on the same seed, so the two designs are compared fairly.",
+        "es": "El arreglo cambia lo que el cuerpo percibe o mueve, así que el cerebro actual no puede seguir con él: "
+        "{why} Las dos pruebas entrenan desde cero con la misma semilla, para comparar los dos diseños con justicia.",
+    },
     "trial_same": {"en": "same design, more steps", "es": "mismo diseño, más pasos"},
+    "trial_same_cold": {"en": "the current design", "es": "el diseño actual"},
     "trial_fix": {"en": "with the fix “{summary}”", "es": "con el arreglo “{summary}”"},
     "trial_result": {
         "en": "Trial comparison on the same evaluation seeds:\n{table}\nI keep {winner}.",
         "es": "Comparación de las pruebas con las mismas semillas de evaluación:\n{table}\nMe quedo con {winner}.",
+    },
+    "trial_restored_cold": {
+        "en": "The current design learned better from zero than the fix, so I restored revision {revision}.",
+        "es": "El diseño actual aprendió mejor desde cero que el arreglo, así que restauré la revisión {revision}.",
     },
     "trial_restored": {
         "en": "More steps beat the fix, so I restored revision {revision} and keep training it.",

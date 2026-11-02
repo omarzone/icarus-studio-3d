@@ -104,6 +104,18 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
         "es": "Miré el episodio {episode} en el paso {step}",
     },
     "episode_missing": {"en": "Looked for an episode that was not recorded", "es": "Busqué un episodio sin grabar"},
+    "strip_seen": {
+        "en": "Watched episode {episode} at step {step} frame by frame",
+        "es": "Miré el episodio {episode} en el paso {step} cuadro a cuadro",
+    },
+    "strip_missing": {
+        "en": "Looked for a film strip that could not be made",
+        "es": "Busqué una tira de cuadros que no se pudo hacer",
+    },
+    "strips_compared": {
+        "en": "Compared how the body moves at steps {first} and {second}",
+        "es": "Comparé cómo se mueve el cuerpo en los pasos {first} y {second}",
+    },
     "diagnosed": {"en": "Wrote the diagnosis", "es": "Escribí el diagnóstico"},
     "diagnosis_unbacked": {
         "en": "The diagnosis cited numbers that are not in the run",

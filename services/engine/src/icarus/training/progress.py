@@ -8,7 +8,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.training import LogLine, MetricPoint, RunConfig, RunFailure, RunState, TrainingSnapshot
 from icarus.sim.env import EPISODE_SECONDS
 from icarus.sim.policy import CheckpointPolicy
-from icarus.training import episode_frames
+from icarus.training import episode_frames, film_strip
 from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
 from icarus.training.evaluation import Evaluation, evaluate
 from icarus.training.run_store import RunFolder
@@ -132,6 +132,12 @@ class RunProgress:
         records = list(result.episodes)
         if result.world is None or not result.states:
             return records
+        try:
+            film_strip.save_states(self.folder, step, result.states)
+        except OSError as error:
+            if not self._frames_warned:
+                self._frames_warned = True
+                self.log(f"Episode states could not be kept ({error.strerror or error}); training goes on", "warn")
         try:
             rendered = episode_frames.render_frames(result.world, result.states)
             for index, files in enumerate(rendered):

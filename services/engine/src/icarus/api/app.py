@@ -46,6 +46,7 @@ from icarus.copilot.client import CopilotError, NotConnected
 from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.early_look import EarlyLook, default_client
+from icarus.copilot.film_strips import FilmStrips
 from icarus.copilot.memory import CopilotMemory, memory_prompt
 from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
@@ -254,6 +255,7 @@ def create_app(
     app.state.model_settings = ModelSettingsStore(data_folder)
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.attachments = AttachmentStore(projects_folder)
+    views = ViewRenderer()
     conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
         app.state.store,
@@ -262,7 +264,7 @@ def create_app(
         app.state.model_settings,
         trainer,
         app.state.attachments,
-        ViewRenderer(),
+        views,
     )
     app.state.run_frames = RunFrames(app.state.attachments)
     app.state.coach = Coach(app.state.copilot, app.state.run_frames)
@@ -286,7 +288,7 @@ def create_app(
         app.state.copilot,
         app.state.runs,
         starter,
-        look=EarlyLook(default_client(app.state.model_settings)),
+        look=EarlyLook(default_client(app.state.model_settings), FilmStrips(views, app.state.attachments)),
         frames=app.state.run_frames,
         piloted=app.state.autopilot.drives,
         background=True,

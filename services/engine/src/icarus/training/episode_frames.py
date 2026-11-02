@@ -32,7 +32,7 @@ def moments(states: EpisodeStates) -> list[tuple[str, int]]:
     return picked
 
 
-def _chase(world: LiveWorld, data: mujoco.MjData) -> CameraSpec:
+def chase(world: LiveWorld, data: mujoco.MjData, width: int = WIDTH, height: int = HEIGHT) -> CameraSpec:
     """A camera that follows the body, keeping the goal in the picture while it is near."""
     agent = world.agent if world.agent is not None else 0
     position = data.xpos[agent].copy()
@@ -56,7 +56,7 @@ def _chase(world: LiveWorld, data: mujoco.MjData) -> CameraSpec:
             distance = max(distance, 1.3 * gap + 2 * extent)
     distance = min(MAX_DISTANCE, max(MIN_DISTANCE, distance))
     target = (float(lookat[0]), float(lookat[1]), float(lookat[2]))
-    return CameraSpec(target, distance, heading + CHASE_AZIMUTH, CHASE_ELEVATION, WIDTH, HEIGHT)
+    return CameraSpec(target, distance, heading + CHASE_AZIMUTH, CHASE_ELEVATION, width, height)
 
 
 def sheet(pictures: dict[str, np.ndarray]) -> np.ndarray:
@@ -81,7 +81,7 @@ def render_frames(world: LiveWorld, recorded: list[EpisodeStates]) -> list[dict[
                 data.time = states.times[index]
                 mujoco.mj_forward(model, data)
                 zones = scene_description(world.compiled, 0, live=data).zones
-                pixels = render_pixels(renderer, data, _chase(world, data), zones)
+                pixels = render_pixels(renderer, data, chase(world, data), zones)
                 if not is_blank(pixels):
                     pictures[name] = pixels.copy()
             files = {name: encode_png(pixels) for name, pixels in pictures.items()}

@@ -1,5 +1,6 @@
-"""The coach watching every coached run: facts at each checkpoint, a budgeted look with the vision model early and
-whenever the facts suggest trouble, and a diagnosis with a tested fix as soon as a problem shows."""
+"""The coach watching every coached run: facts at each checkpoint, a budgeted look with the vision model early,
+when a new problem shows, when progress stalls and when the gait gets worse, and a diagnosis with a tested fix as
+soon as a problem shows."""
 
 import logging
 import queue
@@ -10,6 +11,7 @@ from typing import Literal
 
 from icarus.contracts.copilot import AgentStep, ChatAction, CheckItem, RunCard
 from icarus.copilot.agent.turn import new_message
+from icarus.copilot.behavior_judgment import GAIT_WORSE, coach_findings
 from icarus.copilot.chat import Copilot
 from icarus.copilot.client import CopilotError
 from icarus.copilot.coach import DEFAULT_GOAL
@@ -28,6 +30,11 @@ MAX_CHECKS = 12
 log = logging.getLogger(__name__)
 
 
+# A gait signal got worse when it moved this share of its last looked-at value the wrong way (at least GAIT_STEP).
+GAIT_WORSE_SHARE = 0.15
+GAIT_STEP = 0.02
+
+
 @dataclass(frozen=True)
 class LookBudget:
     """How many model looks a run gets: always the first checkpoints, then only when the facts suggest trouble."""
@@ -36,6 +43,32 @@ class LookBudget:
     per_run: int = 6
     # More looks once a problem was found, to follow the fix.
     after_problem: int = 4
+    # Also look when the learning curve turns flat and when a gait signal gets worse.
+    on_stall: bool = True
+    on_gait: bool = True
+
+
+def gait_values(facts: list[HealthFact]) -> dict[str, float]:
+    """The worst value of each gait signal among the facts; empty when the worker measured no gait."""
+    values: dict[str, float] = {}
+    for fact in facts:
+        direction = GAIT_WORSE.get(fact.kind)
+        value = getattr(fact, "value", None)
+        if direction is None or not isinstance(value, int | float):
+            continue
+        known = values.get(fact.kind)
+        values[fact.kind] = float(value) if known is None else (max if direction > 0 else min)(known, float(value))
+    return values
+
+
+def gait_worse(before: dict[str, float], now: dict[str, float]) -> list[str]:
+    """The gait signals that moved the wrong way since the last look, by name."""
+    worse = []
+    for kind, value in now.items():
+        old = before.get(kind)
+        if old is not None and (value - old) * GAIT_WORSE[kind] > max(GAIT_STEP, GAIT_WORSE_SHARE * abs(old)):
+            worse.append(kind)
+    return worse
 
 
 @dataclass
@@ -46,6 +79,9 @@ class _Watched:
     looks: int = 0
     found_problem: bool = False
     blocker: WatchFinding | None = None
+    flat: bool = False
+    # The gait signals at the last look.
+    gait: dict[str, float] = field(default_factory=dict)
 
 
 class CheckpointCoach:
@@ -142,13 +178,23 @@ class CheckpointCoach:
                 self._diagnose(run_id, step, notes)
             return
         early = index < self._budget.early_checkpoints
-        allowed = self._budget.per_run + (self._budget.after_problem if watched.found_problem else 0)
-        if self._look is None or not (early or fresh) or watched.looks >= allowed:
+        budget = self._budget
+        stalled = budget.on_stall and curve.call == "flat" and not watched.flat
+        watched.flat = curve.call == "flat"
+        gait = gait_values(facts)
+        worse = gait_worse(watched.gait, gait) if budget.on_gait else []
+        allowed = budget.per_run + (budget.after_problem if watched.found_problem else 0)
+        if self._look is None or not (early or fresh or stalled or worse) or watched.looks >= allowed:
             self._post_trend(folder, step, language, facts, curve_text, [])
             return
         watched.looks += 1
+        watched.gait = gait
+        given = look_facts(folder, step, facts, results, curve)
+        reasons = (["progress stalled"] if stalled else []) + [f"{kind} got worse" for kind in worse]
+        if reasons:
+            given["why_this_look"] = reasons
         try:
-            result = self._look.look(folder, step, look_facts(folder, step, facts, results, curve), language)
+            result = self._look.look(folder, step, given, language)
         except CopilotError as error:
             log.warning("the coach could not look at %s step %s: %s", run_id, step, error)
             self._post_trend(folder, step, language, facts, curve_text, [])
@@ -157,7 +203,7 @@ class CheckpointCoach:
         if not result.check.problem:
             return
         # A later look that sees the same problems reports them; only a first or a new problem starts another fix.
-        first = not watched.found_problem or bool(fresh)
+        first = not watched.found_problem or bool(fresh) or stalled or bool(worse)
         watched.found_problem = True
         found = self._noted(result)
         if piloted:
@@ -169,6 +215,7 @@ class CheckpointCoach:
     def _noted(self, result: LookResult) -> str:
         check = result.check
         parts = [check.summary, check.blocker, check.why_it_ends, check.reward_note]
+        parts += [f"{item.seen} ({item.area}: {item.change})" for item in check.gait if item.change]
         return "The coach's early look found a design problem: " + " ".join(part for part in parts if part)
 
     def _text(self, folder: RunFolder, step: int, language: Language) -> str:
@@ -236,9 +283,8 @@ class CheckpointCoach:
         if check.blocker:
             checks.append(CheckItem(text=check.blocker[:200], tone="warn"))
         checks += self._checks(facts, language)
-        looked = coach_said(
-            "looked" if result.looked_at else "read_facts", language, count=len(result.looked_at), step=f"{step:,}"
-        )
+        pictures = len(result.looked_at) + (1 if result.strip else 0)
+        looked = coach_said("looked" if pictures else "read_facts", language, count=pictures, step=f"{step:,}")
         summary = check.summary or coach_said("no_summary", language)
         text = f"{self._text(folder, step, language)} {summary}"
         if check.problem:
@@ -253,5 +299,7 @@ class CheckpointCoach:
             checks=checks[:MAX_CHECKS],
             steps=[AgentStep(tool="look", summary=looked[:200])],
             actions=self._actions(language),
+            film_strip=result.strip.strip if result.strip else None,
+            findings=coach_findings(check.gait),
         )
         self._copilot.post(folder.stored_status().project_id, message, [])

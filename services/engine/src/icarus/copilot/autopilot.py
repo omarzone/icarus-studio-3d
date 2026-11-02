@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 
 from icarus.contracts.coach import AutopilotLogLine, AutopilotStart, AutopilotStatus
-from icarus.contracts.copilot import ChatAction, CopilotMessage
+from icarus.contracts.copilot import ChatAction, CopilotMessage, CopilotProposal
 from icarus.contracts.project import ProjectState
 from icarus.contracts.specs import MIN_TRAINING_STEPS
 from icarus.contracts.training import MAX_COPIES, RunStatus, StartRun, WarmStart
@@ -19,6 +19,7 @@ from icarus.copilot.coach_words import RULE_WORDS, coach_said, percent
 from icarus.copilot.fix_trials import TRIAL_STEPS, trial_table, trial_winner
 from icarus.copilot.language import Language
 from icarus.projects.files import write_atomic
+from icarus.projects.operations import OperationError, apply_operations
 from icarus.projects.store import ProjectStore
 from icarus.training.progress_watch import CheckpointResult, WatchFinding, checkpoint_results, watch
 from icarus.training.run_comparison import compare_runs
@@ -432,8 +433,8 @@ class Autopilot:
         self._update(pilot, state="running")
         return True
 
-    def _trial_run(self, pilot: _Pilot, warm: WarmStart, seed: int, what: str, letter: str) -> RunStatus:
-        """One short trial from the given brain on the current revision, followed to its end."""
+    def _trial_run(self, pilot: _Pilot, warm: WarmStart | None, seed: int, what: str, letter: str) -> RunStatus:
+        """One short trial from the given brain, or from zero, on the current revision, followed to its end."""
         state = self._projects.state(pilot.status.project_id)
         settings = self._settings.get()
         assert self._trial_steps is not None
@@ -442,7 +443,8 @@ class Autopilot:
         run = self._starter.start(state, start, settings.threads, settings.use_graphics_card)
         self._update(pilot, run_ids=[*pilot.status.run_ids, run.run_id])
         steps = f"{self._trial_steps:,}"
-        said = coach_said("trial_start", pilot.language, letter=letter, name=run.name, steps=steps, what=what)
+        key = "trial_start" if warm is not None else "trial_cold_start"
+        said = coach_said(key, pilot.language, letter=letter, name=run.name, steps=steps, what=what)
         self._say(pilot, said)
         ending, results, _ = self._watch_run(pilot, run, [], True, flags=False)
         self._record(pilot, run, results, None)
@@ -450,19 +452,34 @@ class Autopilot:
             pilot.held = run.name
         return self._runs.folder(run.run_id).status()
 
+    def _cold_reason(self, state: ProjectState, proposal: CopilotProposal, warm: WarmStart) -> str | None:
+        """Why the fixed design cannot continue from the brain, when its senses or motors change."""
+        try:
+            candidate = apply_operations(state.project, proposal.operations)
+        except OperationError:
+            return None
+        return warm_start_problem(self._runs, candidate, warm)
+
     def _trial(self, pilot: _Pilot, proposal_id: str, summary: str) -> bool:
-        """Try more steps and the fix as two short runs from the best brain on one seed, and keep the better design.
+        """Try more steps and the fix as two short runs on one seed and keep the better design: both continue from
+        the best brain, or both train from zero when the fix changes what the body senses or drives.
 
         False when no trial fits (no trained brain to continue from); the loop then applies the fix as usual.
         """
         project_id, language = pilot.status.project_id, pilot.language
         state = self._projects.state(project_id)
-        warm = self._warm_start(pilot, state) if self._trial_steps else None
-        if warm is None or self._out_of_budget(pilot):
+        best = self._warm_start(pilot, state) if self._trial_steps else None
+        if best is None or self._out_of_budget(pilot):
             return False
-        seed = self._runs.folder(warm.run_id).config().seed
+        proposal = next(item for item in self._copilot.conversation(project_id).proposals if item.id == proposal_id)
+        cold = self._cold_reason(state, proposal, best)
+        warm = None if cold else best
+        if cold:
+            self._say(pilot, coach_said("trial_cold", language, why=cold))
+        seed = self._runs.folder(best.run_id).config().seed
         base = state.revision.number
-        same = self._trial_run(pilot, warm, seed, coach_said("trial_same", language), "A")
+        same_key = "trial_same_cold" if cold else "trial_same"
+        same = self._trial_run(pilot, warm, seed, coach_said(same_key, language), "A")
         if pilot.held or self._out_of_budget(pilot):
             return True
         try:
@@ -472,18 +489,17 @@ class Autopilot:
             return True
         applied = next(item for item in conversation.proposals if item.id == proposal_id)
         self._say(pilot, coach_said("applied", language, summary=summary, revision=applied.applied_revision))
-        # A fix that changes what the body senses or drives cannot continue from the same brain: no fair trial.
-        if warm_start_problem(self._runs, self._projects.state(project_id).project, warm):
-            return True
         fixed = self._trial_run(pilot, warm, seed, coach_said("trial_fix", language, summary=summary), "B")
         if pilot.held:
             return True
         comparison = compare_runs(self._runs, same.run_id, fixed.run_id)
-        names = (coach_said("trial_same_name", language), coach_said("trial_fix_name", language))
+        names = (coach_said(same_key, language), coach_said("trial_fix_name", language))
+        if not cold:
+            names = (coach_said("trial_same_name", language), names[1])
         winner = trial_winner(comparison)
         kept = names[0] if winner == "a" else names[1]
         self._say(pilot, coach_said("trial_result", language, table=trial_table(comparison, names), winner=kept))
         if winner == "a":
             self._projects.restore(project_id, base)
-            self._say(pilot, coach_said("trial_restored", language, revision=base))
+            self._say(pilot, coach_said("trial_restored_cold" if cold else "trial_restored", language, revision=base))
         return True

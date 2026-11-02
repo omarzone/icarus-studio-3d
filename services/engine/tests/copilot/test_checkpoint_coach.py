@@ -5,7 +5,7 @@ import pytest
 
 from icarus.contracts.training import MetricPoint, StartRun
 from icarus.copilot.attachments import AttachmentStore
-from icarus.copilot.checkpoint_coach import CheckpointCoach, LookBudget
+from icarus.copilot.checkpoint_coach import CheckpointCoach, LookBudget, gait_values, gait_worse
 from icarus.copilot.early_look import EarlyLook
 from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore
@@ -190,3 +190,45 @@ def test_a_number_the_model_made_up_is_sent_back_once_and_then_left_out(copilot,
     assert len(bodies) == 2 and "42.5" in bodies[1]["messages"][-1]["content"]
     text = latest(copilot, run).text
     assert "42.5" not in text and "It drives well." in text
+
+
+CRAWLS = FINE | {
+    "gait": [
+        {
+            "behavior": "crawls_on_knees",
+            "seen": "The body rests on its knees and pushes itself along.",
+            "area": "reward",
+            "change": "Pay for keeping the torso up.",
+        },
+        {"behavior": "moves_well", "seen": "It keeps moving forward.", "area": "reward", "change": ""},
+    ]
+}
+
+
+def test_how_the_body_moves_reaches_the_message_as_findings_with_their_design_area(copilot, run, tmp_path):
+    watcher, bodies, _ = coach(copilot, tmp_path, [CRAWLS])
+    checkpoint(run, 0, {"progress_to_goal": 4.0, "reach_goal": 3.0}, closer=2.0)
+    watcher.comment(run.run_id, 0)
+
+    assert "HOW the body moves" in bodies[0]["messages"][0]["content"]
+    findings = latest(copilot, run).findings
+    assert [(item.area, item.change) for item in findings] == [("reward", "Pay for keeping the torso up.")]
+    assert findings[0].proposal_id is None
+
+
+def test_a_learning_curve_that_turns_flat_gets_one_more_look_within_the_budget(copilot, run, tmp_path):
+    budget = LookBudget(early_checkpoints=1, per_run=3, after_problem=0)
+    watcher, bodies, _ = coach(copilot, tmp_path, [FINE], budget=budget)
+    for step in (0, 25_000, 50_000, 75_000, 100_000):
+        checkpoint(run, step, {"progress_to_goal": 4.0, "reach_goal": 3.0}, closer=2.0)
+        watcher.comment(run.run_id, step)
+
+    assert len(bodies) == 2
+    facts = bodies[1]["messages"][1]["content"][0]["text"]
+    assert '"why_this_look":["progress stalled"]' in facts and '"step":100000' in facts
+
+
+def test_a_gait_signal_counts_as_worse_only_when_it_moved_the_wrong_way_clearly():
+    assert gait_worse({"twitching": 0.4, "body_low": 0.8}, {"twitching": 0.6, "body_low": 0.79}) == ["twitching"]
+    assert gait_worse({"body_low": 0.8}, {"body_low": 0.5}) == ["body_low"]
+    assert gait_worse({}, {"hopping": 0.9}) == [] and gait_values([]) == {}
