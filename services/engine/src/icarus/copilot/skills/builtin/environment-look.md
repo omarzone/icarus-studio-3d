@@ -13,7 +13,9 @@ world. Make it readable first: the camera must show the body, the goal and the o
 2. **Sky and light.** One `sky` per world: `sky.preset` is `day`, `dusk`, `night`, `overcast` or `custom`; its
    `sky.top` and `sky.horizon` apply only with `custom`, so "blue sky" means `day`. `sky.ambient` = 0.6–1.2 keeps
    shadows readable, `sky.fog` = 0–0.3 adds haze without hiding the goal. A `light` sun at `light.intensity` = 1
-   lights the scene; add point lamps above for night scenes.
+   lights the scene; add point lamps above for night scenes. For a time of day set `sky.use_clock` on and
+   `sky.clock_time` (hours); `sky.clouds`, `sky.stars`, `sky.sun_size`, `sky.glare`, `sky.haze` and the color grade
+   (`sky.exposure`, `sky.saturation`, `sky.tint`) set the mood. None of them change the physics.
 3. **Ground.** Give the ground a fitting `material.surface` and `surface` kind: `asphalt` (friction 1.0), `grass`
    (0.6), `wood` (0.7), `metal` (0.5), `rubber` (1.2), `ice` (0.05). Snow is white `ice` with
    `surface.friction` = 0.3. Changing friction changes what the body must learn: say so in the proposal.

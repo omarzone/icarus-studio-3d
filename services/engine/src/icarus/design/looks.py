@@ -16,6 +16,9 @@ class GeomLook:
 
     style: GeomStyle | None
     surface: GeomSurface | None
+    transparency: float = 0
+    reflectance: float = 0
+    cast_shadow: bool = True
 
 
 def geom_looks(project: Project) -> dict[str, GeomLook]:
@@ -31,5 +34,8 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
         looks[obj.id] = GeomLook(
             style=cast(GeomStyle, style) if style in _STYLES and style != "plain" else None,
             surface=cast(GeomSurface, surface) if surface in _SURFACES else None,
+            transparency=material.number("transparency"),
+            reflectance=material.number("reflectance"),
+            cast_shadow=material.switch("cast_shadow"),
         )
     return looks

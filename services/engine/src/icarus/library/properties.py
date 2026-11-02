@@ -52,6 +52,7 @@ def slider(
     expert: bool = False,
     randomizable: bool = False,
     unit: str | None = None,
+    hint: str | None = None,
 ) -> PropertySchema:
     return PropertySchema(
         id=id,
@@ -64,6 +65,7 @@ def slider(
         default=SliderValue(type="slider", value=default),
         expert=expert,
         randomizable=randomizable,
+        hint=hint,
     )
 
 

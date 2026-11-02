@@ -90,3 +90,30 @@ def test_the_lot_is_painted_with_bay_lines_that_nothing_touches():
         index = compiled.model.geom(line.name).id
         assert (compiled.model.geom_contype[index], compiled.model.geom_conaffinity[index]) == (0, 0)
         assert line.size[2] <= 0.02
+
+
+def test_a_part_carries_its_transparency_reflectance_and_shadow_as_looks_only():
+    from icarus.contracts.operations import SetProperty
+    from icarus.contracts.properties import SliderValue, SwitchValue
+
+    def material(prop: str, value) -> SetProperty:
+        return SetProperty(op="set_property", object="car", component="material", property=prop, value=value)
+
+    base = apply_operations(empty_project("0123456789ab", "T"), template_operations("parking_car"))
+    glass = apply_operations(
+        base,
+        [
+            material("transparency", SliderValue(type="slider", value=0.6)),
+            material("reflectance", SliderValue(type="slider", value=0.3)),
+            material("cast_shadow", SwitchValue(type="switch", value=False)),
+        ],
+    )
+    plain, seen = compile_project(base), compile_project(glass)
+    car = next(geom for geom in scene_description(seen, 1).geoms if geom.name == "car")
+    assert (car.transparency, car.reflectance, car.cast_shadow) == (0.6, 0.3, False)
+    assert plain.mjcf == seen.mjcf
+
+
+def test_lights_export_their_color_and_whether_they_cast_shadows(car_scene):
+    sun = car_scene.lights[0]
+    assert (sun.color, sun.shadows) == ("#ffffff", True)

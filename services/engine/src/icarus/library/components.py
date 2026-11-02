@@ -31,6 +31,10 @@ STYLE_HINT = (
     "(paint on the ground, usually a static part without a collider)"
 )
 SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
+CLOCK_HINT = (
+    "On: Clock time moves every sun light across the sky (Latitude sets how high it climbs) and, unless the preset is "
+    "Custom, colors the sky for that hour; the light's own rotation is then ignored"
+)
 
 
 class UnknownKind(KeyError):
@@ -76,6 +80,9 @@ _KINDS = [
             color("color", "Color", "#8a8f98"),
             listing("surface", "Surface", SURFACES, "rubber", hint=SURFACE_HINT),
             listing("style", "Style", GEOM_STYLES, "plain", hint=STYLE_HINT),
+            slider("transparency", "Transparency", 0, 1, 0.05, 0, hint="Drawing only: sensors still see it"),
+            slider("reflectance", "Reflectance", 0, 1, 0.05, 0, hint="Mirrors the sky; drawing only"),
+            switch("cast_shadow", "Cast shadow", True),
         ],
         unique=True,
     ),
@@ -88,6 +95,7 @@ _KINDS = [
             choice("kind", "Kind", ["sun", "point"], "sun"),
             slider("intensity", "Intensity", 0, 5, 0.1, 1),
             color("color", "Color", "#ffffff"),
+            switch("shadows", "Shadows", True, hint="Only the first sun with shadows on casts them"),
         ],
         unique=True,
     ),
@@ -213,7 +221,25 @@ _KINDS = [
             color("top", "Top color", "#5f8fc4", hint="Used when the preset is Custom"),
             color("horizon", "Horizon color", "#e4ecef", hint="Used when the preset is Custom"),
             slider("ambient", "Ambient light", 0, 2, 0.05, 1),
+            color("ambient_color", "Ambient color", "#ffffff", hint="Tint of the light the sky adds everywhere"),
             slider("fog", "Fog", 0, 1, 0.05, 0),
+            switch("use_clock", "Time of day", False, hint=CLOCK_HINT),
+            slider("clock_time", "Clock time", 0, 24, 0.25, 14, unit="h"),
+            slider("latitude", "Latitude", -66, 66, 1, 42, unit="°", expert=True),
+            slider("sun_size", "Sun size", 0, 30, 1, 0, unit="°", hint="The sun's disc on the sky; 0 hides it"),
+            slider("glare", "Glare", 0, 1, 0.05, 0, hint="Glow around the sun"),
+            slider("haze", "Haze", 0, 1, 0.05, 0, hint="Whitens the sky near the horizon"),
+            slider("stars", "Stars", 0, 1, 0.05, 0, hint="Show once the sky is dark"),
+            slider("clouds", "Cloud cover", 0, 1, 0.05, 0),
+            slider("cloud_density", "Cloud density", 0, 1, 0.05, 0.7),
+            color("cloud_color", "Cloud color", "#ffffff"),
+            switch("shadows", "Shadows", True),
+            slider("shadow_softness", "Shadow softness", 0, 1, 0.05, 0.5),
+            slider("exposure", "Exposure", -3, 3, 0.1, 0, hint="1 doubles the light, -1 halves it"),
+            slider("brightness", "Brightness", -1, 1, 0.05, 0, hint="Color grading of the image; 0 keeps it"),
+            slider("contrast", "Contrast", -1, 1, 0.05, 0),
+            slider("saturation", "Saturation", -1, 1, 0.05, 0, hint="-1 is black and white"),
+            color("tint", "Tint", "#ffffff", hint="The image is multiplied by it; white keeps it"),
         ],
         unique=True,
     ),

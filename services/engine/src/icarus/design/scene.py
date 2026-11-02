@@ -74,6 +74,19 @@ def _hex(rgba) -> str:
     return "#" + "".join(f"{round(float(channel) * 255):02x}" for channel in rgba[:3])
 
 
+def _light(model: mujoco.MjModel, data: mujoco.MjData, index: int) -> SceneLight:
+    diffuse = model.light_diffuse[index]
+    intensity = float(np.max(diffuse))
+    return SceneLight(
+        name=model.light(index).name,
+        position=_vector(data.light_xpos[index]),
+        direction=_vector(data.light_xdir[index]),
+        intensity=intensity,
+        color=_hex(diffuse / intensity) if intensity > 0 else "#ffffff",
+        shadows=bool(model.light_castshadow[index]),
+    )
+
+
 def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjData | None = None) -> SceneDescription:
     """Bodies, geoms and lights in the world frame: at the initial pose, or as `live` data already holds them."""
     model = compiled.model
@@ -109,17 +122,12 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
                 color=_hex(model.geom_rgba[index]),
                 style=look.style if look else None,
                 surface=look.surface if look else None,
+                transparency=look.transparency if look else 0,
+                reflectance=look.reflectance if look else 0,
+                cast_shadow=look.cast_shadow if look else True,
             )
         )
-    lights = [
-        SceneLight(
-            name=model.light(index).name,
-            position=_vector(data.light_xpos[index]),
-            direction=_vector(data.light_xdir[index]),
-            intensity=float(np.max(model.light_diffuse[index])),
-        )
-        for index in range(model.nlight)
-    ]
+    lights = [_light(model, data, index) for index in range(model.nlight)]
     zones = _zones(model, data)
     return SceneDescription(
         revision=revision,

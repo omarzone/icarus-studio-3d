@@ -14,6 +14,7 @@ from icarus.design.components import ComponentView, view
 from icarus.design.looks import GeomLook, geom_looks
 from icarus.design.sensors import add_actuator, add_sensors
 from icarus.design.sky import add_sky, world_sky
+from icarus.design.sun_path import SunPath, world_sun
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.projects.document import all_objects, containers
 
@@ -141,23 +142,24 @@ def _add_joint(body: ET.Element, obj: ObjectSpec, joint: ComponentView) -> None:
     ET.SubElement(body, "joint", attributes)
 
 
-def _add_light(body: ET.Element, obj: ObjectSpec) -> None:
+def _add_light(body: ET.Element, obj: ObjectSpec, root: ET.Element, sun: SunPath | None) -> None:
     light = view(obj, "light")
     if light is None:
         return
     color = light.text("color")
     strength = min(light.number("intensity"), 1.0)
     diffuse = [int(color[index : index + 2], 16) / 255 * strength for index in (1, 3, 5)]
-    ET.SubElement(
-        body,
-        "light",
-        {
-            "name": obj.id,
-            "directional": "true" if light.text("kind") == "sun" else "false",
-            "dir": "0.3 0.2 -1",
-            "diffuse": _fmt(diffuse),
-        },
-    )
+    is_sun = light.text("kind") == "sun"
+    attributes = {"name": obj.id, "directional": "true" if is_sun else "false", "dir": "0.3 0.2 -1"}
+    if not light.switch("shadows"):
+        attributes["castshadow"] = "false"
+    if is_sun and sun is not None:
+        # On the clock the sun shines from the sky's hour, whatever the object's rotation, so it lives in the world.
+        world = root.find("worldbody")
+        body = body if world is None else world
+        attributes["dir"] = _fmt(sun.direction)
+        diffuse = [channel * tint for channel, tint in zip(diffuse, sun.tint, strict=True)]
+    ET.SubElement(body, "light", attributes | {"diffuse": _fmt(diffuse)})
 
 
 def _add_markers(body: ET.Element, obj: ObjectSpec) -> None:
@@ -194,7 +196,13 @@ def is_floor_patch(model: mujoco.MjModel, geom: int) -> bool:
     return model.geom(geom).name.endswith(PATCH_SUFFIX)
 
 
-def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, list[ObjectSpec]], root: ET.Element):
+def _add_body(
+    parent: ET.Element,
+    obj: ObjectSpec,
+    children: dict[str | None, list[ObjectSpec]],
+    root: ET.Element,
+    sun: SunPath | None,
+):
     transform = view(obj, "transform")
     position = transform.vector("position") if transform else (0.0, 0.0, 0.0)
     rotation = transform.vector("rotation") if transform else (0.0, 0.0, 0.0)
@@ -210,12 +218,12 @@ def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, li
         physics = view(obj, "physics_body")
         mass = physics.number("mass") if physics else 1.0
         ET.SubElement(body, "inertial", {"pos": "0 0 0", "mass": _fmt([mass]), "diaginertia": "0.001 0.001 0.001"})
-    _add_light(body, obj)
+    _add_light(body, obj, root, sun)
     _add_markers(body, obj)
     _add_zone_patch(body, obj)
     add_sensors(body, root, obj)
     for child in children.get(obj.id, []):
-        _add_body(body, child, children, root)
+        _add_body(body, child, children, root, sun)
 
 
 def _readable(message: str, project: Project) -> str:
@@ -236,12 +244,13 @@ def to_mjcf(project: Project) -> str:
     if sky:
         add_sky(root, sky)
     world = ET.SubElement(root, "worldbody")
+    sun = world_sun(project)
     for objects in containers(project):
         children: dict[str | None, list[ObjectSpec]] = {}
         for obj in objects:
             children.setdefault(obj.parent, []).append(obj)
         for obj in children.get(None, []):
-            _add_body(world, obj, children, root)
+            _add_body(world, obj, children, root, sun)
     for obj in all_objects(project):
         add_actuator(root, obj, project)
     return ET.tostring(root, encoding="unicode")
