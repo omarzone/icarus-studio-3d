@@ -11,7 +11,8 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
-import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
+import { EmptyState, ErrorState } from "../../ui/states.tsx";
+import { GeneratingIdeas } from "./generating-ideas.tsx";
 import { IdeasSceneTab } from "./ideas-scene-tab.tsx";
 import { IdeasTab } from "./ideas-tab.tsx";
 import { useIdeaSet } from "./use-idea-set.ts";
@@ -35,7 +36,7 @@ export function IdeasPanel({ className = "flex-1" }: IdeasPanelProps) {
       {state.kind === "ready" ? (
         <Ideas set={state.set} tab={tab} />
       ) : state.kind === "generating" ? (
-        <LoadingState label="Thinking of three ideas" />
+        <GeneratingIdeas />
       ) : state.error instanceof CopilotNotConnected ? (
         <CopilotNotConnectedState detail={state.error.message} />
       ) : (
