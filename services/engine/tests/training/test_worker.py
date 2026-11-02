@@ -6,21 +6,21 @@ import pytest
 
 from icarus.contracts.training import StartRun
 from icarus.training.run_store import RunStore
-from icarus.training.worker import PpoSettings, train
-from tests.training.conftest import state_of
+from icarus.training.worker import train
+from tests.training.conftest import quick, state_of
 
-TINY = PpoSettings(n_steps=64, batch_size=64, n_epochs=1)
+SHORT = StartRun(total_steps=10_000, copies=1)
 
 
 def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(tmp_path, parking_state, monkeypatch):
     from icarus.training.callback import TrainingCallback
 
     store = RunStore(tmp_path)
-    status = store.create(parking_state, StartRun(total_steps=10_000, copies=1), threads=1, evaluation_episodes=1)
+    status = store.create(quick(parking_state), SHORT, threads=1, evaluation_episodes=1)
     folder = store.folder(status.run_id)
     monkeypatch.setattr(TrainingCallback, "_on_training_start", lambda callback: folder.request_stop())
 
-    assert train(folder.path, TINY) == "stopped"
+    assert train(folder.path) == "stopped"
 
     final = folder.status()
     assert final.state == "stopped" and final.finished_at is not None
@@ -34,11 +34,11 @@ def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(t
 
 def test_a_stop_requested_before_training_starts_ends_the_run_without_training(tmp_path, parking_state):
     store = RunStore(tmp_path)
-    status = store.create(parking_state, StartRun(total_steps=10_000, copies=1), threads=1, evaluation_episodes=1)
+    status = store.create(quick(parking_state), SHORT, threads=1, evaluation_episodes=1)
     folder = store.folder(status.run_id)
     folder.request_stop()
 
-    assert train(folder.path, TINY) == "stopped"
+    assert train(folder.path) == "stopped"
 
     final = folder.status()
     assert final.state == "stopped" and final.step == 0 and final.best_step is None
@@ -50,13 +50,34 @@ def test_a_project_that_cannot_train_fails_with_a_plain_reason(tmp_path):
     status = store.create(state_of("empty_world"), StartRun(total_steps=10_000, copies=1), threads=1)
     folder = store.folder(status.run_id)
 
-    assert train(folder.path, TINY) == "failed"
+    assert train(folder.path) == "failed"
 
     final = folder.status()
     assert final.state == "failed" and final.failure is not None and final.finished_at is not None
     assert "navigation and locomotion" in final.failure.reason
     assert final.failure.details
     assert folder.log()[-1].level == "error"
+
+
+def test_the_worker_trains_the_network_and_settings_frozen_with_the_run(tmp_path, parking_state, monkeypatch):
+    from stable_baselines3 import PPO
+
+    from icarus.training.callback import TrainingCallback
+
+    store = RunStore(tmp_path)
+    state = quick(parking_state, layers=[32, 16, 8])
+    state.project.brain.ppo.learning_rate = 1e-3
+    state.project.brain.ppo.ent_coef = 0.01
+    status = store.create(state, StartRun(total_steps=10_000, copies=1), threads=1, evaluation_episodes=1)
+    folder = store.folder(status.run_id)
+    monkeypatch.setattr(TrainingCallback, "_on_training_start", lambda callback: folder.request_stop())
+
+    assert train(folder.path) == "stopped"
+
+    model = PPO.load(folder.checkpoint_path(0), device="cpu")
+    linear = [layer.out_features for layer in model.policy.mlp_extractor.policy_net if hasattr(layer, "out_features")]
+    assert linear == [32, 16, 8]
+    assert (model.learning_rate, model.ent_coef, model.n_steps, model.n_epochs) == (1e-3, 0.01, 64, 1)
 
 
 @pytest.mark.slow

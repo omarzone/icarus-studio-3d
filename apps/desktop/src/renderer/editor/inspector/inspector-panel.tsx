@@ -9,7 +9,7 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { useDockedPanel } from "../../ui/dock-slot.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
-import { useInspection, useSceneCache } from "../scene-queries.ts";
+import { useBrainSettings, useInspection, useSceneCache } from "../scene-queries.ts";
 import type { PanelRoutes } from "./controls/property-control.tsx";
 import { PropertiesTab } from "./properties-tab.tsx";
 
@@ -22,6 +22,8 @@ export type InspectorPanelProps = {
   addComponentTo?: RouteId;
   // Where "Opens a panel" properties lead in this workspace (training copies, brain sizes…).
   panelRoutes?: PanelRoutes;
+  // What it edits: the selected object, or how the brain practices.
+  subject?: "selection" | "brain";
   className?: string;
 };
 
@@ -30,6 +32,7 @@ export function InspectorPanel({
   label = "Properties",
   addComponentTo,
   panelRoutes,
+  subject = "selection",
   className = "flex-[1.1]",
 }: InspectorPanelProps) {
   const docked = useDockedPanel();
@@ -47,7 +50,11 @@ export function InspectorPanel({
         )
       }
     >
-      <InspectorBody scene={scene} addComponentTo={addComponentTo} panelRoutes={panelRoutes} />
+      {subject === "brain" ? (
+        <BrainBody scene={scene} panelRoutes={panelRoutes} />
+      ) : (
+        <InspectorBody scene={scene} addComponentTo={addComponentTo} panelRoutes={panelRoutes} />
+      )}
     </Panel>
   );
 }
@@ -74,6 +81,28 @@ function InspectorBody({ scene, addComponentTo, panelRoutes }: BodyProps) {
           onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
           onAccept={(target) => accept.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
           onRemove={(section) => remove.mutate({ scene, section }, { onSuccess: cache.inspection })}
+        />
+      )}
+    </QueryView>
+  );
+}
+
+function BrainBody({ scene, panelRoutes }: Pick<InspectorPanelProps, "scene" | "panelRoutes">) {
+  const port = usePort(scenePort);
+  const settings = useBrainSettings(scene);
+  const cache = useSceneCache(scene);
+  const set = useEngineAction(port.setBrainSetting);
+  const reset = useEngineAction(port.resetBrainSetting);
+  const accept = useEngineAction(port.acceptProposedValue);
+  return (
+    <QueryView query={settings}>
+      {(data) => (
+        <PropertiesTab
+          inspection={data}
+          panelRoutes={panelRoutes}
+          onChange={(target, value) => set.mutate({ scene, ...target, value }, { onSuccess: cache.brainSettings })}
+          onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.brainSettings })}
+          onAccept={(target) => accept.mutate({ scene, ...target }, { onSuccess: cache.brainSettings })}
         />
       )}
     </QueryView>

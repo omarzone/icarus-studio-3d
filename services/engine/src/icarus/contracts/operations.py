@@ -4,7 +4,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.properties import PropertyValue
-from icarus.contracts.specs import BodySpec, RewardTermSpec, TaskFamily
+from icarus.contracts.specs import (
+    BodySpec,
+    BrainAlgorithm,
+    LayerSize,
+    RewardTermSpec,
+    TaskFamily,
+    TrainingSteps,
+)
 
 
 class _Operation(BaseModel):
@@ -86,11 +93,33 @@ class RemoveRewardTerm(_Operation):
     term: str
 
 
+class PpoPatch(BaseModel):
+    """PPO knobs to change; the ones left out keep their value."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    learning_rate: float | None = Field(default=None, ge=1e-6, le=1e-2)
+    n_steps: int | None = Field(default=None, ge=64, le=8192)
+    batch_size: int | None = Field(default=None, ge=32, le=65_536)
+    n_epochs: int | None = Field(default=None, ge=1, le=50)
+    gamma: float | None = Field(default=None, ge=0.8, le=0.9999)
+    gae_lambda: float | None = Field(default=None, ge=0.8, le=1.0)
+    ent_coef: float | None = Field(default=None, ge=0.0, le=0.1)
+
+
 class SetBrain(_Operation):
+    """Changes the brain and how it practices; fields left out keep their value."""
+
     op: Literal["set_brain"]
     template: str | None = None
     copies: int | None = Field(default=None, ge=1, le=256)
     seed: int | None = Field(default=None, ge=0)
+    algorithm: BrainAlgorithm | None = None
+    # "recommended" goes back to the task's recommended budget.
+    training_steps: TrainingSteps | Literal["recommended"] | None = None
+    # Neurons in each hidden layer, input side first.
+    layers: list[LayerSize] | None = None
+    ppo: PpoPatch | None = None
 
 
 EditOperation = Annotated[

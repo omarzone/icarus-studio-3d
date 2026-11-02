@@ -187,6 +187,10 @@ export type ScenePort = {
   setProperty: (edit: PropertyEdit) => Promise<Inspection>;
   resetProperty: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   acceptProposedValue: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
+  // How the brain practices (steps, copies, network, PPO), edited like a selection that has no components.
+  getBrainSettings: (scene: string) => Promise<Inspection>;
+  setBrainSetting: (edit: PropertyEdit) => Promise<Inspection>;
+  resetBrainSetting: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   listComponentKinds: () => Promise<ComponentGroup[]>;
   addComponent: (input: { scene: string; kind: string }) => Promise<Inspection>;
   removeComponent: (input: { scene: string; section: string }) => Promise<Inspection>;

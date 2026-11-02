@@ -114,7 +114,9 @@ export function createEngineTrainingPort(
       api.trainingSettings(),
     ]);
     const choice = choices.get(project) ?? {};
-    return startPlan({ runs: runs.length, family: state.project.task.family, settings, choice });
+    const { task, brain } = state.project;
+    const own = { steps: brain.training_steps, copies: brain.copies };
+    return startPlan({ runs: runs.length, family: task.family, settings, choice, brain: own });
   };
 
   return {

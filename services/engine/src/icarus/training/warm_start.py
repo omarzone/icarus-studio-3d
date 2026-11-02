@@ -12,6 +12,10 @@ def sizes(project: Project) -> tuple[int, int]:
     return observations[0], actions[0]
 
 
+def _layers(layers: list[int]) -> str:
+    return " and ".join(str(size) for size in layers)
+
+
 def warm_start_problem(store: RunStore, project: Project, warm: WarmStart) -> str | None:
     """Why a run of this project cannot continue from that checkpoint, in one sentence; None when it can."""
     try:
@@ -23,7 +27,13 @@ def warm_start_problem(store: RunStore, project: Project, warm: WarmStart) -> st
         return f"{source.name} belongs to another project, so its brain cannot continue here."
     if not folder.checkpoint_path(warm.step).is_file():
         return f"{source.name} has no saved brain at step {warm.step:,}."
-    (sensed, motors), (was_sensed, was_motors) = sizes(project), sizes(folder.project())
+    was = folder.project()
+    if project.brain.layers != was.brain.layers:
+        return (
+            f"The brain now has layers of {_layers(project.brain.layers)} neurons and had {_layers(was.brain.layers)} "
+            f"in {source.name}, so that brain cannot continue; train from zero."
+        )
+    (sensed, motors), (was_sensed, was_motors) = sizes(project), sizes(was)
     if sensed != was_sensed:
         return (
             f"The body now senses {sensed} values and senses {was_sensed} in {source.name}, so that brain cannot "

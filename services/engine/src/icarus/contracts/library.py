@@ -65,3 +65,5 @@ class LibraryCatalog(BaseModel):
     reward_terms: list[RewardTermInfo]
     templates: list[TemplateInfo]
     pieces: list[PieceInfo] = []
+    # How the brain practices, as the inspector shows it; ids are the fields of set_brain.
+    brain_settings: list[PropertySchema] = []

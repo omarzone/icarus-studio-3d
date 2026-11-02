@@ -68,6 +68,16 @@ def _component_path(object_id: str, component_id: str) -> str:
     return f"objects.{object_id}.components.{component_id}"
 
 
+def _brain(brain: BrainSpec, change: SetBrain) -> BrainSpec:
+    fields = change.model_dump(include={"template", "copies", "seed", "algorithm", "layers"}, exclude_none=True)
+    if change.training_steps is not None:
+        fields["training_steps"] = None if change.training_steps == "recommended" else change.training_steps
+    if change.ppo is not None:
+        fields["ppo"] = brain.ppo.model_copy(update=change.ppo.model_dump(exclude_none=True))
+    # Validated again so the document never holds a value outside its contract.
+    return BrainSpec.model_validate({**brain.model_dump(), **fields})
+
+
 def _apply(project: Project, operation: EditOperation) -> None:
     match operation:
         case CreateObject(target=target, object=obj):
@@ -130,13 +140,8 @@ def _apply(project: Project, operation: EditOperation) -> None:
             if not any(item.term == term_id for item in project.task.rewards):
                 raise _fail(f"task.rewards.{term_id}", f"The task has no reward term {term_id!r}")
             project.task.rewards = [item for item in project.task.rewards if item.term != term_id]
-        case SetBrain(template=template, copies=copies, seed=seed):
-            brain = project.brain
-            project.brain = BrainSpec(
-                template=template if template is not None else brain.template,
-                copies=copies if copies is not None else brain.copies,
-                seed=seed if seed is not None else brain.seed,
-            )
+        case SetBrain():
+            project.brain = _brain(project.brain, operation)
 
 
 def apply_operations(project: Project, operations: Sequence[EditOperation]) -> Project:

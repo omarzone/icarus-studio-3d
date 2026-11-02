@@ -20,6 +20,7 @@ from icarus.contracts.operations import (
 )
 from icarus.contracts.project import Project
 from icarus.contracts.properties import PropertyValue, RangeValue, SwitchValue, VectorValue
+from icarus.contracts.specs import BrainSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.rewards import REWARD_TERMS
 from icarus.projects.document import find_object
@@ -62,13 +63,36 @@ def _property(project: Project, op: SetProperty) -> ProposalChange:
     return ProposalChange(label=label, before=shown(old, unit) if old else None, after=shown(op.value, unit))
 
 
-def _brain(template: str | None, copies: int | None, seed: int | None) -> str:
-    parts = [
-        f"template {template}" if template else "",
-        f"{copies} copies" if copies else "",
-        f"seed {seed}" if seed is not None else "",
+def _brain_facts(brain: BrainSpec) -> list[str]:
+    ppo = brain.ppo
+    return [
+        f"template {brain.template}" if brain.template else "no template",
+        f"{brain.copies} copies",
+        f"seed {brain.seed}",
+        brain.algorithm.upper(),
+        f"{brain.training_steps:,} steps" if brain.training_steps else "recommended steps",
+        f"layers {' x '.join(str(size) for size in brain.layers)}",
+        f"learning rate {_number(ppo.learning_rate)}",
+        f"{ppo.n_steps:,} steps per update",
+        f"batch {ppo.batch_size:,}",
+        f"{ppo.n_epochs} passes per update",
+        f"discount {_number(ppo.gamma)}",
+        f"advantage smoothing {_number(ppo.gae_lambda)}",
+        f"exploration bonus {_number(ppo.ent_coef)}",
     ]
-    return ", ".join(part for part in parts if part)
+
+
+def _brain_change(project: Project, op: SetBrain) -> ProposalChange:
+    before = _brain_facts(project.brain)
+    after = _brain_facts(apply_operations(project, [op]).brain)
+    changed = [index for index, (old, new) in enumerate(zip(before, after, strict=True)) if old != new]
+    if not changed:
+        return ProposalChange(label="Brain", after="Unchanged")
+    return ProposalChange(
+        label="Brain",
+        before=", ".join(before[index] for index in changed),
+        after=", ".join(after[index] for index in changed),
+    )
 
 
 def _change(project: Project, op: EditOperation) -> ProposalChange:
@@ -107,12 +131,8 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
         case RemoveRewardTerm(term=term_id):
             info = REWARD_TERMS.get(term_id)
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
-        case SetBrain(template=template, copies=copies, seed=seed):
-            brain = project.brain
-            before = _brain(template and brain.template, copies and brain.copies, None if seed is None else brain.seed)
-            return ProposalChange(
-                label="Brain", before=before or None, after=_brain(template, copies, seed) or "Unchanged"
-            )
+        case SetBrain():
+            return _brain_change(project, op)
 
 
 def proposal_changes(project: Project, operations: Sequence[EditOperation]) -> list[ProposalChange]:

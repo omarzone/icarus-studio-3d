@@ -181,7 +181,7 @@ Center, bottom panel in Brain. Folder: `features/brain-studio/learning/`. Used i
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-REWARD` | Reward | `reward-tab.tsx` | One card per reward term: name, plain description, signed weight and slider. Penalties in red or amber. | Drag weights; the copilot's proposed changes show in blue (*1 change proposed*). |
+| `TAB-REWARD` | Reward | `reward-tab.tsx` | One card per reward term: name, plain description, signed weight and slider. Penalties in red or amber. | Drag weights; remove a term with its ×; *+* in the tab bar adds a library term that fits the task and is not in the reward yet. The copilot's proposed changes show in blue (*1 change proposed*). |
 | `TAB-GOAL` | Goal | `goal-tab.tsx` | What success means and when an episode ends. | Edit success condition and time limit. |
 | `TAB-CURRICULUM` | Curriculum | `curriculum-tab.tsx` | Stages that make the task harder as the brain improves. | Add, reorder and edit stages. |
 
@@ -681,11 +681,11 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Decide what the agent perceives, what it can do and what it is rewarded for. Beginners stay at the top; expert settings are collapsed.
 - **Content:**
   - Left: What it sees / What it can do with switches; copilot proposals in blue.
-  - Inspector: Practice (steps, parallel copies) and Expert settings (method, network, learning rate). A copilot-proposed value shows in blue with Accept.
+  - Inspector: Practice (steps, parallel copies) and Expert settings, collapsed (method, hidden layers, neurons per layer, learning rate and the other PPO settings). Steps show *auto* while the task's recommended budget applies; the method lists only what really trains. A copilot-proposed value shows in blue with Accept.
   - Viewport with the sensor rays and a *What the brain sees now* card with live readings and the resulting decision.
   - Bottom: Reward / Goal / Curriculum. *1 change proposed* in blue.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Brain**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
-- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Network, Learning rate
+- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Hidden layers, Neurons per layer, Learning rate
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LEARNING` (**Reward**, Goal, Curriculum) · toolbar: Senses, Network
 - **Chat column:** `PNL-CHAT` (**Chat**, History)
 
@@ -761,7 +761,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Content:**
   - Plain explanation of what will happen, practice steps and parallel copies, estimated time and CPU threads used, and the *Let the copilot coach* switch.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Brain**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
-- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Network, Learning rate
+- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Hidden layers, Neurons per layer, Learning rate
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LEARNING` (**Reward**, Goal, Curriculum) · toolbar: Senses, Network
 - **Chat column:** `PNL-CHAT` (**Chat**, History)
 - **Dialog · Start training:** no tabbed panels

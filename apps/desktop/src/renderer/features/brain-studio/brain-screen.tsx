@@ -92,7 +92,7 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
           title: "Inspector",
           optionsLabel: "Inspector options",
           home: HOME.below("senses", 432),
-          render: () => <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} />,
+          render: () => <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} subject="brain" />,
         },
         viewport: view,
         learning: {
