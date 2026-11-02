@@ -98,12 +98,8 @@ export const settingsPort = definePort<SettingsPort>({
       ids: ["SCR-SETTINGS-PRIVACY"],
     }),
     ...createEngineTrainingSettings(),
-    restartEngine: pending({
-      key: "settings.restart-engine",
-      summary: "Restarting the engine from settings",
-      sprint: 5,
-      ids: ["SCR-SETTINGS-TRAINING"],
-    }),
+    // The main process restarts it; requests wait while it starts again.
+    restartEngine: () => window.icarus.engine.restart(),
     getNotificationSettings: pending({
       key: "settings.notifications",
       summary: "Notification settings",

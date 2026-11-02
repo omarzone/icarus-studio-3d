@@ -11,6 +11,7 @@ from icarus.contracts.properties import (
     PropertyValue,
     RangeValue,
     SliderValue,
+    SwitchValue,
     VectorValue,
 )
 from icarus.library.components import default_component
@@ -44,6 +45,9 @@ class ComponentView:
         if isinstance(value, ChoiceValue | ListValue | AssetValue | ColorValue):
             return value.value
         raise TypeError(f"{prop} is a {value.type} value")
+
+    def switch(self, prop: str) -> bool:
+        return self._get(prop, SwitchValue).value
 
     def vector(self, prop: str) -> tuple[float, float, float]:
         return self._get(prop, VectorValue).value

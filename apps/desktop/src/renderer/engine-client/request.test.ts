@@ -107,4 +107,30 @@ describe("scene checks", () => {
       false,
     );
   });
+
+  it("refuses a scene whose zones miss where to draw them", async () => {
+    const { isSceneDescription } = await import("./response-checks.ts");
+    const zone = {
+      name: "goal:goal_zone",
+      object: "goal",
+      kind: "goal_zone",
+      shape: "sphere",
+      size: [3, 3, 3],
+      position: [12, 0, 0],
+      quaternion: [1, 0, 0, 0],
+    };
+    const scene = { revision: 1, bodies: [], lights: [], geoms: [] };
+    expect(isSceneDescription({ ...scene, zones: [zone] })).toBe(true);
+    expect(isSceneDescription({ ...scene, zones: [{ ...zone, kind: "portal" }] })).toBe(false);
+    expect(isSceneDescription({ ...scene, zones: [{ ...zone, position: [1, 2] }] })).toBe(false);
+  });
+
+  it("takes a scene with or without a sky, and refuses a sky without its colors", async () => {
+    const { isSceneDescription } = await import("./response-checks.ts");
+    const scene = { revision: 1, bodies: [], lights: [], geoms: [] };
+    const sky = { top: "#5F8FC4", horizon: "#E4ECEF", ambient: 1, fog: 0.2 };
+    expect(isSceneDescription({ ...scene, sky: null })).toBe(true);
+    expect(isSceneDescription({ ...scene, sky })).toBe(true);
+    expect(isSceneDescription({ ...scene, sky: { ...sky, top: undefined } })).toBe(false);
+  });
 });

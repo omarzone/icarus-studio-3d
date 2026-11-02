@@ -10,17 +10,28 @@ import { ActionButton } from "../../ui/action-button.tsx";
 import { ChoiceCard } from "../../ui/choice-card.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 
+// Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
 
 // Start training the copy with a clear focus: practice steps, parallel copies and what to practice most.
 export function TrainDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(CLIP)} title="Train the copy">
+      {(clip) => <TrainCopy clip={clip} />}
+    </ProjectDialogGate>
+  );
+}
+
+function TrainCopy({ clip }: { clip: string }) {
   const port = usePort(motionPort);
   const client = useQueryClient();
-  const key = ["motion", CLIP, "plan"] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => port.getTrainingPlan(CLIP) });
+  const key = ["motion", clip, "plan"] as const;
+  const query = useQuery({ queryKey: key, queryFn: () => port.getTrainingPlan(clip) });
   const setFocus = useEngineAction(port.setTrainingFocus);
   return (
     <Dialog
@@ -34,7 +45,7 @@ export function TrainDialog() {
           <ActionButton
             cta="Start training"
             to="STA-MOTION-TRAINING"
-            run={() => port.startTraining(CLIP)}
+            run={() => port.startTraining(clip)}
             className={dialogButtonClass("primary")}
           >
             <Play size={10} fill="currentColor" aria-hidden />
@@ -49,7 +60,7 @@ export function TrainDialog() {
             plan={plan}
             onFocus={(focus) =>
               setFocus.mutate(
-                { clip: CLIP, focus },
+                { clip, focus },
                 { onSuccess: (next: MotionTrainingPlan) => client.setQueryData(key, next) },
               )
             }

@@ -49,8 +49,9 @@ Top bar of every project workspace. Always visible while a project is open. Fold
 
 - Native window controls (see the style guide's window frame), then the **project name** with a chevron that opens `POP-PROJECT-MENU`.
 - **Workspace switcher**: segmented tabs `World · Body · Motion · Brain · Train · Results · Build` plus `+` to add a workspace. Tabs depend on the project: `Motion` only exists when the body is a character with motion clips.
-- **Play** button: enters `SCR-PLAY` for the current project. Disabled (35% opacity, tooltip *Available once the project exists*) until a design exists.
-- **Guide** pill: shows *Getting started n/5* while the guide is active, or *Guide* when hidden; opens the guide (`STA-WORLD-EMPTY`).
+- **Play** button: enters `SCR-PLAY` for the current project (tooltip: try it live, nothing changes the project). Disabled (35% opacity, tooltip *Available once the project exists*) until a design exists.
+- **Guide** pill: shows *Getting started n/N* while the guide is active, or *Guide* when hidden; opens the guide (`STA-WORLD-EMPTY`). In the app it opens the getting-started checklist in place instead (has a body, a goal, rewards, a trained brain), each open step with a one-click action and a *Next* button; see [`app-flows.md`](./app-flows.md).
+- Every workspace tab, Play, Share and the primary action explain themselves on hover in one line.
 - **Share** opens `MOD-SHARE`. The **primary action** is always the next step of the project: *Train* → `MOD-START-TRAINING`, *Stop* while training → `MOD-STOP-RUN`, *Publish* in Build → `MOD-PUBLISH`, *Train copy* in Motion → `MOD-MOTION-TRAIN`, *Run test* for reference brains. Disabled before a design exists.
 
 ### `HDR-LAUNCHER` Launcher header
@@ -65,7 +66,8 @@ Top bar of the pages outside a project: Home, Projects, Community, Profile, Sett
 Replaces the workspace header while playing. Folder: `features/play/play-header/`.
 
 - Green status pill *Playing · nothing you do here changes the project*.
-- **Stop** returns to the workspace Play was started from. **Record** saves a clip and opens it in `SCR-TIMELAPSE`.
+- **Stop** returns to the workspace Play was started from. **Record** saves a clip and opens it in `SCR-TIMELAPSE` (in the app: dimmed, *not available yet*).
+- In the app a **brain chip** next to the status names which brain plays (*Untrained brain: random actions* or *Trained brain: run N at S steps*), with *Train it* → `MOD-START-TRAINING` while it is untrained.
 
 ### `PNL-EXPLORER` Explorer
 
@@ -73,7 +75,7 @@ Left column, top. The project's scene tree. Folder: `editor/explorer/`. Used in:
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag to reparent, right-click for rename, duplicate, delete and *Ask the copilot*. `+` in the tab bar adds an object. |
+| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag to reparent, right-click for rename, duplicate, delete and *Ask the copilot*. `+` in the tab bar adds an object (in the app: a menu of library pieces). |
 
 - One tab only: imported files live in the Library (`PNL-LIBRARY` › My files).
 
@@ -83,7 +85,7 @@ Left column, bottom. Edits whatever is selected. Folder: `editor/inspector/`. Us
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-PROPERTIES` | Properties | `properties-tab.tsx` | Selected item's title and subtitle, a filter field, then one collapsible section per component (Transform, Physics body, Joint, Motor, Sensor, Randomize per copy…) or per settings group (Practice, Expert settings). Every row uses one of the 12 property types (see `REF-PROPERTY-TYPES`). | Edit values with the control of their type, drag names to scrub, right-click to reset or ask the copilot, `···` for component actions, **+ Add component** (objects only) → `POP-ADD-COMPONENT`. |
+| `TAB-PROPERTIES` | Properties | `properties-tab.tsx` | Selected item's title and subtitle, a filter field, then one collapsible section per component (Transform, Physics body, Joint, Motor, Sensor, Randomize per copy…) or per settings group (Practice, Expert settings). Every row uses one of the 12 property types (see `REF-PROPERTY-TYPES`). | Edit values with the control of their type, drag names to scrub, right-click to reset or ask the copilot, `···` for component actions (*Remove ‹component›*), **+ Add component** (objects only) → `POP-ADD-COMPONENT`. |
 
 - Expert settings (algorithm, learning rate, network) are a collapsed section, never a separate screen.
 - Runs, brains and motion settings use the inspector without *Add component*: only scene objects have components.
@@ -104,11 +106,11 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 | `TAB-PLAY` | Play | `play-tab.tsx` | Play mode view with the floating Play tool bar and a status card. | Use Play tools; click in the world to apply the selected tool. |
 | `TAB-AGENT-VIEW` | Agent view · Game view | `agent-view-tab.tsx` | Play mode: what the agent's own camera sees, or the project camera. | Look only. |
 
-- `+` adds another view (split). The right side of the tab bar holds view options: *Lit*, *Perspective*, speed.
+- `+` adds another view (split). The right side of the tab bar holds view options: *Lit*, *Perspective*, speed. In the app, `+` and *Lit* are dimmed with a *not available yet* tooltip, and *Perspective* is the camera menu.
 
 ### `PNL-TOOLBAR` Workspace toolbar
 
-Strip above the viewport. Icon + label buttons in groups. The selected tool is white. Folder: `editor/viewport/toolbar/`.
+Strip above the viewport. Icon + label buttons in groups. The selected tool is white. Every tool's tooltip is its name and one line on what it is for. In the app, a tool with nothing behind it yet is dimmed and says *not available yet* on hover and click; Terrain, Sky and Light select the ground, sky and sun so the Inspector shows them, and Agent and Goal ask the copilot to add one. Folder: `editor/viewport/toolbar/`.
 
 - **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`).
 - **New project**: Terrain, Sky, Light · Part, Agent (→ `SCR-IDEAS`), Goal · Import.
@@ -160,6 +162,7 @@ Center, bottom panel in Body. Folder: `features/body-studio/rig-check/`. Used in
 | `TAB-RIG-CHECK` | Rig check | `rig-check-tab.tsx` | Physics checks of the body: joints and motors present, stands in a test, colliders, joint ranges. Pass in green, problems in amber. | Click a problem to select the part. |
 | `TAB-POSE-TEST` | Pose test | `pose-test-tab.tsx` | Preset poses (T-pose, A-pose, frame from video) to feel joint limits. | Apply a pose to the viewport. |
 | `TAB-WEIGHTS` | Weights | `weights-tab.tsx` | Skin weights per bone for imported meshes. | Paint, auto-fix. |
+| `TAB-BODY-PARTS` | Parts | `parts-tab.tsx` | App only: each body with its part count, every joint with kind, range and the motor that drives it (kind, max force), and the senses each part carries, read from the project document. | Read only; edit a part by selecting it in the Rig explorer. |
 
 
 ### `PNL-SENSES-ACTIONS` Senses and actions
@@ -327,7 +330,7 @@ Left column in Play (learned brains). Folder: `features/play/decisions/`. Used i
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS`. |
+| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS` (in the app: dimmed, *not available yet*; Play runs the best brain of the revision). |
 
 
 ### `PNL-PLAY-VISION` Vision
@@ -345,7 +348,7 @@ Center, bottom, in Play. Folder: `features/play/events/`. Used in: `SCR-PLAY`.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-WHAT-HAPPENED` | What happened | `what-happened-tab.tsx` | Timestamped log of behavior and of what the user did. | Click a line to jump there in the recording. |
+| `TAB-WHAT-HAPPENED` | What happened | `what-happened-tab.tsx` | Timestamped log of behavior and of what the user did. | Click a line to jump there in the recording (in the app the lines are plain text until Play sessions are recorded). |
 
 
 ### `PNL-REFERENCE-TESTS` Behavior tests
@@ -1459,6 +1462,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Project-level actions from the project name.
 - **Content:**
   - Rename, Duplicate, History (with current revision), Open project…, Project settings, Delete project…, Back to Home.
+  - In the app *Project settings* opens `SCR-SETTINGS-TRAINING`, whose training and hardware settings are shared by every project; its tooltip says so.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1521,6 +1525,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Copy the project, choosing what heavy data comes along.
 - **Content:**
   - New name and switches for world and body, trained brains, and training runs with their size.
+  - In the app runs stay in the engine's runs folder, so *Trained brains* and *Training runs* are dimmed and say how many runs stay with the original; no size is shown.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1610,6 +1615,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Set how many copies train in parallel and what changes between them.
 - **Content:**
   - Copies and layout, explanation, *Change on every try* switches with ranges, Preview copies, Done.
+  - In the app *Preview copies* shows every copy's first try in the World viewport and closes the popover; the design (and the gallery) open `SCR-TIMELAPSE`.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1810,6 +1816,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Destructive confirmation with exact consequences.
 - **Content:**
   - What gets deleted from this computer and its size, and what stays in the community. Red *Delete project*.
+  - In the app the project's runs stay in the engine's runs folder, and the dialog says how many; no size is shown.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1842,6 +1849,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** All local projects in one place.
 - **Content:**
   - Filter (all, training, drafts, published), Open a file, New project, project cards with status pills.
+  - In the app a project is *Training* while one of its runs is live; *Published* stays empty and says publishing is not available yet.
 - **Header:** `HDR-LAUNCHER` · active: **Projects**
 - **Page:** no tabbed panels
 
@@ -2134,7 +2142,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | Acts in place |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
-| Page | Restart engine | Button or link | → `SYS-ENGINE-DOWN` Engine stopped |
+| Page | Restart engine | Button or link | → `SYS-ENGINE-DOWN` Engine stopped (in the app: restarts the engine in place) |
 
 #### `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications
 

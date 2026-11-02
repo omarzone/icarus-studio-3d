@@ -2,7 +2,7 @@ import re
 import shutil
 import threading
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,6 +71,12 @@ class ProjectStore:
         self.root = root
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
+        self._observers: list[Callable[[str, Revision], None]] = []
+
+    def observe(self, observer: Callable[[str, Revision], None]) -> None:
+        """Called with the project id and each new revision; it runs under the project's lock, so it must not call
+        the store."""
+        self._observers.append(observer)
 
     @contextmanager
     def _locked(self, project_id: str) -> Iterator[Path]:
@@ -129,6 +135,8 @@ class ProjectStore:
         head = _Head(current=revision.number, redo=[])
         write_atomic(directory / "head.json", head.model_dump_json())
         append_line(directory / "revisions.jsonl", revision.model_dump_json())
+        for observer in self._observers:
+            observer(directory.name, revision)
         return self._state(directory, head)
 
     def _candidate(self, project: Project, operations: list[EditOperation]) -> tuple[Project, DesignReport]:
@@ -191,6 +199,13 @@ class ProjectStore:
                 summary=f"Restored revision {number}",
             )
             return self._commit(directory, old.project, old.report, batch, head.current, restored_from=number)
+
+    def project_at(self, project_id: str, number: int) -> Project:
+        """The project document as revision `number` left it."""
+        with self._locked(project_id) as directory:
+            if not (directory / "snapshots" / f"{number}.json").is_file():
+                raise UnknownRevision(number)
+            return self._snapshot(directory, number).project
 
     def state(self, project_id: str) -> ProjectState:
         with self._locked(project_id) as directory:

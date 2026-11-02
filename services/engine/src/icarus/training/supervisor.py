@@ -11,6 +11,7 @@ from icarus.contracts.training import LogLine, RunFailure, RunStatus, StartRun
 from icarus.sim.env import ProjectEnv
 from icarus.training.process_tree import end_worker, kill_tree
 from icarus.training.run_store import TERMINAL_STATES, RunFolder, RunStore
+from icarus.training.warm_start import warm_start_problem
 
 STOP_TIMEOUT = 60.0
 SHUTDOWN_TIMEOUT = 30.0
@@ -27,6 +28,10 @@ class RunInProgress(Exception):
 
 class NotTrainable(Exception):
     pass
+
+
+class WarmStartRefused(Exception):
+    """A run asked to continue from a brain that does not fit the body, with a sentence a person can read."""
 
 
 def worker_command(run_dir: Path, use_graphics_card: bool) -> list[str]:
@@ -105,6 +110,10 @@ class Supervisor:
             ProjectEnv(state.project)
         except ValueError as error:
             raise NotTrainable(str(error)) from error
+        if start.warm_start is not None and (
+            problem := warm_start_problem(self.store, state.project, start.warm_start)
+        ):
+            raise WarmStartRefused(problem)
         with self._lock:
             # A worker whose run already ended may still be closing its copies; it no longer holds the slot.
             if self._worker is not None and self._worker.folder.stored_status().state not in TERMINAL_STATES:

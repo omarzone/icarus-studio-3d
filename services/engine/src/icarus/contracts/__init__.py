@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 
+from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.copilot import (
+    AttachmentInfo,
+    AttachmentUpload,
     BuildIdea,
     BuildStatus,
     Conversation,
@@ -13,6 +17,7 @@ from icarus.contracts.copilot import (
 )
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
+from icarus.contracts.events import EngineEventEnvelope, TaskInfo
 from icarus.contracts.health import HealthStatus
 from icarus.contracts.library import LibraryCatalog
 from icarus.contracts.operations import OperationBatch
@@ -65,6 +70,15 @@ MODELS: tuple[type[BaseModel], ...] = (
     BuildStatus,
     ModelSettings,
     ModelSettingsPatch,
+    AttachmentUpload,
+    AttachmentInfo,
+    Diagnosis,
+    AutopilotStart,
+    AutopilotStatus,
+    EngineEventEnvelope,
+    TaskInfo,
+    BrainNetwork,
+    BrainActivations,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

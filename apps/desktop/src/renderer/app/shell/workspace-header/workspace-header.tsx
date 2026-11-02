@@ -5,7 +5,12 @@ import type { ReactNode } from "react";
 import { buttonClass } from "../../../ui/button-styles.ts";
 import type { RouteId, ScreenId } from "../../navigation/catalog-id.ts";
 import { Act, GoTo } from "../../navigation/go-to.tsx";
+import { useNavigation } from "../../navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
+import { GuideButton } from "./guide-button.tsx";
+import { PLAY_PURPOSE, primaryPurpose, WORKSPACE_PURPOSES } from "./header-purposes.ts";
+import { TasksIndicator } from "./tasks-indicator.tsx";
 
 export type Workspace = "World" | "Body" | "Motion" | "Brain" | "Train" | "Results" | "Build";
 
@@ -54,6 +59,8 @@ export function WorkspaceHeader({
   layoutMenu,
 }: WorkspaceHeaderProps) {
   useTitleBarHeight(tokens.size.headerWorkspace);
+  const mode = useRuntimeMode();
+  const openProject = useNavigation((state) => state.params.project);
   return (
     <header data-ui-id="HDR-WORKSPACE" className="title-bar col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
       {/* A fixed-width project area: the workspace tabs start at the same place in every workspace. */}
@@ -77,11 +84,18 @@ export function WorkspaceHeader({
               : "rounded-control px-3.5 py-1.5 text-ui text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80";
             const to = isActive ? activeGoesTo : (routes[name] ?? WORKSPACE_ROUTES[name]);
             return to ? (
-              <GoTo key={name} to={to} cta={name} aria-current={isActive ? "page" : undefined} className={className}>
+              <GoTo
+                key={name}
+                to={to}
+                cta={name}
+                aria-current={isActive ? "page" : undefined}
+                title={WORKSPACE_PURPOSES[name]}
+                className={className}
+              >
                 <TabLabel name={name} />
               </GoTo>
             ) : (
-              <Act key={name} cta={name} aria-current="page" className={className}>
+              <Act key={name} cta={name} aria-current="page" title={WORKSPACE_PURPOSES[name]} className={className}>
                 <TabLabel name={name} />
               </Act>
             );
@@ -91,7 +105,7 @@ export function WorkspaceHeader({
           to={playTo}
           cta="Play"
           disabled={!playEnabled}
-          title={playEnabled ? undefined : UNAVAILABLE}
+          title={playEnabled ? PLAY_PURPOSE : UNAVAILABLE}
           className={buttonClass("secondary", "px-3 font-semibold")}
         >
           <Play size={10} fill="currentColor" aria-hidden />
@@ -100,17 +114,22 @@ export function WorkspaceHeader({
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3.5">
         {layoutMenu}
-        <GoTo to="STA-WORLD-EMPTY" cta={guide} className={buttonClass("ghost", "rounded-full")}>
-          {guide}
-        </GoTo>
-        <GoTo to="MOD-SHARE" cta="Share" className={buttonClass("secondary")}>
+        {mode === "app" && openProject ? <TasksIndicator project={openProject} /> : null}
+        {mode === "app" && openProject ? (
+          <GuideButton project={openProject} label={guide} />
+        ) : (
+          <GoTo to="STA-WORLD-EMPTY" cta={guide} className={buttonClass("ghost", "rounded-full")}>
+            {guide}
+          </GoTo>
+        )}
+        <GoTo to="MOD-SHARE" cta="Share" title="Invite people to this project" className={buttonClass("secondary")}>
           Share
         </GoTo>
         <GoTo
           to={primary.to}
           cta={primary.label}
           disabled={primary.disabled}
-          title={primary.disabled ? UNAVAILABLE : undefined}
+          title={primary.disabled ? UNAVAILABLE : primaryPurpose(primary.label)}
           className={buttonClass("primary")}
         >
           {primary.label}

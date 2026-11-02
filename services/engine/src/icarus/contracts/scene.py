@@ -38,6 +38,35 @@ class SceneLight(BaseModel):
     intensity: float
 
 
+class SceneZone(BaseModel):
+    """A place in the world the task uses: where the agent starts, where it must go, or a marked area."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    # The object that carries the zone.
+    object: str
+    kind: Literal["spawn_point", "goal_zone", "zone"]
+    shape: Literal["sphere", "box"]
+    # Full extents in metres.
+    size: Vector3
+    position: Vector3
+    quaternion: Quaternion
+
+
+class SceneSky(BaseModel):
+    """How the world's sky and air look; the physics never depends on it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top: str
+    horizon: str
+    # How much light the sky adds everywhere, 0 to 2.
+    ambient: float
+    # How thick the haze is, 0 for none.
+    fog: float
+
+
 class SceneDescription(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -45,3 +74,6 @@ class SceneDescription(BaseModel):
     bodies: list[SceneBody]
     geoms: list[SceneGeom]
     lights: list[SceneLight]
+    zones: list[SceneZone] = []
+    # None when the world has no sky object; the viewport then uses its default look.
+    sky: SceneSky | None = None

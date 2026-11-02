@@ -1,6 +1,7 @@
 import type { ProjectSummary as EngineSummary, Revision, TemplateInfo } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { projectView, relativeTime, revisionViews, templateView } from "./project-views.ts";
+import { projectFootprint, projectView, relativeTime, revisionViews, templateView, withRuns } from "./project-views.ts";
+import { status } from "./testdata/training-runs.ts";
 
 const now = new Date("2026-11-01T12:00:00Z");
 
@@ -59,5 +60,36 @@ it("describes a project by its revision", () => {
     status: "draft",
     statusLine: "Revision 4 · design checks passed",
     revision: "rev 4",
+  });
+});
+
+describe("withRuns", () => {
+  const draft = projectView({ id: "p", name: "Lot", description: "", revision: 4 });
+
+  it("marks a project training while one of its runs is live", () => {
+    const view = withRuns(draft, [status({ state: "done" }), status({ state: "running" })]);
+    expect(view).toMatchObject({ status: "training", statusLine: "Training · Run 3 at 31%" });
+  });
+
+  it.each(["starting", "stopping"] as const)("counts a %s run as training", (state) => {
+    expect(withRuns(draft, [status({ state })]).status).toBe("training");
+  });
+
+  it("keeps a project whose runs all ended as a draft", () => {
+    expect(withRuns(draft, [status({ state: "done" }), status({ state: "failed" })])).toEqual(draft);
+  });
+
+  it("does not divide by a run without steps", () => {
+    expect(withRuns(draft, [status({ state: "starting", step: 0, total_steps: 0 })]).statusLine).toBe(
+      "Training · Run 3 at 0%",
+    );
+  });
+});
+
+it("counts the runs a project keeps without claiming a size the engine does not measure", () => {
+  expect(projectFootprint([status(), status({ state: "done" })])).toEqual({
+    trainingRuns: 2,
+    runsBytes: null,
+    runsFollowProject: false,
   });
 });

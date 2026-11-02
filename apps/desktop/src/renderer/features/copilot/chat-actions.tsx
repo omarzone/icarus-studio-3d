@@ -2,10 +2,13 @@ import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import type { Suggestion } from "../../ports/copilot-port.ts";
 import type { SuggestionRoutes } from "./suggestion-chips.tsx";
 
-const primary =
-  "inline-flex h-7.5 items-center rounded-full bg-selected px-3.5 text-ui font-semibold text-on-selected hover:opacity-90";
-const ghost =
-  "inline-flex h-7.5 items-center rounded-full bg-fill-ghost px-3.5 text-ui text-fg hover:bg-control-raised";
+const pill =
+  "inline-flex h-7.5 items-center rounded-full px-3.5 text-ui active:opacity-80 disabled:pointer-events-none disabled:opacity-35";
+const primary = `${pill} bg-selected font-semibold text-on-selected hover:opacity-90`;
+const ghost = `${pill} bg-fill-ghost text-fg hover:bg-control-raised`;
+
+// The looks of a button under a copilot answer: the first is white, the others ghost.
+export const chatActionClass = (first: boolean) => (first ? primary : ghost);
 
 type Props = {
   actions: readonly Suggestion[];

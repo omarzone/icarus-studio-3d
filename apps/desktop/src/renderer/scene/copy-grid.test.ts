@@ -1,6 +1,6 @@
 import type { SceneDescription, SceneGeom } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { copyGrid } from "./copy-grid.ts";
+import { copyGrid, isFirstCopy, scenesGrid } from "./copy-grid.ts";
 import type { Pose } from "./pose-track.ts";
 
 const geom = (
@@ -57,5 +57,59 @@ describe("copyGrid", () => {
     const grid = copyGrid(scene, 2);
     expect(grid.description.geoms.some((item) => item.shape === "plane")).toBe(false);
     expect(grid.description.geoms).toHaveLength(4);
+  });
+
+  it("marks exactly one copy's geoms as the one the camera follows", () => {
+    const followed = copyGrid(scene, 4).description.geoms.filter(isFirstCopy);
+    expect(followed.map((item) => item.body)).toEqual(["car", "wall"]);
+  });
+});
+
+describe("scenesGrid", () => {
+  const moved = (dx: number): SceneDescription => ({
+    ...scene,
+    geoms: scene.geoms.map((item) =>
+      item.name === "wall" ? { ...item, position: [3 + dx, 0, 0.5], color: "#ff0000" } : item,
+    ),
+    zones: [
+      {
+        kind: "goal_zone",
+        name: "goal",
+        object: "goal",
+        shape: "sphere",
+        size: [1, 1, 1],
+        position: [1, 0, 0],
+        quaternion: [1, 0, 0, 0],
+      },
+    ],
+  });
+
+  it("draws each copy's own scene in its place, so the copies show how they differ", () => {
+    const grid = scenesGrid([moved(0), moved(1)]);
+    const walls = grid.description.geoms.filter((item) => item.body === "wall").map((item) => item.position[0]);
+    // Footprint of the widest copy: x from -1 to 5, plus a 2 m margin, so the copies sit 8 m apart.
+    expect(walls).toEqual([-4 + 3, 4 + 4]);
+    expect(grid.description.geoms.every((item) => item.color === "#888888" || item.color === "#ff0000")).toBe(true);
+    expect(grid.extent).toBe(16);
+  });
+
+  it("moves each copy's task zones with it", () => {
+    const grid = scenesGrid([moved(0), moved(0), moved(0), moved(0)]);
+    expect(grid.description.zones?.map((zone) => [zone.name, zone.position[0], zone.position[1]])).toEqual([
+      ["0:goal", -2.5, -2],
+      ["1:goal", 4.5, -2],
+      ["2:goal", -2.5, 2],
+      ["3:goal", 4.5, 2],
+    ]);
+  });
+
+  it("draws a single copy as its scene, floor included", () => {
+    const grid = scenesGrid([moved(0)]);
+    expect(grid.description.geoms.map((item) => item.name)).toEqual(["0:floor", "0:car", "0:wall"]);
+    expect(grid.description.geoms.filter(isFirstCopy)).toHaveLength(3);
+  });
+
+  it("is empty without copies", () => {
+    expect(scenesGrid([]).description.geoms).toEqual([]);
   });
 });

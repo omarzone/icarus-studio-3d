@@ -104,6 +104,12 @@ export function createBrainFixture(): BrainPort {
       const reward = learning.reward.map((term) => (term.id === id ? { ...term, weight, proposed: false } : term));
       return edit(brain, "learning", { ...learning, reward });
     },
+    getRewardOptions: async () => [],
+    addRewardTerm: async ({ brain }) => find(brain).learning,
+    removeRewardTerm: async ({ brain, id }) => {
+      const learning = find(brain).learning;
+      return edit(brain, "learning", { ...learning, reward: learning.reward.filter((term) => term.id !== id) });
+    },
     getReadings: async (brain) => find(brain).readings,
     getShape: async (brain) => find(brain).shape,
     setLayerSize: async ({ brain, id, neurons }) =>

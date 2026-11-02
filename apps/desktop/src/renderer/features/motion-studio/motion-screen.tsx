@@ -8,12 +8,12 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { MOTION_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
-import { CHARACTER_WORKSPACES, useOpenProjectName } from "../../ui/project-name.ts";
-import { LoadingState } from "../../ui/states.tsx";
+import { CHARACTER_WORKSPACES, useOpenProjectName, useProjectKey } from "../../ui/project-name.ts";
+import { LoadingState, NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { ClipTimelinePanel } from "./clip-timeline/clip-timeline-panel.tsx";
 import { MotionComparePanel } from "./compare/motion-compare-panel.tsx";
-import { MOTION_VARIANTS, motionConfig } from "./motion-variants.ts";
+import { MOTION_VARIANTS, type MotionConfig, type MotionVariant, motionConfig } from "./motion-variants.ts";
 import { TrainingStatusCard } from "./training-status-card.tsx";
 
 // The motion workspace: the reference against the physics copy; while the copy trains, its status floats on top.
@@ -21,7 +21,16 @@ export function MotionScreen() {
   const screen = useNavigation((state) => state.screen);
   const overlay = useNavigation((state) => state.overlay);
   const variant = MOTION_VARIANTS[screen] ?? "compare";
-  const config = motionConfig(variant, overlay);
+  const sample = motionConfig(variant, overlay);
+  const scene = useProjectKey(sample.scene);
+  const clip = useProjectKey(sample.clip);
+  if (scene === null || clip === null) {
+    return <NoProjectState />;
+  }
+  return <MotionWorkspace variant={variant} config={{ ...sample, scene, clip }} />;
+}
+
+function MotionWorkspace({ variant, config }: { variant: MotionVariant; config: MotionConfig }) {
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
   // The header's project name and guide pill change label once they load, so the screen waits for them.

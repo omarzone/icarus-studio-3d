@@ -18,11 +18,19 @@ export function FailuresTab({ failures, onSelect }: { failures: Failures; onSele
               selected ? "bg-control-raised" : "hover:bg-fill-hover"
             }`}
           >
-            <span
-              role="img"
-              aria-label={`Replay of ${group.title}`}
-              className="h-12.5 w-18.5 rounded-control bg-panel"
-            />
+            {group.frame ? (
+              <img
+                src={group.frame}
+                alt={`First episode of ${group.title}`}
+                className="h-12.5 w-18.5 rounded-control bg-panel object-cover"
+              />
+            ) : (
+              <span
+                role="img"
+                aria-label={`Replay of ${group.title}`}
+                className="h-12.5 w-18.5 rounded-control bg-panel"
+              />
+            )}
             <span className="flex flex-col gap-0.5">
               <span className="font-semibold">{group.title}</span>
               <span className="text-meta text-fg-tertiary">{group.count}</span>

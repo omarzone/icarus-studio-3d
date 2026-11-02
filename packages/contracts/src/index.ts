@@ -1,5 +1,6 @@
 import type {
   ComponentSpec,
+  EngineEventEnvelope,
   OperationBatch,
   PlayCommandEnvelope,
   PlayMessageEnvelope,
@@ -8,12 +9,23 @@ import type {
 
 export type {
   AddComponent,
+  AgentStep,
   ApiError,
   AssetValue,
+  AttachmentInfo,
+  AttachmentUpload,
+  AutopilotLogLine,
+  AutopilotStart,
+  AutopilotStatus,
   BodySpec,
+  BrainActivations,
+  BrainNetwork,
   BuildIdea,
   BuildStatus,
   BuildStep,
+  ChatAction,
+  ChatSuggestion,
+  CheckItem,
   CheckpointInfo,
   ChoiceValue,
   ColorValue,
@@ -29,7 +41,11 @@ export type {
   DesignCheck,
   DesignIdea,
   DesignReport,
+  Diagnosis,
+  DiagnosisEvidence,
   DuplicateProject,
+  EngineEventEnvelope,
+  FailureGroup,
   HealthStatus,
   IdeaRequest,
   IdeaSet,
@@ -40,11 +56,15 @@ export type {
   ModelConnection,
   ModelSettings,
   ModelSettingsPatch,
+  NetworkInput,
+  NetworkLayer,
+  NetworkOutput,
   NumberValue,
   ObjectSpec,
   OperationBatch,
   PanelValue,
   PieceInfo,
+  PlanItem,
   PlayCommandEnvelope,
   PlayEvent,
   PlayFrame,
@@ -66,6 +86,7 @@ export type {
   Revision,
   Rollout,
   RolloutFrame,
+  RunCard,
   RunConfig,
   RunEventEnvelope,
   RunFailure,
@@ -74,6 +95,8 @@ export type {
   SceneDescription,
   SceneGeom,
   SceneLight,
+  SceneSky,
+  SceneZone,
   SendMessage,
   SetAutonomy,
   SetBrain,
@@ -81,6 +104,7 @@ export type {
   SliderValue,
   StartRun,
   SwitchValue,
+  TaskInfo,
   TemplateInfo,
   TrainingSettings,
   TrainingSettingsPatch,
@@ -88,6 +112,7 @@ export type {
   ValidationErrorBody,
   ValidationIssue,
   VectorValue,
+  WarmStart,
 } from "./generated.ts";
 
 // Unions the generator inlines, named once from the generated types.
@@ -96,3 +121,4 @@ export type EditOperation = OperationBatch["operations"][number];
 export type PlayCommand = PlayCommandEnvelope["command"];
 export type PlayMessage = PlayMessageEnvelope["message"];
 export type RunEvent = RunEventEnvelope["event"];
+export type EngineEvent = EngineEventEnvelope["event"];

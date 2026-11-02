@@ -9,16 +9,27 @@ import { ActionButton } from "../../ui/action-button.tsx";
 import { ChoiceCard } from "../../ui/choice-card.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { StatusPill } from "../../ui/status-pill.tsx";
 import { CheckLine } from "../copilot/chat-messages.tsx";
 
+// Sample brain of the gallery and prototype; the app uses the open project's.
 const BRAIN = "fruit-fly";
 
 // Choose what drives the body: learn a new brain, load a connectome or start from a community brain.
 export function SourceDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(BRAIN)} title="Choose the brain">
+      {(brain) => <Source brain={brain} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Source({ brain }: { brain: string }) {
   const port = usePort(brainPort);
-  const query = useQuery({ queryKey: ["brain", BRAIN, "source"], queryFn: () => port.getSource(BRAIN) });
+  const query = useQuery({ queryKey: ["brain", brain, "source"], queryFn: () => port.getSource(brain) });
   const [picked, setPicked] = useState<string | null>(null);
   const selected = picked ?? query.data?.selected ?? null;
   return (
@@ -36,7 +47,7 @@ export function SourceDialog() {
             to="STA-BRAIN-CONNECTOME"
             disabled={selected === null}
             title={selected === null ? "Choose what drives the body first" : undefined}
-            run={() => port.loadSource({ brain: BRAIN, id: selected ?? "" })}
+            run={() => port.loadSource({ brain, id: selected ?? "" })}
             className={dialogButtonClass("primary")}
           >
             Load into the fly

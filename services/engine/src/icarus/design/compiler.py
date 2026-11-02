@@ -8,13 +8,23 @@ import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
+from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.sensors import add_actuator, add_sensors
+from icarus.design.sky import add_sky, world_sky
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.projects.document import all_objects, containers
 
 TIMESTEP = 0.002
+# A zone effect is a thin static floor patch whose contact settings win over whatever touches it (priority).
+PATCH_THICKNESS = 0.004
+PATCH_SUFFIX = ":patch"
+# Slippery grips like ice; slow keeps normal grip but resists rolling, like mud, so wheels and balls labour on it.
+ZONE_PATCHES: dict[str, dict[str, str]] = {
+    "slippery": {"friction": "0.05 0.005 0.0001", "condim": "3", "rgba": "0.78 0.9 0.95 1"},
+    "slow": {"friction": "1 0.05 0.03", "condim": "6", "rgba": "0.42 0.32 0.21 1"},
+}
 
 
 @dataclass(frozen=True)
@@ -23,6 +33,8 @@ class CompiledModel:
     model: mujoco.MjModel
     # Object id → MJCF body name.
     objects: dict[str, str]
+    # How the world looks around it; None when the world has no sky object.
+    sky: SceneSky | None = None
 
 
 def _fmt(values) -> str:
@@ -92,6 +104,9 @@ def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, floa
     collider = view(obj, "collider")
     if collider:
         attributes["solref"] = _fmt([0.02, 1 - 0.9 * collider.number("restitution")])
+    elif physics is None and shape != "plane":
+        # A static part without a collider is decoration painted on the world: nothing touches it.
+        attributes |= {"contype": "0", "conaffinity": "0"}
     ET.SubElement(body, "geom", attributes)
 
 
@@ -118,7 +133,7 @@ def _add_joint(body: ET.Element, obj: ObjectSpec, joint: ComponentView) -> None:
         attributes["range"] = _fmt([math.radians(low), math.radians(high)])
     elif kind == "slide":
         attributes["range"] = _fmt([low, high])
-    elif kind == "ball":
+    elif kind == "ball" and (low > -180 or high < 180):
         attributes["range"] = _fmt([0, math.radians(max(abs(low), abs(high)))])
     ET.SubElement(body, "joint", attributes)
 
@@ -155,6 +170,27 @@ def _add_markers(body: ET.Element, obj: ObjectSpec) -> None:
         ET.SubElement(body, "site", attributes)
 
 
+def _add_zone_patch(body: ET.Element, obj: ObjectSpec) -> None:
+    zone = view(obj, "zone")
+    patch = ZONE_PATCHES.get(zone.text("effect")) if zone else None
+    if zone is None or patch is None or _is_dynamic(obj):
+        return
+    width, depth, _ = zone.vector("size")
+    attributes = {
+        "name": f"{obj.id}{PATCH_SUFFIX}",
+        "type": "box",
+        "size": _fmt([width / 2, depth / 2, PATCH_THICKNESS / 2]),
+        "pos": _fmt([0, 0, PATCH_THICKNESS / 2]),
+        "priority": "1",
+        "mass": "0",
+    }
+    ET.SubElement(body, "geom", attributes | patch)
+
+
+def is_floor_patch(model: mujoco.MjModel, geom: int) -> bool:
+    return model.geom(geom).name.endswith(PATCH_SUFFIX)
+
+
 def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, list[ObjectSpec]], root: ET.Element):
     transform = view(obj, "transform")
     position = transform.vector("position") if transform else (0.0, 0.0, 0.0)
@@ -173,6 +209,7 @@ def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, li
         ET.SubElement(body, "inertial", {"pos": "0 0 0", "mass": _fmt([mass]), "diaginertia": "0.001 0.001 0.001"})
     _add_light(body, obj)
     _add_markers(body, obj)
+    _add_zone_patch(body, obj)
     add_sensors(body, root, obj)
     for child in children.get(obj.id, []):
         _add_body(body, child, children, root)
@@ -192,6 +229,9 @@ def to_mjcf(project: Project) -> str:
     root = ET.Element("mujoco", {"model": project.id})
     ET.SubElement(root, "compiler", {"angle": "radian", "inertiafromgeom": "true", "autolimits": "true"})
     ET.SubElement(root, "option", {"timestep": str(TIMESTEP), "integrator": "implicitfast"})
+    sky = world_sky(project)
+    if sky:
+        add_sky(root, sky)
     world = ET.SubElement(root, "worldbody")
     for objects in containers(project):
         children: dict[str | None, list[ObjectSpec]] = {}
@@ -211,7 +251,8 @@ def compile_project(project: Project) -> CompiledModel:
         model = mujoco.MjModel.from_xml_string(mjcf)
     except ValueError as error:
         raise CompileError(_readable(str(error), project)) from error
-    return CompiledModel(mjcf=mjcf, model=model, objects={obj.id: obj.id for obj in all_objects(project)})
+    objects = {obj.id: obj.id for obj in all_objects(project)}
+    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project))
 
 
-__all__ = ["CompileError", "CompiledModel", "compile_project", "to_mjcf"]
+__all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "to_mjcf"]

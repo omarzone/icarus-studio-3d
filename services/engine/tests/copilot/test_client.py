@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from typing import Annotated, Literal
 
 import httpx
@@ -7,10 +8,18 @@ import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.copilot.architect import IdeaDrafts
-from icarus.copilot.chat import ChatReply
-from icarus.copilot.client import Connection, CopilotError, ModelClient, NotConnected, copilot_client
+from icarus.copilot.client import (
+    Connection,
+    ContextOverflow,
+    CopilotError,
+    ModelClient,
+    NotConnected,
+    ToolsRefused,
+    copilot_client,
+)
 from icarus.copilot.response_schema import response_schema
 from icarus.copilot.settings import ModelSettingsStore
+from icarus.copilot.single_shot import ChatReply
 
 KEY = "sk-secret-9876543210wxyz"
 
@@ -46,11 +55,19 @@ def test_the_request_is_constrained_by_the_output_schema():
     assert request["headers"]["authorization"] == f"Bearer {KEY}"
     body = request["body"]
     assert body["model"] == "big-model"
-    assert body["messages"] == [{"role": "system", "content": "You judge."}, {"role": "user", "content": "Is it good?"}]
+    assert body["messages"][1] == {"role": "user", "content": "Is it good?"}
+    assert body["messages"][0]["content"].startswith("You judge.")
     assert body["response_format"] == {
         "type": "json_schema",
         "json_schema": {"name": "verdict", "schema": response_schema(Verdict)[0], "strict": True},
     }
+
+
+def test_the_schema_is_also_written_in_the_instructions_for_services_that_do_not_enforce_it():
+    client, requests = scripted([{"content": '{"answer": "yes", "score": 3}'}])
+    client.ask("verdict", Verdict, "You judge.", "Is it good?")
+    system = requests[0]["body"]["messages"][0]["content"]
+    assert json.dumps(Verdict.model_json_schema()) in system
 
 
 def test_invalid_output_is_retried_once_with_the_error():
@@ -244,3 +261,114 @@ def test_reasoning_fields_and_unclosed_think_tags_are_split_from_the_answer():
     cut_off, _ = scripted([{"content": '{"answer": "no", "score": 1}<think>Still going'}])
     reply = cut_off.ask("verdict", Verdict, "s", "u")
     assert reply.thinking == "Still going" and reply.value.score == 1
+
+
+def test_a_long_answer_may_be_given_more_time_than_the_default_but_never_past_the_deadline():
+    waits: list[float] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        waits.append(request.extensions["timeout"]["read"])
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"answer": "ok", "score": 1}'}}]})
+
+    client = ModelClient(Connection("https://models.example/v1", KEY, "big-model"), httpx.MockTransport(handle))
+    client.ask("verdict", Verdict, "Judge.", "Go", timeout=90)
+    client.ask("verdict", Verdict, "Judge.", "Go", timeout=90, deadline=time.monotonic() + 30)
+    # The monotonic clock is coarse on Windows, so the remaining time can read a hair over 30 s.
+    assert waits[0] == 90 and 29 < waits[1] <= 30.05
+
+
+TOOLS = [{"type": "function", "function": {"name": "look", "description": "Look.", "parameters": {"type": "object"}}}]
+
+
+def answering(handler) -> tuple[ModelClient, list[dict]]:
+    """A client whose model service is one function of the request body."""
+    bodies: list[dict] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        bodies.append(body)
+        return handler(body, len(bodies))
+
+    return ModelClient(Connection("https://models.example/v1", KEY, "big-model"), httpx.MockTransport(handle)), bodies
+
+
+def tool_reply(**message) -> httpx.Response:
+    choice = {"message": {"role": "assistant", **message}, "finish_reason": "tool_calls"}
+    return httpx.Response(200, json={"choices": [choice], "usage": {"prompt_tokens": 120, "completion_tokens": 9}})
+
+
+def test_a_step_sends_the_tools_and_returns_raw_tool_calls_and_usage():
+    call = {"id": "c1", "type": "function", "function": {"name": "look", "arguments": '{"view": "top"'}}
+    client, bodies = answering(
+        lambda body, n: tool_reply(content="<think>Check first.</think>", tool_calls=[call], reasoning_content="Hm.")
+    )
+    turn = client.step([{"role": "user", "content": "hi"}], TOOLS)
+    assert bodies[0]["tools"] == TOOLS and "tool_choice" not in bodies[0] and "response_format" not in bodies[0]
+    assert [(c.id, c.name, c.arguments) for c in turn.tool_calls] == [("c1", "look", '{"view": "top"')]
+    assert turn.finish == "tool_calls" and turn.usage is not None and turn.usage.prompt_tokens == 120
+    assert turn.thinking == "Hm.\n\nCheck first." and not turn.text
+    assert "reasoning_content" not in turn.raw and turn.raw["tool_calls"][0]["id"] == "c1"
+
+
+def test_a_forced_tool_is_named_and_a_refused_forced_choice_is_retried_with_auto():
+    def handle(body: dict, n: int) -> httpx.Response:
+        if isinstance(body.get("tool_choice"), dict):
+            return httpx.Response(400, json={"error": {"message": "tool_choice object is not supported"}})
+        return tool_reply(content="Done.")
+
+    client, bodies = answering(handle)
+    turn = client.step([{"role": "user", "content": "hi"}], TOOLS, tool_choice="look")
+    assert bodies[0]["tool_choice"] == {"type": "function", "function": {"name": "look"}}
+    assert "tool_choice" not in bodies[1] and turn.text == "Done."
+
+
+def test_a_service_that_refuses_tools_and_a_prompt_too_long_raise_their_own_errors():
+    refusing, _ = answering(lambda body, n: httpx.Response(400, json={"error": {"message": "tools are not supported"}}))
+    with pytest.raises(ToolsRefused):
+        refusing.step([{"role": "user", "content": "hi"}], TOOLS)
+    full, _ = answering(
+        lambda body, n: httpx.Response(400, json={"error": {"message": "This model's maximum context length is 8192"}})
+    )
+    with pytest.raises(ContextOverflow):
+        full.step([{"role": "user", "content": "hi"}], TOOLS)
+
+
+def test_a_transient_error_is_retried_once_for_every_role():
+    def busy_once(body: dict, n: int) -> httpx.Response:
+        if n == 1:
+            return httpx.Response(503, headers={"Retry-After": "0"}, json={"error": {"message": "overloaded"}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"answer": "ok", "score": 1}'}}]})
+
+    client, bodies = answering(busy_once)
+    assert client.ask("verdict", Verdict, "s", "u").value.score == 1 and len(bodies) == 2
+    always, bodies = answering(lambda body, n: httpx.Response(429, headers={"Retry-After": "0"}, json={}))
+    with pytest.raises(CopilotError) as error:
+        always.step([{"role": "user", "content": "hi"}], TOOLS)
+    assert len(bodies) == 2 and "429" in str(error.value)
+
+
+def test_a_timeout_is_retried_once_and_then_reported():
+    attempts: list[int] = []
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        attempts.append(1)
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = ModelClient(Connection("https://models.example/v1", KEY, "big-model"), httpx.MockTransport(slow))
+    with pytest.raises(CopilotError):
+        client.step([{"role": "user", "content": "hi"}], TOOLS)
+    assert len(attempts) == 2
+
+
+def test_a_structured_reply_carries_the_measured_usage():
+    client, _ = answering(
+        lambda body, n: httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": '{"answer": "ok", "score": 1}'}}],
+                "usage": {"prompt_tokens": 50, "completion_tokens": 4},
+            },
+        )
+    )
+    usage = client.ask("verdict", Verdict, "s", "u").usage
+    assert usage is not None and (usage.prompt_tokens, usage.completion_tokens) == (50, 4)

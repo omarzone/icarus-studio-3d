@@ -1,0 +1,202 @@
+{
+ "replies": [
+  {
+   "reasoning": "The chassis sat too low; its center goes back to the wheel radius plus the drop to the axle.",
+   "content": {
+    "id": "delivery_bot",
+    "name": "Delivery robot",
+    "parts": [
+     {
+      "id": "chassis",
+      "name": "Chassis",
+      "parent": null,
+      "shape": "box",
+      "size": [
+       0.6,
+       0.4,
+       0.15
+      ],
+      "position": [
+       0,
+       0,
+       0.18
+      ],
+      "rotation": [
+       0,
+       0,
+       0
+      ],
+      "mass": 12,
+      "color": "#e8e4da",
+      "friction": 0.8,
+      "joint": null,
+      "motor": null,
+      "rays": {
+       "range": 6,
+       "count": 5,
+       "tilt": 0
+      },
+      "balance": false,
+      "touch": false
+     },
+     {
+      "id": "wheel_left",
+      "name": "Left wheel",
+      "parent": "chassis",
+      "shape": "cylinder",
+      "size": [
+       0.2,
+       0.2,
+       0.06
+      ],
+      "position": [
+       -0.2,
+       0.24,
+       -0.08
+      ],
+      "rotation": [
+       -90,
+       0,
+       0
+      ],
+      "mass": 1,
+      "color": "#1f2023",
+      "friction": 1.2,
+      "joint": {
+       "kind": "hinge",
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "limits": [
+        -180,
+        180
+       ],
+       "anchor": [
+        0,
+        0,
+        0
+       ],
+       "damping": 0.4
+      },
+      "motor": {
+       "kind": "torque",
+       "max_force": 8
+      },
+      "rays": null,
+      "balance": false,
+      "touch": false
+     },
+     {
+      "id": "wheel_right",
+      "name": "Right wheel",
+      "parent": "chassis",
+      "shape": "cylinder",
+      "size": [
+       0.2,
+       0.2,
+       0.06
+      ],
+      "position": [
+       -0.2,
+       -0.24,
+       -0.08
+      ],
+      "rotation": [
+       -90,
+       0,
+       0
+      ],
+      "mass": 1,
+      "color": "#1f2023",
+      "friction": 1.2,
+      "joint": {
+       "kind": "hinge",
+       "axis": [
+        0,
+        0,
+        1
+       ],
+       "limits": [
+        -180,
+        180
+       ],
+       "anchor": [
+        0,
+        0,
+        0
+       ],
+       "damping": 0.4
+      },
+      "motor": {
+       "kind": "torque",
+       "max_force": 8
+      },
+      "rays": null,
+      "balance": false,
+      "touch": false
+     },
+     {
+      "id": "caster",
+      "name": "Front caster",
+      "parent": "chassis",
+      "shape": "sphere",
+      "size": [
+       0.1,
+       0.1,
+       0.1
+      ],
+      "position": [
+       0.22,
+       0,
+       -0.13
+      ],
+      "rotation": [
+       0,
+       0,
+       0
+      ],
+      "mass": 0.3,
+      "color": "#5a5f66",
+      "friction": 0.05,
+      "joint": null,
+      "motor": null,
+      "rays": null,
+      "balance": false,
+      "touch": false
+     },
+     {
+      "id": "cargo",
+      "name": "Cargo bin",
+      "parent": "chassis",
+      "shape": "box",
+      "size": [
+       0.4,
+       0.32,
+       0.16
+      ],
+      "position": [
+       -0.05,
+       0,
+       0.155
+      ],
+      "rotation": [
+       0,
+       0,
+       0
+      ],
+      "mass": 2,
+      "color": "#f2c230",
+      "friction": 0.8,
+      "joint": null,
+      "motor": null,
+      "rays": null,
+      "balance": false,
+      "touch": false
+     }
+    ]
+   }
+  }
+ ]
+}

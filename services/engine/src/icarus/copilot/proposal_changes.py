@@ -62,6 +62,15 @@ def _property(project: Project, op: SetProperty) -> ProposalChange:
     return ProposalChange(label=label, before=shown(old, unit) if old else None, after=shown(op.value, unit))
 
 
+def _brain(template: str | None, copies: int | None, seed: int | None) -> str:
+    parts = [
+        f"template {template}" if template else "",
+        f"{copies} copies" if copies else "",
+        f"seed {seed}" if seed is not None else "",
+    ]
+    return ", ".join(part for part in parts if part)
+
+
 def _change(project: Project, op: EditOperation) -> ProposalChange:
     match op:
         case SetProperty():
@@ -99,12 +108,11 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             info = REWARD_TERMS.get(term_id)
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
         case SetBrain(template=template, copies=copies, seed=seed):
-            parts = [
-                f"template {template}" if template else "",
-                f"{copies} copies" if copies else "",
-                f"seed {seed}" if seed is not None else "",
-            ]
-            return ProposalChange(label="Brain", after=", ".join(part for part in parts if part) or "Unchanged")
+            brain = project.brain
+            before = _brain(template and brain.template, copies and brain.copies, None if seed is None else brain.seed)
+            return ProposalChange(
+                label="Brain", before=before or None, after=_brain(template, copies, seed) or "Unchanged"
+            )
 
 
 def proposal_changes(project: Project, operations: Sequence[EditOperation]) -> list[ProposalChange]:

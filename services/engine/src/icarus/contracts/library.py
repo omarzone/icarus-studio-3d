@@ -28,6 +28,8 @@ class RewardTermInfo(BaseModel):
     version: int
     label: str
     family: TaskFamily
+    # Every task family the term fits; `family` is the one it belongs to first.
+    families: list[TaskFamily] = []
     weight_min: float
     weight_max: float
     default_weight: float

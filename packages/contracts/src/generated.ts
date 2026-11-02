@@ -174,6 +174,17 @@ export interface AddObjectCommand {
   tool: "add_object";
 }
 /**
+ * One thing the copilot did before answering, shown so the person can follow its work.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AgentStep".
+ */
+export interface AgentStep {
+  ok?: boolean;
+  summary: string;
+  tool: "inspect" | "look" | "try" | "propose" | "train" | "library";
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ApiError".
  */
@@ -183,6 +194,138 @@ export interface ApiError {
     [k: string]: string;
   } | null;
   message: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AttachmentInfo".
+ */
+export interface AttachmentInfo {
+  id: string;
+  kind: "image" | "video" | "document" | "view";
+  media_type: string;
+  name: string;
+  size: number;
+}
+/**
+ * A file the person adds to the chat, or a picture of the scene the app renders for the copilot.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AttachmentUpload".
+ */
+export interface AttachmentUpload {
+  data: string;
+  /**
+   * @maxItems 12
+   */
+  frames?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string, string];
+  kind: "image" | "video" | "document" | "view";
+  media_type: string;
+  name: string;
+  text?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotLogLine".
+ */
+export interface AutopilotLogLine {
+  text: string;
+  time: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotStart".
+ */
+export interface AutopilotStart {
+  goal_success?: number;
+  max_iterations?: number;
+  max_minutes?: number;
+  mode: "ask" | "fix";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutopilotStatus".
+ */
+export interface AutopilotStatus {
+  best_run_id?: string | null;
+  best_success?: number | null;
+  diagnosis_ids: string[];
+  finished_at?: string | null;
+  goal_success: number;
+  iteration: number;
+  log: AutopilotLogLine[];
+  max_iterations: number;
+  mode: "ask" | "fix";
+  project_id: string;
+  run_ids: string[];
+  started_at: string;
+  state: "running" | "waiting_approval" | "done" | "stopped" | "failed";
+}
+/**
+ * What every neuron of a checkpoint's policy computes for the first observation of an evaluation episode.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainActivations".
+ */
+export interface BrainActivations {
+  layers: number[][];
+  observation: number[];
+  observation_labels: string[];
+  outputs: number[];
+  run_id: string;
+  step: number;
+}
+/**
+ * The policy network of a checkpoint, with its inputs and outputs named after the body.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainNetwork".
+ */
+export interface BrainNetwork {
+  inputs: NetworkInput[];
+  layers: NetworkLayer[];
+  outputs: NetworkOutput[];
+  run_id: string;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkInput".
+ */
+export interface NetworkInput {
+  index: number;
+  label: string;
+  sensor?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkLayer".
+ */
+export interface NetworkLayer {
+  activation: string;
+  name: string;
+  size: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkOutput".
+ */
+export interface NetworkOutput {
+  actuator?: string | null;
+  index: number;
+  label: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -222,6 +365,45 @@ export interface BuildStep {
   id: string;
   label: string;
   status: "done" | "running" | "todo";
+}
+/**
+ * A button under a copilot answer: what it says and what the app does when it is pressed.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ChatAction".
+ */
+export interface ChatAction {
+  kind: "navigate" | "train" | "apply" | "discard" | "send" | "show" | "dismiss" | "apply_and_train";
+  label: string;
+  target?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ChatSuggestion".
+ */
+export interface ChatSuggestion {
+  intent?:
+    | "ask"
+    | "propose-change"
+    | "explain"
+    | "diagnose"
+    | "compare"
+    | "train-run"
+    | "stop-run"
+    | "play"
+    | "show"
+    | "share";
+  text: string;
+}
+/**
+ * One line of a check list in an answer ("Wheels touch the ground").
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CheckItem".
+ */
+export interface CheckItem {
+  text: string;
+  tone: "ok" | "warn";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -316,6 +498,7 @@ export interface Conversation {
   messages: CopilotMessage[];
   project_id: string;
   proposals: CopilotProposal[];
+  suggestion_items?: ChatSuggestion[];
   suggestions: string[];
 }
 /**
@@ -323,12 +506,94 @@ export interface Conversation {
  * via the `definition` "CopilotMessage".
  */
 export interface CopilotMessage {
+  actions?: ChatAction[];
+  attachments?: AttachmentInfo[];
+  build_id?: string | null;
+  /**
+   * @maxItems 12
+   */
+  checks?:
+    | []
+    | [CheckItem]
+    | [CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem
+      ]
+    | [
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem
+      ];
   created_at: string;
   id: string;
+  /**
+   * @maxItems 8
+   */
+  plan?:
+    | []
+    | [PlanItem]
+    | [PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem];
   proposal_id?: string | null;
   role: "user" | "copilot";
+  run?: RunCard | null;
+  steps?: AgentStep[];
   text: string;
   thinking?: string | null;
+  title?: string | null;
+}
+/**
+ * One change of a next-step plan the copilot suggests.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlanItem".
+ */
+export interface PlanItem {
+  detail: string;
+  label: string;
+  mark: "add" | "change";
+}
+/**
+ * A training run the message is about; the app shows its live progress.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunCard".
+ */
+export interface RunCard {
+  milestone_step?: number | null;
+  run_id: string;
 }
 /**
  * Operations the copilot proposes, already validated and compiled against the revision they start from.
@@ -588,6 +853,8 @@ export interface SceneDescription {
   geoms: SceneGeom[];
   lights: SceneLight[];
   revision: number;
+  sky?: SceneSky | null;
+  zones?: SceneZone[];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -651,6 +918,45 @@ export interface SceneLight {
   position: [number, number, number];
 }
 /**
+ * How the world's sky and air look; the physics never depends on it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneSky".
+ */
+export interface SceneSky {
+  ambient: number;
+  fog: number;
+  horizon: string;
+  top: string;
+}
+/**
+ * A place in the world the task uses: where the agent starts, where it must go, or a marked area.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneZone".
+ */
+export interface SceneZone {
+  kind: "spawn_point" | "goal_zone" | "zone";
+  name: string;
+  object: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+  shape: "sphere" | "box";
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "DesignReport".
  */
@@ -660,11 +966,503 @@ export interface DesignReport {
   ok: boolean;
 }
 /**
+ * What the coach found in a run at one checkpoint, from the run's own data and frames.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "Diagnosis".
+ */
+export interface Diagnosis {
+  created_at: string;
+  /**
+   * @maxItems 16
+   */
+  evidence:
+    | []
+    | [DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence, DiagnosisEvidence]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ]
+    | [
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence,
+        DiagnosisEvidence
+      ];
+  /**
+   * @maxItems 8
+   */
+  failure_groups:
+    | []
+    | [FailureGroup]
+    | [FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup]
+    | [FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup, FailureGroup];
+  hypothesis: string;
+  id: string;
+  next_step: "keep_training" | "stop_and_fix" | "done";
+  /**
+   * @maxItems 12
+   */
+  observations:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string, string];
+  project_id: string;
+  proposal_id?: string | null;
+  run_id: string;
+  step: number;
+  summary: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DiagnosisEvidence".
+ */
+export interface DiagnosisEvidence {
+  attachment_id?: string | null;
+  detail?: string | null;
+  kind: "metric" | "reward_term" | "episode" | "frame";
+  label: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "FailureGroup".
+ */
+export interface FailureGroup {
+  description: string;
+  /**
+   * @maxItems 6
+   */
+  frame_attachment_ids?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string];
+  label: string;
+  share: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DiagnosisCreatedEvent".
+ */
+export interface DiagnosisCreatedEvent {
+  diagnosis_id: string;
+  run_id: string;
+  type: "diagnosis_created";
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "DuplicateProject".
  */
 export interface DuplicateProject {
   name: string;
+}
+/**
+ * One server-sent event of GET /events.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "EngineEventEnvelope".
+ */
+export interface EngineEventEnvelope {
+  event:
+    | TurnStartedEvent
+    | StepEvent
+    | ViewTakenEvent
+    | ProposalCreatedEvent
+    | ProposalAppliedEvent
+    | TurnFinishedEvent
+    | TaskStartedEvent
+    | TaskProgressEvent
+    | TaskFinishedEvent
+    | RunEventWrapper
+    | DiagnosisCreatedEvent
+    | RevisionCreatedEvent
+    | HookDecisionEvent;
+  id: string;
+  project_id: string | null;
+  time: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TurnStartedEvent".
+ */
+export interface TurnStartedEvent {
+  turn_id: string;
+  type: "turn_started";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StepEvent".
+ */
+export interface StepEvent {
+  step: AgentStep;
+  turn_id: string;
+  type: "step";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ViewTakenEvent".
+ */
+export interface ViewTakenEvent {
+  attachment_id: string;
+  turn_id: string;
+  type: "view_taken";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProposalCreatedEvent".
+ */
+export interface ProposalCreatedEvent {
+  proposal_id: string;
+  summary: string;
+  type: "proposal_created";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProposalAppliedEvent".
+ */
+export interface ProposalAppliedEvent {
+  proposal_id: string;
+  revision: number;
+  type: "proposal_applied";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TurnFinishedEvent".
+ */
+export interface TurnFinishedEvent {
+  message_id?: string | null;
+  ok?: boolean;
+  turn_id: string;
+  type: "turn_finished";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskStartedEvent".
+ */
+export interface TaskStartedEvent {
+  task: TaskInfo;
+  type: "task_started";
+}
+/**
+ * One piece of long work the engine is doing or did, listed by GET /tasks.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskInfo".
+ */
+export interface TaskInfo {
+  finished_at?: string | null;
+  id: string;
+  kind: "training_run" | "autopilot" | "diagnosis" | "ideas" | "build" | "agent_turn";
+  parent_task_id?: string | null;
+  progress?: number | null;
+  project_id: string | null;
+  started_at: string;
+  state: "running" | "done" | "stopped" | "failed";
+  title: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskProgressEvent".
+ */
+export interface TaskProgressEvent {
+  progress: number;
+  task_id: string;
+  text: string;
+  type: "task_progress";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskFinishedEvent".
+ */
+export interface TaskFinishedEvent {
+  reason?: string | null;
+  state: "done" | "stopped" | "failed";
+  task_id: string;
+  type: "task_finished";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunEventWrapper".
+ */
+export interface RunEventWrapper {
+  event: StatusEvent | MetricEvent | CheckpointEvent | SnapshotEvent | LogEvent;
+  run_id: string;
+  type: "run_event";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StatusEvent".
+ */
+export interface StatusEvent {
+  status: RunStatus;
+  type: "status";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunStatus".
+ */
+export interface RunStatus {
+  best_step?: number | null;
+  copies: number;
+  failure?: RunFailure | null;
+  finished_at?: string | null;
+  name: string;
+  project_id: string;
+  revision_number: number;
+  run_id: string;
+  started_at: string;
+  state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
+  step: number;
+  steps_per_second: number;
+  success_rate?: number | null;
+  total_steps: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunFailure".
+ */
+export interface RunFailure {
+  details: string[];
+  reason: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricEvent".
+ */
+export interface MetricEvent {
+  metric: MetricPoint;
+  type: "metric";
+}
+/**
+ * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricPoint".
+ */
+export interface MetricPoint {
+  elapsed: number;
+  episode_length: number;
+  episode_return: number;
+  failure_rate?: number | null;
+  kind: "train" | "eval";
+  reward_terms: {
+    [k: string]: number;
+  };
+  step: number;
+  steps_per_second?: number | null;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SnapshotEvent".
+ */
+export interface SnapshotEvent {
+  snapshot: TrainingSnapshot;
+  type: "snapshot";
+}
+/**
+ * The parallel copies as they are right now, sampled a few times per second while a run trains.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainingSnapshot".
+ */
+export interface TrainingSnapshot {
+  copies: CopyPoses[];
+  geoms: string[];
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogEvent".
+ */
+export interface LogEvent {
+  line: LogLine;
+  type: "log";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogLine".
+ */
+export interface LogLine {
+  elapsed: number;
+  level: "info" | "warn" | "error";
+  text: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RevisionCreatedEvent".
+ */
+export interface RevisionCreatedEvent {
+  author: "user" | "copilot";
+  revision: number;
+  summary: string;
+  type: "revision_created";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HookDecisionEvent".
+ */
+export interface HookDecisionEvent {
+  action: "allow" | "add_context" | "block" | "require_approval" | "suggest" | "run_check";
+  point:
+    | "turn_start"
+    | "before_tool"
+    | "after_tool"
+    | "before_propose"
+    | "before_apply"
+    | "turn_end"
+    | "before_compact"
+    | "task_finished";
+  reason: string;
+  type: "hook_decision";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -722,6 +1520,7 @@ export interface PieceInfo {
 export interface RewardTermInfo {
   default_weight: number;
   description: string;
+  families?: ("none" | "navigation" | "locomotion")[];
   family: "none" | "navigation" | "locomotion";
   label: string;
   term: string;
@@ -746,50 +1545,6 @@ export interface TemplateInfo {
 export interface LightCommand {
   intensity: number;
   tool: "light";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogEvent".
- */
-export interface LogEvent {
-  line: LogLine;
-  type: "log";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogLine".
- */
-export interface LogLine {
-  elapsed: number;
-  level: "info" | "warn" | "error";
-  text: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricEvent".
- */
-export interface MetricEvent {
-  metric: MetricPoint;
-  type: "metric";
-}
-/**
- * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricPoint".
- */
-export interface MetricPoint {
-  elapsed: number;
-  episode_length: number;
-  episode_return: number;
-  failure_rate?: number | null;
-  kind: "train" | "eval";
-  reward_terms: {
-    [k: string]: number;
-  };
-  step: number;
-  steps_per_second?: number | null;
-  success_rate?: number | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1205,6 +1960,17 @@ export interface RunConfig {
   seed: number;
   threads: number;
   total_steps: number;
+  warm_start?: WarmStart | null;
+}
+/**
+ * Continue from a brain that already learned, instead of from zero; it must see and act the same way.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "WarmStart".
+ */
+export interface WarmStart {
+  run_id: string;
+  step: number;
 }
 /**
  * One server-sent event of GET /runs/{id}/events.
@@ -1217,66 +1983,30 @@ export interface RunEventEnvelope {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "StatusEvent".
- */
-export interface StatusEvent {
-  status: RunStatus;
-  type: "status";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "RunStatus".
- */
-export interface RunStatus {
-  best_step?: number | null;
-  copies: number;
-  failure?: RunFailure | null;
-  finished_at?: string | null;
-  name: string;
-  project_id: string;
-  revision_number: number;
-  run_id: string;
-  started_at: string;
-  state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
-  step: number;
-  steps_per_second: number;
-  success_rate?: number | null;
-  total_steps: number;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "RunFailure".
- */
-export interface RunFailure {
-  details: string[];
-  reason: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SnapshotEvent".
- */
-export interface SnapshotEvent {
-  snapshot: TrainingSnapshot;
-  type: "snapshot";
-}
-/**
- * The parallel copies as they are right now, sampled a few times per second while a run trains.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "TrainingSnapshot".
- */
-export interface TrainingSnapshot {
-  copies: CopyPoses[];
-  geoms: string[];
-  step: number;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "SendMessage".
  */
 export interface SendMessage {
+  /**
+   * @maxItems 10
+   */
+  attachments?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string];
   selection?: string | null;
   text: string;
+  /**
+   * @maxItems 4
+   */
+  views?: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
   workspace?: string | null;
 }
 /**
@@ -1293,9 +2023,11 @@ export interface SetAutonomy {
  * via the `definition` "StartRun".
  */
 export interface StartRun {
+  coach?: boolean;
   copies: number;
   seed?: number | null;
   total_steps: number;
+  warm_start?: WarmStart | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

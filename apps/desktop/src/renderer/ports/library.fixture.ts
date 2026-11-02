@@ -36,5 +36,6 @@ export function createLibraryFixture(): LibraryPort {
       return query ? items.filter((item) => item.name.toLowerCase().includes(query)) : [...items];
     },
     previewItem: async () => undefined,
+    itemScene: null,
   };
 }

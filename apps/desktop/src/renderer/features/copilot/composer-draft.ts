@@ -1,6 +1,7 @@
 // The message to send from the composer, or null when it is empty or another message is still on its way.
-export function draftToSend(text: string, pending: boolean): string | null {
-  const message = text.trim();
+// Files sent without words go under their names, since a message always has text.
+export function draftToSend(text: string, pending: boolean, attached: readonly string[] = []): string | null {
+  const message = text.trim() || attached.join(", ");
   return pending || message === "" ? null : message;
 }
 

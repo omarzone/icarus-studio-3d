@@ -2,13 +2,14 @@
 import { Plus } from "lucide-react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type SceneObject, scenePort } from "../../ports/scene-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneTree } from "../scene-queries.ts";
+import { AddObjectMenu } from "./add-object-menu.tsx";
 import { ExplorerTab } from "./explorer-tab.tsx";
 
 export type ExplorerPanelProps = {
@@ -27,15 +28,20 @@ export function ExplorerPanel({ scene, label = "Explorer", onAction, className =
   const tree = useSceneTree(scene);
   const cache = useSceneCache(scene);
   const select = useEngineAction(port.selectObject);
+  const app = useRuntimeMode() === "app";
   return (
     <Panel
       id="PNL-EXPLORER"
       className={className}
       tabs={<PanelTab label={label} active />}
       options={
-        <Act cta="Add object" aria-label="Add object" title="Add object" className={buttonClass("icon", "size-6!")}>
-          <Plus size={14} strokeWidth={1.75} aria-hidden />
-        </Act>
+        app ? (
+          <AddObjectMenu scene={scene} />
+        ) : (
+          <Act cta="Add object" aria-label="Add object" title="Add object" className={buttonClass("icon", "size-6!")}>
+            <Plus size={14} strokeWidth={1.75} aria-hidden />
+          </Act>
+        )
       }
     >
       <QueryView

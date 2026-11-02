@@ -14,7 +14,7 @@ export const RESULTS_VARIANTS: Readonly<Partial<Record<ScreenId, ResultsVariant>
 export type ResultsConfig = {
   // Example project shown when no project is open (gallery, prototype start).
   project: string;
-  // Scene key whose guide progress the header shows.
+  // Sample scene whose guide progress the header shows in the prototype; the app uses the open project.
   scene: string;
   conversation: string;
   placeholder: string;

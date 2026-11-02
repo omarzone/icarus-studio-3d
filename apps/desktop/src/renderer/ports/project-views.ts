@@ -1,5 +1,5 @@
-import type { ProjectSummary as EngineSummary, Revision, TemplateInfo } from "@icarus/contracts";
-import type { ProjectSummary } from "./projects-port.ts";
+import type { ProjectSummary as EngineSummary, Revision, RunStatus, TemplateInfo } from "@icarus/contracts";
+import type { ProjectFootprint, ProjectSummary } from "./projects-port.ts";
 import type { RevisionSummary } from "./revisions-port.ts";
 import type { TemplateSummary } from "./templates-port.ts";
 
@@ -33,6 +33,24 @@ export function projectView(summary: Pick<EngineSummary, "id" | "name" | "descri
     statusLine: `Revision ${summary.revision} · design checks passed`,
     revision: `rev ${summary.revision}`,
   };
+}
+
+const LIVE: ReadonlySet<RunStatus["state"]> = new Set(["starting", "running", "stopping"]);
+
+// A project is training while one of its runs is live; otherwise its summary stays as the revision left it.
+export function withRuns(summary: ProjectSummary, runs: readonly RunStatus[]): ProjectSummary {
+  const live = runs.find((run) => LIVE.has(run.state));
+  if (!live) {
+    return summary;
+  }
+  const percent = live.total_steps > 0 ? Math.floor((live.step / live.total_steps) * 100) : 0;
+  return { ...summary, status: "training", statusLine: `Training · ${live.name} at ${percent}%` };
+}
+
+// Runs live in the engine's runs folder, apart from the project: deleting a project keeps them and duplicating
+// does not copy them, and the engine does not measure their size.
+export function projectFootprint(runs: readonly RunStatus[]): ProjectFootprint {
+  return { trainingRuns: runs.length, runsBytes: null, runsFollowProject: false };
 }
 
 export function revisionViews(revisions: readonly Revision[], current: number, now: Date): RevisionSummary[] {

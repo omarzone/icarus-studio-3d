@@ -9,19 +9,30 @@ import { type AnimationExport, motionPort } from "../../ports/motion-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 
+// Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
 
 // Export the motion as an animation file: format, physics result or raw pose, root motion, loop and target rig.
 export function ExportDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(CLIP)} title="Export animation">
+      {(clip) => <Export clip={clip} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Export({ clip }: { clip: string }) {
   const port = usePort(motionPort);
   const client = useQueryClient();
-  const key = ["motion", CLIP, "export"] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => port.getExport(CLIP) });
+  const key = ["motion", clip, "export"] as const;
+  const query = useQuery({ queryKey: key, queryFn: () => port.getExport(clip) });
   const update = { onSuccess: (next: AnimationExport) => client.setQueryData(key, next) };
   const setFormat = useEngineAction(port.setExportFormat);
   const toggle = useEngineAction(port.toggleExportOption);
@@ -36,7 +47,7 @@ export function ExportDialog() {
           </CloseOverlay>
           <ActionButton
             cta="Download"
-            run={() => port.downloadAnimation(CLIP)}
+            run={() => port.downloadAnimation(clip)}
             disabled={!query.data}
             title={query.data ? undefined : "Available once the export settings load"}
             className={dialogButtonClass("primary")}
@@ -51,8 +62,8 @@ export function ExportDialog() {
         {(settings) => (
           <ExportBody
             settings={settings}
-            onFormat={(format) => setFormat.mutate({ clip: CLIP, format }, update)}
-            onToggle={(id) => toggle.mutate({ clip: CLIP, id }, update)}
+            onFormat={(format) => setFormat.mutate({ clip, format }, update)}
+            onToggle={(id) => toggle.mutate({ clip, id }, update)}
           />
         )}
       </QueryView>

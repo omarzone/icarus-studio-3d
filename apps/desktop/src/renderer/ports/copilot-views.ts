@@ -1,12 +1,27 @@
 import type {
+  AttachmentInfo,
   CopilotProposal,
   Conversation as EngineConversation,
   ProposalChange as EngineProposalChange,
   SceneGeom,
 } from "@icarus/contracts";
-import type { ChatMessage, Conversation, Proposal, ProposalChange, RichText } from "./copilot-port.ts";
+import type { AttachmentLinks } from "../engine-client/attachment-api.ts";
+import type {
+  AgentStep,
+  AnswerAction,
+  ChatAttachment,
+  ChatMessage,
+  Conversation,
+  Proposal,
+  ProposalChange,
+  RichText,
+  RunProgress,
+} from "./copilot-port.ts";
+import type { RunSummary } from "./training-port.ts";
 
 // Pure mappings from the engine's conversation documents onto the chat's view types.
+
+type EngineMessage = EngineConversation["messages"][number];
 
 function changeView(change: EngineProposalChange): ProposalChange {
   if (change.before === undefined || change.before === null) {
@@ -48,27 +63,142 @@ export function proposalView(proposal: CopilotProposal): Proposal {
   };
 }
 
-export function conversationView(conversation: EngineConversation): Conversation {
+export function attachmentView(info: AttachmentInfo, links: AttachmentLinks | null): ChatAttachment {
+  return {
+    id: info.id,
+    kind: info.kind,
+    name: info.name,
+    mediaType: info.media_type,
+    size: info.size,
+    url: links ? links.content(info.id) : null,
+    poster: links && info.kind === "video" ? links.frame(info.id, 0) : null,
+  };
+}
+
+export function hasAttachments(conversation: EngineConversation): boolean {
+  return conversation.messages.some((message) => (message.attachments ?? []).length > 0);
+}
+
+// Files the person sent, and apart from them the renders of the scene the app took for the copilot.
+function userMessage(message: EngineMessage, links: AttachmentLinks | null): ChatMessage {
+  const all = (message.attachments ?? []).map((info) => attachmentView(info, links));
+  const files = all.filter((item) => item.kind !== "view");
+  const views = all.filter((item) => item.kind === "view");
+  return {
+    id: message.id,
+    role: "user",
+    text: message.text,
+    ...(files.length > 0 ? { attachments: files } : {}),
+    ...(views.length > 0 ? { views } : {}),
+  };
+}
+
+// An answer with the buttons the copilot offered, the steps it took and the renders it looked at.
+function copilotMessage(
+  message: EngineMessage,
+  proposal: CopilotProposal | undefined,
+  links: AttachmentLinks | null,
+): ChatMessage {
+  const actions = (message.actions ?? []).map(
+    (action): AnswerAction => ({ label: action.label, kind: action.kind, target: action.target ?? null }),
+  );
+  const steps = (message.steps ?? []).map(
+    (step): AgentStep => ({ tool: step.tool, summary: step.summary, ok: step.ok ?? true }),
+  );
+  const views = (message.attachments ?? [])
+    .filter((info) => info.kind === "view")
+    .map((info) => attachmentView(info, links));
+  return {
+    id: message.id,
+    role: "copilot",
+    text: [{ text: message.text }],
+    markdown: message.text,
+    ...(message.title ? { title: message.title } : {}),
+    ...(message.thinking ? { thinking: message.thinking } : {}),
+    ...((message.checks ?? []).length > 0 ? { checks: message.checks } : {}),
+    ...(actions.length > 0 ? { answerActions: actions } : {}),
+    ...(steps.length > 0 ? { steps } : {}),
+    ...(views.length > 0 ? { views } : {}),
+    ...(proposal && actions.length > 0 ? { proposal: { id: proposal.id, open: proposal.status === "open" } } : {}),
+  };
+}
+
+// "100k steps", "1.5M steps": where in a run the following messages belong.
+export function milestoneText(step: number): string {
+  if (step >= 1_000_000) {
+    return `${Number((step / 1_000_000).toFixed(1))}M steps`;
+  }
+  if (step >= 1000) {
+    return `${Number((step / 1000).toFixed(1))}k steps`;
+  }
+  return `${step} steps`;
+}
+
+// The cards an answer brings after its text: the build it started, the run it is about and the plan it suggests.
+function cardsOf(message: EngineMessage): ChatMessage[] {
+  const cards: ChatMessage[] = [];
+  if (message.build_id) {
+    cards.push({ id: `build-${message.id}`, role: "build", scene: message.build_id });
+  }
+  if (message.run) {
+    cards.push({ id: `run-${message.id}`, role: "run", runId: message.run.run_id });
+  }
+  const plan = message.plan ?? [];
+  if (plan.length > 0) {
+    cards.push({
+      id: `plan-${message.id}`,
+      role: "plan",
+      plan: {
+        title: "Next run, if you agree",
+        items: plan.map((item) => ({ mark: item.mark, label: item.label, detail: item.detail })),
+        actions: [],
+      },
+    });
+  }
+  return cards;
+}
+
+export function conversationView(conversation: EngineConversation, links: AttachmentLinks | null = null): Conversation {
   const proposals = new Map(conversation.proposals.map((proposal) => [proposal.id, proposal]));
+  let milestone: number | null = null;
   const messages = conversation.messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user") {
-      return [{ id: message.id, role: "user", text: message.text }];
+      return [userMessage(message, links)];
     }
-    const answer: ChatMessage = {
-      id: message.id,
-      role: "copilot",
-      text: [{ text: message.text }],
-      ...(message.thinking ? { thinking: message.thinking } : {}),
-    };
+    const step = message.run?.milestone_step;
+    const divider: ChatMessage[] =
+      typeof step === "number" && step !== milestone
+        ? [{ id: `milestone-${message.id}`, role: "milestone", text: milestoneText(step) }]
+        : [];
+    if (typeof step === "number") {
+      milestone = step;
+    }
     const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;
-    return proposal
-      ? [answer, { id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
-      : [answer];
+    const answer = copilotMessage(message, proposal, links);
+    const card: ChatMessage[] = proposal
+      ? [{ id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
+      : [];
+    return [...divider, answer, ...cardsOf(message), ...card];
   });
+  const items = conversation.suggestion_items ?? [];
   return {
     messages,
-    suggestions: conversation.suggestions.map((text) => ({ text, intent: "ask" })),
+    suggestions:
+      items.length > 0
+        ? items.map((item) => ({ text: item.text, intent: item.intent ?? "ask" }))
+        : conversation.suggestions.map((text) => ({ text, intent: "ask" })),
     autonomy: conversation.autonomy,
+  };
+}
+
+// The run card of an answer from the run as the engine reports it now; goals stay empty until runs have stages.
+export function runCardProgress(run: RunSummary): RunProgress {
+  const running = run.status === "running";
+  return {
+    title: run.name,
+    meta: running ? "training" : run.detail,
+    done: run.status === "done" ? 1 : (run.progress ?? 0),
+    goals: [],
   };
 }
 

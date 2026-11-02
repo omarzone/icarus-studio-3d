@@ -18,6 +18,29 @@ export const trainingKeys = {
 
 export const useRuns = useRunList;
 
+const AUTOPILOT_POLL_MS = 2000;
+
+// The autopilot's settings and status, read again every 2 s while it runs. Each new step it logs may have
+// posted in the conversation or started a run, so those views read again too.
+export function useAutopilot(project: string) {
+  const port = usePort(trainingPort);
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: trainingKeys.autopilot(project),
+    queryFn: () => port.getAutopilot(project),
+    refetchInterval: (current) => (current.state.data?.progress?.active ? AUTOPILOT_POLL_MS : false),
+  });
+  const lastLine = query.data?.progress?.log.at(-1)?.id;
+  useEffect(() => {
+    if (lastLine === undefined) {
+      return;
+    }
+    void client.invalidateQueries({ queryKey: ["copilot", project] });
+    void client.invalidateQueries({ queryKey: trainingKeys.runs(project) });
+  }, [client, project, lastLine]);
+  return query;
+}
+
 export function useRunMetrics(project: string) {
   const port = usePort(trainingPort);
   const run = useSelectedRun(project);

@@ -50,7 +50,7 @@ def events(lines: Iterator[str]) -> Iterator[dict]:
 def stored_run(app: FastAPI, client: TestClient) -> RunFolder:
     """A run created on disk without a worker, so a test can write its files by hand."""
     state = app.state.store.state(new_project(client))
-    return app.state.runs.folder(app.state.runs.create(state, StartRun(**START), threads=1).run_id)
+    return app.state.runs.folder(app.state.runs.create(state, StartRun.model_validate(START), threads=1).run_id)
 
 
 def metric(kind, step) -> MetricPoint:
@@ -192,7 +192,11 @@ def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, 
         rename = {"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}
         assert client.post(f"/projects/{project_id}/operations", json=rename).status_code == 200
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        assert socket.receive_json()["message"]["session"]["brain"].startswith("Untrained brain")
+        brain = socket.receive_json()["message"]["session"]["brain"]
+    if change == "never trained":
+        assert brain == "Untrained brain: Run 1 did not beat random actions yet"
+    else:
+        assert brain == "Untrained brain: random actions"
 
 
 def test_the_api_serves_runs_without_loading_the_training_stack(tmp_path):

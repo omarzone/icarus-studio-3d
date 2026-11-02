@@ -30,6 +30,7 @@ import {
   isProjectSummaries,
   isRevisions,
   isSceneDescription,
+  isSceneDescriptions,
 } from "./response-checks.ts";
 import {
   isCheckpoints,
@@ -53,6 +54,8 @@ const put = (body: unknown): RequestInit => ({ method: "PUT", body: JSON.stringi
 // One function per engine route the desktop uses.
 export const engineApi = {
   library: (): Promise<LibraryCatalog> => request("/library", {}, isLibraryCatalog),
+  templateScene: (templateId: string): Promise<SceneDescription> =>
+    request(`/library/templates/${encodeURIComponent(templateId)}/scene`, {}, isSceneDescription),
   listProjects: (): Promise<ProjectSummary[]> => request("/projects", {}, isProjectSummaries),
   createProject: (name: string, template: string): Promise<ProjectState> =>
     request("/projects", post({ name, template }), isProjectState),
@@ -98,3 +101,12 @@ export const engineApi = {
 };
 
 export type EngineApi = typeof engineApi;
+
+// Training copies (POP-TRAINING-COPIES): copy i's first episode as training starts it (seed = brain seed + i);
+// without a count, as many as the brain trains (up to the engine's preview limit).
+export const copiesApi = {
+  copyScenes: (id: string, count?: number): Promise<SceneDescription[]> =>
+    request(`${at(id)}/copies${count === undefined ? "" : `?count=${count}`}`, {}, isSceneDescriptions),
+};
+
+export type CopiesApi = typeof copiesApi;

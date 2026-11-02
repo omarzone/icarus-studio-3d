@@ -8,7 +8,8 @@ import { usePort } from "../../app/runtime/port.tsx";
 import { type StartPlan, trainingPort } from "../../ports/training-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { useProjectName } from "../../ui/project-name.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useOpenProjectId } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -19,7 +20,14 @@ const DIALOG_BUTTON = "h-8.5! px-4! text-body!";
 
 // Confirms a training run with a clear cost: steps, parallel copies, estimated time and threads.
 export function StartTrainingDialog() {
-  const project = useProjectName(TRAIN_CONFIG.project).id;
+  return (
+    <ProjectDialogGate projectKey={useOpenProjectId(TRAIN_CONFIG.project)} title="Start training">
+      {(project) => <StartTraining project={project} />}
+    </ProjectDialogGate>
+  );
+}
+
+function StartTraining({ project }: { project: string }) {
   const port = usePort(trainingPort);
   const client = useQueryClient();
   const plan = useQuery({ queryKey: trainingKeys.plan(project), queryFn: () => port.getStartPlan(project) });
@@ -68,12 +76,27 @@ function PlanBody({ plan, onChange }: { plan: StartPlan; onChange: (change: Chan
     <>
       <p className="leading-normal text-fg-secondary">{plan.intro}</p>
       <div className="grid grid-cols-2 gap-2.5">
-        <CountField label="Practice steps" value={plan.steps} onCommit={(steps) => onChange({ steps })} />
-        <CountField label="Parallel copies" value={plan.copies} onCommit={(copies) => onChange({ copies })} />
+        <CountField
+          label="Practice steps"
+          hint="How many moments of practice in total. More steps: it can learn more, and it takes longer."
+          value={plan.steps}
+          onCommit={(steps) => onChange({ steps })}
+        />
+        <CountField
+          label="Parallel copies"
+          hint="How many copies of the world it practices in at the same time. More copies finish sooner and use more CPU."
+          value={plan.copies}
+          onCommit={(copies) => onChange({ copies })}
+        />
       </div>
       <div className="flex flex-col gap-2 rounded-card-sm bg-control px-3.5 py-3">
         <p className="flex">
-          <span className="text-fg-secondary">Estimated time on your computer</span>
+          <span
+            className="text-fg-secondary"
+            title="A rough guess from the steps and copies; the real time shows live in Train"
+          >
+            Estimated time on your computer
+          </span>
           <span className="ml-auto font-semibold">{plan.estimate}</span>
         </p>
         <p className="flex">
@@ -93,7 +116,9 @@ function PlanBody({ plan, onChange }: { plan: StartPlan; onChange: (change: Chan
 }
 
 // A whole-number field that shows thousands separators and commits a valid count on blur or Enter.
-function CountField({ label, value, onCommit }: { label: string; value: number; onCommit: (value: number) => void }) {
+type CountProps = { label: string; hint: string; value: number; onCommit: (value: number) => void };
+
+function CountField({ label, hint, value, onCommit }: CountProps) {
   const [text, setText] = useState(value.toLocaleString("en-US"));
   const commit = () => {
     const parsed = Number(text.replaceAll(",", "").trim());
@@ -107,6 +132,7 @@ function CountField({ label, value, onCommit }: { label: string; value: number; 
   return (
     <TextField
       label={label}
+      title={hint}
       mono
       inputMode="numeric"
       value={text}

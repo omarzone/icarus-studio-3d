@@ -1,0 +1,20 @@
+{
+  "replies": [
+    {
+      "tool_calls": [
+        {
+          "name": "answer",
+          "arguments": {
+            "answer": "I can change the world, the body, the task or the brain of this project, or explain anything in it. Tell me what you would like to try.",
+            "suggestions": [
+              "Make it night?",
+              "What does the car sense?",
+              "How is the reward built?"
+            ],
+            "actions": []
+          }
+        }
+      ]
+    }
+  ]
+}

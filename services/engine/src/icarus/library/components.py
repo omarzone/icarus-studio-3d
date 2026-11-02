@@ -14,7 +14,16 @@ from icarus.library.properties import (
     vector,
 )
 
-SURFACES = ["asphalt", "grass", "ice", "rubber", "wood", "metal"]
+# Furthest a randomized object may move per axis on each try, in metres.
+POSITION_RANGE_MAX = 50.0
+
+SURFACES = ["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
+# Friction is what the physics uses; the kind names the look, and these values and colors match each kind.
+SURFACE_HINT = (
+    "Friction and look: asphalt 1 dark grey, concrete 0.9 light grey, grass 0.6 green, snow 0.3 white, "
+    "ice 0.05 pale blue, rubber 1.2 black, wood 0.7 brown, metal 0.5 steel"
+)
+SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 
 
 class UnknownKind(KeyError):
@@ -56,7 +65,7 @@ _KINDS = [
         "Material",
         "material",
         "Shape",
-        [color("color", "Color", "#8a8f98"), listing("surface", "Surface", SURFACES, "rubber")],
+        [color("color", "Color", "#8a8f98"), listing("surface", "Surface", SURFACES, "rubber", hint=SURFACE_HINT)],
         unique=True,
     ),
     _kind(
@@ -100,7 +109,13 @@ _KINDS = [
         "joint",
         "Physics",
         [
-            choice("kind", "Kind", ["hinge", "slide", "ball", "fixed"], "hinge"),
+            choice(
+                "kind",
+                "Kind",
+                ["hinge", "slide", "ball", "fixed"],
+                "hinge",
+                hint="Ball turns freely on every axis: on a sphere with limits (-180, 180) and no motor it is a caster",
+            ),
             vector("axis", "Axis", None, -1, 1, (0, 1, 0)),
             span("limits", "Limits", "deg or m", -180, 180, (-90, 90)),
             vector("anchor", "Anchor", "m", -10, 10, (0, 0, 0), hint="Where the joint sits, from the object's center"),
@@ -127,7 +142,11 @@ _KINDS = [
         "Distance ray",
         "ray",
         "Senses",
-        [number("range", "Range", "m", 0.05, 50, 5), count("count", "Rays", 1, 32, 5)],
+        [
+            number("range", "Range", "m", 0.05, 50, 5),
+            count("count", "Rays", 1, 32, 5),
+            number("tilt", "Tilt", "°", -60, 30, 0, hint="Below zero the rays look down, to see low obstacles"),
+        ],
         unique=True,
     ),
     _kind(
@@ -150,7 +169,14 @@ _KINDS = [
         "World",
         [
             vector("size", "Size", "m", 0.1, 500, (4, 4, 1)),
-            choice("effect", "Effect", ["none", "slow", "slippery"], "none"),
+            choice(
+                "effect",
+                "Effect",
+                ["none", "slow", "slippery"],
+                "none",
+                hint="Lays a thin floor patch at the zone's height: slippery grips like ice, slow resists rolling like "
+                "mud (wheels and balls); place the zone on the ground",
+            ),
         ],
         unique=True,
     ),
@@ -160,8 +186,47 @@ _KINDS = [
         "terrain",
         "World",
         [
-            listing("kind", "Kind", SURFACES, "asphalt"),
+            listing("kind", "Kind", SURFACES, "asphalt", hint=f"{SURFACE_HINT}; set Friction to match the kind"),
             slider("friction", "Friction", 0, 2, 0.05, 1, randomizable=True),
+        ],
+        unique=True,
+    ),
+    # How the world looks around it; one per world and never part of the physics (see design/sky.py).
+    _kind(
+        "sky",
+        "Sky",
+        "sky",
+        "World",
+        [
+            choice("preset", "Preset", SKY_PRESETS, "day"),
+            color("top", "Top color", "#5f8fc4", hint="Used when the preset is Custom"),
+            color("horizon", "Horizon color", "#e4ecef", hint="Used when the preset is Custom"),
+            slider("ambient", "Ambient light", 0, 2, 0.05, 1),
+            slider("fog", "Fog", 0, 1, 0.05, 0),
+        ],
+        unique=True,
+    ),
+    # What changes between training copies and on every try; world objects only (see sim/variation.py).
+    _kind(
+        "randomize",
+        "Randomize per copy",
+        "shuffle",
+        "Learning",
+        [
+            vector(
+                "position_range",
+                "Position range",
+                "m",
+                0,
+                POSITION_RANGE_MAX,
+                (0, 0, 0),
+                hint="Each try moves the object up to this far either way on X and Y, and only up on Z",
+            ),
+            number(
+                "rotation_range", "Rotation range", "deg", 0, 180, 0, hint="Each try turns it up to this far either way"
+            ),
+            switch("color", "Vary color", False, hint="Each try shifts its material color a little"),
+            slider("friction_spread", "Friction spread", 0, 50, 5, 0, unit="%"),
         ],
         unique=True,
     ),

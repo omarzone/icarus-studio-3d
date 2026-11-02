@@ -2,9 +2,13 @@
 import { ViewportSurface } from "../../../editor/viewport/viewport-surface.tsx";
 import type { Comparison } from "../../../ports/results-port.ts";
 import { StatusPill } from "../../../ui/status-pill.tsx";
+import { CompareTableView } from "./compare-table.tsx";
 
 // Two runs side by side on the same seed, each with its score chips.
 export function CompareTab({ comparison }: { comparison: Comparison }) {
+  if (comparison.table) {
+    return <CompareTableView comparison={comparison} table={comparison.table} />;
+  }
   return (
     <div className="flex h-full gap-2 p-2">
       {comparison.sides.map((side) => (

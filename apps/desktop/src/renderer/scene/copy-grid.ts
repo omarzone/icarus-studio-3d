@@ -34,28 +34,42 @@ const shifted = ([x, y, z]: readonly number[], [dx, dy]: readonly number[]): Vec
   z ?? 0,
 ];
 
-// Geom names become "<copy>:<geom>"; floors are left out when there are several copies, the grid is the ground.
-export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
-  const several = count > 1;
-  const geoms = several ? scene.geoms.filter((geom) => geom.shape !== "plane") : scene.geoms;
-  const [width, depth] = footprint(scene.geoms.filter((geom) => geom.shape !== "plane"));
-  const spacing = [width + MARGIN, depth + MARGIN] as const;
+// Geom names become "<copy>:<geom>"; the camera follows the agent of the first copy.
+export const isFirstCopy = (geom: SceneGeom): boolean => geom.name.startsWith("0:");
+
+// Each copy's offset in a square grid of cells this wide and deep; one copy stays where it is.
+function gridOffsets(
+  count: number,
+  spacing: readonly [number, number],
+): { offsets: [number, number][]; extent: number } {
   const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.max(1, Math.ceil(count / columns));
   const offsets = Array.from({ length: count }, (_, index): [number, number] =>
-    several
+    count > 1
       ? [
           ((index % columns) - (columns - 1) / 2) * spacing[0],
           (Math.floor(index / columns) - (rows - 1) / 2) * spacing[1],
         ]
       : [0, 0],
   );
-  const placed = offsets.flatMap((offset, index) =>
-    geoms.map((geom) => ({ ...geom, name: `${index}:${geom.name}`, position: shifted(geom.position, offset) })),
-  );
+  return { offsets, extent: Math.max(columns * spacing[0], rows * spacing[1]) };
+}
+
+const solid = (geoms: readonly SceneGeom[]) => geoms.filter((geom) => geom.shape !== "plane");
+
+function placeGeoms(geoms: readonly SceneGeom[], index: number, offset: readonly number[]): SceneGeom[] {
+  return geoms.map((geom) => ({ ...geom, name: `${index}:${geom.name}`, position: shifted(geom.position, offset) }));
+}
+
+// Floors are left out when there are several copies, the grid is the ground.
+export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
+  const geoms = count > 1 ? solid(scene.geoms) : scene.geoms;
+  const [width, depth] = footprint(solid(scene.geoms));
+  const { offsets, extent } = gridOffsets(count, [width + MARGIN, depth + MARGIN]);
+  const placed = offsets.flatMap((offset, index) => placeGeoms(geoms, index, offset));
   return {
     description: { ...scene, geoms: placed },
-    extent: Math.max(columns * spacing[0], rows * spacing[1]),
+    extent,
     place: (copies) => {
       const poses = new Map<string, Pose>();
       copies.forEach((copy, index) => {
@@ -69,5 +83,37 @@ export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
       });
       return poses;
     },
+  };
+}
+
+// Training copies that each start differently (their own scene), side by side with their task zones, spaced by
+// the widest copy; the first copy's lights and sky light them all.
+export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, "place"> {
+  const sizes = scenes.map((scene) => footprint(solid(scene.geoms)));
+  const width = Math.max(0, ...sizes.map(([x]) => x));
+  const depth = Math.max(0, ...sizes.map(([, y]) => y));
+  const { offsets, extent } = gridOffsets(scenes.length, [width + MARGIN, depth + MARGIN]);
+  const several = scenes.length > 1;
+  const geoms = scenes.flatMap((scene, index) =>
+    placeGeoms(several ? solid(scene.geoms) : scene.geoms, index, offsets[index] ?? [0, 0]),
+  );
+  const zones = scenes.flatMap((scene, index) =>
+    (scene.zones ?? []).map((zone) => ({
+      ...zone,
+      name: `${index}:${zone.name}`,
+      position: shifted(zone.position, offsets[index] ?? [0, 0]),
+    })),
+  );
+  const first = scenes[0];
+  return {
+    description: {
+      revision: first?.revision ?? 0,
+      bodies: first?.bodies ?? [],
+      lights: first?.lights ?? [],
+      sky: first?.sky ?? null,
+      geoms,
+      zones,
+    },
+    extent,
   };
 }

@@ -25,6 +25,7 @@ from icarus.contracts.training import (
 from icarus.design.compiler import compile_project
 from icarus.design.scene import scene_description
 from icarus.projects.store import ProjectStore
+from icarus.training.run_comparison import RunComparison, compare_runs
 from icarus.training.run_store import TERMINAL_STATES, RunFolder, RunStore
 from icarus.training.settings import TrainingSettingsStore
 from icarus.training.supervisor import Supervisor
@@ -63,6 +64,12 @@ def start_run(request: Request, project_id: str, body: StartRun) -> RunStatus:
 def list_runs(request: Request, project_id: str) -> list[RunStatus]:
     _projects(request).state(project_id)
     return _runs(request).list_runs(project_id)
+
+
+@router.get("/runs/compare")
+def compare_two_runs(request: Request, a: str, b: str) -> RunComparison:
+    """Two runs side by side (b minus a), with whether their evaluations used the same seeds."""
+    return compare_runs(_runs(request), a, b)
 
 
 @router.get("/runs/{run_id}")

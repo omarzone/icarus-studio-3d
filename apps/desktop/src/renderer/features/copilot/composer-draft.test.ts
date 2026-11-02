@@ -8,6 +8,12 @@ describe("the composer draft", () => {
     expect(draftToSend("make it faster", true)).toBeNull();
   });
 
+  it("sends files without words under their names, so the copilot knows what it got", () => {
+    expect(draftToSend("  ", false, ["lot.png", "run.mp4"])).toBe("lot.png, run.mp4");
+    expect(draftToSend("like this", false, ["lot.png"])).toBe("like this");
+    expect(draftToSend("", true, ["lot.png"])).toBeNull();
+  });
+
   it("gives the text back when the send fails, without overwriting a new draft", () => {
     expect(draftAfterSend("", "make it faster", false)).toBe("make it faster");
     expect(draftAfterSend("and taller", "make it faster", false)).toBe("and taller");

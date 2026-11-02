@@ -1,5 +1,7 @@
 // TAB-LIVE-TRAINING
-import { lazy, Suspense, useMemo } from "react";
+import type { SceneGeom } from "@icarus/contracts";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { LiveCopies } from "../../ports/training-port.ts";
 import { copyGrid } from "../../scene/copy-grid.ts";
@@ -67,6 +69,10 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
   // The grid's meshes only change with the scene or the number of copies; each snapshot only moves them.
   const grid = useMemo(() => copyGrid(scene, copies.length), [scene, copies.length]);
   const poses = useMemo(() => grid.place(copies), [grid, copies]);
+  // The camera's Follow mode tracks this copy's agent; grid geom names start with "<copy>:".
+  const [picked, setPicked] = useState(0);
+  const followed = Math.min(picked, Math.max(0, copies.length - 1));
+  const follows = useMemo(() => (geom: SceneGeom) => geom.name.startsWith(`${followed}:`), [followed]);
   return (
     <>
       <RenderBoundary
@@ -85,6 +91,7 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
             poses={poses}
             onPick={ignorePick}
             framing={grid.extent}
+            follows={follows}
           />
         </Suspense>
       </RenderBoundary>
@@ -92,8 +99,43 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
         <span role="status" className="rounded-full bg-overlay px-3 py-1.5 font-mono text-meta">
           {copies.length} {copies.length === 1 ? "copy" : "copies"} · {live.step}
         </span>
+        {copies.length > 1 ? <CopyPicker followed={followed} count={copies.length} onPick={setPicked} /> : null}
         {live.note ? <span className="max-w-80 rounded-card-sm bg-overlay px-3 py-2 text-ui">{live.note}</span> : null}
       </div>
     </>
+  );
+}
+
+const STEP_CLASS =
+  "grid size-6 place-items-center rounded-full hover:bg-fill-hover active:opacity-80 disabled:opacity-40";
+
+// Which copy the camera's Follow mode tracks.
+function CopyPicker({ followed, count, onPick }: { followed: number; count: number; onPick: (copy: number) => void }) {
+  return (
+    <span className="pointer-events-auto flex items-center gap-1 rounded-full bg-overlay px-1.5 py-1 text-meta">
+      <button
+        type="button"
+        aria-label="Follow the previous copy"
+        title="Follow the previous copy"
+        disabled={followed === 0}
+        onClick={() => onPick(followed - 1)}
+        className={STEP_CLASS}
+      >
+        <ChevronLeft size={14} aria-hidden />
+      </button>
+      <span className="font-mono">
+        Following copy {followed + 1} of {count}
+      </span>
+      <button
+        type="button"
+        aria-label="Follow the next copy"
+        title="Follow the next copy"
+        disabled={followed >= count - 1}
+        onClick={() => onPick(followed + 1)}
+        className={STEP_CLASS}
+      >
+        <ChevronRight size={14} aria-hidden />
+      </button>
+    </span>
   );
 }

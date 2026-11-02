@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { EmptyState } from "../../../ui/states.tsx";
+import { CoachControls } from "../coach-controls.tsx";
 import { useRunConsole, useRunMetrics } from "../use-training.ts";
 import { ConsoleTab } from "./console-tab.tsx";
 import { MetricsTab } from "./metrics-tab.tsx";
@@ -24,9 +25,12 @@ export function MetricsPanel({ project, className = "h-52.5 flex-none" }: { proj
         </>
       }
       options={
-        metrics.data?.progress ? (
-          <span className="font-mono text-meta text-fg-tertiary">{metrics.data.progress}</span>
-        ) : null
+        <>
+          <CoachControls project={project} />
+          {metrics.data?.progress ? (
+            <span className="font-mono text-meta text-fg-tertiary">{metrics.data.progress}</span>
+          ) : null}
+        </>
       }
     >
       {tab === "metrics" ? (

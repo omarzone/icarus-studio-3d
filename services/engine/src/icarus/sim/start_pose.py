@@ -19,9 +19,10 @@ def _free_joint(world: LiveWorld) -> int | None:
 
 
 def place_start(world: LiveWorld, rng: np.random.Generator) -> None:
-    """Move a navigation agent to a seeded start beside and behind its spawn, turned a little, so no one path fits."""
+    """Move a navigation agent to a seeded start beside and behind its spawn, turned a little, so no one path fits.
+    A legged body keeps its spawn: in a lane the shifted start could put it inside a wall."""
     joint = _free_joint(world)
-    if world.family != "navigation" or joint is None or world.goal is None or world.agent is None:
+    if world.family != "navigation" or world.legged or joint is None or world.goal is None or world.agent is None:
         return
     model, data = world.model, world.data
     address = int(model.jnt_qposadr[joint])

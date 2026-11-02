@@ -9,7 +9,8 @@ import { TRAIN_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { PlaybackBar } from "../../ui/playback-bar.tsx";
-import { useProjectName } from "../../ui/project-name.ts";
+import { useProjectKey, useProjectName } from "../../ui/project-name.ts";
+import { NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { MetricsPanel } from "./metrics/metrics-panel.tsx";
 import { RunFailedCard } from "./run-failed-card.tsx";
@@ -25,10 +26,18 @@ const VIEWS = [
 
 // The Train workspace: watch learning happen live; a run that stopped by itself shows why over it.
 export function TrainScreen() {
+  const project = useProjectName(TRAIN_CONFIG.project);
+  const scene = useProjectKey(TRAIN_CONFIG.scene);
+  if (project.id === null || scene === null) {
+    return <NoProjectState />;
+  }
+  return <TrainWorkspace project={{ id: project.id, name: project.name }} scene={scene} />;
+}
+
+function TrainWorkspace({ project, scene }: { project: { id: string; name: string }; scene: string }) {
   const screen = useNavigation((state) => state.screen);
   const variant = TRAIN_VARIANTS[screen] ?? "live";
-  const project = useProjectName(TRAIN_CONFIG.project);
-  const guide = useGuide(TRAIN_CONFIG.scene);
+  const guide = useGuide(scene);
   const training = useIsTraining(project.id);
   const stream = useTrainingStream(project.id);
   return (
@@ -48,7 +57,7 @@ export function TrainScreen() {
             title: "Inspector",
             optionsLabel: "Inspector options",
             home: HOME.below("runs", 608),
-            render: () => <InspectorPanel scene={TRAIN_CONFIG.scene} panelRoutes={{ autopilot: "MOD-AUTOPILOT" }} />,
+            render: () => <InspectorPanel scene={scene} panelRoutes={{ autopilot: "MOD-AUTOPILOT" }} />,
           },
           viewport: {
             title: "Viewport",

@@ -2,9 +2,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { settingsPort, type TrainingSettings } from "../../ports/settings-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { QueryView } from "../../ui/query-view.tsx";
@@ -62,6 +62,7 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
   const store = { onSuccess: (next: TrainingSettings) => client.setQueryData(["settings", "training"], next) };
   const setTraining = useEngineAction(settings.setTraining);
   const restart = useEngineAction(settings.restartEngine);
+  const app = useRuntimeMode() === "app";
   const [folder, setFolder] = useState(training.projectsFolder);
   const [checkpoints, setCheckpoints] = useState(training.checkpoints);
   const free = training.maxThreads - training.threads;
@@ -121,14 +122,27 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
         <span className="flex-1">
           Engine running · version {training.engine.version} · {training.engine.healthy ? "healthy" : "not responding"}
         </span>
-        <GoTo
-          to="SYS-ENGINE-DOWN"
-          cta="Restart engine"
-          onClick={() => restart.mutate(undefined)}
-          className={buttonClass("secondary", "h-8.5 px-4 text-body")}
-        >
-          Restart engine
-        </GoTo>
+        {app ? (
+          // The real restart keeps this screen; requests wait until the engine is back.
+          <Act
+            cta="Restart engine"
+            disabled={restart.isPending}
+            title="Stop and start the local engine again; a run that is training stops"
+            onClick={() => restart.mutate(undefined)}
+            className={buttonClass("secondary", "h-8.5 px-4 text-body")}
+          >
+            {restart.isPending ? "Restarting…" : "Restart engine"}
+          </Act>
+        ) : (
+          <GoTo
+            to="SYS-ENGINE-DOWN"
+            cta="Restart engine"
+            onClick={() => restart.mutate(undefined)}
+            className={buttonClass("secondary", "h-8.5 px-4 text-body")}
+          >
+            Restart engine
+          </GoTo>
+        )}
       </div>
     </>
   );

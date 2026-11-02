@@ -6,6 +6,11 @@ import numpy as np
 UNTRAINED_BRAIN = "Untrained brain: random actions"
 
 
+def untrained_after(run_name: str) -> str:
+    """The untrained brain's label once a run ended whose best checkpoint is still the untrained network."""
+    return f"Untrained brain: {run_name} did not beat random actions yet"
+
+
 class Policy(Protocol):
     """A brain: one -1..1 action per actuator from an observation."""
 
@@ -17,9 +22,8 @@ class Policy(Protocol):
 class RandomPolicy:
     """The untrained brain: seeded uniform actions within each actuator's range."""
 
-    label = UNTRAINED_BRAIN
-
-    def __init__(self, actions: int, seed: int) -> None:
+    def __init__(self, actions: int, seed: int, label: str = UNTRAINED_BRAIN) -> None:
+        self.label = label
         self._actions = actions
         self._rng = np.random.default_rng(seed)
 

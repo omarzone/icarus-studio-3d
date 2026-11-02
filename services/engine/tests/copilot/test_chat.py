@@ -1,5 +1,3 @@
-import json
-
 import httpx
 import pytest
 
@@ -7,7 +5,9 @@ from icarus.contracts.copilot import CopilotProposal, SendMessage
 from icarus.contracts.operations import OperationBatch, SetProperty
 from icarus.contracts.properties import NumberValue, SliderValue
 from icarus.copilot import chat
+from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot, ProposalClosed, ProposalOutdated, UnknownProposal
+from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.client import Connection, ModelClient
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.fixture_provider import fixture_transport
@@ -15,6 +15,9 @@ from icarus.copilot.grounding import UNSUPPORTED_ANSWER
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunStore
+from icarus.training.settings import TrainingSettingsStore
+from icarus.training.supervisor import Supervisor
+from tests.copilot.agent_script import answering, script, tool_step
 
 
 @pytest.fixture
@@ -24,9 +27,13 @@ def store(tmp_path) -> ProjectStore:
 
 @pytest.fixture
 def copilot(tmp_path, store) -> Copilot:
-    return Copilot(
-        store, RunStore(tmp_path / "runs"), ConversationStore(tmp_path / "projects"), ModelSettingsStore(tmp_path)
+    runs = RunStore(tmp_path / "runs")
+    trainer = ChatTrainer(
+        store, runs, Supervisor(runs), TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects")
     )
+    projects = tmp_path / "projects"
+    settings = ModelSettingsStore(tmp_path)
+    return Copilot(store, runs, ConversationStore(projects), settings, trainer, AttachmentStore(projects))
 
 
 @pytest.fixture
@@ -51,7 +58,7 @@ def sun_intensity(store: ProjectStore, project_id: str) -> float:
     return intensity.value
 
 
-def test_make_it_night_proposes_a_validated_dimmer_light(copilot, store, project_id):
+def test_make_it_night_inspects_tries_and_proposes_a_validated_dimmer_light(copilot, store, project_id):
     conversation = say(copilot, project_id, "make it night")
     proposal = only_proposal(conversation)
     assert proposal.status == "open" and proposal.base_revision == 1
@@ -61,6 +68,14 @@ def test_make_it_night_proposes_a_validated_dimmer_light(copilot, store, project
     user, answer = conversation.messages
     assert user.role == "user" and user.text == "make it night"
     assert answer.role == "copilot" and answer.proposal_id == proposal.id and answer.thinking
+    assert [step.tool for step in answer.steps] == ["inspect", "library", "try", "propose"]
+    assert all(step.ok for step in answer.steps) and answer.steps[2].summary == "Tried 3 changes: all checks passed"
+    assert [(action.kind, action.target) for action in answer.actions] == [
+        ("apply", None),
+        ("discard", None),
+        ("navigate", "SCR-TRAIN"),
+    ]
+    assert [item.kind for item in answer.attachments] in ([], ["view"])
     assert 1 <= len(conversation.suggestions) <= 3
     assert sun_intensity(store, project_id) == 1
     assert copilot.conversation(project_id) == conversation
@@ -102,11 +117,40 @@ def test_a_proposal_is_outdated_once_the_project_moves_on(copilot, store, projec
         copilot.proposal_scene(proposal.id)
 
 
-def test_autopilot_applies_a_valid_proposal_at_once(copilot, store, project_id):
+def test_autopilot_applies_a_tried_change_as_a_copilot_revision(copilot, store, project_id, monkeypatch, tmp_path):
+    script(monkeypatch, tmp_path, default=[TRY_NIGHT, APPLY_NIGHT, answering("It is night now.")])
     assert copilot.set_autonomy(project_id, "autopilot").autonomy == "autopilot"
-    proposal = only_proposal(say(copilot, project_id, "make it night"))
+    conversation = say(copilot, project_id, "make it night")
+    proposal = only_proposal(conversation)
     assert proposal.status == "applied" and proposal.applied_revision == 2
-    assert store.state(project_id).revision.author == "copilot"
+    assert conversation.messages[-1].proposal_id == proposal.id
+    assert store.state(project_id).revision.author == "copilot" and sun_intensity(store, project_id) == 0.25
+
+
+def test_ask_mode_denies_apply_and_never_writes(copilot, store, project_id, monkeypatch, tmp_path):
+    script(monkeypatch, tmp_path, default=[TRY_NIGHT, APPLY_NIGHT, answering("Done.")])
+    answer = say(copilot, project_id, "make it night").messages[-1]
+    assert store.state(project_id).revision.number == 1
+    assert [(step.tool, step.ok) for step in answer.steps] == [("try", True), ("propose", False)]
+    assert answer.steps[1].summary == "Could not apply: not allowed in ask mode"
+
+
+def test_the_steps_under_a_spanish_answer_are_in_spanish(copilot, project_id, monkeypatch, tmp_path):
+    inspect = tool_step("inspect_object", object="car")
+    script(monkeypatch, tmp_path, default=[inspect, TRY_NIGHT, APPLY_NIGHT, answering("Te propongo la noche.")])
+    answer = say(copilot, project_id, "quiero que sea de noche").messages[-1]
+    assert [step.summary for step in answer.steps] == [
+        "Revisé Car",
+        "Probé 1 cambio: pasó todas las revisiones",
+        "No pude aplicar: no se permite en modo preguntar",
+    ]
+
+
+def test_propose_needs_a_try_that_passed_in_this_turn(copilot, project_id, monkeypatch, tmp_path):
+    unknown = tool_step("propose", try_id="t9", summary="Make it night", explanation="Dims the Sun.", warnings=[])
+    script(monkeypatch, tmp_path, default=[unknown, answering("I need to try it first.")])
+    conversation = say(copilot, project_id, "make it night")
+    assert conversation.proposals == [] and not conversation.messages[-1].steps[0].ok
 
 
 def test_an_answer_citing_numbers_not_in_the_context_is_replaced(copilot, project_id):
@@ -115,10 +159,12 @@ def test_an_answer_citing_numbers_not_in_the_context_is_replaced(copilot, projec
     assert conversation.proposals == []
 
 
-def test_an_invalid_proposal_is_answered_in_words_only(copilot, store, project_id):
+def test_a_change_that_fails_its_try_is_never_proposed(copilot, store, project_id):
     conversation = say(copilot, project_id, "make the car heavier")
     assert conversation.proposals == [] and conversation.messages[-1].proposal_id is None
-    assert "Mass" in conversation.messages[-1].text
+    steps = conversation.messages[-1].steps
+    assert [(step.tool, step.ok) for step in steps] == [("try", False), ("propose", False)]
+    assert steps[0].summary == "Tried 1 change: Structure check failed"
     assert store.state(project_id).revision.number == 1
 
 
@@ -157,29 +203,27 @@ NIGHT = {
 }
 
 
-def answer_with(monkeypatch, tmp_path, **fixtures: dict) -> None:
-    """Fixtures for the chat role, by file name: each one answers with the given reply."""
-    folder = tmp_path / "fixtures" / "chat_reply"
-    folder.mkdir(parents=True)
-    for name, reply in fixtures.items():
-        match = reply.pop("match", [])
-        content = {"proposal": None, "suggestions": [], **reply}
-        (folder / f"{name}.json").write_text(json.dumps({"match": match, "replies": [{"content": content}]}))
-    monkeypatch.setenv("ICARUS_COPILOT_FIXTURES", str(tmp_path / "fixtures"))
+TRY_NIGHT = tool_step("try", operations=NIGHT["operations"], look=None)
+APPLY_NIGHT = tool_step("apply", try_id="t1", summary="Make it night")
+
+
+def proposing(**overrides) -> dict:
+    fields = {"try_id": "t1", "summary": NIGHT["summary"], "explanation": NIGHT["explanation"], "warnings": []}
+    return tool_step("propose", **(fields | overrides))
 
 
 def test_only_the_answer_is_replaced_when_only_the_answer_cites_unbacked_numbers(
     copilot, project_id, monkeypatch, tmp_path
 ):
-    answer_with(monkeypatch, tmp_path, default={"answer": "It gets 73.5 lux darker.", "proposal": NIGHT})
+    script(monkeypatch, tmp_path, default=[TRY_NIGHT, proposing(), answering("It gets 73.5 lux darker.")])
     conversation = say(copilot, project_id, "make it night")
     assert conversation.messages[-1].text == UNSUPPORTED_ANSWER
     assert only_proposal(conversation).summary == "Make it night"
 
 
 def test_a_proposal_whose_explanation_cites_unbacked_numbers_is_left_out(copilot, project_id, monkeypatch, tmp_path):
-    explained = {**NIGHT, "explanation": "Dims the Sun to 17.5 lux."}
-    answer_with(monkeypatch, tmp_path, default={"answer": "Here is a night version.", "proposal": explained})
+    unbacked = proposing(explanation="Dims the Sun to 17.5 lux.")
+    script(monkeypatch, tmp_path, default=[TRY_NIGHT, unbacked, answering("Here is a night version.")])
     conversation = say(copilot, project_id, "make it night")
     assert conversation.proposals == [] and conversation.messages[-1].proposal_id is None
     assert conversation.messages[-1].text.startswith("Here is a night version.")
@@ -187,23 +231,19 @@ def test_a_proposal_whose_explanation_cites_unbacked_numbers_is_left_out(copilot
 
 def test_suggestions_citing_unbacked_numbers_are_dropped(copilot, project_id, monkeypatch, tmp_path):
     suggestions = ["Make it night?", "Set the mass to 777 kg?"]
-    answer_with(monkeypatch, tmp_path, default={"answer": "Ask me anything.", "suggestions": suggestions})
+    script(monkeypatch, tmp_path, default=[answering("Ask me anything.", suggestions)])
     assert say(copilot, project_id, "hello").suggestions == ["Make it night?"]
 
 
 def test_numbers_from_earlier_in_the_conversation_are_backed(copilot, project_id, monkeypatch, tmp_path):
-    answer_with(
-        monkeypatch,
-        tmp_path,
-        default={"answer": "Noted."},
-        recall={"match": ["remember"], "answer": "You said the course is 64.5 m long."},
-    )
+    recall = answering("You said the course is 64.5 m long.") | {"match": ["remember"]}
+    script(monkeypatch, tmp_path, default=[answering("Noted.")], recall=[recall])
     say(copilot, project_id, "The course is 64.5 m long.")
     assert say(copilot, project_id, "Do you remember the length?").messages[-1].text.startswith("You said")
 
 
 def test_a_percentage_backed_only_by_a_library_range_is_replaced(copilot, project_id, monkeypatch, tmp_path):
-    answer_with(monkeypatch, tmp_path, default={"answer": "It parks 35% of the time."})
+    script(monkeypatch, tmp_path, default=[answering("It parks 35% of the time.")])
     assert say(copilot, project_id, "how often?").messages[-1].text == UNSUPPORTED_ANSWER
     assert say(copilot, project_id, "would 35% be good?").messages[-1].text == "It parks 35% of the time."
 
@@ -255,3 +295,10 @@ def test_autopilot_reports_a_proposal_outdated_while_the_model_answered(copilot,
     conversation = say(copilot, project_id, "make it night")
     assert only_proposal(conversation).status == "outdated"
     assert store.state(project_id).revision.summary == "Heavier"
+
+
+def test_a_proposal_carries_the_copilots_clearance_warnings(copilot, project_id, monkeypatch, tmp_path):
+    warned = proposing(warnings=["The car is wider than the gap between the parked cars."])
+    script(monkeypatch, tmp_path, default=[TRY_NIGHT, warned, answering("Here it is.")])
+    proposal = only_proposal(say(copilot, project_id, "make it night"))
+    assert "The car is wider than the gap between the parked cars." in proposal.warnings

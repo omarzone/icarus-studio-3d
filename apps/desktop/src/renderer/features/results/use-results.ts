@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePort } from "../../app/runtime/port.tsx";
 import { resultsPort, type SummaryView } from "../../ports/results-port.ts";
 
@@ -18,7 +18,18 @@ export const resultsKeys = {
   referenceComparison: (project: string, test: string) => ["results", project, "reference", test] as const,
   behaviorMatch: (project: string) => ["results", project, "behavior-match"] as const,
   neurons: (project: string) => ["results", project, "neurons"] as const,
+  diagnoses: (project: string) => ["results", project, "diagnoses"] as const,
+  all: (project: string) => ["results", project] as const,
 };
+
+// A new diagnosis changes the failures, summary and the copilot conversation it was posted in.
+export function useAfterDiagnosis(project: string): () => void {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: resultsKeys.all(project) });
+    void client.invalidateQueries({ queryKey: ["copilot", project] });
+  };
+}
 
 export function useReferenceTests(project: string) {
   const port = usePort(resultsPort);

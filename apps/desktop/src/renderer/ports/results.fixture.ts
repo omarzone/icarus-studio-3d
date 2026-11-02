@@ -2,6 +2,7 @@ import { ARENA_WALKS } from "./arena-walks.fixture.ts";
 import type {
   BehaviorMatch,
   Comparison,
+  DiagnosisView,
   FailureReplay,
   Failures,
   LearningHistory,
@@ -161,6 +162,17 @@ const NEURONS: readonly NeuronLink[] = [
   { behavior: "Grooming starts after dust", neurons: "Antennal touch neurons · not wired to the front legs" },
 ];
 
+const DIAGNOSIS: DiagnosisView = {
+  id: "diagnosis-1",
+  title: "Run 3 · checkpoint 312k",
+  createdAt: "2026-11-01T10:30:00Z",
+  summary: "It turns in too early on tight left spots and scrapes the car beside it.",
+  hypothesis: "The front-left sensor sees the car only 0.3 s before contact.",
+  observations: ["Scrapes a car in 38% of test runs"],
+  nextStep: { label: "Stop and fix", tone: "warn" },
+  proposal: { id: "proposal-1", summary: "Add a wider front-left sensor", status: "open" },
+};
+
 // In-memory results that behave: comparing toggles, selecting selects, notes save.
 export function createResultsFixture(): ResultsPort {
   let runs = RUNS;
@@ -168,6 +180,7 @@ export function createResultsFixture(): ResultsPort {
   let failures = FAILURES;
   let timelapse = TIMELAPSE;
   let tests = REFERENCE_TESTS;
+  let diagnoses: DiagnosisView[] = [];
   return {
     listRuns: async () => [...runs],
     toggleCompare: async ({ id }) => {
@@ -216,5 +229,11 @@ export function createResultsFixture(): ResultsPort {
     }),
     getBehaviorMatch: async () => [...MATCH],
     getNeuronLinks: async () => [...NEURONS],
+    listDiagnoses: async () => [...diagnoses],
+    diagnose: async () => {
+      const made = { ...DIAGNOSIS, id: `diagnosis-${diagnoses.length + 1}` };
+      diagnoses = [made, ...diagnoses];
+      return made;
+    },
   };
 }

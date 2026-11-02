@@ -1,4 +1,4 @@
-import type { AutoRigProgress, BodyPort, BoneWeights, ImportPreview, RigCheck } from "./body-port.ts";
+import type { AutoRigProgress, BodyParts, BodyPort, BoneWeights, ImportPreview, RigCheck } from "./body-port.ts";
 
 // Sample body from the design (an imported dancer), used only by the prototype, the gallery and tests.
 
@@ -79,6 +79,19 @@ const AUTO_RIG: AutoRigProgress = {
   ],
 };
 
+const PARTS: readonly BodyParts[] = [
+  {
+    id: "dancer",
+    name: "Dancer",
+    parts: 19,
+    joints: [
+      { id: "left-knee", part: "Left knee", kind: "hinge", range: "0° … 150°", motor: "position · 120 N" },
+      { id: "right-knee", part: "Right knee", kind: "hinge", range: "0° … 150°", motor: "position · 120 N" },
+    ],
+    sensors: [{ id: "hips/balance", part: "Hips", label: "Balance" }],
+  },
+];
+
 const RIG_CHECKS: Readonly<Record<string, RigCheck>> = { "dance-copy": RIGGED, "dance-copy-failed": FAILED };
 
 // In-memory body that behaves: fixing fixes the checks, auto-fix fills the weights, the import kind switches.
@@ -88,6 +101,7 @@ export function createBodyFixture(): BodyPort {
   let preview = IMPORT;
   return {
     getRigCheck: async (body) => checks.get(body) ?? RIGGED,
+    getParts: async () => PARTS,
     applyPose: async () => undefined,
     fixProblems: async (body) => {
       checks.set(body, FIXED);

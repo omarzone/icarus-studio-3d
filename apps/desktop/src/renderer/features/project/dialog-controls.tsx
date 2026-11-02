@@ -23,17 +23,26 @@ export function TextField({ label, mono = false, ...rest }: FieldProps) {
   );
 }
 
-type SwitchProps = { label: ReactNode; cta: string; checked: boolean; onChange: (checked: boolean) => void };
+type SwitchProps = {
+  label: ReactNode;
+  cta: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  title?: string;
+};
 
 // Switch from the style guide: 34 × 20, on is `ok`, off is the track color, white knob.
-export function SwitchRow({ label, cta, checked, onChange }: SwitchProps) {
+export function SwitchRow({ label, cta, checked, onChange, disabled, title }: SwitchProps) {
   return (
     <Act
       cta={cta}
       role="switch"
       aria-checked={checked}
+      disabled={disabled}
+      title={title}
       onClick={() => onChange(!checked)}
-      className="flex items-center gap-2.5 self-start rounded-control text-body hover:opacity-90 active:opacity-80"
+      className="flex items-center gap-2.5 self-start rounded-control text-body hover:opacity-90 active:opacity-80 disabled:opacity-35"
     >
       <span
         className={`relative h-5 w-8.5 shrink-0 rounded-full transition-colors ${checked ? "bg-ok" : "bg-fill-track-off"}`}

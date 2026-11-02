@@ -17,7 +17,7 @@ from icarus.design.compiler import CompileError, compile_project
 from icarus.projects.store import ProjectStore, UnknownProject
 from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
-from icarus.sim.policy import CheckpointPolicy, Policy, RandomPolicy
+from icarus.sim.policy import UNTRAINED_BRAIN, CheckpointPolicy, Policy, RandomPolicy, untrained_after
 from icarus.training.run_store import RunStore
 
 router = APIRouter()
@@ -49,7 +49,9 @@ def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
             return CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
-    return RandomPolicy(compile_project(project).model.nu, project.brain.seed)
+    ended = runs.latest_ended(project.id, revision)
+    label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
+    return RandomPolicy(compile_project(project).model.nu, project.brain.seed, label)
 
 
 def _open_session(store: ProjectStore, runs: RunStore, project_id: str) -> PlaySession:

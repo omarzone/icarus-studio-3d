@@ -7,14 +7,25 @@ import { ActionButton } from "../../ui/action-button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
 import { ProgressBar, ProgressSteps } from "../../ui/progress-steps.tsx";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 
+// Sample body of the gallery and prototype; the app uses the open project's.
 const BODY = "dance-copy";
 
 // Makes an imported model physical step by step, honestly showing which step runs now.
 export function AutoRigDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(BODY)} title="Auto-rigging">
+      {(body) => <AutoRig body={body} />}
+    </ProjectDialogGate>
+  );
+}
+
+function AutoRig({ body }: { body: string }) {
   const port = usePort(bodyPort);
-  const query = useQuery({ queryKey: ["body", BODY, "auto-rig"], queryFn: () => port.getAutoRig(BODY) });
+  const query = useQuery({ queryKey: ["body", body, "auto-rig"], queryFn: () => port.getAutoRig(body) });
   return (
     <Dialog
       title={query.data ? `Auto-rigging ${query.data.file}` : "Auto-rigging"}
@@ -23,7 +34,7 @@ export function AutoRigDialog() {
           <CloseOverlay cta="Run in background" className={dialogButtonClass("secondary")}>
             Run in background
           </CloseOverlay>
-          <ActionButton cta="Cancel" run={() => port.cancelAutoRig(BODY)} className={dialogButtonClass("secondary")}>
+          <ActionButton cta="Cancel" run={() => port.cancelAutoRig(body)} className={dialogButtonClass("secondary")}>
             Cancel
           </ActionButton>
           <GoTo to="STA-BODY-CHECK-FAILED" cta="See result" className={dialogButtonClass("primary")}>

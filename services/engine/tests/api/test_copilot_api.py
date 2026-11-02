@@ -1,9 +1,14 @@
+import threading
 import time
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from icarus.api.app import create_app
+from icarus.copilot import chat
+from icarus.copilot.client import Connection, ModelClient
+from icarus.copilot.fixture_provider import fixture_transport
 
 PARKING_PROMPT = "a little car that learns to park itself"
 
@@ -73,8 +78,35 @@ def test_discard_and_autonomy(client, project_id):
     assert discarded.status_code == 200 and discarded.json()["proposals"][0]["status"] == "discarded"
     autonomy = client.post(f"/projects/{project_id}/conversation/autonomy", json={"autonomy": "autopilot"})
     assert autonomy.json()["autonomy"] == "autopilot"
-    auto = client.post(f"/projects/{project_id}/conversation/messages", json={"text": "make it dark"}).json()
-    assert auto["proposals"][-1]["status"] == "applied"
+    auto = client.post(f"/projects/{project_id}/conversation/messages", json={"text": "switch to night"}).json()
+    assert auto["proposals"][-1]["status"] == "applied" and auto["proposals"][-1]["applied_revision"] == 2
+    assert [action["kind"] for action in auto["messages"][-1]["actions"]] == ["train"]
+
+
+def test_a_second_message_while_the_copilot_answers_is_refused_with_409(client, project_id, monkeypatch):
+    answering, release = threading.Event(), threading.Event()
+    fixtures = fixture_transport()
+
+    def slow_model(request: httpx.Request) -> httpx.Response:
+        answering.set()
+        release.wait(10)
+        return fixtures.handle_request(request)
+
+    model = ModelClient(Connection("http://fixtures.invalid/v1", "", "fixtures"), httpx.MockTransport(slow_model))
+    monkeypatch.setattr(chat, "copilot_client", lambda settings: model)
+    first = threading.Thread(
+        target=client.post, args=(f"/projects/{project_id}/conversation/messages",), kwargs={"json": {"text": "hi"}}
+    )
+    first.start()
+    assert answering.wait(10)
+    busy = client.post(f"/projects/{project_id}/conversation/messages", json={"text": "hello again"})
+    release.set()
+    first.join(10)
+    assert busy.status_code == 409 and busy.json() == {
+        "code": "conflict",
+        "message": "The copilot is still answering the previous message.",
+        "details": None,
+    }
 
 
 def test_unknown_things_are_404(client, project_id):
@@ -102,6 +134,8 @@ def test_without_a_connection_every_copilot_route_answers_503(client, project_id
 def test_no_valid_idea_is_a_readable_copilot_error(client):
     response = client.post("/ideas", json={"prompt": "something impossible"})
     assert response.status_code == 502 and response.json()["code"] == "copilot_error"
+    details = response.json()["details"]
+    assert set(details) == {"Hovercraft", "Impossible weight"} and "hovercraft" in details["Hovercraft"]
 
 
 def test_model_settings_keep_the_key_inside_the_engine(client, monkeypatch):

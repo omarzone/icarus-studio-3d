@@ -1,4 +1,5 @@
 import type { Vector3 } from "./coordinates.ts";
+import { slerp } from "./quaternion.ts";
 
 // Poses streamed by the engine (MuJoCo axes, quaternions wxyz), by geom name.
 export type Pose = { position: Vector3; quaternion: readonly [number, number, number, number] };
@@ -25,4 +26,18 @@ export function trackProgress(track: PoseTrack, now: number): number {
 
 export function lerpPosition(from: Vector3, to: Vector3, t: number): [number, number, number] {
   return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t, from[2] + (to[2] - from[2]) * t];
+}
+
+// Where one geom is drawn at `now`, eased between the last two frames.
+export function poseAt(track: PoseTrack, name: string, now: number): Pose | null {
+  const target = track.to.get(name);
+  if (!target) {
+    return null;
+  }
+  const start = track.from.get(name) ?? target;
+  const t = trackProgress(track, now);
+  return {
+    position: lerpPosition(start.position, target.position, t),
+    quaternion: slerp(start.quaternion, target.quaternion, t),
+  };
 }

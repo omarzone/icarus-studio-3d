@@ -122,7 +122,7 @@ describe("training on the engine", () => {
     await port.updateStartPlan({ project: "p", steps: 30_000 });
     expect(await port.updateStartPlan({ project: "p", copies: 4 })).toMatchObject({ steps: 30_000, copies: 4 });
     const list = await port.startRun("p");
-    expect(started).toEqual([{ total_steps: 30_000, copies: 4 }]);
+    expect(started).toEqual([{ total_steps: 30_000, copies: 4, coach: false }]);
     expect(list.selected).toBe("run-new");
     expect(list.runs[0]).toMatchObject({ status: "running", detail: "starting" });
   });

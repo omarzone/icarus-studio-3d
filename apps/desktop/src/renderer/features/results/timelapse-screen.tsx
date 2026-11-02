@@ -8,14 +8,26 @@ import { usePort } from "../../app/runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../../app/shell/window-frame.tsx";
 import { resultsPort, type Timelapse } from "../../ports/results-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
-import { useProjectName } from "../../ui/project-name.ts";
+import { useOpenProjectId } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
+import { NoProjectState } from "../../ui/states.tsx";
 import { resultsKeys } from "./use-results.ts";
 
 // Presentation mode: how it learned, full screen, with the real checkpoints and scores.
 export function TimelapseScreen() {
   useTitleBarHeight(tokens.size.headerLauncher);
-  const project = useProjectName("park-pilot").id;
+  const project = useOpenProjectId("park-pilot");
+  if (project === null) {
+    return (
+      <div className="h-full bg-app text-fg">
+        <NoProjectState />
+      </div>
+    );
+  }
+  return <Presentation project={project} />;
+}
+
+function Presentation({ project }: { project: string }) {
   const port = usePort(resultsPort);
   const client = useQueryClient();
   const timelapse = useQuery({ queryKey: resultsKeys.timelapse(project), queryFn: () => port.getTimelapse(project) });

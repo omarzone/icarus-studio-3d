@@ -7,20 +7,31 @@ import { type BrainSize, brainPort } from "../../ports/brain-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { StatusPill } from "../../ui/status-pill.tsx";
 import { brainShapeKey } from "./brain-shape/brain-shape-panel.tsx";
 
+// Sample brain of the gallery and prototype; the app uses the open project's.
 const BRAIN = "park-pilot";
 
 // Three brain sizes with honest trade-offs: training time on this computer and the expected result.
 export function SizesDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(BRAIN)} title="Brain sizes Icarus suggests">
+      {(brain) => <Sizes brain={brain} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Sizes({ brain }: { brain: string }) {
   const port = usePort(brainPort);
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ["brain", BRAIN, "sizes"], queryFn: () => port.getSizes(BRAIN) });
+  const query = useQuery({ queryKey: ["brain", brain, "sizes"], queryFn: () => port.getSizes(brain) });
   const choose = (id: string) => async () => {
-    const shape = await port.chooseSize({ brain: BRAIN, id });
-    client.setQueryData(brainShapeKey(BRAIN), shape);
+    const shape = await port.chooseSize({ brain, id });
+    client.setQueryData(brainShapeKey(brain), shape);
   };
   return (
     <Dialog title="Brain sizes Icarus suggests" width="w-201">

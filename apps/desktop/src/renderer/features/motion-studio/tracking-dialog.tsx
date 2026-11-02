@@ -6,14 +6,25 @@ import { motionPort } from "../../ports/motion-port.ts";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
 import { ProgressBar, ProgressSteps } from "../../ui/progress-steps.tsx";
+import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
+import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 
+// Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
 
 // Pose tracking progress, honestly: the frame being tracked, the steps and which one runs now.
 export function TrackingDialog() {
+  return (
+    <ProjectDialogGate projectKey={useProjectKey(CLIP)} title="Tracking the motion">
+      {(clip) => <Tracking clip={clip} />}
+    </ProjectDialogGate>
+  );
+}
+
+function Tracking({ clip }: { clip: string }) {
   const port = usePort(motionPort);
-  const query = useQuery({ queryKey: ["motion", CLIP, "tracking"], queryFn: () => port.getTracking(CLIP) });
+  const query = useQuery({ queryKey: ["motion", clip, "tracking"], queryFn: () => port.getTracking(clip) });
   return (
     <Dialog
       title={query.data ? `Tracking ${query.data.file}` : "Tracking the motion"}

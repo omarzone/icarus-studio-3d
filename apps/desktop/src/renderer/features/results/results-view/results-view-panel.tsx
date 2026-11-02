@@ -1,10 +1,11 @@
 // PNL-RESULTS-VIEW
 import { useQuery } from "@tanstack/react-query";
 import { GoTo } from "../../../app/navigation/go-to.tsx";
-import { usePort } from "../../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../../app/runtime/port.tsx";
 import { resultsPort } from "../../../ports/results-port.ts";
 import { Panel, PanelTab, panelTabClass } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
+import { EmptyState } from "../../../ui/states.tsx";
 import { resultsKeys } from "../use-results.ts";
 import { CompareTab } from "./compare-tab.tsx";
 import { TimelapseTab } from "./timelapse-tab.tsx";
@@ -27,7 +28,9 @@ export function ResultsViewPanel({ project, tab, className = "flex-1" }: Props) 
     queryFn: () => port.getFailureReplay(project),
     enabled: tab === "where-it-fails",
   });
-  const basis = comparison.data?.basis ?? "Same seed";
+  // The sample always compares on the same seed; the app says only what the compared runs recorded.
+  const app = useRuntimeMode() === "app";
+  const basis = comparison.data?.basis ?? (app ? null : "Same seed");
   return (
     <Panel
       id="PNL-RESULTS-VIEW"
@@ -39,12 +42,33 @@ export function ResultsViewPanel({ project, tab, className = "flex-1" }: Props) 
           <TimelapseTab />
         </>
       }
-      options={<span className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary">{basis}</span>}
+      options={
+        basis === null ? null : (
+          <span className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary">{basis}</span>
+        )
+      }
     >
       {tab === "compare" ? (
-        <QueryView query={comparison}>{(data) => <CompareTab comparison={data} />}</QueryView>
+        <QueryView
+          query={comparison}
+          isEmpty={(data) => data.sides.length < 2}
+          empty={<EmptyState title="Pick two runs" body="Tick two runs in the Runs list to compare them." />}
+        >
+          {(data) => <CompareTab comparison={data} />}
+        </QueryView>
       ) : (
-        <QueryView query={replay}>{(data) => <WhereItFailsTab replay={data} />}</QueryView>
+        <QueryView
+          query={replay}
+          isEmpty={(data) => data.empty === true}
+          empty={
+            <EmptyState
+              title="No failure groups yet"
+              body="They appear once a checkpoint has been evaluated, or after the coach diagnoses a run."
+            />
+          }
+        >
+          {(data) => <WhereItFailsTab replay={data} />}
+        </QueryView>
       )}
     </Panel>
   );

@@ -1,5 +1,7 @@
 import pytest
 
+from icarus.sim.offscreen_gl import prepare_rendering, rendering_available
+
 MODEL_VARIABLES = ("ICARUS_MODEL_ENDPOINT", "ICARUS_MODEL_API_KEY", "ICARUS_MODEL_REASONING", "ICARUS_MODEL_VISION")
 
 
@@ -12,3 +14,12 @@ def offline_copilot(request, monkeypatch, tmp_path_factory):
     monkeypatch.setenv("ICARUS_SETTINGS_DIR", str(tmp_path_factory.mktemp("settings")))
     for variable in MODEL_VARIABLES:
         monkeypatch.delenv(variable, raising=False)
+
+
+def pytest_configure(config):
+    prepare_rendering()
+
+
+def pytest_runtest_setup(item):
+    if item.get_closest_marker("needs_gl") and not rendering_available():
+        pytest.skip("no OpenGL on this machine")

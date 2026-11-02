@@ -1,4 +1,4 @@
-import type { CheckpointInfo, LogLine, RunStatus, StartRun, TrainingSettings } from "@icarus/contracts";
+import type { CheckpointInfo, LogLine, Rollout, RunStatus, StartRun, TrainingSettings } from "@icarus/contracts";
 import { compactNumber } from "../ui/compact-number.ts";
 import type {
   ConsoleLine,
@@ -116,7 +116,11 @@ export function startPlan({ runs, family, settings, choice }: PlanInput): StartP
   const estimate = time === "under a minute" ? time : `${family === "locomotion" ? "roughly" : "about"} ${time}`;
   return {
     run: `run ${runs + 1}`,
-    intro: `Icarus will practice in ${copies} ${copies === 1 ? "copy" : "copies"} of the world at once. You can keep editing and chatting while it trains.`,
+    intro: [
+      "Training is practice: the brain tries over and over and keeps what earns rewards.",
+      `It will practice ${compactNumber(steps)} steps (one step is one moment of practice) in ${copies} ${copies === 1 ? "copy" : "copies"} of the world at once; more copies finish sooner but use more of your computer.`,
+      "You can keep editing and chatting meanwhile, and Play then uses the best brain it found.",
+    ].join(" "),
     steps,
     copies,
     estimate,
@@ -126,7 +130,7 @@ export function startPlan({ runs, family, settings, choice }: PlanInput): StartP
 }
 
 export function startRequest(plan: StartPlan): StartRun {
-  return { total_steps: plan.steps, copies: plan.copies };
+  return { total_steps: plan.steps, copies: plan.copies, coach: plan.coach };
 }
 
 export function checkpointResult(checkpoint: CheckpointInfo): string {
@@ -137,14 +141,28 @@ export function checkpointResult(checkpoint: CheckpointInfo): string {
   return `Success ${percent(checkpoint.success_rate)}${fails}`;
 }
 
-export function liveView(run: RunStatus, checkpoints: readonly CheckpointInfo[]): LiveView {
+// Episode time as the playback bar shows it: minutes, seconds and tenths.
+function episodeClock(seconds: number): string {
+  const tenths = Math.round(Math.max(0, seconds) * 10);
+  const minutes = Math.floor(tenths / 600);
+  const rest = ((tenths % 600) / 10).toFixed(1).padStart(4, "0");
+  return `${minutes}:${rest}`;
+}
+
+export function liveView(run: RunStatus, checkpoints: readonly CheckpointInfo[], rollout?: Rollout): LiveView {
   const latest = checkpoints.at(-1);
-  return {
+  const view: LiveView = {
     caption: isFinal(run) ? `${run.name} · ${run.state}` : `Live training · ${run.copies} copies`,
     checkpoint: latest ? `Checkpoint ${compactNumber(latest.step)}` : "No checkpoint yet",
     result: latest ? checkpointResult(latest) : "The first one is saved at step 0",
     speed: `${Math.round(run.steps_per_second).toLocaleString("en-US")} steps/s`,
   };
+  const first = rollout?.frames[0]?.time;
+  const last = rollout?.frames.at(-1)?.time;
+  if (first !== undefined && last !== undefined) {
+    view.episode = { at: episodeClock(0), length: episodeClock(last - first), played: 0 };
+  }
+  return view;
 }
 
 function clock(elapsed: number): string {

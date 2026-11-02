@@ -15,6 +15,8 @@ export type PropertiesTabProps = {
   onChange: (target: PropertyTarget, value: PropertyValue) => void;
   onReset: (target: PropertyTarget) => void;
   onAccept: (target: PropertyTarget) => void;
+  // Removes a component section from the selected object.
+  onRemove?: (section: string) => void;
   // Where "+ Add component" leads; it only shows for scene objects.
   addComponentTo?: RouteId;
   // Scene key the new component goes to, passed to the picker as the `addTo` route parameter.
@@ -39,6 +41,7 @@ function ObjectProperties({
   onChange,
   onReset,
   onAccept,
+  onRemove,
   addComponentTo,
   scene,
   panelRoutes,
@@ -56,7 +59,12 @@ function ObjectProperties({
           return null;
         }
         return (
-          <InspectorSection key={section.id} section={section} component={Boolean(section.icon)}>
+          <InspectorSection
+            key={section.id}
+            section={section}
+            component={Boolean(section.icon)}
+            onRemove={onRemove && inspection.components ? () => onRemove(section.id) : undefined}
+          >
             {properties.map((property) => {
               const target = { section: section.id, property: property.id };
               return (

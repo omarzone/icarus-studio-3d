@@ -6,6 +6,7 @@ import { scenePort } from "../../ports/scene-port.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { ErrorState } from "../../ui/states.tsx";
 import { useSceneCache, useSceneDescription, useSceneTree } from "../scene-queries.ts";
+import { CopiesPreview } from "./copies-preview.tsx";
 
 // The 3D renderer is heavy, so it loads the first time a view has a scene to draw.
 const SceneView = lazy(() => import("../../scene/scene-view.tsx"));
@@ -21,13 +22,24 @@ export type ViewportSurfaceProps = {
   ghosts?: readonly SceneGeom[];
   // A 3D view drawn instead of the project scene (the live world in Play).
   children?: ReactNode;
+  // Shows the scene's training copies side by side instead of the editable scene, until `onExit`.
+  copiesPreview?: { onExit: () => void };
 };
 
 // The 3D area: it draws the engine's compiled scene when there is one, and never a fake scene.
-export function ViewportSurface({ label, tint, overlays, scene, ghosts, children }: ViewportSurfaceProps) {
+export function ViewportSurface({
+  label,
+  tint,
+  overlays,
+  scene,
+  ghosts,
+  children,
+  copiesPreview,
+}: ViewportSurfaceProps) {
   return (
     <div role="img" aria-label={label} className="relative min-h-0 flex-1 bg-panel">
-      {scene ? <EngineScene scene={scene} ghosts={ghosts} /> : null}
+      {scene && copiesPreview ? <CopiesPreview scene={scene} onExit={copiesPreview.onExit} /> : null}
+      {scene && !copiesPreview ? <EngineScene scene={scene} ghosts={ghosts} /> : null}
       {children}
       {tint === "proposal" ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-proposal-tint" />
@@ -60,6 +72,7 @@ function EngineScene({ scene, ghosts }: { scene: string; ghosts?: readonly Scene
       >
         <Suspense fallback={null}>
           <SceneView
+            key={scene}
             description={description.data}
             ghosts={ghosts}
             selected={tree.data?.selected ?? null}

@@ -17,13 +17,13 @@ export const BRAIN_VARIANTS: Readonly<Partial<Record<ScreenId, BrainVariant>>> =
 // Tools of a connectome brain, which is inspected and not trained (catalog PNL-TOOLBAR, Brain).
 const CONNECTOME_TOOLS: readonly ToolGroup[] = [
   [
-    { label: "Neurons", icon: Boxes },
-    { label: "Connections", icon: Cable },
-    { label: "Regions", icon: Layers },
+    { label: "Neurons", icon: Boxes, hint: "Show the neurons of the brain" },
+    { label: "Connections", icon: Cable, hint: "Show how neurons connect" },
+    { label: "Regions", icon: Layers, hint: "Group neurons by brain region" },
   ],
   [
-    { label: "Senses map", icon: Radar },
-    { label: "Motor map", icon: Cog },
+    { label: "Senses map", icon: Radar, hint: "Show which neurons the senses reach" },
+    { label: "Motor map", icon: Cog, hint: "Show which neurons move the body" },
   ],
 ];
 

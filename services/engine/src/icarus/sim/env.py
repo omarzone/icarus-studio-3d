@@ -8,6 +8,7 @@ from gymnasium import spaces
 from icarus.contracts.project import Project
 from icarus.contracts.training import CopyPoses
 from icarus.sim.model_state import (
+    LiveWorld,
     apply_action,
     build_world,
     control_substeps,
@@ -16,11 +17,21 @@ from icarus.sim.model_state import (
     reward_state,
 )
 from icarus.sim.poses import geom_poses, moving_geoms
-from icarus.sim.rewards import compose, parked
+from icarus.sim.rewards import compose, delivered, parked
 from icarus.sim.start_pose import place_start
+from icarus.sim.variation import WorldVariation
 
 EPISODE_SECONDS = 30.0
-FRICTION_SPREAD = 0.2
+
+
+def trainable_world(project: Project) -> LiveWorld:
+    """The project's world when it can be trained; otherwise a ValueError that says why."""
+    if project.task.family not in ("navigation", "locomotion"):
+        raise ValueError("Only navigation and locomotion projects can be trained")
+    world = build_world(project)
+    if world.agent is None or not world.actuators:
+        raise ValueError("The project needs a body with at least one motor")
+    return world
 
 
 class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
@@ -29,13 +40,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
     metadata = {"render_modes": []}
 
     def __init__(self, project: Project, randomize: bool = False) -> None:
-        if project.task.family not in ("navigation", "locomotion"):
-            raise ValueError("Only navigation and locomotion projects can be trained")
-        self.world = build_world(project)
-        if self.world.agent is None or not self.world.actuators:
-            raise ValueError("The project needs a body with at least one motor")
+        self.world = trainable_world(project)
         self.randomize = randomize
-        self._base_friction = self.world.model.geom_friction[:, 0].copy()
+        self.variation = WorldVariation(self.world)
         self._substeps = control_substeps(self.world)
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
@@ -43,7 +50,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(size,), dtype=np.float32)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(len(self.world.actuators),), dtype=np.float32)
         self._state = reward_state(self.world)
-        self._geoms = moving_geoms(self.world)
+        self._geoms = sorted(set(moving_geoms(self.world)) | self.variation.moved_geoms)
         self.moving_geoms = [self.world.model.geom(index).name for index in self._geoms]
         self._start_episode()
 
@@ -57,14 +64,12 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
-        model = self.world.model
         if self.randomize:
-            spread = self.np_random.uniform(1 - FRICTION_SPREAD, 1 + FRICTION_SPREAD, size=self._base_friction.shape)
-            model.geom_friction[:, 0] = self._base_friction * spread
+            self.variation.start_copy(self.np_random)
         else:
-            model.geom_friction[:, 0] = self._base_friction
-        reset_world(self.world)
-        place_start(self.world, self.np_random)
+            self.variation.restore()
+            reset_world(self.world)
+            place_start(self.world, self.np_random)
         self._state = reward_state(self.world)
         self._start_episode()
         return observation(self.world), {}
@@ -79,7 +84,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         for term, part in parts.items():
             self._episode_terms[term] += part
         self._collided = self._collided or after.colliding
-        reached = self.world.family == "navigation" and parked(after)
+        # A task that brings an object to the goal succeeds when the object rests there, wherever the agent is.
+        done = delivered(after) if self.world.carried is not None else parked(after)
+        reached = self.world.family == "navigation" and done
         terminated = after.fallen or reached
         truncated = float(self.world.data.time) >= EPISODE_SECONDS - 1e-9
         info: dict[str, Any] = {"reward_parts": parts}

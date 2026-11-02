@@ -6,6 +6,12 @@ Vector3 = tuple[float, float, float]
 
 # A navigation agent has reached its goal once it is inside the zone and moving slower than this, in m/s.
 STOP_SPEED = 0.2
+# Most an object's progress toward the goal pays in one control step, in metres, so a kick or a reset cannot spike it.
+OBJECT_STEP_LIMIT = 1.0
+# What bringing the object to rest in the goal is worth, in metres of progress.
+OBJECT_REST_BONUS = 10.0
+# Highest height above the start that height_gain pays for, in metres.
+HEIGHT_GAIN_MAX = 1.0
 
 
 @dataclass(frozen=True)
@@ -25,6 +31,13 @@ class RewardState:
     effort: float
     # Ground speed of the agent in m/s.
     speed: float
+    # The object a task brings to the goal and its ground speed, when the task names one.
+    object_position: Vector3 | None = None
+    object_speed: float = 0.0
+    # Height of the agent's root when the world was built.
+    start_height: float = 0.0
+    # Grid cells of the ground the agent has entered in this try, when the task counts them.
+    visited: int = 0
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -47,6 +60,33 @@ def reach_goal(before: RewardState, after: RewardState) -> float:
 
 def progress_to_goal(before: RewardState, after: RewardState) -> float:
     return _goal_distance(before) - _goal_distance(after) if after.goal is not None else 0.0
+
+
+def _object_distance(state: RewardState) -> float | None:
+    if state.goal is None or state.object_position is None:
+        return None
+    return math.hypot(state.goal[0] - state.object_position[0], state.goal[1] - state.object_position[1])
+
+
+def delivered(state: RewardState) -> bool:
+    distance = _object_distance(state)
+    return distance is not None and distance <= state.goal_radius and state.object_speed <= STOP_SPEED
+
+
+def object_to_goal(before: RewardState, after: RewardState) -> float:
+    start, end = _object_distance(before), _object_distance(after)
+    if start is None or end is None:
+        return 0.0
+    progress = min(max(start - end, -OBJECT_STEP_LIMIT), OBJECT_STEP_LIMIT)
+    return progress + OBJECT_REST_BONUS * float(delivered(after) and not delivered(before))
+
+
+def coverage(before: RewardState, after: RewardState) -> float:
+    return float(min(max(after.visited - before.visited, 0), 1))
+
+
+def height_gain(before: RewardState, after: RewardState) -> float:
+    return min(max(after.position[2] - after.start_height, 0.0), HEIGHT_GAIN_MAX)
 
 
 def heading_alignment(before: RewardState, after: RewardState) -> float:
@@ -95,6 +135,9 @@ TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "stay_upright": stay_upright,
     "energy_cost": energy_cost,
     "fall_penalty": fall_penalty,
+    "object_to_goal": object_to_goal,
+    "coverage": coverage,
+    "height_gain": height_gain,
 }
 
 

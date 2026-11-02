@@ -1,6 +1,6 @@
 import type { EditOperation, LibraryCatalog, Project, ProjectState } from "@icarus/contracts";
 import { describe, expect, it, vi } from "vitest";
-import type { EngineApi } from "../engine-client/engine-api.ts";
+import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
 import { EngineRejected } from "../engine-client/request.ts";
 import { isLibraryCatalog, isProject } from "../engine-client/response-checks.ts";
 import { createEngineScenePort, nextComponentId, worldToParent } from "./scene-engine.ts";
@@ -33,11 +33,13 @@ function stateOf(doc: Project, number = 1): ProjectState {
 
 function fakeApi(apply: (operations: EditOperation[]) => Promise<ProjectState>) {
   const applyOperations = vi.fn((_id: string, operations: EditOperation[]) => apply(operations));
-  const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene"> = {
+  const api: Pick<EngineApi, "project" | "library" | "applyOperations" | "scene" | "runs"> & CopiesApi = {
     project: async () => stateOf(project),
     scene: async () => ({ revision: 1, bodies: [], geoms: [], lights: [] }),
     library: async (): Promise<LibraryCatalog> => catalog,
     applyOperations,
+    copyScenes: async () => [],
+    runs: async () => [],
   };
   return { api, applyOperations };
 }

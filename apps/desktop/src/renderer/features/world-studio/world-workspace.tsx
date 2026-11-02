@@ -1,6 +1,7 @@
 // The World workspace's docked panels, shared by every state of the screen.
 import type { ReactNode } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
@@ -11,9 +12,11 @@ import { OverlayBottomLeft, OverlayTop, PreviewPill } from "../../editor/viewpor
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { useConversationKey, useProposalPreview } from "../copilot/conversation-key.ts";
+import { useCopiesPreview } from "./copies-preview-store.ts";
 import { GuideCard, guideLabel, ShowGuidePill } from "./guide-card.tsx";
 import { LibraryPanel } from "./library/library-panel.tsx";
 import { useProjectName } from "./use-project-name.ts";
+import { useWorldToolActions } from "./world-tool-actions.ts";
 import type { WorldConfig, WorldVariant } from "./world-variants.ts";
 
 const PANEL_ROUTES = { "training-copies": "POP-TRAINING-COPIES" } as const;
@@ -35,6 +38,12 @@ export function WorldWorkspace({
   const go = useNavigation((state) => state.go);
   const preview = useProposalPreview(useConversationKey(config.conversation));
   const previewing = variant === "proposal" || Boolean(preview.data);
+  const copiesScene = useCopiesPreview((state) => state.scene);
+  const hideCopies = useCopiesPreview((state) => state.hide);
+  const copiesPreview = copiesScene === scene ? { onExit: hideCopies } : undefined;
+  const toolActions = useWorldToolActions(scene);
+  // In the app the project exists in every editable state (the empty states only show the guide over it).
+  const appProject = useRuntimeMode() === "app" && variant !== "building";
   return (
     <DockWorkspaceShell
       header={{
@@ -42,8 +51,8 @@ export function WorldWorkspace({
         active: "World",
         activeGoesTo: config.activeGoesTo,
         guide: guideLabel(guide.data),
-        playEnabled: config.playEnabled,
-        primary: { label: "Train", to: "MOD-START-TRAINING", disabled: !config.trainEnabled },
+        playEnabled: config.playEnabled || appProject,
+        primary: { label: "Train", to: "MOD-START-TRAINING", disabled: !(config.trainEnabled || appProject) },
       }}
       layoutKey="world"
       panels={{
@@ -66,9 +75,10 @@ export function WorldWorkspace({
             <ViewportPanel
               label="The project's world"
               scene={scene}
-              toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
+              toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} actions={toolActions} />}
               tint={previewing ? "proposal" : undefined}
               ghosts={preview.data?.geoms}
+              copiesPreview={copiesPreview}
               overlays={overlays ?? <WorldOverlays variant={variant} config={config} scene={scene} />}
             />
           ),
@@ -116,7 +126,7 @@ function GuideOverlay({ scene, hidden }: { scene: string; hidden: boolean }) {
   }
   return (
     <OverlayBottomLeft>
-      {hidden ? <ShowGuidePill guide={guide.data} /> : <GuideCard guide={guide.data} />}
+      {hidden ? <ShowGuidePill guide={guide.data} /> : <GuideCard guide={guide.data} project={scene} />}
     </OverlayBottomLeft>
   );
 }

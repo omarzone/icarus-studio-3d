@@ -1,5 +1,6 @@
 import math
 
+import mujoco
 import pytest
 from pydantic import TypeAdapter
 
@@ -79,3 +80,23 @@ def test_a_zero_size_part_fails_with_its_name():
     with pytest.raises(CompileError) as error:
         compile_project(project_of(flat))
     assert "Flat" in error.value.reason
+
+
+def test_a_tilted_distance_ray_looks_down_by_its_tilt():
+    sensed = box(distance_ray={"count": {"type": "count", "value": 3}, "tilt": {"type": "number", "value": -30}})
+    compiled = compile_project(project_of(sensed))
+    data = mujoco.MjData(compiled.model)
+    mujoco.mj_forward(compiled.model, data)
+    for index in range(3):
+        site = compiled.model.site(f"box:ray{index}").id
+        looking = data.site_xmat[site].reshape(3, 3)[:, 2]
+        assert looking[2] == pytest.approx(-0.5, abs=1e-6) and looking[0] > 0
+
+
+def test_a_static_part_without_a_collider_is_painted_on_and_never_touched():
+    marking = part("line", None, transform={"position": {"type": "vector", "value": [0, 0, 0.002]}}, mesh={})
+    wall = part("wall", None, transform={}, mesh={}, collider={})
+    model = compile_project(project_of(marking, wall)).model
+    line = model.geom("line")
+    assert (int(line.contype[0]), int(line.conaffinity[0])) == (0, 0)
+    assert int(model.geom("wall").contype[0]) == 1

@@ -1,16 +1,18 @@
 // SCR-PLAY · SCR-PLAY.b
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
 import { useProjectName } from "../../ui/project-name.ts";
+import { NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { DecisionsPanel } from "./decisions/decisions-panel.tsx";
 import { EventsPanel } from "./events/events-panel.tsx";
 import { PlayHeader } from "./play-header/play-header.tsx";
 import { PlayShell } from "./play-shell.tsx";
-import { PLAY_CONFIGS, PLAY_VARIANTS } from "./play-variants.ts";
+import { PLAY_CONFIGS, PLAY_VARIANTS, type PlayConfig } from "./play-variants.ts";
 import { PlayViewport } from "./play-viewport.tsx";
 import { SensesPanel } from "./senses/senses-panel.tsx";
-import { usePlayConnection, usePlayLayout } from "./use-play-session.ts";
+import { usePlayBrain, usePlayConnection, usePlayLayout } from "./use-play-session.ts";
 import { VisionPanel } from "./vision/vision-panel.tsx";
 
 // Play mode: the current brain live in its world; the panels follow what the body senses and what brain it has.
@@ -18,11 +20,21 @@ export function PlayScreen() {
   const screen = useNavigation((state) => state.screen);
   const config = PLAY_CONFIGS[PLAY_VARIANTS[screen] ?? "learned"];
   const project = useProjectName(config.project);
+  if (project.id === null) {
+    return <NoProjectState />;
+  }
+  return <PlaySession config={config} project={{ id: project.id, name: project.name }} />;
+}
+
+function PlaySession({ config, project }: { config: PlayConfig; project: { id: string; name: string } }) {
   const connection = usePlayConnection(project.id);
   const layout = usePlayLayout(project.id).data;
+  // Only the app names the brain in the header; the prototype keeps its design.
+  const brain = usePlayBrain(project.id);
+  const app = useRuntimeMode() === "app";
   return (
     <PlayShell
-      header={<PlayHeader project={project.name} returnTo={config.returnTo} />}
+      header={<PlayHeader project={project.name} returnTo={config.returnTo} brain={app ? brain : undefined} />}
       left={
         <>
           <SensesPanel project={project.id} className={layout?.vision ? "flex-1" : "flex-none"} />

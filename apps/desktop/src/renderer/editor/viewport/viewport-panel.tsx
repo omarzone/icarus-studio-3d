@@ -3,7 +3,11 @@ import type { SceneGeom } from "@icarus/contracts";
 import { Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
+import { type CameraMode, CameraViewContext, defaultCameraMode } from "../../scene/camera-mode.ts";
+import { NOT_YET_CLASS, useNotYet } from "../../ui/not-yet.ts";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
+import { CameraMenu } from "./camera-menu.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
 import { LiveTrainingTab, type TrainingView } from "./live-training-tab.tsx";
 import { PlayTab, type PlayView } from "./play-tab.tsx";
@@ -36,6 +40,8 @@ export type ViewportPanelProps = {
   play?: PlayView;
   // The training run the "live-training" and "replay" tabs draw.
   training?: TrainingView;
+  // The scene tab shows the training copies side by side instead of the editable scene.
+  copiesPreview?: { onExit: () => void };
   className?: string;
 };
 
@@ -45,6 +51,25 @@ export const DEFAULT_VIEWPORT_TABS: readonly ViewportTab[] = [
 ];
 
 const DEFAULT_OPTIONS = ["Lit", "Perspective"] as const;
+// What view options without a handler will do, for the app's "not available yet" tooltip.
+const OPTION_PURPOSES: Readonly<Record<string, string>> = { Lit: "Switch between lit, unlit and wireframe looks" };
+// The view option the camera menu takes the place of.
+const CAMERA_OPTION = "Perspective";
+
+// Whether the tab draws an engine scene the camera can move around.
+function drawsScene(tab: string, props: Pick<ViewportPanelProps, "scene" | "play" | "training">): boolean {
+  switch (tab) {
+    case "scene":
+      return props.scene !== undefined;
+    case "play":
+      return props.play !== undefined;
+    case "live-training":
+    case "replay":
+      return props.training !== undefined;
+    default:
+      return false;
+  }
+}
 
 export function ViewportPanel({
   label,
@@ -59,10 +84,27 @@ export function ViewportPanel({
   scene,
   play,
   training,
+  copiesPreview,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
+  // Each tab keeps the camera mode chosen in it; `frame` asks the camera to frame everything again.
+  const [modes, setModes] = useState<Readonly<Record<string, CameraMode>>>({});
+  const [frame, setFrame] = useState(0);
+  // The prototype keeps its fixed camera and plain label, as in the design.
+  const cameraReady = useRuntimeMode() === "app" && drawsScene(active, { scene, play, training });
+  const mode = modes[active] ?? defaultCameraMode(active);
+  const setMode = (next: CameraMode) => setModes((current) => ({ ...current, [active]: next }));
+  const frameAll = () => {
+    if (mode === "follow" || mode === "onboard") {
+      setMode("free");
+    }
+    setFrame((count) => count + 1);
+  };
+  const camera = cameraReady ? { mode, frame, onFrameAll: frameAll } : null;
+  const options = cameraReady ? viewOptions.filter((option) => option !== CAMERA_OPTION) : viewOptions;
   const surface = { label, tint, overlays, scene, ghosts };
+  const notYet = useNotYet();
   return (
     <Panel
       id="PNL-VIEWPORT"
@@ -76,7 +118,8 @@ export function ViewportPanel({
             cta="Add a view"
             aria-label="Add a view"
             title="Split the view"
-            className="grid h-6.5 place-items-center rounded-control px-2.5 text-fg-tertiary hover:bg-fill-hover hover:text-fg"
+            className={`grid h-6.5 place-items-center rounded-control px-2.5 text-fg-tertiary hover:bg-fill-hover hover:text-fg ${NOT_YET_CLASS}`}
+            {...notYet?.("Add a view", "Split the viewport to see the world from two cameras at once")}
           >
             <Plus size={12} strokeWidth={1.75} aria-hidden />
           </Act>
@@ -85,35 +128,39 @@ export function ViewportPanel({
       options={
         <>
           {note ? <span className="mr-1 text-ui text-fg-tertiary">{note}</span> : null}
-          {viewOptions.map((option) => (
+          {options.map((option) => (
             <Act
               key={option}
               cta={option}
               onClick={() => onViewOption?.(option)}
-              className="rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg"
+              className={`rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg ${NOT_YET_CLASS}`}
+              {...(onViewOption ? {} : notYet?.(option, OPTION_PURPOSES[option] ?? "Change what the view shows"))}
             >
               {option}
             </Act>
           ))}
+          {camera ? <CameraMenu mode={mode} onMode={setMode} onFrameAll={frameAll} /> : null}
         </>
       }
     >
-      <div className="flex h-full flex-col">
-        {toolbar}
-        {active === "scene" ? (
-          <SceneTab {...surface} />
-        ) : active === "game-view" ? (
-          <GameViewTab {...surface} />
-        ) : active === "play" ? (
-          <PlayTab {...surface} play={play} />
-        ) : active === "live-training" ? (
-          <LiveTrainingTab {...surface} training={training} />
-        ) : active === "replay" ? (
-          <ReplayTab {...surface} training={training} />
-        ) : (
-          <ViewportSurface {...surface} />
-        )}
-      </div>
+      <CameraViewContext value={camera}>
+        <div className="flex h-full flex-col">
+          {toolbar}
+          {active === "scene" ? (
+            <SceneTab {...surface} copiesPreview={copiesPreview} />
+          ) : active === "game-view" ? (
+            <GameViewTab {...surface} />
+          ) : active === "play" ? (
+            <PlayTab {...surface} play={play} />
+          ) : active === "live-training" ? (
+            <LiveTrainingTab {...surface} training={training} />
+          ) : active === "replay" ? (
+            <ReplayTab {...surface} training={training} />
+          ) : (
+            <ViewportSurface {...surface} />
+          )}
+        </div>
+      </CameraViewContext>
     </Panel>
   );
 }

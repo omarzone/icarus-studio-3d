@@ -28,6 +28,7 @@ testpaths = ["tests"]
 markers = [
     "slow: real training for a few thousand steps",
     "live: calls real model providers and needs credentials",
+    "needs_gl: renders with OpenGL; skipped on machines without it",
 ]
 
 [tool.ruff]

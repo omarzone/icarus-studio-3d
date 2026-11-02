@@ -1,10 +1,11 @@
 from icarus.contracts.errors import ValidationIssue
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.project import Project
-from icarus.contracts.properties import AssetValue
+from icarus.contracts.properties import AssetValue, ChoiceValue
+from icarus.contracts.specs import RewardTermSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
-from icarus.library.rewards import REWARD_TERMS
+from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, term_fits
 from icarus.projects.document import all_objects, containers
 
 
@@ -82,14 +83,78 @@ def _reward_issues(project: Project) -> list[ValidationIssue]:
         path = f"task.rewards.{term.term}"
         if info is None:
             issues.append(ValidationIssue(path=path, message=f"{term.term!r} is not a library reward term"))
-        elif info.family != project.task.family:
-            issues.append(ValidationIssue(path=path, message=f"{info.label} is for {info.family} tasks"))
+        elif not term_fits(term.term, project.task.family):
+            families = " and ".join(sorted(term_families(term.term)))
+            issues.append(ValidationIssue(path=path, message=f"{info.label} is for {families} tasks"))
         elif not info.weight_min <= term.weight <= info.weight_max:
             bounds = f"between {info.weight_min:g} and {info.weight_max:g}"
             issues.append(ValidationIssue(path=path, message=f"{info.label} weight must be {bounds}"))
-        for param in term.params:
-            message = f"{info.label if info else term.term} has no setting {param!r}"
-            issues.append(ValidationIssue(path=f"{path}.params.{param}", message=message))
+        label = info.label if info else term.term
+        schemas = {schema.id: schema for schema in TERM_SETTINGS.get(term.term, [])}
+        for param, value in term.params.items():
+            schema = schemas.get(param)
+            problem = f"{label} has no setting {param!r}" if schema is None else check_value(schema, value)
+            if problem:
+                issues.append(ValidationIssue(path=f"{path}.params.{param}", message=problem))
+        if term.term == "object_to_goal":
+            issues += _carried_object_issues(project, term, f"{path}.params.object")
+    return issues
+
+
+def _movable(obj: ObjectSpec) -> bool:
+    """A world object that moves on its own: a root with a dynamic physics body and no joint holding it."""
+    physics = next((item for item in obj.components if item.kind == "physics_body"), None)
+    mode = physics.properties.get("mode") if physics else None
+    dynamic = physics is not None and (not isinstance(mode, ChoiceValue) or mode.value == "dynamic")
+    return dynamic and obj.parent is None and not any(item.kind == "joint" for item in obj.components)
+
+
+def _carried_object_issues(project: Project, term: RewardTermSpec, path: str) -> list[ValidationIssue]:
+    target = term.params.get("object")
+    target_id = target.value if isinstance(target, AssetValue) else ""
+    world = {obj.id: obj for obj in project.world.objects}
+    if not target_id:
+        message = "Bring the object to the goal needs an object: the id of a movable world object"
+    elif target_id in {obj.id for body in project.bodies for obj in body.objects}:
+        message = f"{target_id!r} is part of a body; the object to bring must be a world object"
+    elif target_id not in world:
+        message = f"Bring the object to the goal names {target_id!r}, which does not exist"
+    elif not _movable(world[target_id]):
+        message = f"{world[target_id].name} is fixed in place; the object to bring must be movable"
+    else:
+        return []
+    return [ValidationIssue(path=path, message=message)]
+
+
+def _randomize_issues(project: Project) -> list[ValidationIssue]:
+    """Body parts never vary per copy: moving one would tear its joints, so only world objects take Randomize."""
+    return [
+        ValidationIssue(
+            path=f"objects.{obj.id}.components.{component.id}",
+            message=f"{obj.name} is part of a body; only world objects can vary per copy",
+        )
+        for body in project.bodies
+        for obj in body.objects
+        for component in obj.components
+        if component.kind == "randomize"
+    ]
+
+
+def _sky_issues(project: Project) -> list[ValidationIssue]:
+    """A world has one sky at most, and a body never carries one."""
+    issues = [
+        ValidationIssue(
+            path=f"objects.{obj.id}.components.{component.id}",
+            message=f"{obj.name} is part of a body; a sky belongs to the world",
+        )
+        for body in project.bodies
+        for obj in body.objects
+        for component in obj.components
+        if component.kind == "sky"
+    ]
+    skies = [obj for obj in project.world.objects if any(item.kind == "sky" for item in obj.components)]
+    if len(skies) > 1:
+        issues.append(ValidationIssue(path="objects", message="A world can have only one sky"))
     return issues
 
 
@@ -108,4 +173,4 @@ def validate_project(project: Project) -> list[ValidationIssue]:
     spawns = [obj for obj in project.world.objects if any(item.kind == "spawn_point" for item in obj.components)]
     if len(spawns) > 1:
         issues.append(ValidationIssue(path="objects", message="A world can have only one spawn point"))
-    return issues + _reward_issues(project)
+    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project)

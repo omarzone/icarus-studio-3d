@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lerpPosition, nextTrack, type Pose, trackProgress } from "./pose-track.ts";
+import { lerpPosition, nextTrack, type Pose, poseAt, trackProgress } from "./pose-track.ts";
 
 const at = (x: number): ReadonlyMap<string, Pose> =>
   new Map([["car", { position: [x, 0, 0], quaternion: [1, 0, 0, 0] }]]);
@@ -18,5 +18,23 @@ describe("pose track", () => {
   it("stops at the newest frame instead of guessing beyond it", () => {
     const track = nextTrack(nextTrack(null, at(0), 0), at(1), 30);
     expect(trackProgress(track, 500)).toBe(1);
+  });
+});
+
+describe("pose at a moment", () => {
+  const turning = (x: number, angle: number): ReadonlyMap<string, Pose> =>
+    new Map([["car", { position: [x, 0, 0], quaternion: [Math.cos(angle / 2), 0, 0, Math.sin(angle / 2)] }]]);
+
+  it("is halfway in place and in rotation halfway between frames", () => {
+    const track = nextTrack(nextTrack(null, turning(0, 0), 0), turning(2, Math.PI / 2), 100);
+    const pose = poseAt(track, "car", 150);
+    expect(pose?.position).toEqual([1, 0, 0]);
+    const [w = 0, , , z = 0] = pose?.quaternion ?? [];
+    expect(2 * Math.atan2(z, w)).toBeCloseTo(Math.PI / 4, 6);
+  });
+
+  it("knows nothing about a geom the engine never sent", () => {
+    const track = nextTrack(null, turning(0, 0), 0);
+    expect(poseAt(track, "boat", 0)).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from icarus.contracts.coach import Diagnosis
 from icarus.contracts.project import Project, ProjectState
 from icarus.contracts.training import (
     CheckpointInfo,
@@ -25,11 +26,13 @@ from icarus.contracts.training import (
     TrainingSnapshot,
 )
 from icarus.projects.files import append_line, write_atomic
+from icarus.training.episodes import CheckpointEpisodes
 from icarus.training.schedule import checkpoint_steps
 
 RUNS_DIR_ENV = "ICARUS_RUNS_DIR"
 ENGINE_ROOT = Path(__file__).resolve().parents[3]
 RUN_ID = re.compile(r"^run-\d{8}T\d{6}Z-[0-9a-f]{4}$")
+FRAME_NAME = re.compile(r"^e\d-(start|middle|failure|end|sheet)\.png$")
 TERMINAL_STATES: frozenset[RunState] = frozenset({"done", "stopped", "failed"})
 EVALUATION_EPISODES = 20
 TRACKED_PACKAGES = ("icarus-engine", "mujoco", "gymnasium", "stable-baselines3", "torch")
@@ -91,6 +94,17 @@ def _retrying[T](action: Callable[[], T]) -> T:
 
 def _write(path: Path, text: str) -> None:
     _retrying(lambda: write_atomic(path, text))
+
+
+def _write_bytes(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(f"{path.name}.{secrets.token_hex(4)}.tmp")
+    partial.write_bytes(data)
+    try:
+        _retrying(lambda: os.replace(partial, path))
+    except OSError:
+        partial.unlink(missing_ok=True)
+        raise
 
 
 def _read(path: Path) -> str:
@@ -170,6 +184,37 @@ class RunFolder:
     def rollout(self, step: int) -> Rollout | None:
         path = self.rollout_path(step)
         return Rollout.model_validate_json(_read(path)) if path.is_file() else None
+
+    def frames_folder(self, step: int) -> Path:
+        return self.path / "frames" / str(step)
+
+    def frame_path(self, step: int, name: str) -> Path:
+        if not FRAME_NAME.fullmatch(name):
+            raise ValueError(f"{name!r} is not a frame name")
+        return self.frames_folder(step) / name
+
+    def write_frame(self, step: int, name: str, png: bytes) -> None:
+        path = self.frame_path(step, name)
+        _write_bytes(path, png)
+
+    def write_episodes(self, episodes: CheckpointEpisodes) -> None:
+        _write(self.frames_folder(episodes.step) / "episodes.json", episodes.model_dump_json())
+
+    def episodes(self, step: int) -> CheckpointEpisodes | None:
+        path = self.frames_folder(step) / "episodes.json"
+        return CheckpointEpisodes.model_validate_json(_read(path)) if path.is_file() else None
+
+    def diagnoses(self) -> list[Diagnosis]:
+        """Every diagnosis of the run, oldest first, from diagnosis/<n>.json."""
+        folder = self.path / "diagnosis"
+        paths = sorted(folder.glob("*.json"), key=lambda path: int(path.stem)) if folder.is_dir() else []
+        return [Diagnosis.model_validate_json(_read(path)) for path in paths if path.stem.isdigit()]
+
+    def add_diagnosis(self, diagnosis: Diagnosis) -> int:
+        """Store a diagnosis as the next diagnosis/<n>.json and return n, counting from 1."""
+        number = len(self.diagnoses()) + 1
+        _write(self.path / "diagnosis" / f"{number}.json", diagnosis.model_dump_json(indent=2))
+        return number
 
     def write_snapshot(self, snapshot: TrainingSnapshot) -> None:
         _write(self.path / "live.json", snapshot.model_dump_json())
@@ -253,9 +298,12 @@ class RunStore:
                 seed=project.brain.seed if start.seed is None else start.seed,
                 total_steps=start.total_steps,
                 copies=start.copies,
+                # A warm-started run counts its own steps from 0: its checkpoint 0 is the inherited brain evaluated on
+                # this revision, so the schedule and the step numbers mean the same in every run.
                 checkpoint_steps=checkpoint_steps(start.total_steps),
                 evaluation_episodes=evaluation_episodes,
                 threads=threads,
+                warm_start=start.warm_start,
             )
             meta = RunMeta(
                 versions={package: _version(package) for package in TRACKED_PACKAGES},
@@ -280,6 +328,17 @@ class RunStore:
             )
             folder.write_status(status)
             return status
+
+    def latest_ended(self, project_id: str, revision: int) -> RunStatus | None:
+        """The newest run of a revision that is no longer training."""
+        return next(
+            (
+                status
+                for status in self.list_runs(project_id)
+                if status.revision_number == revision and status.state in TERMINAL_STATES
+            ),
+            None,
+        )
 
     def trained_checkpoint(self, project_id: str, revision: int) -> tuple[RunStatus, Path] | None:
         """The best trained checkpoint of the newest ended run of a revision, the brain Play should use.

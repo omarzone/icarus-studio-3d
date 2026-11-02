@@ -1,6 +1,13 @@
 import type { Conversation, CopilotProposal, SceneGeom } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { changedGeoms, conversationView, openProposal, proposalView, workspaceOf } from "./copilot-views.ts";
+import {
+  changedGeoms,
+  conversationView,
+  openProposal,
+  proposalView,
+  runCardProgress,
+  workspaceOf,
+} from "./copilot-views.ts";
 
 const night: CopilotProposal = {
   id: "p1",
@@ -62,9 +69,52 @@ describe("copilot conversation views", () => {
       id: "m2",
       role: "copilot",
       text: [{ text: "Here is a darker lot." }],
+      markdown: "Here is a darker lot.",
       thinking: "The light component has an intensity.",
     });
     expect(view.autonomy).toBe("ask");
+  });
+
+  it("carries an answer's buttons, the steps the copilot took and what it saw", () => {
+    const links = {
+      content: (id: string) => `http://engine/attachments/${id}/content`,
+      frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+    };
+    const engine: Conversation = {
+      ...conversation([{ ...night, status: "applied", applied_revision: 5 }]),
+      messages: [
+        {
+          id: "m2",
+          role: "copilot",
+          text: "Done.",
+          created_at: "2026-11-01T10:00:02Z",
+          proposal_id: "p1",
+          actions: [
+            { label: "Apply", kind: "apply" },
+            { label: "See it train", kind: "navigate", target: "SCR-TRAIN" },
+          ],
+          steps: [
+            { tool: "look", summary: "Looked at the lot from above" },
+            { tool: "try", summary: "Tried 2 changes: placement check failed", ok: false },
+          ],
+          attachments: [{ id: "v1", kind: "view", name: "Top view", media_type: "image/png", size: 30 }],
+        },
+      ],
+    };
+    const [message] = conversationView(engine, links).messages;
+    expect(message).toMatchObject({
+      role: "copilot",
+      answerActions: [
+        { label: "Apply", kind: "apply", target: null },
+        { label: "See it train", kind: "navigate", target: "SCR-TRAIN" },
+      ],
+      steps: [
+        { tool: "look", summary: "Looked at the lot from above", ok: true },
+        { tool: "try", summary: "Tried 2 changes: placement check failed", ok: false },
+      ],
+      views: [{ id: "v1", kind: "view", url: "http://engine/attachments/v1/content" }],
+      proposal: { id: "p1", open: false },
+    });
   });
 
   it("turns suggestions into chips that send their own text", () => {
@@ -74,9 +124,175 @@ describe("copilot conversation views", () => {
     ]);
   });
 
+  it("shows the files a message carries apart from the scene renders taken for it, served by the engine", () => {
+    const links = {
+      content: (id: string) => `http://engine/attachments/${id}/content`,
+      frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+    };
+    const engine: Conversation = {
+      ...conversation([]),
+      messages: [
+        {
+          id: "m1",
+          role: "user",
+          text: "like this",
+          created_at: "2026-11-01T10:00:00Z",
+          attachments: [
+            { id: "a1", kind: "image", name: "lot.png", media_type: "image/png", size: 10 },
+            { id: "a2", kind: "video", name: "run.mp4", media_type: "video/mp4", size: 20 },
+            { id: "v1", kind: "view", name: "Three-quarter view", media_type: "image/jpeg", size: 30 },
+          ],
+        },
+      ],
+    };
+    const [message] = conversationView(engine, links).messages;
+    expect(message).toEqual({
+      id: "m1",
+      role: "user",
+      text: "like this",
+      attachments: [
+        {
+          id: "a1",
+          kind: "image",
+          name: "lot.png",
+          mediaType: "image/png",
+          size: 10,
+          url: "http://engine/attachments/a1/content",
+          poster: null,
+        },
+        {
+          id: "a2",
+          kind: "video",
+          name: "run.mp4",
+          mediaType: "video/mp4",
+          size: 20,
+          url: "http://engine/attachments/a2/content",
+          poster: "http://engine/attachments/a2/frames/0",
+        },
+      ],
+      views: [
+        {
+          id: "v1",
+          kind: "view",
+          name: "Three-quarter view",
+          mediaType: "image/jpeg",
+          size: 30,
+          url: "http://engine/attachments/v1/content",
+          poster: null,
+        },
+      ],
+    });
+  });
+
+  it("carries an answer's title and check list", () => {
+    const engine: Conversation = {
+      ...conversation([]),
+      messages: [
+        {
+          id: "m1",
+          role: "copilot",
+          text: "The car is ready.",
+          created_at: "2026-11-01T10:00:00Z",
+          title: "Body checks",
+          checks: [
+            { text: "Wheels touch the ground", tone: "ok" },
+            { text: "Sensors see only the front", tone: "warn" },
+          ],
+        },
+      ],
+    };
+    expect(conversationView(engine).messages[0]).toMatchObject({
+      role: "copilot",
+      title: "Body checks",
+      checks: [
+        { text: "Wheels touch the ground", tone: "ok" },
+        { text: "Sensors see only the front", tone: "warn" },
+      ],
+    });
+  });
+
+  it("follows an answer with its build, its run and its plan, and marks each new milestone once", () => {
+    const at = "2026-11-01T10:00:00Z";
+    const engine: Conversation = {
+      ...conversation([]),
+      messages: [
+        { id: "m1", role: "copilot", text: "Building.", created_at: at, build_id: "b1" },
+        { id: "m2", role: "copilot", text: "Training.", created_at: at, run: { run_id: "r1" } },
+        {
+          id: "m3",
+          role: "copilot",
+          text: "It turns too late.",
+          created_at: at,
+          run: { run_id: "r1", milestone_step: 100000 },
+          plan: [{ mark: "add", label: "Side sensors", detail: "2 rays" }],
+        },
+        { id: "m4", role: "copilot", text: "Better.", created_at: at, run: { run_id: "r1", milestone_step: 100000 } },
+        { id: "m5", role: "copilot", text: "Done.", created_at: at, run: { run_id: "r1", milestone_step: 1500000 } },
+      ],
+    };
+    const view = conversationView(engine).messages;
+    expect(view.map((message) => message.role)).toEqual([
+      "copilot",
+      "build",
+      "copilot",
+      "run",
+      "milestone",
+      "copilot",
+      "run",
+      "plan",
+      "copilot",
+      "run",
+      "milestone",
+      "copilot",
+      "run",
+    ]);
+    expect(view[1]).toEqual({ id: "build-m1", role: "build", scene: "b1" });
+    expect(view[3]).toEqual({ id: "run-m2", role: "run", runId: "r1" });
+    expect(view[4]).toEqual({ id: "milestone-m3", role: "milestone", text: "100k steps" });
+    expect(view[7]).toEqual({
+      id: "plan-m3",
+      role: "plan",
+      plan: {
+        title: "Next run, if you agree",
+        items: [{ mark: "add", label: "Side sensors", detail: "2 rays" }],
+        actions: [],
+      },
+    });
+    expect(view[10]).toMatchObject({ role: "milestone", text: "1.5M steps" });
+  });
+
+  it("uses suggestion intents when the engine sends them", () => {
+    const engine: Conversation = {
+      ...conversation([]),
+      suggestion_items: [{ text: "Show where it fails", intent: "diagnose" }, { text: "Why?" }],
+    };
+    expect(conversationView(engine).suggestions).toEqual([
+      { text: "Show where it fails", intent: "diagnose" },
+      { text: "Why?", intent: "ask" },
+    ]);
+  });
+
   it("leaves out a proposal the conversation no longer has", () => {
     const view = conversationView(conversation([]));
     expect(view.messages.map((message) => message.role)).toEqual(["user", "copilot"]);
+  });
+});
+
+describe("run card", () => {
+  it("shows the share done while the run trains", () => {
+    expect(runCardProgress({ id: "r1", name: "Run 3", status: "running", progress: 0.42, detail: "" })).toEqual({
+      title: "Run 3",
+      meta: "training",
+      done: 0.42,
+      goals: [],
+    });
+  });
+
+  it("shows the result once it ended", () => {
+    expect(runCardProgress({ id: "r1", name: "Run 3", status: "done", detail: "parks 71%" })).toMatchObject({
+      meta: "parks 71%",
+      done: 1,
+    });
   });
 });
 
