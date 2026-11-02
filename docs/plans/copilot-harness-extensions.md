@@ -83,7 +83,30 @@ The loop's compaction (in-turn pruning of old tool results and pictures, rolling
 - **Summaries are never sources:** a number in a summary or log must still be read from a run or revision before it is cited.
 - Thresholds stay configurable per connection (context window learned from overflow errors).
 
-## 8. Extensions without code
+**Sized to the window, so large windows are used, not wasted.** A 1M-token model should keep weeks of a project's conversation verbatim; a 64k model should compact early. Every threshold is a share of the connection's window, never a fixed token count:
+
+| Window | Reserve for the answer | Prune old tool results at | Summarize history at | Recent history kept verbatim |
+|---|---|---|---|---|
+| ≤ 64k | 15% | 60% | 75% | 25% |
+| 64k–256k | 10% | 70% | 82% | 35% |
+| 256k–1M+ | 6% | 80% | 90% | 50% |
+
+- **Prompt-cache friendly order:** a stable prefix (system rules, skill catalog, library reference, pinned skill bodies) never changes between steps; the conversation is appended in order; live project state goes last. Providers that cache prefixes then reuse most of a long prompt, so a large context stays fast and cheap; compaction rewrites only the middle of the prompt, never the prefix.
+- **Layered, not destructive:** pruning first shortens old tool results and drops old pictures (kept as their attachment ids, re-readable with tools); only then are the oldest messages folded into a summary, and later summaries fold into the previous one. Each layer is stored, so a summary can be expanded again with a `recall_history(range)` tool when the window allows.
+- **Measured, not guessed:** prompt size comes from the provider's reported usage of the previous call plus an estimate of what was added since; the learned window shrinks after an overflow and the next call retries once after compacting.
+- **Per-connection setting:** the person can set the window in Settings › AI models; the default stays conservative until a connection reports it.
+
+## 8. Hooks
+
+Hooks let the engine and, later, extensions react at fixed points of the copilot's life, the way established agent harnesses do.
+
+- **Points:** `turn_start` (before the model sees a message), `before_tool` (a call about to run, with its validated arguments), `after_tool` (its result), `before_propose`, `before_apply`, `turn_end`, `before_compact`, `task_finished`.
+- **Engine hooks** are Python callables registered by engine modules (reviewed code in this repository). The design checks, the placement checks, grounding and the ask-mode permission rule move onto these points so they are explicit and ordered instead of scattered through the loop.
+- **Declarative hooks** (data, shippable in bundles) can only do a fixed set of actions: add context to the turn (a note or a skill to load), block a tool call with a reason the model sees, require the person's approval for a call, post a suggestion or button, or run one of the engine's built-in checks. They match on the hook point, tool name and simple conditions over the event (for example "before_apply when the change removes a reward term → require approval"). They never run code or reach the network.
+- **Order and failures:** engine hooks run first, then declarative ones in install order; a hook that fails is skipped and reported as a step, never a crash; a block from any hook wins.
+- Every hook decision is published as an event, so the person can see why something was blocked or added.
+
+## 9. Extensions without code
 
 Community extension is declarative so that sharing never runs foreign code:
 
@@ -94,20 +117,21 @@ Community extension is declarative so that sharing never runs foreign code:
 | Library piece | a preset object (components with values) | library components and ranges |
 | Look pack | palettes, sky presets, materials | sky and material schemas |
 | Reward recipe | a named composition of existing reward terms with weights | reward term catalog |
-| Event hook | "when event X with condition Y, post this skill-driven suggestion" | event kinds, skills |
+| Hook | a declarative hook (§8): point, match, action | hook points, tools, actions |
 
 All ship inside the existing bundle format (`BundleManifest`), validated on import, versioned, removable. New physics, new reward term implementations or new sensors stay engine code reviewed in this repository; an extension can only combine what the library already defines. Code plugins are out of scope: they would need a sandbox and would break the bundle invariant.
 
-## 9. Build order
+## 10. Build order
 
 1. Contract task: `EngineEventEnvelope` + `EngineEvent` union, `TaskInfo`.
 2. Event bus and `/events` SSE; copilot, tasks, training and projects publish; the desktop shows live steps.
 3. Task registry; autopilot, diagnosis, ideas and builds become tasks; `tasks` tool.
-4. Skills: loader, validation, `use_skill`, prompt catalog, checklists; the first eight built-in skills written and tested with the fake provider, then measured with the real model on the beginner scenarios (walker, race, parking).
-5. Subagents: `delegate`, `message_task`, `task_result`, chat threads.
-6. Memory and `remember`/`recall`; comparison tools.
-7. Extension kinds in bundles (with the community sprint).
+4. Hooks: engine hooks for the existing checks, then declarative hooks.
+5. Skills: loader, validation, `use_skill`, prompt catalog, checklists; the first eight built-in skills written and tested with the fake provider, then measured with the real model on the beginner scenarios (walker, race, parking).
+6. Subagents: `delegate`, `message_task`, `task_result`, chat threads.
+7. Memory and `remember`/`recall`; comparison tools.
+8. Extension kinds in bundles (with the community sprint).
 
-## 10. Testing
+## 11. Testing
 
 Every event kind has a test that the owning module publishes it; the SSE endpoint is tested with the existing TestClient streaming pattern; skills are tested by loading every built-in skill and by fake-provider turns that call `use_skill` and follow its checklist; memory is tested for scoping, sources and deletion. No test touches the network.
