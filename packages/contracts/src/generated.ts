@@ -1028,10 +1028,279 @@ export interface FailureGroup {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DiagnosisCreatedEvent".
+ */
+export interface DiagnosisCreatedEvent {
+  diagnosis_id: string;
+  run_id: string;
+  type: "diagnosis_created";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "DuplicateProject".
  */
 export interface DuplicateProject {
   name: string;
+}
+/**
+ * One server-sent event of GET /events.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "EngineEventEnvelope".
+ */
+export interface EngineEventEnvelope {
+  event:
+    | TurnStartedEvent
+    | StepEvent
+    | ViewTakenEvent
+    | ProposalCreatedEvent
+    | ProposalAppliedEvent
+    | TurnFinishedEvent
+    | TaskStartedEvent
+    | TaskProgressEvent
+    | TaskFinishedEvent
+    | RunEventWrapper
+    | DiagnosisCreatedEvent
+    | RevisionCreatedEvent
+    | HookDecisionEvent;
+  id: string;
+  project_id: string | null;
+  time: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TurnStartedEvent".
+ */
+export interface TurnStartedEvent {
+  turn_id: string;
+  type: "turn_started";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StepEvent".
+ */
+export interface StepEvent {
+  step: AgentStep;
+  turn_id: string;
+  type: "step";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ViewTakenEvent".
+ */
+export interface ViewTakenEvent {
+  attachment_id: string;
+  turn_id: string;
+  type: "view_taken";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProposalCreatedEvent".
+ */
+export interface ProposalCreatedEvent {
+  proposal_id: string;
+  summary: string;
+  type: "proposal_created";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProposalAppliedEvent".
+ */
+export interface ProposalAppliedEvent {
+  proposal_id: string;
+  revision: number;
+  type: "proposal_applied";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TurnFinishedEvent".
+ */
+export interface TurnFinishedEvent {
+  message_id?: string | null;
+  ok?: boolean;
+  turn_id: string;
+  type: "turn_finished";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskStartedEvent".
+ */
+export interface TaskStartedEvent {
+  task: TaskInfo;
+  type: "task_started";
+}
+/**
+ * One piece of long work the engine is doing or did, listed by GET /tasks.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskInfo".
+ */
+export interface TaskInfo {
+  finished_at?: string | null;
+  id: string;
+  kind: "training_run" | "autopilot" | "diagnosis" | "ideas" | "build" | "agent_turn";
+  parent_task_id?: string | null;
+  progress?: number | null;
+  project_id: string | null;
+  started_at: string;
+  state: "running" | "done" | "stopped" | "failed";
+  title: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskProgressEvent".
+ */
+export interface TaskProgressEvent {
+  progress: number;
+  task_id: string;
+  text: string;
+  type: "task_progress";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TaskFinishedEvent".
+ */
+export interface TaskFinishedEvent {
+  reason?: string | null;
+  state: "done" | "stopped" | "failed";
+  task_id: string;
+  type: "task_finished";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunEventWrapper".
+ */
+export interface RunEventWrapper {
+  event: StatusEvent | MetricEvent | CheckpointEvent | SnapshotEvent | LogEvent;
+  run_id: string;
+  type: "run_event";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StatusEvent".
+ */
+export interface StatusEvent {
+  status: RunStatus;
+  type: "status";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunStatus".
+ */
+export interface RunStatus {
+  best_step?: number | null;
+  copies: number;
+  failure?: RunFailure | null;
+  finished_at?: string | null;
+  name: string;
+  project_id: string;
+  revision_number: number;
+  run_id: string;
+  started_at: string;
+  state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
+  step: number;
+  steps_per_second: number;
+  success_rate?: number | null;
+  total_steps: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunFailure".
+ */
+export interface RunFailure {
+  details: string[];
+  reason: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricEvent".
+ */
+export interface MetricEvent {
+  metric: MetricPoint;
+  type: "metric";
+}
+/**
+ * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricPoint".
+ */
+export interface MetricPoint {
+  elapsed: number;
+  episode_length: number;
+  episode_return: number;
+  failure_rate?: number | null;
+  kind: "train" | "eval";
+  reward_terms: {
+    [k: string]: number;
+  };
+  step: number;
+  steps_per_second?: number | null;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SnapshotEvent".
+ */
+export interface SnapshotEvent {
+  snapshot: TrainingSnapshot;
+  type: "snapshot";
+}
+/**
+ * The parallel copies as they are right now, sampled a few times per second while a run trains.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainingSnapshot".
+ */
+export interface TrainingSnapshot {
+  copies: CopyPoses[];
+  geoms: string[];
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogEvent".
+ */
+export interface LogEvent {
+  line: LogLine;
+  type: "log";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogLine".
+ */
+export interface LogLine {
+  elapsed: number;
+  level: "info" | "warn" | "error";
+  text: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RevisionCreatedEvent".
+ */
+export interface RevisionCreatedEvent {
+  author: "user" | "copilot";
+  revision: number;
+  summary: string;
+  type: "revision_created";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HookDecisionEvent".
+ */
+export interface HookDecisionEvent {
+  action: "allow" | "add_context" | "block" | "require_approval" | "suggest" | "run_check";
+  point:
+    | "turn_start"
+    | "before_tool"
+    | "after_tool"
+    | "before_propose"
+    | "before_apply"
+    | "turn_end"
+    | "before_compact"
+    | "task_finished";
+  reason: string;
+  type: "hook_decision";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1089,6 +1358,7 @@ export interface PieceInfo {
 export interface RewardTermInfo {
   default_weight: number;
   description: string;
+  families?: ("none" | "navigation" | "locomotion")[];
   family: "none" | "navigation" | "locomotion";
   label: string;
   term: string;
@@ -1113,50 +1383,6 @@ export interface TemplateInfo {
 export interface LightCommand {
   intensity: number;
   tool: "light";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogEvent".
- */
-export interface LogEvent {
-  line: LogLine;
-  type: "log";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "LogLine".
- */
-export interface LogLine {
-  elapsed: number;
-  level: "info" | "warn" | "error";
-  text: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricEvent".
- */
-export interface MetricEvent {
-  metric: MetricPoint;
-  type: "metric";
-}
-/**
- * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "MetricPoint".
- */
-export interface MetricPoint {
-  elapsed: number;
-  episode_length: number;
-  episode_return: number;
-  failure_rate?: number | null;
-  kind: "train" | "eval";
-  reward_terms: {
-    [k: string]: number;
-  };
-  step: number;
-  steps_per_second?: number | null;
-  success_rate?: number | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1592,61 +1818,6 @@ export interface WarmStart {
  */
 export interface RunEventEnvelope {
   event: StatusEvent | MetricEvent | CheckpointEvent | SnapshotEvent | LogEvent;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "StatusEvent".
- */
-export interface StatusEvent {
-  status: RunStatus;
-  type: "status";
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "RunStatus".
- */
-export interface RunStatus {
-  best_step?: number | null;
-  copies: number;
-  failure?: RunFailure | null;
-  finished_at?: string | null;
-  name: string;
-  project_id: string;
-  revision_number: number;
-  run_id: string;
-  started_at: string;
-  state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
-  step: number;
-  steps_per_second: number;
-  success_rate?: number | null;
-  total_steps: number;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "RunFailure".
- */
-export interface RunFailure {
-  details: string[];
-  reason: string;
-}
-/**
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "SnapshotEvent".
- */
-export interface SnapshotEvent {
-  snapshot: TrainingSnapshot;
-  type: "snapshot";
-}
-/**
- * The parallel copies as they are right now, sampled a few times per second while a run trains.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "TrainingSnapshot".
- */
-export interface TrainingSnapshot {
-  copies: CopyPoses[];
-  geoms: string[];
-  step: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

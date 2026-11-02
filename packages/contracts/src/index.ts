@@ -1,5 +1,6 @@
 import type {
   ComponentSpec,
+  EngineEventEnvelope,
   OperationBatch,
   PlayCommandEnvelope,
   PlayMessageEnvelope,
@@ -39,6 +40,7 @@ export type {
   Diagnosis,
   DiagnosisEvidence,
   DuplicateProject,
+  EngineEventEnvelope,
   FailureGroup,
   HealthStatus,
   IdeaRequest,
@@ -93,6 +95,7 @@ export type {
   SliderValue,
   StartRun,
   SwitchValue,
+  TaskInfo,
   TemplateInfo,
   TrainingSettings,
   TrainingSettingsPatch,
@@ -109,3 +112,4 @@ export type EditOperation = OperationBatch["operations"][number];
 export type PlayCommand = PlayCommandEnvelope["command"];
 export type PlayMessage = PlayMessageEnvelope["message"];
 export type RunEvent = RunEventEnvelope["event"];
+export type EngineEvent = EngineEventEnvelope["event"];
