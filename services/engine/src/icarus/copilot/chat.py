@@ -209,6 +209,28 @@ class Copilot:
         client, capability, sees = self._client(media)
         conversation = self.conversation(project_id)
         user_message = new_message("user", message.text, attachments=media.infos)
+        # Stored at once, so messages the coach posts while the copilot works come after it and speak its language.
+        with self._conversations.editing(project_id) as stored:
+            stored.messages.append(user_message)
+        try:
+            return self._answer(project_id, message, media, client, capability, sees, conversation, user_message)
+        except BaseException:
+            # A turn that fails leaves the conversation as it was, so sending again does not repeat the message.
+            with self._conversations.editing(project_id) as stored:
+                stored.messages = [item for item in stored.messages if item.id != user_message.id]
+            raise
+
+    def _answer(
+        self,
+        project_id: str,
+        message: SendMessage,
+        media: TurnMedia,
+        client: ModelClient,
+        capability: Capability,
+        sees: bool,
+        conversation: Conversation,
+        user_message: CopilotMessage,
+    ) -> Conversation:
         if self._settings.refuses_tools(capability):
             return self._single_shot(project_id, message, media, client, sees, user_message)
         setup = self._setup(client, capability)
@@ -220,11 +242,11 @@ class Copilot:
         except InputRejected:
             if not media.pictures or sees:
                 raise
-            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
+            return self._record(project_id, new_message("copilot", CANNOT_SEE))
         with self._conversations.editing(project_id) as stored:
             if result.proposals:
                 _retire_open(stored)
-            stored.messages += [user_message, result.message]
+            stored.messages.append(result.message)
             stored.proposals += result.proposals
             stored.suggestions = result.suggestions
             stored.suggestion_items = result.suggestion_items
@@ -295,6 +317,8 @@ class Copilot:
         state = self._projects.state(project_id)
         context = project_context(state, self._runs, message.selection, message.workspace)
         conversation = self.conversation(project_id)
+        # The person's message is already stored; the prompt carries it once, as the message itself.
+        conversation.messages = [item for item in conversation.messages if item.id != user_message.id]
         history = history_text(conversation)
         autopilot = conversation.autonomy == "autopilot"
         system = SYSTEM.format(
@@ -308,7 +332,7 @@ class Copilot:
         except InputRejected:
             if not media.pictures or sees:
                 raise
-            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
+            return self._record(project_id, new_message("copilot", CANNOT_SEE))
         answer, draft = reply.value.answer, reply.value.proposal
         if review.proposal_problem:
             answer = f"{answer} I could not turn this into a change that passes validation: {review.proposal_problem}"
@@ -332,7 +356,7 @@ class Copilot:
         with self._conversations.editing(project_id) as stored:
             if proposal:
                 _retire_open(stored)
-            stored.messages += [user_message, copilot_message]
+            stored.messages.append(copilot_message)
             stored.proposals += [proposal] if proposal else []
             stored.suggestions = suggestions
         if proposal and autopilot:
@@ -348,9 +372,9 @@ class Copilot:
                         item.text = f"{item.text} {outcome.text}"
         return self.conversation(project_id)
 
-    def _record(self, project_id: str, user: CopilotMessage, answer: CopilotMessage) -> Conversation:
+    def _record(self, project_id: str, answer: CopilotMessage) -> Conversation:
         with self._conversations.editing(project_id) as conversation:
-            conversation.messages += [user, answer]
+            conversation.messages.append(answer)
             conversation.suggestions = []
         return self.conversation(project_id)
 
