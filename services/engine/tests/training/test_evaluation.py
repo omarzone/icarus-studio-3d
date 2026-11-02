@@ -54,3 +54,21 @@ def test_a_walker_has_no_success_rate():
     assert result.rollout.outcome == f"Fell over at {result.rollout.frames[-1].time:.1f} s" or (
         result.rollout.outcome == "Time ran out"
     )
+
+
+class Steady:
+    label = "Hold every motor at its middle"
+
+    def act(self, observation: np.ndarray) -> np.ndarray:
+        return np.zeros(6)
+
+
+def test_a_walker_episode_records_its_gait_and_a_car_episode_does_not(parking):
+    steady = evaluate(project_from("walker_robot"), Steady(), episodes=1, step=0).episodes[0].gait
+    jittery = evaluate(project_from("walker_robot"), RandomPolicy(6, seed=0), episodes=1, step=0).episodes[0].gait
+    assert steady is not None and jittery is not None
+    assert [foot.name for foot in steady.feet] == ["Left foot", "Right foot"]
+    assert all(0 <= foot.contact_share <= 1 for foot in steady.feet)
+    assert steady.start_height == pytest.approx(1.0)
+    assert jittery.action_change > steady.action_change
+    assert evaluate(parking, RandomPolicy(4, seed=1), episodes=1, step=0).episodes[0].gait is None

@@ -12,6 +12,7 @@ from icarus.sim.model_state import LiveWorld, reward_state, touching
 from icarus.sim.policy import BatchPolicy, Policy
 from icarus.sim.rewards import RewardState
 from icarus.training.episodes import EpisodeRecord
+from icarus.training.gait_signals import GaitMeter, measures_gait
 
 # Evaluation seeds sit apart from training seeds so a checkpoint is never judged on the episodes it trained on.
 EVALUATION_SEED = 10_000
@@ -89,6 +90,7 @@ class _EpisodeRun:
         world = env.world
         self.observation, _ = env.reset(seed=seed)
         self.start = reward_state(world)
+        self.gait = GaitMeter(world, self.start) if measures_gait(world) else None
         self.frames: list[RolloutFrame] = []
         self.times, self.qpos = [float(world.data.time)], [world.data.qpos.copy()]
         self.first_touch: str | None = None
@@ -102,6 +104,8 @@ class _EpisodeRun:
         self.length += 1
         self.done = self.terminated or truncated
         time = float(world.data.time)
+        if self.gait is not None:
+            self.gait.add(env.state)
         if self.keep:
             self.times.append(time)
             self.qpos.append(world.data.qpos.copy())
@@ -139,6 +143,7 @@ class _EpisodeRun:
             start_distance=_distance(self.start),
             end_distance=_distance(end),
             forward=round(end.position[0] - self.start.position[0], 3),
+            gait=self.gait.result(time) if self.gait is not None else None,
         )
         failure = self.length if fell else (touched[2] if touched else None)
         states = EpisodeStates(self.times, self.qpos, failure) if self.keep else None

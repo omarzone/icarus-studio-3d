@@ -11,6 +11,7 @@ from icarus.contracts.specs import TaskFamily
 from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch
 from icarus.design.components import view
 from icarus.projects.document import all_objects
+from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.rewards import RewardState
 
 SensorKind = Literal["ray", "accel", "gyro", "touch"]
@@ -94,6 +95,11 @@ class LiveWorld:
     # Side of the ground grid the coverage term counts, and the cells entered since the last reset.
     cell_size: float | None = None
     visited: set[tuple[int, int]] = field(default_factory=set)
+    # Body ids of the feet by the foot rule in sim/gait.py, and when each left the ground (None while down).
+    feet: tuple[int, ...] = ()
+    lifted_at: list[float | None] = field(default_factory=list)
+    # The root height body_height aims for when the term sets one; otherwise the start height.
+    target_height: float | None = None
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -183,6 +189,12 @@ def _cell_size(project: Project) -> float | None:
     return float(size.value) if isinstance(size, NumberValue) else COVERAGE_CELL
 
 
+def _target_height(project: Project) -> float | None:
+    term = next((item for item in project.task.rewards if item.term == "body_height"), None)
+    height = term.params.get("height") if term else None
+    return float(height.value) if isinstance(height, NumberValue) else None
+
+
 def build_world(project: Project) -> LiveWorld:
     compiled = compile_project(project)
     model = compiled.model
@@ -225,9 +237,14 @@ def build_world(project: Project) -> LiveWorld:
         legged=bool(project.bodies) and any(view(obj, "balance") for obj in project.bodies[0].objects),
         carried=_carried(project, model),
         cell_size=_cell_size(project),
+        target_height=_target_height(project),
     )
     reset_world(world)
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
+    if agent is not None:
+        bodies = {index for index in range(model.nbody) if model.body(index).name in body_objects}
+        world.feet = foot_bodies(model, data, agent, bodies)
+        world.lifted_at = [None] * len(world.feet)
     return world
 
 
@@ -235,6 +252,7 @@ def reset_world(world: LiveWorld) -> None:
     mujoco.mj_resetData(world.model, world.data)
     mujoco.mj_forward(world.model, world.data)
     world.visited.clear()
+    world.lifted_at = [None] * len(world.feet)
 
 
 def control_substeps(world: LiveWorld) -> int:
@@ -361,6 +379,9 @@ def reward_state(world: LiveWorld) -> RewardState:
             fallen = False
     goal = data.site_xpos[world.goal.site] if world.goal else None
     carried = data.xpos[world.carried] if world.carried is not None else None
+    controls = normalized_controls(world)
+    down = feet_down(data, world.model, world.feet, world.agent_geoms)
+    velocity = body_velocity(world, world.agent) if world.agent is not None else np.zeros(6)
     if world.cell_size is not None:
         world.visited.add((math.floor(position[0] / world.cell_size), math.floor(position[1] / world.cell_size)))
     return RewardState(
@@ -371,10 +392,16 @@ def reward_state(world: LiveWorld) -> RewardState:
         goal_radius=world.goal.radius if world.goal else 0.0,
         colliding=bool(touching(world)),
         fallen=fallen,
-        effort=float(np.sum(normalized_controls(world) ** 2)),
+        effort=float(np.sum(controls**2)),
         speed=float(np.hypot(*agent_velocity(world)[3:5])),
         object_position=(float(carried[0]), float(carried[1]), float(carried[2])) if carried is not None else None,
         object_speed=float(np.hypot(*body_velocity(world, world.carried)[3:5])) if world.carried is not None else 0.0,
         start_height=world.start_height,
         visited=len(world.visited),
+        controls=tuple(controls.tolist()),
+        velocity=(float(velocity[3]), float(velocity[4])),
+        feet_down=down,
+        landed_air=landings(world.lifted_at, down, float(data.time)),
+        at_limits=at_limits(data, world.limited_joints),
+        target_height=world.target_height or world.start_height,
     )

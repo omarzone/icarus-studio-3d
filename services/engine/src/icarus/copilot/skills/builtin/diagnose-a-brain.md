@@ -3,7 +3,7 @@ name: diagnose-a-brain
 title: Diagnose a brain that does not learn and fix it
 when: A run finished or is training and the body falls, stalls, wanders, crashes or never succeeds.
 tools: [read_run, inspect_object, try, look, propose, train]
-version: 2
+version: 3
 ---
 Every explanation comes from the run's own data. When there is no run, say no training has run yet and offer one.
 Do not wait for a stall: the run brief's health facts and coach notes already name what blocks learning at the
@@ -31,7 +31,13 @@ first checkpoints (reward paid without doing the task, objects touched, early en
 6. **Times out.** Near the goal: the bonus needs a stop under 0.2 m/s inside the zone, so check the drive can brake
    (wheel `joint.damping`) and the zone radius fits the body. Far from the goal: the course is too long or too hard
    for 30 s; move the goal closer and train the easy version first (curriculum-and-warm-start).
-7. **Propose one fix.** `try` the smallest change that answers the largest group, `look` if it changes layout,
+7. **Walks badly.** A legged body that moves forward but crawls, hops, drags a foot, twitches or veers has gait
+   facts in the run brief: the root's height against its start, each foot's ground contact share and lift-offs
+   ("the left foot touches the ground 98% of the time ... (dragged)"), every foot in the air at once (hopping),
+   action change per step (twitching), joints at their limits and sideways drift. Quote the number and add the
+   one gait term that answers it, as walking-robot lists: `feet_air_time`, `body_height`, `smooth_actions`,
+   `joint_limits` or `heading_and_drift`. Compare the same fact at the next run's checkpoints to see it worked.
+8. **Propose one fix.** `try` the smallest change that answers the largest group, `look` if it changes layout,
    then `propose` with the evidence (the group and its count). Offer `train`, continuing from the best brain when
    the sensors and motors did not change.
 

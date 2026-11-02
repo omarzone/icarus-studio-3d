@@ -70,3 +70,28 @@ def test_height_gain_pays_a_walker_lifted_above_its_start():
     env.world.data.qpos[address + 2] += 0.3
     mujoco.mj_forward(env.world.model, env.world.data)
     assert env.step(idle(env))[4]["reward_parts"]["height_gain"] == pytest.approx(0.3, abs=0.03)
+
+
+def test_body_height_aims_for_the_standing_height_unless_the_term_sets_one():
+    standing = ProjectEnv(with_term(project_from("walker_robot"), "body_height", 1.0))
+    standing.reset(seed=0)
+    assert standing.step(idle(standing))[4]["reward_parts"]["body_height"] == pytest.approx(1.0, abs=0.1)
+    low = with_term(project_from("walker_robot"), "body_height", 1.0, height={"type": "number", "value": 0.5})
+    crouching = ProjectEnv(low)
+    crouching.reset(seed=0)
+    assert crouching.step(idle(crouching))[4]["reward_parts"]["body_height"] == 0
+
+
+def test_existing_terms_pay_the_same_with_the_gait_terms_added():
+    plain = ProjectEnv(project_from("walker_robot"))
+    project = project_from("walker_robot")
+    for term, weight in (("smooth_actions", -0.05), ("feet_air_time", 1.0), ("heading_and_drift", -0.1)):
+        project = with_term(project, term, weight)
+    gait = ProjectEnv(project)
+    action = np.full(len(plain.world.actuators), 0.3, dtype=np.float32)
+    for env in (plain, gait):
+        env.reset(seed=0)
+    for _ in range(20):
+        before = plain.step(action)[4]["reward_parts"]
+        after = gait.step(action)[4]["reward_parts"]
+        assert {term: after[term] for term in before} == before

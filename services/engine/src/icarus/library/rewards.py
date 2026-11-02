@@ -117,6 +117,64 @@ _TERMS = [
         "Reward each step for how high the body's root is above where it started, up to 1 m, for jumping or "
         "standing up.",
     ),
+    _term(
+        "body_height",
+        "Keep the body's height",
+        "locomotion",
+        0,
+        5,
+        0.2,
+        "Reward each step for keeping the body's root near a target height: 1 at the target, falling to 0 once the "
+        "root is 30% of the target above or below it. Stops a legged body from crawling on its belly or knees. "
+        "Setting: height (metres, 0.05 to 5); left unset, the target is the root's height when the world is built, "
+        "which is its standing height when the body is designed standing on its feet. Paid every step like "
+        "stay_upright, so keep it small next to forward_progress.",
+    ),
+    _term(
+        "smooth_actions",
+        "Move smoothly",
+        "locomotion",
+        -1,
+        0,
+        -0.05,
+        "A penalty each step for how much the brain's commands change from the step before: the mean over motors "
+        "of the squared change of each -1 to 1 command, from 0 (steady) up to 4 (full swing from one end to the "
+        "other). Removes twitching and jitter in the joints.",
+    ),
+    _term(
+        "feet_air_time",
+        "Take real steps",
+        "locomotion",
+        0,
+        5,
+        1,
+        "Reward each time a foot lands after a real lift-off: its time in the air minus 0.1 s, counting at most "
+        "0.5 s, so long strides pay and shuffles shorter than 0.1 s cost a little. Paid only while the body moves "
+        "faster than 0.1 m/s, so stamping in place earns nothing. Feet are the parts with a touch sensor; a body "
+        "without touch sensors uses the tip of each jointed leg whose lowest point at the start sits within 25% of "
+        "the root's height above the body's lowest point. Stops dragged feet and crawling.",
+    ),
+    _term(
+        "heading_and_drift",
+        "Walk straight",
+        "locomotion",
+        -2,
+        0,
+        -0.1,
+        "A penalty each step for turning away from +x, the walking direction (1 minus the cosine of the turn: 0 "
+        "facing ahead, 1 sideways, 2 backwards), plus the sideways speed in m/s. Stops a walker that circles, "
+        "crabs or veers off.",
+    ),
+    _term(
+        "joint_limits",
+        "Stay off the joint limits",
+        "locomotion",
+        -2,
+        0,
+        -0.1,
+        "A penalty each step equal to the share of the body's limited joints within 5% of either end of their "
+        "range, from 0 (none) to 1 (all). Stops locked straight legs and joints slammed against their stops.",
+    ),
 ]
 
 REWARD_TERMS: dict[str, RewardTermInfo] = {term.term: term for term in _TERMS}
@@ -125,6 +183,9 @@ REWARD_TERMS: dict[str, RewardTermInfo] = {term.term: term for term in _TERMS}
 TERM_SETTINGS: dict[str, list[PropertySchema]] = {
     "object_to_goal": [reference("object", "Object", "The movable world object to bring into the goal zone")],
     "coverage": [number("cell_size", "Cell size", "m", 0.1, 5, 0.5, hint="Side of each grid cell on the ground")],
+    "body_height": [
+        number("height", "Target height", "m", 0.05, 5, 1, hint="Root height to hold; unset uses the standing height")
+    ],
 }
 
 # Posture and effort do not depend on where the body goes, so a legged body racing to a goal keeps them.
@@ -132,6 +193,10 @@ _ALSO_FOR: dict[str, frozenset[TaskFamily]] = {
     "stay_upright": frozenset({"navigation"}),
     "fall_penalty": frozenset({"navigation"}),
     "energy_cost": frozenset({"navigation"}),
+    "body_height": frozenset({"navigation"}),
+    "smooth_actions": frozenset({"navigation"}),
+    "feet_air_time": frozenset({"navigation"}),
+    "joint_limits": frozenset({"navigation"}),
 }
 
 
