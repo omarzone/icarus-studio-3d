@@ -7,7 +7,7 @@ from icarus.contracts.training import MAX_COPIES, MAX_STEPS, StartRun, WarmStart
 from icarus.copilot.language import Language, count, say
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunStore
-from icarus.training.schedule import RECOMMENDED_STEPS
+from icarus.training.schedule import planned_steps
 from icarus.training.settings import TrainingSettingsStore
 from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor, WarmStartRefused
 
@@ -58,7 +58,7 @@ class ChatTrainer:
         project = state.project
         if project.task.family == "none":
             return TrainerReply(say("train_no_task", language), False)
-        steps = request.total_steps or RECOMMENDED_STEPS[project.task.family]
+        steps = request.total_steps or planned_steps(project)
         copies = request.copies or min(project.brain.copies, MAX_COPIES)
         settings = self._settings.get()
         warm = self._best_brain(project_id) if request.continue_from_best else None

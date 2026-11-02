@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from icarus.contracts.copilot import SendMessage
+from icarus.contracts.operations import OperationBatch, SetBrain
 from icarus.contracts.training import StartRun, WarmStart
 from icarus.copilot import fixture_provider
 from icarus.copilot.attachments import AttachmentStore
@@ -116,6 +117,18 @@ def test_training_defaults_come_from_the_recommended_budget_and_the_brain(
     say(copilot, project_id, "entrénalo")
     (run,) = runs.list_runs(project_id)
     assert run.total_steps == 1_000_000 and run.copies == store.state(project_id).project.brain.copies
+
+
+def test_a_brain_with_its_own_training_steps_trains_that_long_by_default(
+    copilot, store, runs, project_id, monkeypatch, tmp_path
+):
+    longer = SetBrain(op="set_brain", training_steps=50_000)
+    store.apply(project_id, OperationBatch(operations=[longer], summary="Shorter practice"))
+    script(monkeypatch, tmp_path, default=[tool_step("train", action="start"), answering("Ok.")])
+    copilot.set_autonomy(project_id, "autopilot")
+    say(copilot, project_id, "entrénalo")
+    (run,) = runs.list_runs(project_id)
+    assert run.total_steps == 50_000
 
 
 def test_a_project_without_a_task_is_not_trained_and_the_answer_says_why(copilot, store, runs, trains):

@@ -10,6 +10,7 @@ from typing import Literal, Protocol
 from icarus.contracts.coach import AutopilotLogLine, AutopilotStart, AutopilotStatus
 from icarus.contracts.copilot import ChatAction, CopilotMessage
 from icarus.contracts.project import ProjectState
+from icarus.contracts.specs import MIN_TRAINING_STEPS
 from icarus.contracts.training import MAX_COPIES, RunStatus, StartRun, WarmStart
 from icarus.copilot.chat import Copilot, CopilotBusy, ProposalOutdated
 from icarus.copilot.client import CopilotError
@@ -22,7 +23,7 @@ from icarus.projects.store import ProjectStore
 from icarus.training.progress_watch import CheckpointResult, WatchFinding, checkpoint_results, watch
 from icarus.training.run_comparison import compare_runs
 from icarus.training.run_store import TERMINAL_STATES, RunStore
-from icarus.training.schedule import RECOMMENDED_STEPS
+from icarus.training.schedule import planned_steps
 from icarus.training.settings import TrainingSettingsStore
 from icarus.training.supervisor import NotTrainable, RunInProgress, WarmStartRefused
 from icarus.training.warm_start import warm_start_problem
@@ -301,7 +302,7 @@ class Autopilot:
         project = state.project
         settings = self._settings.get()
         warm = self._warm_start(pilot, state)
-        steps = RECOMMENDED_STEPS[project.task.family] // ITERATION_SHARE
+        steps = max(MIN_TRAINING_STEPS, planned_steps(project) // ITERATION_SHARE)
         # Coached: the coach looks at its first checkpoints and flags a design problem before the watch rules would.
         copies = min(project.brain.copies, MAX_COPIES)
         start = StartRun(total_steps=steps, copies=copies, warm_start=warm, coach=True)

@@ -3,13 +3,13 @@ import functools
 import sys
 import traceback
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypedDict
 
 import gymnasium
 
 from icarus.contracts.project import Project
+from icarus.contracts.specs import BrainSpec
 from icarus.contracts.training import RunState
 from icarus.sim.env import ProjectEnv
 from icarus.training.lifeline import watch_parent
@@ -18,19 +18,6 @@ from icarus.training.run_store import RunFolder
 
 Device = Literal["cpu", "cuda"]
 TRACEBACK_LINES = 8
-
-
-@dataclass(frozen=True)
-class PpoSettings:
-    """PPO hyperparameters known to train navigation on CPU (ADR 001)."""
-
-    n_steps: int = 1024
-    batch_size: int = 2048
-    n_epochs: int = 10
-    learning_rate: float = 3e-4
-    gamma: float = 0.99
-    gae_lambda: float = 0.95
-    layers: tuple[int, ...] = (256, 256)
 
 
 def make_env(project: Project) -> ProjectEnv:
@@ -43,11 +30,32 @@ def _failure_reason(error: BaseException, started: bool) -> str:
     return "Training stopped because of an error in the worker."
 
 
-DEFAULT_PPO = PpoSettings()
+class PpoArguments(TypedDict):
+    learning_rate: float
+    n_steps: int
+    batch_size: int
+    n_epochs: int
+    gamma: float
+    gae_lambda: float
+    ent_coef: float
 
 
-def train(run_dir: Path, ppo: PpoSettings = DEFAULT_PPO, device: Device = "cpu") -> RunState:
-    """Train a run to its last step or until a stop request, writing everything into its folder."""
+def ppo_arguments(brain: BrainSpec, copies: int) -> PpoArguments:
+    """The brain's PPO knobs as Stable-Baselines3 takes them; a batch never holds more than one update collects."""
+    ppo = brain.ppo
+    return {
+        "learning_rate": ppo.learning_rate,
+        "n_steps": ppo.n_steps,
+        "batch_size": min(ppo.batch_size, ppo.n_steps * copies),
+        "n_epochs": ppo.n_epochs,
+        "gamma": ppo.gamma,
+        "gae_lambda": ppo.gae_lambda,
+        "ent_coef": ppo.ent_coef,
+    }
+
+
+def train(run_dir: Path, device: Device = "cpu") -> RunState:
+    """Train a run to its last step or until a stop request, with the brain settings frozen in its project."""
     folder = RunFolder(run_dir)
     progress = RunProgress(folder)
     config = progress.config
@@ -71,25 +79,22 @@ def train(run_dir: Path, ppo: PpoSettings = DEFAULT_PPO, device: Device = "cpu")
             progress.finish("stopped", 0)
             return "stopped"
         geoms = ProjectEnv(progress.project).moving_geoms
-        batch_size = min(ppo.batch_size, ppo.n_steps * config.copies)
+        brain = progress.project.brain
+        arguments = ppo_arguments(brain, config.copies)
         warm = config.warm_start
         if warm is not None:
             source = RunFolder(run_dir.parent / warm.run_id)
             # Loading with the new copies checks that they see and act the way the saved brain does.
-            model = PPO.load(source.checkpoint_path(warm.step), env=env, device=actual_device, batch_size=batch_size)
+            # The network keeps the saved shape; warm_start_problem refuses one that differs from the brain's layers.
+            model = PPO.load(source.checkpoint_path(warm.step), env=env, device=actual_device, **arguments)
             model.set_random_seed(config.seed)
             progress.log(f"Continuing from {source.stored_status().name} at step {warm.step:,}")
         else:
-            layers = list(ppo.layers)
+            layers = list(brain.layers)
             model = PPO(
                 "MlpPolicy",
                 env,
-                learning_rate=ppo.learning_rate,
-                n_steps=ppo.n_steps,
-                batch_size=batch_size,
-                n_epochs=ppo.n_epochs,
-                gamma=ppo.gamma,
-                gae_lambda=ppo.gae_lambda,
+                **arguments,
                 policy_kwargs={"net_arch": {"pi": layers, "vf": layers}, "activation_fn": torch.nn.Tanh},
                 seed=config.seed,
                 device=actual_device,

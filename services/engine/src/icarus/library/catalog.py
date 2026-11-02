@@ -1,5 +1,6 @@
 from icarus.contracts.library import LibraryCatalog, RewardTermInfo
 from icarus.library import LIBRARY_VERSION
+from icarus.library.brain_settings import BRAIN_SETTINGS
 from icarus.library.components import COMPONENTS
 from icarus.library.pieces import PIECES
 from icarus.library.rewards import REWARD_TERMS, term_families
@@ -17,4 +18,5 @@ def library_catalog() -> LibraryCatalog:
         reward_terms=[_with_families(info) for info in REWARD_TERMS.values()],
         templates=list(TEMPLATES.values()),
         pieces=list(PIECES.values()),
+        brain_settings=BRAIN_SETTINGS,
     )

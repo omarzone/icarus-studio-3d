@@ -2,7 +2,7 @@ from icarus.contracts.errors import ValidationIssue
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue, ChoiceValue
-from icarus.contracts.specs import RewardTermSpec
+from icarus.contracts.specs import MAX_LAYERS, RewardTermSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
 from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, term_fits
@@ -158,6 +158,14 @@ def _sky_issues(project: Project) -> list[ValidationIssue]:
     return issues
 
 
+def _brain_issues(project: Project) -> list[ValidationIssue]:
+    layers = len(project.brain.layers)
+    if 1 <= layers <= MAX_LAYERS:
+        return []
+    message = f"The brain needs between 1 and {MAX_LAYERS} hidden layers, and has {layers}"
+    return [ValidationIssue(path="brain.layers", message=message)]
+
+
 def validate_project(project: Project) -> list[ValidationIssue]:
     """Every structural problem: ids, parents, components, property values, references and rewards."""
     issues: list[ValidationIssue] = []
@@ -173,4 +181,4 @@ def validate_project(project: Project) -> list[ValidationIssue]:
     spawns = [obj for obj in project.world.objects if any(item.kind == "spawn_point" for item in obj.components)]
     if len(spawns) > 1:
         issues.append(ValidationIssue(path="objects", message="A world can have only one spawn point"))
-    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project)
+    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)
