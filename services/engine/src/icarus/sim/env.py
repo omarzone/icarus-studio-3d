@@ -17,7 +17,7 @@ from icarus.sim.model_state import (
     reward_state,
 )
 from icarus.sim.poses import geom_poses, moving_geoms
-from icarus.sim.rewards import compose, delivered, parked
+from icarus.sim.rewards import RewardState, compose, delivered, parked
 from icarus.sim.start_pose import place_start
 from icarus.sim.variation import WorldVariation
 
@@ -57,6 +57,11 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
     def _start_episode(self) -> None:
         self._episode_terms = dict.fromkeys(self._terms, 0.0)
         self._collided = False
+
+    @property
+    def state(self) -> RewardState:
+        """What the reward terms read after the last reset or step."""
+        return self._state
 
     def poses(self) -> CopyPoses:
         """Where this copy's moving geoms are right now, for the live view of training."""
