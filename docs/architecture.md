@@ -250,6 +250,8 @@ A `BehaviorTest` replays a scripted situation and measures the simulated body ag
 
 ### Run store
 
+Runs live next to the projects, in `~/Icarus Studio/runs` (`ICARUS_RUNS_DIR` overrides it), so reinstalling the app never deletes a trained brain. On start the engine moves runs left in the older `services/engine/runs` folder into it, removing each original only after its copy is verified.
+
 ```text
 runs/<run_id>/
 ├── run.json             # RunConfig: project id, revision, seed
