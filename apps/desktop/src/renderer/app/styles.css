@@ -6,6 +6,8 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  /* A desktop window never scrolls as a page: panels shrink or hide instead. */
+  overflow: hidden;
 }
 
 body {

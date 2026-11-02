@@ -15,8 +15,8 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 1280,
-    minHeight: 800,
+    minWidth: 1024,
+    minHeight: 720,
     useContentSize: true,
     show: false,
     backgroundColor: tokens.color.bg.app,

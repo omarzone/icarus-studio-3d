@@ -17,7 +17,7 @@ export function DockWorkspaceShell({ header, layoutKey, panels }: Props) {
   useUndoShortcuts();
   const [api, setApi] = useState<DockviewApi | null>(null);
   return (
-    <div className="grid h-full grid-rows-[52px_minmax(0,1fr)] border border-line-strong bg-app text-fg">
+    <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[52px_minmax(0,1fr)] overflow-hidden border border-line-strong bg-app text-fg">
       <WorkspaceHeader {...header} layoutMenu={<DockLayoutMenu api={api} panels={panels} />} />
       <div className="min-h-0 px-3 pb-3">
         <DockWorkspace panels={panels} storage={storageKey(layoutKey, panels)} onReady={setApi} />

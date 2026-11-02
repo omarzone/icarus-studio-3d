@@ -68,7 +68,7 @@ export function WorkspaceHeader({
   return (
     <header data-ui-id="HDR-WORKSPACE" className="title-bar col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
       {/* A fixed-width project area: the workspace tabs start at the same place in every workspace. */}
-      <div className="flex w-76 shrink-0 items-center">
+      <div className="flex w-76 min-w-0 shrink items-center max-[1360px]:w-52">
         <WindowControlsSpace side="start" />
         <GoTo
           to="POP-PROJECT-MENU"

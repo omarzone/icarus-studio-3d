@@ -26,7 +26,7 @@ export function SavedIndicator({ project }: { project: string }) {
       className={buttonClass("ghost", "gap-1.5 rounded-full text-fg-tertiary")}
     >
       <Check size={12} strokeWidth={2} aria-hidden />
-      Saved {when}
+      <span className="max-[1440px]:hidden">Saved {when}</span>
     </GoTo>
   );
 }

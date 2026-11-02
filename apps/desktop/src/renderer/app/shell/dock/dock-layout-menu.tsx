@@ -52,7 +52,7 @@ export function DockLayoutMenu({ api, panels }: Props) {
   return (
     <MenuButton label="Panels" entries={entries} className={buttonClass("ghost", "gap-1.5")}>
       <PanelsTopLeft size={14} strokeWidth={1.75} aria-hidden />
-      Panels
+      <span className="max-[1360px]:hidden">Panels</span>
     </MenuButton>
   );
 }
