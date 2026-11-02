@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { settingsPort, type TrainingSettings } from "../../ports/settings-port.ts";
@@ -11,9 +12,15 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { SettingSwitchRow } from "./setting-switch-row.tsx";
 import { SettingsLayout } from "./settings-layout.tsx";
-import { STORAGE_SECTION_ID, StorageSection } from "./storage-section.tsx";
+import { StoragePage } from "./storage-page.tsx";
 
 export function TrainingPage() {
+  // Storage shares this route so the design inventory stays as drawn; it is its own page in the navigation.
+  const storage = useNavigation((state) => state.params.page === "storage");
+  return storage ? <StoragePage /> : <TrainingSettingsPage />;
+}
+
+function TrainingSettingsPage() {
   const settings = usePort(settingsPort);
   const query = useQuery({ queryKey: ["settings", "training"], queryFn: settings.getTraining });
   return (
@@ -21,14 +28,8 @@ export function TrainingPage() {
       section="training"
       title="Training and hardware"
       description="Training runs on this computer. Nothing is uploaded."
-      onLocalItem={(label) => {
-        if (label === "Storage") {
-          document.getElementById(STORAGE_SECTION_ID)?.scrollIntoView({ block: "start" });
-        }
-      }}
     >
       <QueryView query={query}>{(training) => <TrainingForm training={training} />}</QueryView>
-      <StorageSection />
     </SettingsLayout>
   );
 }

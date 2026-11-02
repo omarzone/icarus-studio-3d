@@ -1,4 +1,4 @@
-// Storage section of SCR-SETTINGS-TRAINING: where projects and runs live, and moving them to another folder.
+// The body of the Storage settings page: where projects and runs live, and moving them to another folder.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
