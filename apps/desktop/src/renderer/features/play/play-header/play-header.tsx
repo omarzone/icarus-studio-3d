@@ -8,6 +8,7 @@ import { useNotices } from "../../../app/runtime/notices.ts";
 import { useRuntimeMode } from "../../../app/runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../../../app/shell/window-frame.tsx";
 import { buttonClass } from "../../../ui/button-styles.ts";
+import { playExit } from "./play-exit.ts";
 
 type Props = {
   project: string;
@@ -26,8 +27,9 @@ export function PlayHeader({ project, returnTo, brain }: Props) {
   useTitleBarHeight(tokens.size.headerWorkspace);
   const app = useRuntimeMode() === "app";
   const notify = useNotices((state) => state.notify);
-  const previous = useNavigation((state) => state.history.at(-1));
-  const stopTo = previous?.screen ?? returnTo;
+  const history = useNavigation((state) => state.history);
+  const params = useNavigation((state) => state.params);
+  const exit = playExit(history, returnTo, params);
   return (
     <header data-ui-id="HDR-PLAY" className="title-bar col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
       <WindowControlsSpace side="start" />
@@ -50,9 +52,9 @@ export function PlayHeader({ project, returnTo, brain }: Props) {
         </span>
         {brain ? <BrainChip brain={brain} /> : null}
         <GoTo
-          to={stopTo}
+          to={exit.screen}
           cta="Stop"
-          params={previous?.params}
+          params={exit.params}
           title="Back to the workspace, exactly as you left it"
           className={buttonClass("primary", "px-3.5!")}
         >
