@@ -25,6 +25,7 @@ from icarus.contracts.training import (
     StartRun,
     TrainingSnapshot,
 )
+from icarus.library.look_properties import training_content
 from icarus.projects.files import append_line, write_atomic
 from icarus.training.episodes import CheckpointEpisodes
 from icarus.training.schedule import checkpoint_steps
@@ -329,24 +330,35 @@ class RunStore:
             folder.write_status(status)
             return status
 
-    def latest_ended(self, project_id: str, revision: int) -> RunStatus | None:
+    def _fits(self, revision: int, project: Project | None) -> Callable[[RunStatus], bool]:
+        """Runs of the revision, and with `project` also runs of revisions that differ from it only in looks."""
+        content = training_content(project) if project is not None else None
+
+        def fits(status: RunStatus) -> bool:
+            if status.revision_number == revision:
+                return True
+            return content is not None and training_content(self.folder(status.run_id).project()) == content
+
+        return fits
+
+    def latest_ended(self, project_id: str, revision: int, project: Project | None = None) -> RunStatus | None:
         """The newest run of a revision that is no longer training."""
+        fits = self._fits(revision, project)
         return next(
-            (
-                status
-                for status in self.list_runs(project_id)
-                if status.revision_number == revision and status.state in TERMINAL_STATES
-            ),
+            (status for status in self.list_runs(project_id) if status.state in TERMINAL_STATES and fits(status)),
             None,
         )
 
-    def trained_checkpoint(self, project_id: str, revision: int) -> tuple[RunStatus, Path] | None:
+    def trained_checkpoint(
+        self, project_id: str, revision: int, project: Project | None = None
+    ) -> tuple[RunStatus, Path] | None:
         """The best trained checkpoint of the newest ended run of a revision, the brain Play should use.
 
         Step 0 is the untrained network, so a run whose best is step 0 has no trained brain.
         """
+        fits = self._fits(revision, project)
         for status in self.list_runs(project_id):
-            if status.revision_number != revision or status.state not in TERMINAL_STATES:
+            if status.state not in TERMINAL_STATES or not fits(status):
                 continue
             if status.best_step:
                 path = self.folder(status.run_id).checkpoint_path(status.best_step)

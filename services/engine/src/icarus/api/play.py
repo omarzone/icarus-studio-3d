@@ -41,8 +41,8 @@ def _error(text: str) -> PlayErrorMessage:
 
 
 def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
-    """The best trained brain of this revision when one exists, otherwise random actions."""
-    trained = runs.trained_checkpoint(project.id, revision)
+    """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions."""
+    trained = runs.trained_checkpoint(project.id, revision, project)
     if trained is not None:
         status, path = trained
         label = f"Trained brain: {status.name} at {status.best_step:,} steps"
@@ -50,7 +50,7 @@ def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
             return CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
-    ended = runs.latest_ended(project.id, revision)
+    ended = runs.latest_ended(project.id, revision, project)
     label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
     return RandomPolicy(compile_project(project).model.nu, project.brain.seed, label)
 

@@ -1,0 +1,41 @@
+from icarus.contracts.objects import ObjectSpec
+from icarus.contracts.project import Project
+
+# Components that physics, senses and rewards never read (ADR 007: looks stay out of the simulation).
+LOOK_COMPONENTS = frozenset({"sky", "light"})
+# Properties of physical components that only change the drawing; the material's surface sets friction, so it stays.
+LOOK_PROPERTIES = {"material": frozenset({"color", "style", "transparency", "reflectance", "cast_shadow"})}
+
+
+def _training_objects(objects: list[ObjectSpec]) -> list[dict[str, object]]:
+    parents = {obj.parent for obj in objects}
+    kept: list[dict[str, object]] = []
+    for obj in objects:
+        components = [
+            {
+                "id": component.id,
+                "kind": component.kind,
+                "properties": {
+                    name: value.model_dump()
+                    for name, value in sorted(component.properties.items())
+                    if name not in LOOK_PROPERTIES.get(component.kind, ())
+                },
+            }
+            for component in obj.components
+            if component.kind not in LOOK_COMPONENTS
+        ]
+        # A light or sky object leaves at most a transform behind, which places nothing the simulation sees.
+        if obj.id not in parents and all(component["kind"] == "transform" for component in components):
+            continue
+        kept.append({"id": obj.id, "parent": obj.parent, "components": components})
+    return kept
+
+
+def training_content(project: Project) -> dict[str, object]:
+    """The project as training sees it: equal for two revisions when one only changed the look, name or description."""
+    return {
+        "world": _training_objects(project.world.objects),
+        "bodies": [{"id": body.id, "objects": _training_objects(body.objects)} for body in project.bodies],
+        "task": project.task.model_dump(),
+        "brain": project.brain.model_dump(),
+    }

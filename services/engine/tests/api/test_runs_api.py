@@ -171,6 +171,46 @@ def test_play_drives_the_body_with_the_best_checkpoint_of_the_current_revision(t
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
+def edit(target: str, component: str, prop: str, value: dict) -> dict:
+    return {
+        "summary": f"Set {prop}",
+        "operations": [
+            {"op": "set_property", "object": target, "component": component, "property": prop, "value": value}
+        ],
+    }
+
+
+LOOK_EDITS = {
+    "time of day": [
+        edit("sky", "sky", "use_clock", {"type": "switch", "value": True}),
+        edit("sky", "sky", "clock_time", {"type": "slider", "value": 18.5}),
+    ],
+    "car color": [edit("car", "material", "color", {"type": "color", "value": "#d23b3b"})],
+    "sun light": [edit("sun", "light", "intensity", {"type": "slider", "value": 2})],
+    "project name": [{"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}],
+}
+
+
+@pytest.mark.parametrize("look", LOOK_EDITS)
+def test_play_keeps_the_trained_brain_after_a_change_that_only_alters_the_look(tmp_path, look):
+    from stable_baselines3 import PPO
+
+    from icarus.sim.env import ProjectEnv
+
+    app = make_app(tmp_path)
+    client = TestClient(app)
+    folder = stored_run(app, client)
+    project_id = folder.project().id
+    PPO("MlpPolicy", ProjectEnv(folder.project()), seed=0, device="cpu").save(folder.checkpoint_path(25_000))
+    folder.write_status(folder.status().model_copy(update={"state": "done", "best_step": 25_000}))
+    for batch in LOOK_EDITS[look]:
+        assert client.post(f"/projects/{project_id}/operations", json=batch).status_code == 200, batch
+
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        ready = socket.receive_json()["message"]
+    assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
+
+
 @pytest.mark.parametrize("change", ["still training", "newer revision", "unreadable checkpoint", "never trained"])
 def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, change):
     from stable_baselines3 import PPO
@@ -189,8 +229,8 @@ def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, 
     state = "running" if change == "still training" else "done"
     folder.write_status(folder.status().model_copy(update={"state": state, "best_step": best}))
     if change == "newer revision":
-        rename = {"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}
-        assert client.post(f"/projects/{project_id}/operations", json=rename).status_code == 200
+        heavier = edit("car", "physics_body", "mass", {"type": "number", "value": 3})
+        assert client.post(f"/projects/{project_id}/operations", json=heavier).status_code == 200
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
         brain = socket.receive_json()["message"]["session"]["brain"]
     if change == "never trained":
