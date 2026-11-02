@@ -3,6 +3,7 @@ import { GoTo } from "../../../app/navigation/go-to.tsx";
 import type { ResultSummary, Tone } from "../../../ports/results-port.ts";
 import { buttonClass } from "../../../ui/button-styles.ts";
 import { Meter, type MeterTone } from "../../../ui/meter.tsx";
+import { EmptyState } from "../../../ui/states.tsx";
 
 const METER: Record<Tone, MeterTone> = { ok: "ok", warn: "warn", danger: "danger", neutral: "main" };
 
@@ -55,5 +56,7 @@ export function SummaryTab({ summary }: { summary: ResultSummary }) {
           </GoTo>
         </div>
       );
+    case "empty":
+      return <EmptyState title={summary.title} body={summary.detail} />;
   }
 }

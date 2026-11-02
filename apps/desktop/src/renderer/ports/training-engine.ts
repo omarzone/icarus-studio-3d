@@ -34,7 +34,10 @@ type TrainingApi = Pick<
   | "trainingSettings"
 >;
 
-export type EngineTrainingPort = Omit<TrainingPort, "pauseRun" | "getAutopilot" | "setAutopilot">;
+export type EngineTrainingPort = Omit<
+  TrainingPort,
+  "pauseRun" | "getAutopilot" | "setAutopilot" | "startAutopilot" | "stopAutopilot"
+>;
 
 const MAX_LOG_LINES = 500;
 

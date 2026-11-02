@@ -16,22 +16,9 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `results.bestBrains` | The best brain of each run | `SCR-RESULTS` |
-| `results.compare` | Choosing runs to compare | `SCR-RESULTS` |
-| `results.comparison` | Two runs side by side on the same seed | `SCR-RESULTS` |
-| `results.failures` | Failure groups found by the copilot | `STA-RESULTS-FAILURES` |
-| `results.history` | How it learned, checkpoint by checkpoint | `SCR-RESULTS` |
-| `results.notes` | Notes about the runs | `SCR-RESULTS`, `STA-RESULTS-FAILURES` |
-| `results.replay` | Replay of a failing test run | `STA-RESULTS-FAILURES` |
-| `results.runs` | Runs with their scores | `SCR-RESULTS` |
-| `results.saveNotes` | Saving notes | `SCR-RESULTS`, `STA-RESULTS-FAILURES` |
-| `results.selectFailure` | Replaying a failure group | `STA-RESULTS-FAILURES` |
-| `results.summary` | The summary of the best brain | `SCR-RESULTS`, `STA-RESULTS-FAILURES`, `STA-RESULTS-REFERENCE` |
 | `results.testRuns` | Every test run with pass or fail | `STA-RESULTS-FAILURES` |
 | `results.timelapse` | The timelapse of how it learned | `SCR-TIMELAPSE` |
 | `results.timelapseFrame` | Jumping to a checkpoint in the timelapse | `SCR-TIMELAPSE` |
-| `training.autopilot` | What the copilot may change while training | `MOD-AUTOPILOT` |
-| `training.setAutopilot` | Choosing what the copilot may change while training | `MOD-AUTOPILOT` |
 
 ## Sprint 8
 
@@ -105,6 +92,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `results.neurons` | Which neurons drive each behavior | `STA-RESULTS-REFERENCE` |
 | `results.recordings` | Recordings imported for comparison | `STA-RESULTS-REFERENCE` |
 | `results.referenceComparison` | Recorded and simulated behavior side by side | `STA-RESULTS-REFERENCE` |
+| `results.referenceSummary` | The overall match against recordings | `STA-RESULTS-REFERENCE` |
 | `results.referenceTests` | Tests against recorded real behavior | `STA-RESULTS-REFERENCE` |
 | `results.selectReferenceTest` | Opening a behavior test | `STA-RESULTS-REFERENCE` |
 

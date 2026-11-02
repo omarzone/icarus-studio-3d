@@ -143,7 +143,13 @@ export function createTrainingFixture(): TrainingPort {
     stopRun: async () => setStatus("stopped"),
     getAutopilot: async () => autopilot,
     setAutopilot: async ({ mode }) => {
-      autopilot = { ...autopilot, mode };
+      autopilot = { ...autopilot, mode: mode ?? autopilot.mode };
+      return autopilot;
+    },
+    // The sample shows the choice only; the engine runs the autopilot.
+    startAutopilot: async () => autopilot,
+    stopAutopilot: async () => {
+      autopilot = { ...autopilot, mode: "off" };
       return autopilot;
     },
     getFailure: async () => FAILURE,

@@ -20,7 +20,13 @@ export function HowItLearnedTab({ checkpoints }: { checkpoints: readonly Checkpo
               checkpoint.current ? "bg-control-raised hover:bg-fill-hover" : "bg-control hover:bg-control-raised"
             }`}
           >
-            <span role="img" aria-label={`Checkpoint ${checkpoint.step}`} className="min-h-0 w-full flex-1 bg-panel" />
+            <span
+              role="img"
+              aria-label={`Checkpoint ${checkpoint.step}`}
+              className="grid min-h-0 w-full flex-1 place-items-center bg-panel text-meta text-fg-tertiary"
+            >
+              {checkpoint.detail}
+            </span>
             <span className="flex justify-between px-2.25 py-1.75 text-meta">
               <span className={checkpoint.current ? "font-semibold" : "font-medium"}>{checkpoint.step}</span>
               <span className={checkpoint.current ? "" : "text-fg-tertiary"}>{checkpoint.label}</span>

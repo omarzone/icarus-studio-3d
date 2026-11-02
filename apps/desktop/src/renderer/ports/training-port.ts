@@ -2,6 +2,7 @@ import type { SceneDescription } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createTrainingFixture } from "./training.fixture.ts";
+import { createEngineAutopilot } from "./training-autopilot.ts";
 import { createEngineTrainingPort } from "./training-engine.ts";
 
 // Training runs of a project: live progress, metrics, starting, pausing and stopping, and the autopilot.
@@ -81,6 +82,22 @@ export type AutopilotSettings = {
   intro: string;
   mode: AutopilotMode;
   options: readonly { mode: AutopilotMode; label: string; detail: string }[];
+  // On the engine: the limits of the next or current autopilot (goal success from 0 to 1) and how it is going.
+  limits?: AutopilotLimits;
+  progress?: AutopilotProgress | null;
+};
+
+export type AutopilotLimits = { goal: number; iterations: number; minutes: number };
+
+export type AutopilotProgress = {
+  // Running or waiting for an approval: it can be stopped, and its status is read again every few seconds.
+  active: boolean;
+  label: string;
+  tone: Tone;
+  // Short status for the Train workspace ("Autopilot · try 2 of 4").
+  chip: string;
+  detail: string;
+  log: readonly { id: string; time: string; text: string }[];
 };
 
 // A run that stopped by itself: why, what is safe, and the technical details.
@@ -134,7 +151,13 @@ export type TrainingPort = {
   pauseRun: (project: string) => Promise<RunList>;
   stopRun: (project: string) => Promise<RunList>;
   getAutopilot: (project: string) => Promise<AutopilotSettings>;
-  setAutopilot: (input: { project: string; mode: AutopilotMode }) => Promise<AutopilotSettings>;
+  setAutopilot: (input: {
+    project: string;
+    mode?: AutopilotMode;
+    limits?: Partial<AutopilotLimits>;
+  }) => Promise<AutopilotSettings>;
+  startAutopilot: (project: string) => Promise<AutopilotSettings>;
+  stopAutopilot: (project: string) => Promise<AutopilotSettings>;
   getFailure: (project: string) => Promise<RunFailure>;
   // Streams the selected run while the Train workspace is open; the returned function disconnects.
   watch: (project: string, listener: TrainingListener) => () => void;
@@ -146,18 +169,7 @@ export const trainingPort = definePort<TrainingPort>({
   app: {
     ...createEngineTrainingPort(),
     pauseRun: pending({ key: "training.pause", summary: "Pausing a training run", sprint: 8, ids: ["MOD-STOP-RUN"] }),
-    getAutopilot: pending({
-      key: "training.autopilot",
-      summary: "What the copilot may change while training",
-      sprint: 7,
-      ids: ["MOD-AUTOPILOT"],
-    }),
-    setAutopilot: pending({
-      key: "training.setAutopilot",
-      summary: "Choosing what the copilot may change while training",
-      sprint: 7,
-      ids: ["MOD-AUTOPILOT"],
-    }),
+    ...createEngineAutopilot(),
   },
   prototype: createTrainingFixture,
 });
