@@ -8,6 +8,25 @@ export type RichText = readonly { text: string; strong?: boolean }[];
 
 export type CheckItem = { text: string; tone: "ok" | "warn" };
 
+// The part of a design a coach finding points to.
+export type DesignArea = "reward" | "sensors" | "body" | "world" | "brain";
+
+// What the coach saw the body do, the area to change and the tested fix for it when there is one.
+export type CoachFinding = {
+  area: DesignArea;
+  behavior: string;
+  change: string;
+  proposal: { id: string; status: ProposalStatus } | null;
+};
+
+// Pictures of one episode at a fixed interval, in time order.
+export type FilmStripView = {
+  step: number;
+  episode: number;
+  interval: number;
+  frames: readonly { picture: ChatAttachment; time: number; failure: boolean }[];
+};
+
 export type ProposalChange = { kind: "diff"; label: string; from: string; to: string } | { kind: "add"; text: string };
 
 // "outdated" when the project moved on before the proposal was answered.
@@ -102,6 +121,9 @@ export type ChatMessage =
       views?: readonly ChatAttachment[];
       // The proposal this answer made, so Apply and Discard act on it.
       proposal?: { id: string; open: boolean };
+      // The coach's frame-by-frame look at an episode.
+      filmStrip?: FilmStripView;
+      findings?: readonly CoachFinding[];
     }
   | { id: string; role: "proposal"; proposal: Proposal }
   // Live progress of the project the copilot is building.

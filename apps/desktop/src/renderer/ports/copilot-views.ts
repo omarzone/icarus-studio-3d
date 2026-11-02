@@ -11,7 +11,9 @@ import type {
   AnswerAction,
   ChatAttachment,
   ChatMessage,
+  CoachFinding,
   Conversation,
+  FilmStripView,
   Proposal,
   ProposalChange,
   RichText,
@@ -93,12 +95,52 @@ function userMessage(message: EngineMessage, links: AttachmentLinks | null): Cha
   };
 }
 
+// The coach's strip with each frame's picture served by the engine.
+export function filmStripView(strip: EngineMessage["film_strip"], links: AttachmentLinks | null): FilmStripView | null {
+  if (!strip || strip.frames.length === 0) {
+    return null;
+  }
+  return {
+    step: strip.step,
+    episode: strip.episode,
+    interval: strip.interval,
+    frames: strip.frames.map((frame) => ({
+      picture: {
+        id: frame.attachment_id,
+        kind: "view",
+        name: `Step ${strip.step.toLocaleString("en-US")} · ${frame.time.toFixed(1)} s`,
+        mediaType: "image/png",
+        size: 0,
+        url: links ? links.content(frame.attachment_id) : null,
+        poster: null,
+      },
+      time: frame.time,
+      failure: frame.failure ?? false,
+    })),
+  };
+}
+
+export function findingViews(message: EngineMessage, proposals: ReadonlyMap<string, CopilotProposal>): CoachFinding[] {
+  return (message.findings ?? []).map((finding) => {
+    const proposal = finding.proposal_id ? proposals.get(finding.proposal_id) : undefined;
+    return {
+      area: finding.area,
+      behavior: finding.behavior,
+      change: finding.change,
+      proposal: proposal ? { id: proposal.id, status: proposal.status } : null,
+    };
+  });
+}
+
 // An answer with the buttons the copilot offered, the steps it took and the renders it looked at.
 function copilotMessage(
   message: EngineMessage,
-  proposal: CopilotProposal | undefined,
+  proposals: ReadonlyMap<string, CopilotProposal>,
   links: AttachmentLinks | null,
 ): ChatMessage {
+  const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;
+  const strip = filmStripView(message.film_strip, links);
+  const findings = findingViews(message, proposals);
   const actions = (message.actions ?? []).map(
     (action): AnswerAction => ({ label: action.label, kind: action.kind, target: action.target ?? null }),
   );
@@ -120,6 +162,8 @@ function copilotMessage(
     ...(steps.length > 0 ? { steps } : {}),
     ...(views.length > 0 ? { views } : {}),
     ...(proposal && actions.length > 0 ? { proposal: { id: proposal.id, open: proposal.status === "open" } } : {}),
+    ...(strip ? { filmStrip: strip } : {}),
+    ...(findings.length > 0 ? { findings } : {}),
   };
 }
 
@@ -174,7 +218,7 @@ export function conversationView(conversation: EngineConversation, links: Attach
       milestone = step;
     }
     const proposal = message.proposal_id ? proposals.get(message.proposal_id) : undefined;
-    const answer = copilotMessage(message, proposal, links);
+    const answer = copilotMessage(message, proposals, links);
     const card: ChatMessage[] = proposal
       ? [{ id: `proposal-${proposal.id}`, role: "proposal", proposal: proposalView(proposal) }]
       : [];

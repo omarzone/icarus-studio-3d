@@ -13,7 +13,9 @@ import type { ReadFile } from "./attachment-reading.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
 import { ChosenOption, CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
+import { CoachFindings } from "./coach-findings.tsx";
 import { Composer } from "./composer.tsx";
+import { FilmStrip } from "./film-strip.tsx";
 import { MessageAttachments, SceneViewsStrip } from "./message-attachments.tsx";
 import { PlanCard } from "./plan-card.tsx";
 import { ProposalCard, type ProposalRoutes } from "./proposal-card.tsx";
@@ -207,6 +209,10 @@ function Message({
               ) : undefined
             }
           />
+          {message.filmStrip ? <FilmStrip strip={message.filmStrip} /> : null}
+          {message.findings && message.findings.length > 0 ? (
+            <CoachFindings findings={message.findings} busy={Boolean(sending) || Boolean(acting)} onApply={onApply} />
+          ) : null}
           {message.views && message.views.length > 0 ? (
             <SceneViewsStrip views={message.views} title="What the copilot saw" side="copilot" />
           ) : null}
