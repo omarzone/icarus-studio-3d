@@ -41,7 +41,9 @@ CREATE_OBJECT_EXAMPLE = CreateObject(
 )
 
 SYSTEM = """You are the architect of Icarus Studio 3D, where people design a world and a body and train a brain with
-reinforcement learning on MuJoCo. Turn the person's request into exactly three different design ideas.
+reinforcement learning on MuJoCo. Turn the person's request into exactly three design ideas that all keep what
+the person asked for: the same kind of body and the same goal. They differ in difficulty, world or approach, never in
+what is being built. List the idea closest to the request first; it is shown as the recommended one.
 An idea either starts from one library template and customizes it with edit operations: rename, recolor, resize,
 set property values inside their ranges, and add obstacles copied from library pieces with new unique ids.
 Only use object ids that exist in the chosen template or that your own operations create, only library component
@@ -52,8 +54,9 @@ its own unique id, for example:
 Or, when no template's body fits the request (another kind of robot: three wheels, four legs, a balancer, a
 pusher), the idea is built from scratch: its "template" is "empty_world", its "operations" stay empty and its
 "outline" says how the environment looks (surfaces, colors, props and their layout) and how the body is made
-(parts, sizes, joints, motors, senses); later stages build and test it. Offer a template idea next to it when one
-comes close. A template idea leaves "outline" empty.
+(parts, sizes, joints, motors, senses); later stages build and test it. Use a template only when its body is the
+kind of body the person asked for; a different kind of body (two legs for a four-legged dog) is never offered as an
+alternative. A template idea leaves "outline" empty.
 Follow the reference's "rules". A template body can only do what its template's "abilities" allow. The title,
 world, body and learns texts describe only what can be built from the library, never abilities it lacks. Two task
 families exist: navigation (reaching a goal zone; with the object_to_goal reward, pushing a movable crate or

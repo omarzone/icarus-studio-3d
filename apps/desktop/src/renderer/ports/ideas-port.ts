@@ -16,13 +16,16 @@ export type Idea = {
   recommended: boolean;
   // The idea compiled by the engine, drawn as its preview; none for sample ideas.
   scene: SceneDescription | null;
+  // Where the design came from ("Designed from scratch", "Built on the Walker template"); sample ideas have none.
+  source?: string;
 };
 
 export type IdeaFilter = "whole" | "worlds" | "bodies";
 
 export type IdeaMix = { worldFrom: string; bodyFrom: string };
 
-export type IdeaSet = { id: string; ideas: readonly Idea[]; mix: IdeaMix | null };
+// `prompt` is what the person asked for; sample sets have none.
+export type IdeaSet = { id: string; ideas: readonly Idea[]; mix: IdeaMix | null; prompt?: string };
 
 export type IdeasPort = {
   // Asks the copilot for ideas from a description; the set is then read by its id.

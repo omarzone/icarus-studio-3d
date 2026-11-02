@@ -18,6 +18,14 @@ export function estimateText(minutes: number): string {
   return rest === 0 ? `about ${hours} h` : `about ${hours} h ${rest} min`;
 }
 
+export function ideaSource(template: string): string {
+  if (template === "empty_world") {
+    return "Designed from scratch";
+  }
+  const name = template.replaceAll("_", " ");
+  return `Built on the ${name.charAt(0).toUpperCase()}${name.slice(1)} template`;
+}
+
 function ideaView(idea: DesignIdea): Idea {
   return {
     id: idea.id,
@@ -28,12 +36,13 @@ function ideaView(idea: DesignIdea): Idea {
     estimate: estimateText(idea.estimate_minutes),
     recommended: idea.recommended,
     scene: idea.scene,
+    source: ideaSource(idea.template),
   };
 }
 
 export function ideaSetView(set: EngineIdeaSet): IdeaSet {
   // Mixing parts of two ideas is not built yet, so the engine's sets never propose a mix.
-  return { id: set.id, ideas: set.ideas.map(ideaView), mix: null };
+  return { id: set.id, ideas: set.ideas.map(ideaView), mix: null, prompt: set.prompt };
 }
 
 export function buildProgressView(status: BuildStatus): BuildProgress {

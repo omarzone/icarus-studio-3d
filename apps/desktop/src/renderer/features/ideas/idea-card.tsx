@@ -21,7 +21,10 @@ export function IdeaCard({ idea, onUse, onTweak }: Props) {
         ) : null}
       </div>
       <div className="flex flex-1 flex-col gap-2.25 p-3.5">
-        <span className="text-headline leading-tight font-semibold">{idea.title}</span>
+        <span className="flex flex-col gap-0.5">
+          <span className="text-headline leading-tight font-semibold">{idea.title}</span>
+          {idea.source ? <span className="text-meta text-fg-tertiary">{idea.source}</span> : null}
+        </span>
         <Line label="World" value={idea.world} />
         <Line label="Body" value={idea.body} />
         <Line label="Learns" value={idea.learns} />

@@ -35,6 +35,20 @@ describe("idea set view", () => {
     expect(view.ideas[0]?.scene).toBe(scene);
     expect(view.ideas[0]?.estimate).toBe("about 40 min");
   });
+
+  it("says what was asked and where each idea came from", () => {
+    const set: IdeaSet = {
+      id: "set-2",
+      prompt: "a robot dog",
+      ideas: [idea("a", { template: "empty_world" }), idea("b")],
+    };
+    const view = ideaSetView(set);
+    expect(view.prompt).toBe("a robot dog");
+    expect(view.ideas.map((item) => item.source)).toEqual([
+      "Designed from scratch",
+      "Built on the Parking car template",
+    ]);
+  });
 });
 
 describe("training estimate", () => {

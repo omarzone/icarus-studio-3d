@@ -31,6 +31,9 @@ export function IdeasTab({ set, filter, onFilter, onUse, onTweak, onMix }: Ideas
           <span className="text-body leading-normal text-fg-tertiary">
             Each one is a real 3D world and body. Pick one, mix them, or describe what to change.
           </span>
+          {set.prompt ? (
+            <span className="line-clamp-2 max-w-180 text-ui text-fg-secondary">You asked: “{set.prompt}”</span>
+          ) : null}
         </span>
         <div role="radiogroup" aria-label="Show" className="ml-auto flex gap-0.5 rounded-button bg-control p-0.75">
           {FILTERS.map((item) => {
