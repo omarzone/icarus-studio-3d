@@ -95,6 +95,7 @@ export type {
   SceneDescription,
   SceneGeom,
   SceneLight,
+  SceneRay,
   SceneSky,
   SceneZone,
   SendMessage,

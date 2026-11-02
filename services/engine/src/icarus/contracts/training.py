@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from icarus.contracts.scene import Quaternion, Vector3
+from icarus.contracts.scene import Quaternion, SceneRay, Vector3
 
 MAX_STEPS = 50_000_000
 MAX_COPIES = 64
@@ -126,6 +126,8 @@ class Rollout(_Model):
 class CopyPoses(_Model):
     positions: list[Vector3]
     quaternions: list[Quaternion]
+    # This copy's distance sensors right now.
+    rays: list[SceneRay] = []
 
 
 class TrainingSnapshot(_Model):

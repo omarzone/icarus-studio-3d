@@ -1,9 +1,32 @@
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
 Vector3 = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
+
+# How a part is drawn; the physics only ever sees its primitive shape, which the drawing stays inside.
+GeomStyle = Literal[
+    "plain",
+    "car_body",
+    "wheel",
+    "shell",
+    "joint",
+    "crate",
+    "wall",
+    "post",
+    "cone",
+    "ball",
+    "lamp_post",
+    "curb",
+    "marking",
+    "tree",
+]
+GEOM_STYLES: list[str] = list(get_args(GeomStyle))
+
+# What a part is made of, for its look: roughness, shine and the grain on its face.
+GeomSurface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
+GEOM_SURFACES: list[str] = list(get_args(GeomSurface))
 
 
 class SceneBody(BaseModel):
@@ -27,6 +50,9 @@ class SceneGeom(BaseModel):
     position: Vector3
     quaternion: Quaternion
     color: str
+    # None draws the plain primitive (also every scene exported before styles existed).
+    style: GeomStyle | None = None
+    surface: GeomSurface | None = None
 
 
 class SceneLight(BaseModel):
@@ -67,6 +93,22 @@ class SceneSky(BaseModel):
     fog: float
 
 
+class SceneRay(BaseModel):
+    """Where a distance sensor looks and what it reads, as MuJoCo computed it; the renderer only draws it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # The reading id, the same as in Play's senses ("car:ray2").
+    sensor: str
+    label: str
+    origin: Vector3
+    # Unit vector in the world frame.
+    direction: Vector3
+    range: float
+    # None when nothing is within range.
+    distance: float | None
+
+
 class SceneDescription(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,3 +119,5 @@ class SceneDescription(BaseModel):
     zones: list[SceneZone] = []
     # None when the world has no sky object; the viewport then uses its default look.
     sky: SceneSky | None = None
+    # Distance sensors at the initial pose.
+    rays: list[SceneRay] = []

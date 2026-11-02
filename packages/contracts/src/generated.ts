@@ -807,6 +807,29 @@ export interface SetBrain {
 export interface CopyPoses {
   positions: [number, number, number][];
   quaternions: [number, number, number, number][];
+  rays?: SceneRay[];
+}
+/**
+ * Where a distance sensor looks and what it reads, as MuJoCo computed it; the renderer only draws it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneRay".
+ */
+export interface SceneRay {
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  direction: [number, number, number];
+  distance: number | null;
+  label: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  origin: [number, number, number];
+  range: number;
+  sensor: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -852,6 +875,7 @@ export interface SceneDescription {
   bodies: SceneBody[];
   geoms: SceneGeom[];
   lights: SceneLight[];
+  rays?: SceneRay[];
   revision: number;
   sky?: SceneSky | null;
   zones?: SceneZone[];
@@ -898,6 +922,25 @@ export interface SceneGeom {
    * @maxItems 3
    */
   size: [number, number, number];
+  style?:
+    | (
+        | "plain"
+        | "car_body"
+        | "wheel"
+        | "shell"
+        | "joint"
+        | "crate"
+        | "wall"
+        | "post"
+        | "cone"
+        | "ball"
+        | "lamp_post"
+        | "curb"
+        | "marking"
+        | "tree"
+      )
+    | null;
+  surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1224,7 +1267,8 @@ export interface EngineEventEnvelope {
     | RunEventWrapper
     | DiagnosisCreatedEvent
     | RevisionCreatedEvent
-    | HookDecisionEvent;
+    | HookDecisionEvent
+    | MessagePostedEvent;
   id: string;
   project_id: string | null;
   time: string;
@@ -1463,6 +1507,17 @@ export interface HookDecisionEvent {
     | "task_finished";
   reason: string;
   type: "hook_decision";
+}
+/**
+ * A copilot message added to a conversation outside a turn, such as a coach comment or an autopilot step.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MessagePostedEvent".
+ */
+export interface MessagePostedEvent {
+  message_id: string;
+  role: "user" | "copilot";
+  type: "message_posted";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1753,6 +1808,7 @@ export interface PlayFrame {
   episode_return: number;
   geoms: PlayGeomPose[];
   paused: boolean;
+  rays?: SceneRay[];
   reward: number;
   senses: PlayReading[];
   speed: number;

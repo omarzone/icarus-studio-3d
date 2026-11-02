@@ -113,6 +113,14 @@ class RevisionCreatedEvent(_Model):
     summary: str
 
 
+class MessagePostedEvent(_Model):
+    """A copilot message added to a conversation outside a turn, such as a coach comment or an autopilot step."""
+
+    type: Literal["message_posted"]
+    message_id: str
+    role: Literal["user", "copilot"]
+
+
 class HookDecisionEvent(_Model):
     type: Literal["hook_decision"]
     point: HookPoint
@@ -133,7 +141,8 @@ EngineEvent = Annotated[
     | RunEventWrapper
     | DiagnosisCreatedEvent
     | RevisionCreatedEvent
-    | HookDecisionEvent,
+    | HookDecisionEvent
+    | MessagePostedEvent,
     Field(discriminator="type"),
 ]
 
