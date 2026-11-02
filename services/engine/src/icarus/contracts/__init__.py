@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from icarus.contracts.brain_network import BrainActivations, BrainNetwork
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.copilot import (
     AttachmentInfo,
@@ -76,6 +77,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     AutopilotStatus,
     EngineEventEnvelope,
     TaskInfo,
+    BrainNetwork,
+    BrainActivations,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

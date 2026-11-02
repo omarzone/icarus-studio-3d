@@ -27,6 +27,8 @@ class StartRun(_Model):
     copies: int = Field(ge=1, le=MAX_COPIES)
     seed: int | None = Field(default=None, ge=0)
     warm_start: WarmStart | None = None
+    # The copilot comments at checkpoints and diagnoses when the run goes wrong.
+    coach: bool = False
 
 
 class RunConfig(_Model):

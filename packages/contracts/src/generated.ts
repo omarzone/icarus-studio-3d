@@ -274,6 +274,60 @@ export interface AutopilotStatus {
   state: "running" | "waiting_approval" | "done" | "stopped" | "failed";
 }
 /**
+ * What every neuron of a checkpoint's policy computes for the first observation of an evaluation episode.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainActivations".
+ */
+export interface BrainActivations {
+  layers: number[][];
+  observation: number[];
+  observation_labels: string[];
+  outputs: number[];
+  run_id: string;
+  step: number;
+}
+/**
+ * The policy network of a checkpoint, with its inputs and outputs named after the body.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainNetwork".
+ */
+export interface BrainNetwork {
+  inputs: NetworkInput[];
+  layers: NetworkLayer[];
+  outputs: NetworkOutput[];
+  run_id: string;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkInput".
+ */
+export interface NetworkInput {
+  index: number;
+  label: string;
+  sensor?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkLayer".
+ */
+export interface NetworkLayer {
+  activation: string;
+  name: string;
+  size: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NetworkOutput".
+ */
+export interface NetworkOutput {
+  actuator?: string | null;
+  index: number;
+  label: string;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "BrainSpec".
  */
@@ -319,9 +373,37 @@ export interface BuildStep {
  * via the `definition` "ChatAction".
  */
 export interface ChatAction {
-  kind: "navigate" | "train" | "apply" | "discard" | "send";
+  kind: "navigate" | "train" | "apply" | "discard" | "send" | "show" | "dismiss" | "apply_and_train";
   label: string;
   target?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ChatSuggestion".
+ */
+export interface ChatSuggestion {
+  intent?:
+    | "ask"
+    | "propose-change"
+    | "explain"
+    | "diagnose"
+    | "compare"
+    | "train-run"
+    | "stop-run"
+    | "play"
+    | "show"
+    | "share";
+  text: string;
+}
+/**
+ * One line of a check list in an answer ("Wheels touch the ground").
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CheckItem".
+ */
+export interface CheckItem {
+  text: string;
+  tone: "ok" | "warn";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -416,6 +498,7 @@ export interface Conversation {
   messages: CopilotMessage[];
   project_id: string;
   proposals: CopilotProposal[];
+  suggestion_items?: ChatSuggestion[];
   suggestions: string[];
 }
 /**
@@ -425,13 +508,92 @@ export interface Conversation {
 export interface CopilotMessage {
   actions?: ChatAction[];
   attachments?: AttachmentInfo[];
+  build_id?: string | null;
+  /**
+   * @maxItems 12
+   */
+  checks?:
+    | []
+    | [CheckItem]
+    | [CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem, CheckItem]
+    | [
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem
+      ]
+    | [
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem,
+        CheckItem
+      ];
   created_at: string;
   id: string;
+  /**
+   * @maxItems 8
+   */
+  plan?:
+    | []
+    | [PlanItem]
+    | [PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem]
+    | [PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem, PlanItem];
   proposal_id?: string | null;
   role: "user" | "copilot";
+  run?: RunCard | null;
   steps?: AgentStep[];
   text: string;
   thinking?: string | null;
+  title?: string | null;
+}
+/**
+ * One change of a next-step plan the copilot suggests.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlanItem".
+ */
+export interface PlanItem {
+  detail: string;
+  label: string;
+  mark: "add" | "change";
+}
+/**
+ * A training run the message is about; the app shows its live progress.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunCard".
+ */
+export interface RunCard {
+  milestone_step?: number | null;
+  run_id: string;
 }
 /**
  * Operations the copilot proposes, already validated and compiled against the revision they start from.
@@ -1861,6 +2023,7 @@ export interface SetAutonomy {
  * via the `definition` "StartRun".
  */
 export interface StartRun {
+  coach?: boolean;
   copies: number;
   seed?: number | null;
   total_steps: number;

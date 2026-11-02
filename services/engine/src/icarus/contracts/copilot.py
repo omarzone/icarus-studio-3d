@@ -96,8 +96,42 @@ class ChatAction(_Model):
     label: str = Field(min_length=1, max_length=60)
     # navigate: open a workspace or screen (target is its id); train: start training with the defaults;
     # apply / discard: act on the proposal of this message; send: send `target` as the person's next message.
-    kind: Literal["navigate", "train", "apply", "discard", "send"]
+    kind: Literal["navigate", "train", "apply", "discard", "send", "show", "dismiss", "apply_and_train"]
     target: str | None = Field(default=None, max_length=400)
+
+
+class CheckItem(_Model):
+    """One line of a check list in an answer ("Wheels touch the ground")."""
+
+    text: str = Field(max_length=200)
+    tone: Literal["ok", "warn"]
+
+
+class PlanItem(_Model):
+    """One change of a next-step plan the copilot suggests."""
+
+    mark: Literal["add", "change"]
+    label: str = Field(max_length=80)
+    detail: str = Field(max_length=200)
+
+
+class RunCard(_Model):
+    """A training run the message is about; the app shows its live progress."""
+
+    run_id: str
+    # The checkpoint the following messages belong to, when the message marks one ("100k steps").
+    milestone_step: int | None = None
+
+
+SuggestionIntent = Literal[
+    "ask", "propose-change", "explain", "diagnose", "compare", "train-run", "stop-run", "play", "show", "share"
+]
+
+
+class ChatSuggestion(_Model):
+    text: str = Field(max_length=120)
+    # What the chip does: "ask" sends the text; the others also open the screen that answers it.
+    intent: SuggestionIntent = "ask"
 
 
 class AgentStep(_Model):
@@ -122,6 +156,13 @@ class CopilotMessage(_Model):
     actions: list[ChatAction] = []
     # What the copilot did to reach this answer, in order.
     steps: list[AgentStep] = []
+    # A short heading for the answer card.
+    title: str | None = Field(default=None, max_length=120)
+    checks: list[CheckItem] = Field(default=[], max_length=12)
+    plan: list[PlanItem] = Field(default=[], max_length=8)
+    # A project build the message follows live.
+    build_id: str | None = None
+    run: RunCard | None = None
 
 
 class Conversation(_Model):
@@ -131,6 +172,8 @@ class Conversation(_Model):
     autonomy: Autonomy
     # Short questions the copilot suggests next.
     suggestions: list[str]
+    # The same suggestions with what each chip does; empty when only text is known.
+    suggestion_items: list[ChatSuggestion] = []
 
 
 class SendMessage(_Model):
