@@ -92,7 +92,9 @@ function usePlayer(duration: number) {
     }
     let last = performance.now();
     let frame = requestAnimationFrame(function tick(now) {
-      setPlayer((state) => advance(state, (now - last) / 1000));
+      // Measured before the update: React may run the updater after `last` has moved on.
+      const seconds = Math.max(0, now - last) / 1000;
+      setPlayer((state) => advance(state, seconds));
       last = now;
       frame = requestAnimationFrame(tick);
     });
@@ -150,7 +152,11 @@ function ReplayPlayer({ replay, marks, step, onChoose }: PlayerProps) {
           min={0}
           max={SCRUB_STEPS}
           value={Math.round(shown.played * SCRUB_STEPS)}
-          onChange={(event) => setPlayer((state) => scrub(state, Number(event.currentTarget.value) / SCRUB_STEPS))}
+          onChange={(event) => {
+            // Read now: the updater runs after React has let go of the event.
+            const share = Number(event.currentTarget.value) / SCRUB_STEPS;
+            setPlayer((state) => scrub(state, share));
+          }}
           className="h-1 min-w-0 flex-1 accent-fg hover:opacity-90 active:opacity-80"
         />
         <span className="font-mono text-meta text-fg-tertiary">{shown.length}</span>

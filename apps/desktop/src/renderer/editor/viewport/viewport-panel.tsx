@@ -113,7 +113,9 @@ export function ViewportPanel({
   const rays = cameraReady && active !== "replay" ? rayView : null;
   const setRayView = (next: RayView) => setRayViews((current) => ({ ...current, [active]: next }));
   const options = cameraReady ? viewOptions.filter((option) => option !== CAMERA_OPTION) : viewOptions;
-  const surface = { label, tint, overlays, scene, ghosts };
+  // Replay draws its own checkpoint card and player; the live run's would cover its controls.
+  const shownOverlays = cameraReady && active === "replay" ? null : overlays;
+  const surface = { label, tint, overlays: shownOverlays, scene, ghosts };
   const notYet = useNotYet();
   return (
     <Panel
