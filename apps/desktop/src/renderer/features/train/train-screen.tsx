@@ -1,7 +1,5 @@
 // SCR-TRAIN · STA-TRAIN-FAILED
-import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
@@ -9,7 +7,6 @@ import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { TRAIN_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
-import { trainingPort } from "../../ports/training-port.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { PlaybackBar } from "../../ui/playback-bar.tsx";
 import { useProjectName } from "../../ui/project-name.ts";
@@ -18,7 +15,7 @@ import { MetricsPanel } from "./metrics/metrics-panel.tsx";
 import { RunFailedCard } from "./run-failed-card.tsx";
 import { RunsPanel } from "./runs/runs-panel.tsx";
 import { TRAIN_CONFIG, TRAIN_VARIANTS } from "./train-variants.ts";
-import { trainingKeys } from "./use-training.ts";
+import { useIsTraining, useLiveView, useTrainingStream } from "./use-training.ts";
 
 const TOOL_ROUTES = { Train: "MOD-START-TRAINING", Stop: "MOD-STOP-RUN" } as const;
 const VIEWS = [
@@ -32,6 +29,8 @@ export function TrainScreen() {
   const variant = TRAIN_VARIANTS[screen] ?? "live";
   const project = useProjectName(TRAIN_CONFIG.project);
   const guide = useGuide(TRAIN_CONFIG.scene);
+  const training = useIsTraining(project.id);
+  const stream = useTrainingStream(project.id);
   return (
     <div className="relative h-full">
       <DockWorkspaceShell
@@ -40,7 +39,7 @@ export function TrainScreen() {
           active: "Train",
           activeGoesTo: "SCR-TRAIN",
           guide: guideLabel(guide.data),
-          primary: { label: "Stop", to: "MOD-STOP-RUN" },
+          primary: training ? { label: "Stop", to: "MOD-STOP-RUN" } : { label: "Train", to: "MOD-START-TRAINING" },
         }}
         layoutKey="train"
         panels={{
@@ -61,6 +60,7 @@ export function TrainScreen() {
                 tabs={VIEWS}
                 toolbar={<Toolbar groups={TRAIN_TOOLS} selected="Train" overrides={TOOL_ROUTES} />}
                 overlays={<LiveOverlays project={project.id} />}
+                training={{ project: project.id, onReconnect: stream.reconnect }}
               />
             ),
           },
@@ -84,8 +84,7 @@ export function TrainScreen() {
 }
 
 function LiveOverlays({ project }: { project: string }) {
-  const port = usePort(trainingPort);
-  const view = useQuery({ queryKey: trainingKeys.liveView(project), queryFn: () => port.getLiveView(project) });
+  const view = useLiveView(project);
   const data = view.data;
   if (!data) {
     return null;
@@ -97,15 +96,17 @@ function LiveOverlays({ project }: { project: string }) {
         <span className="text-headline font-semibold">{data.checkpoint}</span>
         <span className="text-ui text-fg-secondary">{data.result}</span>
       </div>
-      <div className="absolute inset-x-3 bottom-3 rounded-card-sm bg-overlay px-3 py-2">
-        <PlaybackBar
-          at={data.episode.at}
-          length={data.episode.length}
-          played={data.episode.played}
-          marker={data.episode.failureAt}
-          chip={data.speed}
-        />
-      </div>
+      {data.episode ? (
+        <div className="absolute inset-x-3 bottom-3 rounded-card-sm bg-overlay px-3 py-2">
+          <PlaybackBar
+            at={data.episode.at}
+            length={data.episode.length}
+            played={data.episode.played}
+            marker={data.episode.failureAt}
+            chip={data.speed}
+          />
+        </div>
+      ) : null}
     </>
   );
 }

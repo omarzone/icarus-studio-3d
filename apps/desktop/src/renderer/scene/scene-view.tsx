@@ -28,7 +28,11 @@ type PlayProps = {
   onPick: (pick: ScenePick) => void;
 };
 
-export type SceneViewProps = { description: SceneDescription } & (EditProps | PlayProps);
+// Width in metres the camera starts out framing (every copy of a training run); the default frames one world.
+export type SceneViewProps = { description: SceneDescription; framing?: number } & (EditProps | PlayProps);
+
+const CAMERA: Vec3 = [7, 6, 9];
+const CAMERA_FRAMES = 12;
 
 // Three's local axes for a MuJoCo geom: MuJoCo local z (the axis of cylinders and capsules) is Three's y.
 function GeomShape({ geom }: { geom: SceneGeom }) {
@@ -224,10 +228,11 @@ function LiveGeoms({
 // Draws the engine's compiled scene; it never moves anything itself, a drag or a pick only reports what was done.
 export default function SceneView(props: SceneViewProps) {
   const colors = useMemo(sceneColors, []);
-  const { description } = props;
+  const { description, framing = CAMERA_FRAMES } = props;
+  const scale = Math.max(1, framing / CAMERA_FRAMES);
   return (
     <Canvas
-      camera={{ position: [7, 6, 9], fov: 45 }}
+      camera={{ position: [CAMERA[0] * scale, CAMERA[1] * scale, CAMERA[2] * scale], fov: 45 }}
       dpr={[1, 2]}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
@@ -244,7 +249,7 @@ export default function SceneView(props: SceneViewProps) {
         infiniteGrid
         cellColor={colors.grid}
         sectionColor={colors.gridStrong}
-        fadeDistance={60}
+        fadeDistance={60 * scale}
         position={[0, 0.001, 0]}
       />
       {props.mode === "play" ? (

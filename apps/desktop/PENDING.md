@@ -10,20 +10,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 |---|---|---|
 | `scene.toggleVariation` | Changing what varies between copies | `POP-TRAINING-COPIES` |
 | `settings.restart-engine` | Restarting the engine from settings | `SCR-SETTINGS-TRAINING` |
-| `settings.training` | Training and hardware settings | `SCR-SETTINGS-TRAINING` |
-| `settings.training-set` | Changing training settings | `SCR-SETTINGS-TRAINING` |
-| `training.console` | The training log | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
-| `training.failure` | Why a run stopped by itself | `STA-TRAIN-FAILED` |
-| `training.liveView` | Watching the parallel copies train | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
-| `training.metrics` | Live training metrics | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
-| `training.pause` | Pausing a training run | `MOD-STOP-RUN` |
-| `training.plan` | The cost of a training run | `MOD-START-TRAINING` |
-| `training.runs` | The training runs | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
-| `training.selectRun` | Selecting a run | `SCR-TRAIN`, `MOD-STOP-RUN`, `MOD-AUTOPILOT`, `STA-TRAIN-FAILED` |
-| `training.start` | Starting a training run | `MOD-START-TRAINING` |
-| `training.stop` | Stopping a training run | `MOD-STOP-RUN` |
-| `training.stopSummary` | What stopping a run keeps | `MOD-STOP-RUN` |
-| `training.updatePlan` | Changing the steps and copies of a run | `MOD-START-TRAINING` |
 
 ## Sprint 6
 
@@ -84,6 +70,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `brain.toggleInput` | Turning a sense on or off | `SCR-BRAIN` |
 | `brain.toggleOutput` | Turning an action on or off | `SCR-BRAIN` |
 | `brain.toggleRule` | Changing an episode rule | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
+| `training.pause` | Pausing a training run | `MOD-STOP-RUN` |
 
 ## Sprint 9
 

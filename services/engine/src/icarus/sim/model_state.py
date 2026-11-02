@@ -77,6 +77,8 @@ class LiveWorld:
     geom_objects: dict[str, str]
     object_names: dict[str, str]
     start_height: float
+    # qpos and qvel addresses of the body's hinge and slide joints, which locomotion observes.
+    joint_addresses: list[tuple[int, int]]
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -118,6 +120,15 @@ def _actuators(model: mujoco.MjModel, names: dict[str, str]) -> list[ActuatorInf
         low, high = (float(value) for value in model.actuator_ctrlrange[index])
         actuators.append(ActuatorInfo(name, names.get(name.split(":")[0], name), low, high, unit))
     return actuators
+
+
+def _joint_addresses(model: mujoco.MjModel, body_objects: set[str]) -> list[tuple[int, int]]:
+    moving = (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_SLIDE))
+    return [
+        (int(model.jnt_qposadr[index]), int(model.jnt_dofadr[index]))
+        for index in range(model.njnt)
+        if int(model.jnt_type[index]) in moving and model.body(int(model.jnt_bodyid[index])).name in body_objects
+    ]
 
 
 def _goal(project: Project, model: mujoco.MjModel) -> GoalInfo | None:
@@ -163,6 +174,7 @@ def build_world(project: Project) -> LiveWorld:
         },
         object_names=names,
         start_height=0.0,
+        joint_addresses=_joint_addresses(model, body_objects),
     )
     reset_world(world)
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
@@ -198,6 +210,10 @@ def observation(world: LiveWorld) -> np.ndarray:
     parts = [sensor_value(world, sensor) for sensor in world.sensors]
     if world.family == "navigation":
         parts.append(goal_vector(world))
+    if world.family == "locomotion":
+        data = world.data
+        parts.append(np.array([data.qpos[address] for address, _ in world.joint_addresses], dtype=float))
+        parts.append(np.array([data.qvel[address] for _, address in world.joint_addresses], dtype=float))
     return np.concatenate(parts).astype(np.float32) if parts else np.zeros(0, dtype=np.float32)
 
 

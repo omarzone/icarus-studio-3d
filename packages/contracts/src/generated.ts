@@ -195,6 +195,25 @@ export interface BrainSpec {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CheckpointEvent".
+ */
+export interface CheckpointEvent {
+  checkpoint: CheckpointInfo;
+  type: "checkpoint";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CheckpointInfo".
+ */
+export interface CheckpointInfo {
+  episode_return: number;
+  failure_rate?: number | null;
+  has_rollout: boolean;
+  step: number;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ComponentKindSpec".
  */
 export interface ComponentKindSpec {
@@ -257,6 +276,14 @@ export interface PropertyOption {
   icon?: string | null;
   label: string;
   value: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CopyPoses".
+ */
+export interface CopyPoses {
+  positions: [number, number, number][];
+  quaternions: [number, number, number, number][];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -373,6 +400,50 @@ export interface TemplateInfo {
 export interface LightCommand {
   intensity: number;
   tool: "light";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogEvent".
+ */
+export interface LogEvent {
+  line: LogLine;
+  type: "log";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LogLine".
+ */
+export interface LogLine {
+  elapsed: number;
+  level: "info" | "warn" | "error";
+  text: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricEvent".
+ */
+export interface MetricEvent {
+  metric: MetricPoint;
+  type: "metric";
+}
+/**
+ * One line of metrics.jsonl: training episodes since the previous point, or one checkpoint's evaluation.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MetricPoint".
+ */
+export interface MetricPoint {
+  elapsed: number;
+  episode_length: number;
+  episode_return: number;
+  failure_rate?: number | null;
+  kind: "train" | "eval";
+  reward_terms: {
+    [k: string]: number;
+  };
+  step: number;
+  steps_per_second?: number | null;
+  success_rate?: number | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -911,6 +982,142 @@ export interface ProjectSummary {
   name: string;
   revision: number;
   updated_at: string;
+}
+/**
+ * The first deterministic evaluation episode of a checkpoint, replayed exactly as MuJoCo computed it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "Rollout".
+ */
+export interface Rollout {
+  episode_return: number;
+  frames: RolloutFrame[];
+  geoms: string[];
+  outcome: string;
+  seed: number;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RolloutFrame".
+ */
+export interface RolloutFrame {
+  positions: [number, number, number][];
+  quaternions: [number, number, number, number][];
+  reward: number;
+  time: number;
+}
+/**
+ * Frozen in run.json when a run starts.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunConfig".
+ */
+export interface RunConfig {
+  checkpoint_steps: number[];
+  copies: number;
+  evaluation_episodes: number;
+  project_id: string;
+  revision_number: number;
+  run_id: string;
+  seed: number;
+  threads: number;
+  total_steps: number;
+}
+/**
+ * One server-sent event of GET /runs/{id}/events.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunEventEnvelope".
+ */
+export interface RunEventEnvelope {
+  event: StatusEvent | MetricEvent | CheckpointEvent | SnapshotEvent | LogEvent;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StatusEvent".
+ */
+export interface StatusEvent {
+  status: RunStatus;
+  type: "status";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunStatus".
+ */
+export interface RunStatus {
+  best_step?: number | null;
+  copies: number;
+  failure?: RunFailure | null;
+  finished_at?: string | null;
+  name: string;
+  project_id: string;
+  revision_number: number;
+  run_id: string;
+  started_at: string;
+  state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
+  step: number;
+  steps_per_second: number;
+  success_rate?: number | null;
+  total_steps: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RunFailure".
+ */
+export interface RunFailure {
+  details: string[];
+  reason: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SnapshotEvent".
+ */
+export interface SnapshotEvent {
+  snapshot: TrainingSnapshot;
+  type: "snapshot";
+}
+/**
+ * The parallel copies as they are right now, sampled a few times per second while a run trains.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainingSnapshot".
+ */
+export interface TrainingSnapshot {
+  copies: CopyPoses[];
+  geoms: string[];
+  step: number;
+}
+/**
+ * What the desktop or the copilot asks for when it starts training the current revision.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StartRun".
+ */
+export interface StartRun {
+  copies: number;
+  seed?: number | null;
+  total_steps: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainingSettings".
+ */
+export interface TrainingSettings {
+  graphics_card: string | null;
+  max_threads: number;
+  projects_folder: string;
+  runs_folder: string;
+  threads: number;
+  use_graphics_card: boolean;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainingSettingsPatch".
+ */
+export interface TrainingSettingsPatch {
+  threads?: number | null;
+  use_graphics_card?: boolean | null;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

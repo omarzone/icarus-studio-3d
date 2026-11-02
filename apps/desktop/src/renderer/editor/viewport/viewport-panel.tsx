@@ -4,7 +4,9 @@ import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { GameViewTab } from "./game-view-tab.tsx";
+import { LiveTrainingTab, type TrainingView } from "./live-training-tab.tsx";
 import { PlayTab, type PlayView } from "./play-tab.tsx";
+import { ReplayTab } from "./replay-tab.tsx";
 import { SceneTab } from "./scene-tab.tsx";
 import { ViewportSurface } from "./viewport-surface.tsx";
 
@@ -13,7 +15,7 @@ export type ViewportTab = { id: string; label: string };
 export type ViewportPanelProps = {
   // What the view shows, read by assistive technology ("Parking lot under a dusk sky").
   label: string;
-  // Tabs of the view; "scene", "game-view" and "play" have their own tab files, other ids draw a plain surface.
+  // Tabs of the view; "scene", "game-view", "play", "live-training" and "replay" have their own tab files, other ids draw a plain surface.
   tabs?: readonly ViewportTab[];
   // View options on the right of the tab bar (Lit, Perspective, speed).
   viewOptions?: readonly string[];
@@ -29,6 +31,8 @@ export type ViewportPanelProps = {
   scene?: string;
   // The live world the "play" tab draws.
   play?: PlayView;
+  // The training run the "live-training" and "replay" tabs draw.
+  training?: TrainingView;
   className?: string;
 };
 
@@ -50,6 +54,7 @@ export function ViewportPanel({
   tint,
   scene,
   play,
+  training,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
@@ -97,6 +102,10 @@ export function ViewportPanel({
           <GameViewTab {...surface} />
         ) : active === "play" ? (
           <PlayTab {...surface} play={play} />
+        ) : active === "live-training" ? (
+          <LiveTrainingTab {...surface} training={training} />
+        ) : active === "replay" ? (
+          <ReplayTab {...surface} training={training} />
         ) : (
           <ViewportSurface {...surface} />
         )}

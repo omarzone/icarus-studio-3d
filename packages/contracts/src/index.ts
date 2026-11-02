@@ -1,14 +1,22 @@
-import type { ComponentSpec, OperationBatch, PlayCommandEnvelope, PlayMessageEnvelope } from "./generated.ts";
+import type {
+  ComponentSpec,
+  OperationBatch,
+  PlayCommandEnvelope,
+  PlayMessageEnvelope,
+  RunEventEnvelope,
+} from "./generated.ts";
 
 export type {
   AddComponent,
   ApiError,
   AssetValue,
   BodySpec,
+  CheckpointInfo,
   ChoiceValue,
   ColorValue,
   ComponentKindSpec,
   ComponentSpec,
+  CopyPoses,
   CountValue,
   CreateObject,
   CreateProject,
@@ -18,6 +26,8 @@ export type {
   HealthStatus,
   LibraryCatalog,
   ListValue,
+  LogLine,
+  MetricPoint,
   NumberValue,
   ObjectSpec,
   OperationBatch,
@@ -41,6 +51,12 @@ export type {
   ReadonlyValue,
   RenameProject,
   Revision,
+  Rollout,
+  RolloutFrame,
+  RunConfig,
+  RunEventEnvelope,
+  RunFailure,
+  RunStatus,
   SceneBody,
   SceneDescription,
   SceneGeom,
@@ -48,8 +64,12 @@ export type {
   SetBrain,
   SetProperty,
   SliderValue,
+  StartRun,
   SwitchValue,
   TemplateInfo,
+  TrainingSettings,
+  TrainingSettingsPatch,
+  TrainingSnapshot,
   ValidationErrorBody,
   ValidationIssue,
   VectorValue,
@@ -60,3 +80,4 @@ export type PropertyValue = ComponentSpec["properties"][string];
 export type EditOperation = OperationBatch["operations"][number];
 export type PlayCommand = PlayCommandEnvelope["command"];
 export type PlayMessage = PlayMessageEnvelope["message"];
+export type RunEvent = RunEventEnvelope["event"];

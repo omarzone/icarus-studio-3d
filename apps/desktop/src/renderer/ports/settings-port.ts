@@ -2,6 +2,7 @@ import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AvatarTone } from "../ui/avatar.tsx";
 import { createSettingsFixture } from "./settings.fixture.ts";
+import { createEngineTrainingSettings } from "./settings-engine.ts";
 
 export type ModelCapability = "reasoning" | "vision" | "image" | "pose";
 
@@ -106,18 +107,7 @@ export const settingsPort = definePort<SettingsPort>({
       sprint: 13,
       ids: ["SCR-SETTINGS-PRIVACY"],
     }),
-    getTraining: pending({
-      key: "settings.training",
-      summary: "Training and hardware settings",
-      sprint: 5,
-      ids: ["SCR-SETTINGS-TRAINING"],
-    }),
-    setTraining: pending({
-      key: "settings.training-set",
-      summary: "Changing training settings",
-      sprint: 5,
-      ids: ["SCR-SETTINGS-TRAINING"],
-    }),
+    ...createEngineTrainingSettings(),
     restartEngine: pending({
       key: "settings.restart-engine",
       summary: "Restarting the engine from settings",

@@ -33,7 +33,7 @@ export function StopRunDialog() {
           </CloseOverlay>
           <CloseOverlay
             cta="Pause"
-            onClick={() => pause.mutate(project, { onSuccess: runsCache })}
+            onClick={() => void pause.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("secondary", DIALOG_BUTTON)}
           >
             Pause
@@ -41,7 +41,7 @@ export function StopRunDialog() {
           <GoTo
             to="SCR-RESULTS"
             cta={`Stop ${run}`}
-            onClick={() => stop.mutate(project, { onSuccess: runsCache })}
+            onClick={() => void stop.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("primary", DIALOG_BUTTON)}
           >
             Stop {run}

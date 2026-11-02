@@ -18,6 +18,11 @@ def write_atomic(path: Path, text: str) -> None:
 
 
 def append_line(path: Path, line: str) -> None:
+    """Append one line, starting it on a new line when a killed writer left the last one unfinished."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(line.rstrip("\n") + "\n")
+    with path.open("a+b") as handle:
+        unfinished = False
+        if handle.seek(0, os.SEEK_END) > 0:
+            handle.seek(-1, os.SEEK_END)
+            unfinished = handle.read(1) != b"\n"
+        handle.write(f"{'\n' if unfinished else ''}{line.rstrip('\n')}\n".encode())

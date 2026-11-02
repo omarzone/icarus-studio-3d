@@ -4,6 +4,10 @@ import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, BinaryIO
+
+if TYPE_CHECKING:
+    from icarus.training.supervisor import Supervisor
 
 
 @dataclass(frozen=True)
@@ -32,8 +36,11 @@ def parse_args(argv: list[str]) -> EngineArgs:
     )
 
 
-def _exit_when_stdin_closes() -> None:
-    sys.stdin.buffer.read()
+def exit_when_stdin_closes(stdin: BinaryIO, supervisor: "Supervisor | None") -> None:
+    """Exit once the parent closes stdin, first stopping the run in training so no worker outlives the engine."""
+    stdin.read()
+    if supervisor is not None:
+        supervisor.shutdown()
     os._exit(0)
 
 
@@ -43,12 +50,23 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if args.projects_dir is not None:
         os.environ["ICARUS_PROJECTS_DIR"] = str(args.projects_dir)
-    if args.exit_with_stdin:
-        # Native imports (MuJoCo) hang on Windows while another thread blocks reading stdin, so import first.
-        import icarus.api.app  # noqa: F401
+    if not args.exit_with_stdin:
+        uvicorn.run("icarus.api.app:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
+        return
+    # Native imports (MuJoCo) hang on Windows while another thread blocks reading stdin, so import first.
+    from icarus.api.app import create_app
 
-        threading.Thread(target=_exit_when_stdin_closes, name="parent-watch", daemon=True).start()
-    uvicorn.run("icarus.api.app:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
+    # With reload the app lives in a child process this one cannot reach.
+    app = None if args.reload else create_app()
+    supervisor = app.state.supervisor if app is not None else None
+    watch = threading.Thread(
+        target=exit_when_stdin_closes, args=(sys.stdin.buffer, supervisor), name="parent-watch", daemon=True
+    )
+    watch.start()
+    if app is None:
+        uvicorn.run("icarus.api.app:create_app", factory=True, host=args.host, port=args.port, reload=True)
+    else:
+        uvicorn.run(app, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
