@@ -21,6 +21,7 @@ EXPECTED = {
     "curriculum-and-warm-start",
     "environment-look",
     "sensors-for-a-task",
+    "about-icarus-studio",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.
@@ -46,7 +47,7 @@ def _range(name: str) -> tuple[float, float] | None:
     return None if schema.min is None or schema.max is None else (schema.min, schema.max)
 
 
-def test_the_eight_builtin_skills_load_without_problems():
+def test_the_builtin_skills_load_without_problems():
     assert builtin_skills().skipped == []
     assert set(builtin_skills().skills) == EXPECTED
 
