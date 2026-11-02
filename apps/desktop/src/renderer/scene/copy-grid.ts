@@ -1,4 +1,5 @@
 import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
+import type { MotionPlayer, PosePlayer } from "./motion-player.ts";
 import type { Pose, Poses } from "./pose-track.ts";
 
 // The parallel copies of a training run side by side: each copy's geoms shifted by its place in a square grid.
@@ -125,5 +126,24 @@ export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, 
       zones,
     },
     extent,
+  };
+}
+
+// Every view of a frame (geoms, camera, rays) asks within the same few milliseconds; one sample serves them all.
+const SAME_FRAME_MS = 4;
+
+// The player's copies placed in the grid; rays of one copy (`rays` its index), of all (`"all"`) or none.
+export function gridPlayer(player: MotionPlayer, grid: CopyGrid, rays: number | "all" | null): PosePlayer {
+  let last: { now: number; frame: ReturnType<PosePlayer["at"]> } | null = null;
+  return {
+    at: (now) => {
+      if (last && Math.abs(now - last.now) < SAME_FRAME_MS) {
+        return last.frame;
+      }
+      const played = player.sample(now);
+      const shown = rays === null ? [] : grid.placeRays(played.rays, rays === "all" ? undefined : rays);
+      last = { now, frame: { poses: grid.place(played.copies), rays: shown } };
+      return last.frame;
+    },
   };
 }

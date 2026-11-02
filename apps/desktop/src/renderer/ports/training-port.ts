@@ -1,6 +1,7 @@
 import type { SceneDescription, SceneRay } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import type { MotionPlayer } from "../scene/motion-player.ts";
 import { createTrainingFixture } from "./training.fixture.ts";
 import { createEngineAutopilot } from "./training-autopilot.ts";
 import { createEngineTrainingPort } from "./training-engine.ts";
@@ -120,9 +121,25 @@ export type LiveCopies =
       copies: readonly CopyPoses[];
       // Each copy's distance sensors, in the order of `copies`.
       rays: readonly (readonly SceneRay[])[];
+      // Plays the copies' recorded motion; absent when the run streams one pose per snapshot.
+      player?: MotionPlayer;
+      progress?: LiveProgress;
       note?: string;
     }
   | { kind: "closed"; reason: string };
+
+// How far the run is and what its worker is doing, as last reported.
+export type LiveProgress = {
+  // "Practicing", "Updating the brain", "Testing checkpoint 25k"; null when the run does not say.
+  phase: string | null;
+  step: number;
+  total: number;
+  // Measured end to end; the bar moves on with it between reports only while the copies practice.
+  stepsPerSecond: number;
+  advancing: boolean;
+  // performance.now() when this was reported.
+  reportedAt: number;
+};
 
 // What changed in a run, so the views that show it read it again.
 export type TrainingChange = "runs" | "metrics" | "checkpoints" | "console" | "live-view";

@@ -20,6 +20,11 @@ export function nextTrack(track: PoseTrack | null, poses: Poses, now: number): P
   return { from: track.to, to: poses, arrivedAt: now, span };
 }
 
+// A track that stays on these poses, for a frame a player already placed.
+export function heldTrack(poses: Poses): PoseTrack {
+  return { from: poses, to: poses, arrivedAt: Number.NEGATIVE_INFINITY, span: MIN_SPAN_MS };
+}
+
 // How far rendering is from the previous frame to the newest one, from 0 to 1.
 export function trackProgress(track: PoseTrack, now: number): number {
   return Math.min(1, Math.max(0, (now - track.arrivedAt) / track.span));

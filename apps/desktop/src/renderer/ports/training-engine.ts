@@ -1,8 +1,10 @@
 import type { LogLine, RunStatus, SceneDescription } from "@icarus/contracts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
 import { type OpenRunEvents, openRunEvents, type RunEventsConnection } from "../engine-client/run-events.ts";
+import { createMotionPlayer, type MotionPlayer } from "../scene/motion-player.ts";
 import { compactNumber } from "../ui/compact-number.ts";
-import { checkpointMarks, replayFrames, snapshotCopies, snapshotRays } from "./replay-views.ts";
+import { liveProgress } from "./live-progress.ts";
+import { checkpointMarks, replayFrames, snapshotCopies, snapshotMotion, snapshotRays } from "./replay-views.ts";
 import { liveMetrics } from "./training-metrics.ts";
 import type { LiveCopies, RunList, TrainingPort } from "./training-port.ts";
 import {
@@ -232,26 +234,43 @@ export function createEngineTrainingPort(
                   starting: true,
                 },
           );
+          let status: RunStatus = run;
+          let snapshotStep = 0;
+          let player: MotionPlayer | undefined;
+          const progress = () => liveProgress(status, snapshotStep, performance.now());
           connection = open(run.run_id, {
-            onStatus: (status) => {
-              if (!isFinal(status)) {
+            onStatus: (next) => {
+              status = next;
+              if (!isFinal(next)) {
+                if (shown.kind === "live") {
+                  show({ ...shown, progress: progress() });
+                }
                 listener.onChange(["runs", "live-view"]);
                 return;
               }
               listener.onChange(["runs", "live-view", "metrics", "checkpoints"]);
-              const words = ended(status);
+              const words = ended(next);
               show(
                 shown.kind === "live"
-                  ? { ...shown, note: `${words.title} · ${words.body}` }
+                  ? { ...shown, progress: undefined, note: `${words.title} · ${words.body}` }
                   : { kind: "message", ...words },
               );
-              if (status.state === "failed" && !endedEarlier && !cancelled) {
+              if (next.state === "failed" && !endedEarlier && !cancelled) {
                 listener.onFailed();
               }
             },
             onMetric: () => listener.onChange(["metrics"]),
             onCheckpoint: () => listener.onChange(["checkpoints", "live-view"]),
             onSnapshot: (snapshot) => {
+              snapshotStep = snapshot.step;
+              // Frames go to the player as they arrive, so none is lost while the scene loads or React batches.
+              const motion = snapshotMotion(snapshot);
+              const mode = snapshot.live_view === "fast" ? "fast" : "realtime";
+              if (motion) {
+                player = player?.mode === mode ? player : createMotionPlayer(mode);
+                player.push(motion, performance.now());
+              }
+              const played = motion ? player : undefined;
               runScene(run.run_id).then(
                 (description) =>
                   show({
@@ -260,6 +279,8 @@ export function createEngineTrainingPort(
                     step: `${compactNumber(snapshot.step)} steps`,
                     copies: snapshotCopies(snapshot),
                     rays: snapshotRays(snapshot),
+                    player: played,
+                    progress: progress(),
                   }),
                 (error: unknown) =>
                   show({ kind: "closed", reason: error instanceof Error ? error.message : String(error) }),

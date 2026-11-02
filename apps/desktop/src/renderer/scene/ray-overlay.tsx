@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { type RefObject, useEffect, useMemo, useRef } from "react";
 import { BufferAttribute, BufferGeometry, Color } from "three";
 import { toThreePosition } from "./coordinates.ts";
+import type { PosePlayer } from "./motion-player.ts";
 import { type PoseTrack, trackProgress } from "./pose-track.ts";
 import { easeRays, type RayLine, rayLine } from "./ray-lines.ts";
 
@@ -48,16 +49,19 @@ function draw(lines: readonly RayLine[], segments: BufferGeometry, dots: BufferG
 }
 
 // The engine's distance sensors as thin lines from each sensor to what it hit (with a dot) or to its full range,
-// hot when the hit is close. In a live view `track` eases them with the geoms; it never moves a ray by itself.
+// hot when the hit is close. In a live view `track` eases them with the geoms, or `player` plays their recorded
+// readings; it never moves a ray by itself.
 export function RayOverlay({
   rays,
   values,
   track,
+  player,
   layer,
 }: {
   rays: readonly SceneRay[];
   values: boolean;
   track: RefObject<PoseTrack | null> | null;
+  player?: PosePlayer;
   // A fixed element over the canvas: drei moves labels between hosts when its default host changes, and React then
   // fails to remove them.
   layer: RefObject<HTMLDivElement | null>;
@@ -77,13 +81,19 @@ export function RayOverlay({
     [segments, dots],
   );
   useFrame(() => {
+    if (player) {
+      draw(player.at(performance.now()).rays.slice(0, count).map(rayLine), segments, dots);
+      return;
+    }
     const current = track?.current;
     const t = current ? trackProgress(current, performance.now()) : 1;
     draw(easeRays(frames.current.from, frames.current.to, t).map(rayLine), segments, dots);
   });
   // SAFETY: drei reads `portal.current` with optional chaining, so an element not attached yet is handled.
   const host = layer as RefObject<HTMLElement>;
-  const labels = values && count <= MAX_VALUES ? rays.map(rayLine).filter((line) => line.value !== null) : [];
+  // Readings change with each snapshot, which renders this again; a player's labels follow what it plays then.
+  const labelled = player ? player.at(performance.now()).rays : rays;
+  const labels = values && count <= MAX_VALUES ? labelled.map(rayLine).filter((line) => line.value !== null) : [];
   return (
     <>
       <lineSegments geometry={segments} frustumCulled={false} raycast={() => undefined} renderOrder={2}>

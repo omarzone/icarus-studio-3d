@@ -4,13 +4,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { lazy, Suspense, useContext, useMemo, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { LiveCopies } from "../../ports/training-port.ts";
-import { copyGrid } from "../../scene/copy-grid.ts";
+import { copyGrid, gridPlayer } from "../../scene/copy-grid.ts";
 import { RayViewContext } from "../../scene/ray-lines.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
-import { RunStarting } from "./run-starting.tsx";
 import { useLiveCopies } from "../training-queries.ts";
+import { RunProgress } from "./run-progress.tsx";
+import { RunStarting } from "./run-starting.tsx";
 import { ViewportSurface, type ViewportSurfaceProps } from "./viewport-surface.tsx";
 
 // The 3D renderer is heavy, so it loads the first time the copies have a world to draw.
@@ -85,6 +86,11 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
     () => (view?.shown ? grid.placeRays(live.rays, view.allCopies ? undefined : followed) : undefined),
     [view?.shown, view?.allCopies, grid, live.rays, followed],
   );
+  const raysOf = view?.shown ? (view.allCopies ? "all" : followed) : null;
+  const player = useMemo(
+    () => (live.player ? gridPlayer(live.player, grid, raysOf) : undefined),
+    [live.player, grid, raysOf],
+  );
   return (
     <>
       <RenderBoundary
@@ -101,6 +107,7 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
             mode="play"
             description={grid.description}
             poses={poses}
+            player={player}
             onPick={ignorePick}
             framing={grid.extent}
             follows={follows}
@@ -110,9 +117,13 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
         </Suspense>
       </RenderBoundary>
       <div className="pointer-events-none absolute top-3 right-3 flex flex-col items-end gap-1.5">
-        <span role="status" className="rounded-full bg-overlay px-3 py-1.5 font-mono text-meta">
-          {copies.length} {copies.length === 1 ? "copy" : "copies"} · {live.step}
-        </span>
+        {live.progress ? (
+          <RunProgress copies={copies.length} progress={live.progress} />
+        ) : (
+          <span role="status" className="rounded-full bg-overlay px-3 py-1.5 font-mono text-meta">
+            {copies.length} {copies.length === 1 ? "copy" : "copies"} · {live.step}
+          </span>
+        )}
         {copies.length > 1 ? <CopyPicker followed={followed} count={copies.length} onPick={setPicked} /> : null}
         {live.note ? <span className="max-w-80 rounded-card-sm bg-overlay px-3 py-2 text-ui">{live.note}</span> : null}
       </div>

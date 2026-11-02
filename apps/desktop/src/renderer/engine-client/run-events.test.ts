@@ -104,6 +104,23 @@ describe("openRunEvents", () => {
     expect(calls.onError).not.toHaveBeenCalled();
   });
 
+  it("passes recorded motion on and drops a snapshot whose frames and times disagree", async () => {
+    const { calls, source } = await connected();
+    const pose = { positions: [[0, 0, 0.2]], quaternions: [[1, 0, 0, 0]] };
+    const snapshot = (times: number[]) => ({
+      step: 2048,
+      geoms: ["torso"],
+      copies: [pose],
+      live_view: "realtime",
+      motion: [[{ episode: 3, times, frames: [pose, pose] }]],
+    });
+    source.receive({ event: { type: "snapshot", snapshot: snapshot([0.05, 0.1]) } });
+    source.receive({ event: { type: "snapshot", snapshot: snapshot([0.05]) } });
+    expect(calls.onSnapshot).toHaveBeenCalledTimes(1);
+    expect(calls.onSnapshot).toHaveBeenCalledWith(snapshot([0.05, 0.1]));
+    expect(calls.onError).toHaveBeenCalledTimes(1);
+  });
+
   it("reports an unreadable event instead of throwing", async () => {
     const { calls, source } = await connected();
     expect(() => source.receive("not json")).not.toThrow();

@@ -11,6 +11,7 @@ import { geomGeometry, geomObject } from "./geom-object.ts";
 import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
 import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
+import type { PosePlayer } from "./motion-player.ts";
 import { isDeliberateClick } from "./pick.ts";
 import type { Poses, PoseTrack } from "./pose-track.ts";
 import { RayOverlay } from "./ray-overlay.tsx";
@@ -43,6 +44,8 @@ type PlayProps = {
   mode: "play";
   // Engine poses that override each geom's place; geoms without one stay where the description has them.
   poses: Poses;
+  // Recorded motion to play instead of easing between `poses` (and `rays`) as they arrive.
+  player?: PosePlayer;
   onPick: (pick: ScenePick) => void;
 };
 
@@ -301,7 +304,13 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
         />
       )}
       {props.mode === "play" ? (
-        <LiveGeoms geoms={description.geoms} poses={props.poses} track={track} onPick={props.onPick} />
+        <LiveGeoms
+          geoms={description.geoms}
+          poses={props.poses}
+          player={props.player}
+          track={track}
+          onPick={props.onPick}
+        />
       ) : (
         <EditGeoms {...props} />
       )}
@@ -310,6 +319,7 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
           rays={props.rays}
           values={props.rayValues ?? false}
           track={props.mode === "play" ? track : null}
+          player={props.mode === "play" ? props.player : undefined}
           layer={props.labels}
         />
       ) : null}

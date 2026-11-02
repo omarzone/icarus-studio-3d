@@ -4,8 +4,9 @@ import { type RefObject, useEffect, useMemo, useRef } from "react";
 import { type Object3D, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomObject } from "./geom-object.ts";
+import type { PosePlayer } from "./motion-player.ts";
 import { isDeliberateClick } from "./pick.ts";
-import { lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
+import { heldTrack, lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
 
 type Vec3 = [number, number, number];
 
@@ -26,15 +27,18 @@ const from = new Quaternion();
 const to = new Quaternion();
 
 // Geoms placed by the engine's frames (drawn in their styles, see geom-object.ts), eased from one frame to the next; clicks report picks instead of selecting.
-// `track` is shared with the camera, which follows the same eased poses.
+// `track` is shared with the camera, which follows the same eased poses. With a `player`, the geoms follow its
+// recorded motion instead, and `track` holds what it played this frame.
 export function LiveGeoms({
   geoms,
   poses,
+  player,
   track,
   onPick,
 }: {
   geoms: readonly SceneGeom[];
   poses: Poses;
+  player?: PosePlayer;
   track: RefObject<PoseTrack | null>;
   onPick: (pick: ScenePick) => void;
 }) {
@@ -44,9 +48,14 @@ export function LiveGeoms({
     pick.current = onPick;
   }, [onPick]);
   useEffect(() => {
-    track.current = nextTrack(track.current, poses, performance.now());
-  }, [poses, track]);
+    if (!player) {
+      track.current = nextTrack(track.current, poses, performance.now());
+    }
+  }, [poses, track, player]);
   useFrame(() => {
+    if (player) {
+      track.current = heldTrack(player.at(performance.now()).poses);
+    }
     const current = track.current;
     if (!current) {
       return;
