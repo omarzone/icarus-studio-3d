@@ -24,6 +24,7 @@ from icarus.contracts.operations import OperationBatch
 from icarus.contracts.play import PlayBrainOption, PlayCommandEnvelope, PlayMessageEnvelope
 from icarus.contracts.project import CreateProject, DuplicateProject, Project, ProjectState, ProjectSummary, Revision
 from icarus.contracts.scene import SceneDescription
+from icarus.contracts.storage import ChangeDataFolder, DataFolderCheck, DataFolderChoice, DataFolderMove, StorageInfo
 from icarus.contracts.training import (
     CheckpointInfo,
     MetricPoint,
@@ -80,6 +81,11 @@ MODELS: tuple[type[BaseModel], ...] = (
     TaskInfo,
     BrainNetwork,
     BrainActivations,
+    StorageInfo,
+    DataFolderMove,
+    DataFolderChoice,
+    DataFolderCheck,
+    ChangeDataFolder,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

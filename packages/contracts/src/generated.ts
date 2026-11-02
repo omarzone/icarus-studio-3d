@@ -395,6 +395,14 @@ export interface BuildStep {
   status: "done" | "running" | "todo";
 }
 /**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ChangeDataFolder".
+ */
+export interface ChangeDataFolder {
+  folder: string;
+  move_data: boolean;
+}
+/**
  * A button under a copilot answer: what it says and what the app does when it is pressed.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -941,6 +949,39 @@ export interface SceneRay {
 export interface CreateProject {
   name: string;
   template: string;
+}
+/**
+ * Whether a folder can become the data folder, and why not in words.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DataFolderCheck".
+ */
+export interface DataFolderCheck {
+  folder: string;
+  free_bytes: number;
+  needed_bytes: number;
+  problem: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DataFolderChoice".
+ */
+export interface DataFolderChoice {
+  folder: string;
+}
+/**
+ * Where moving the data folder stands; lines say what moved and what was left where it was.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DataFolderMove".
+ */
+export interface DataFolderMove {
+  folder?: string | null;
+  lines?: string[];
+  progress?: number;
+  restart_needed?: boolean;
+  state: "idle" | "moving" | "done" | "failed";
+  text?: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2254,6 +2295,22 @@ export interface StartRun {
   seed?: number | null;
   total_steps: number;
   warm_start?: WarmStart | null;
+}
+/**
+ * The data folder holding projects and runs, the space they use and what is free on that drive.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StorageInfo".
+ */
+export interface StorageInfo {
+  data_folder: string;
+  free_bytes: number;
+  move: DataFolderMove;
+  projects_bytes: number;
+  projects_folder: string;
+  runs_bytes: number;
+  runs_folder: string;
+  set_by_environment: boolean;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
