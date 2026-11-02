@@ -32,7 +32,7 @@ def _component(kind: str, overrides: dict[str, Raw]) -> ComponentSpec:
 
 
 @dataclass
-class _Part:
+class Part:
     id: str
     name: str
     parent: str | None
@@ -47,7 +47,7 @@ class _Part:
         )
 
 
-def _solid(
+def solid(
     id: str,
     name: str,
     parent: str | None,
@@ -59,7 +59,7 @@ def _solid(
     *,
     rotation: tuple[float, float, float] = (0, 0, 0),
     extra: dict[str, dict[str, Raw]] | None = None,
-) -> _Part:
+) -> Part:
     components: dict[str, dict[str, Raw]] = {
         "transform": {"position": position, "rotation": rotation},
         "mesh": {"shape": shape, "size": size},
@@ -67,7 +67,7 @@ def _solid(
         "physics_body": {"mode": "dynamic", "mass": mass},
         "collider": {},
     }
-    return _Part(id, name, parent, components | (extra or {}))
+    return Part(id, name, parent, components | (extra or {}))
 
 
 def _hinge(axis: tuple[float, float, float], limits: tuple[float, float], anchor=(0.0, 0.0, 0.0)) -> dict[str, Raw]:
@@ -78,9 +78,9 @@ def _motor(kind: str, max_force: float) -> dict[str, Raw]:
     return {"kind": kind, "max_force": max_force}
 
 
-def _world() -> list[_Part]:
+def _world() -> list[Part]:
     return [
-        _Part(
+        Part(
             "ground",
             "Ground",
             None,
@@ -92,14 +92,14 @@ def _world() -> list[_Part]:
                 "surface": {"kind": "asphalt"},
             },
         ),
-        _Part("sun", "Sun", None, {"transform": {"position": (0, 0, 10)}, "light": {"kind": "sun"}}),
-        _Part("spawn", "Spawn point", None, {"transform": {}, "spawn_point": {}}),
+        Part("sun", "Sun", None, {"transform": {"position": (0, 0, 10)}, "light": {"kind": "sun"}}),
+        Part("spawn", "Spawn point", None, {"transform": {}, "spawn_point": {}}),
     ]
 
 
-def _car() -> list[_Part]:
+def _car() -> list[Part]:
     parts = [
-        _solid(
+        solid(
             "car",
             "Car",
             None,
@@ -114,7 +114,7 @@ def _car() -> list[_Part]:
     for side, y in (("left", 1.05), ("right", -1.05)):
         knuckle = f"steer_{side}"
         parts.append(
-            _solid(
+            solid(
                 knuckle,
                 f"Front {side} steering",
                 "car",
@@ -136,7 +136,7 @@ def _car() -> list[_Part]:
             if motor:
                 extra["motor"] = motor
             parts.append(
-                _solid(
+                solid(
                     id,
                     name,
                     parent,
@@ -150,14 +150,14 @@ def _car() -> list[_Part]:
                 )
             )
     parts.append(
-        _Part("goal", "Parking spot", None, {"transform": {"position": (12, 0, 0)}, "goal_zone": {"radius": 1.5}})
+        Part("goal", "Parking spot", None, {"transform": {"position": (12, 0, 0)}, "goal_zone": {"radius": 1.5}})
     )
     return parts
 
 
-def _leg(side: str, y: float, parent: str, top: float) -> list[_Part]:
+def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
     return [
-        _solid(
+        solid(
             f"thigh_{side}",
             f"{side.capitalize()} thigh",
             parent,
@@ -168,7 +168,7 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[_Part]:
             "#8a8f98",
             extra={"joint": _hinge((0, 1, 0), (-60, 60), (0, 0, 0.2)), "motor": _motor("position", 150)},
         ),
-        _solid(
+        solid(
             f"shin_{side}",
             f"{side.capitalize()} shin",
             f"thigh_{side}",
@@ -179,7 +179,7 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[_Part]:
             "#8a8f98",
             extra={"joint": _hinge((0, 1, 0), (0, 120), (0, 0, 0.2)), "motor": _motor("position", 150)},
         ),
-        _solid(
+        solid(
             f"foot_{side}",
             f"{side.capitalize()} foot",
             f"shin_{side}",
@@ -197,15 +197,15 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[_Part]:
     ]
 
 
-def _walker() -> list[_Part]:
-    torso = _solid("torso", "Torso", None, (0, 0, 1.0), "box", (0.3, 0.3, 0.4), 10, "#4f7cac", extra={"balance": {}})
+def _walker() -> list[Part]:
+    torso = solid("torso", "Torso", None, (0, 0, 1.0), "box", (0.3, 0.3, 0.4), 10, "#4f7cac", extra={"balance": {}})
     return [torso, *_leg("left", 0.12, "torso", -0.35), *_leg("right", -0.12, "torso", -0.35)]
 
 
-def _humanoid() -> list[_Part]:
+def _humanoid() -> list[Part]:
     parts = [
-        _solid("pelvis", "Pelvis", None, (0, 0, 1.0), "box", (0.25, 0.3, 0.2), 8, "#4f7cac", extra={"balance": {}}),
-        _solid(
+        solid("pelvis", "Pelvis", None, (0, 0, 1.0), "box", (0.25, 0.3, 0.2), 8, "#4f7cac", extra={"balance": {}}),
+        solid(
             "chest",
             "Chest",
             "pelvis",
@@ -216,7 +216,7 @@ def _humanoid() -> list[_Part]:
             "#4f7cac",
             extra={"joint": _hinge((0, 1, 0), (-30, 45), (0, 0, -0.2)), "motor": _motor("position", 100)},
         ),
-        _solid(
+        solid(
             "head",
             "Head",
             "chest",
@@ -230,7 +230,7 @@ def _humanoid() -> list[_Part]:
     ]
     for side, y in (("left", 0.25), ("right", -0.25)):
         parts += [
-            _solid(
+            solid(
                 f"upper_arm_{side}",
                 f"{side.capitalize()} upper arm",
                 "chest",
@@ -241,7 +241,7 @@ def _humanoid() -> list[_Part]:
                 "#8a8f98",
                 extra={"joint": _hinge((0, 1, 0), (-90, 90), (0, 0, 0.15)), "motor": _motor("position", 60)},
             ),
-            _solid(
+            solid(
                 f"forearm_{side}",
                 f"{side.capitalize()} forearm",
                 f"upper_arm_{side}",
@@ -260,7 +260,7 @@ def _humanoid() -> list[_Part]:
 class _Template:
     info: TemplateInfo
     body: tuple[str, str] | None
-    parts: list[_Part]
+    parts: list[Part]
     rewards: list[str]
 
 

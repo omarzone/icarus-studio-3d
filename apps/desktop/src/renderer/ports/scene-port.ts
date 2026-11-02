@@ -1,6 +1,9 @@
+import type { SceneDescription } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
 import { createSceneFixture } from "./scene.fixture.ts";
+import { createEngineScenePort } from "./scene-engine.ts";
 
 // View types of the project document the editor shows; the engine implementation maps @icarus/contracts onto them.
 
@@ -179,79 +182,27 @@ export type ScenePort = {
   toggleVariation: (input: { scene: string; id: string }) => Promise<TrainingCopies>;
   getGuide: (scene: string) => Promise<GuideProgress>;
   getPropertyReference: () => Promise<PropertyReference>;
+  // The compiled scene the viewport draws; null where there is no engine scene (prototype).
+  getSceneDescription: (scene: string) => Promise<SceneDescription | null>;
+  // Moves an object by a delta in world axes (metres, MuJoCo frame), as a gizmo drag ends.
+  moveObject: (input: { scene: string; id: string; delta: [number, number, number] }) => Promise<Inspection>;
 };
-
-const editorIds = ["SCR-WORLD", "STA-WORLD-EMPTY", "STA-WORLD-EMPTY-NOGUIDE", "STA-WORLD-PROPOSAL"] as const;
 
 export const scenePort = definePort<ScenePort>({
   app: {
-    getTree: pending({
-      key: "scene.tree",
-      summary: "The project's scene tree",
-      sprint: 3,
-      ids: [...editorIds, "STA-WORLD-BUILDING"],
-    }),
-    selectObject: pending({ key: "scene.select", summary: "Selecting an object", sprint: 3, ids: [...editorIds] }),
-    getInspection: pending({
-      key: "scene.inspect",
-      summary: "The properties of the selected object",
-      sprint: 3,
-      ids: [...editorIds, "POP-ADD-COMPONENT"],
-    }),
-    setProperty: pending({ key: "scene.setProperty", summary: "Editing a property", sprint: 3, ids: [...editorIds] }),
-    resetProperty: pending({
-      key: "scene.resetProperty",
-      summary: "Resetting a property",
-      sprint: 3,
-      ids: [...editorIds],
-    }),
+    ...createEngineScenePort(engineApi),
     acceptProposedValue: pending({
       key: "scene.acceptProposedValue",
       summary: "Accepting a value the copilot proposed",
       sprint: 6,
       ids: ["REF-PROPERTY-TYPES"],
     }),
-    listComponentKinds: pending({
-      key: "scene.componentKinds",
-      summary: "The components you can add",
-      sprint: 3,
-      ids: ["POP-ADD-COMPONENT"],
-    }),
-    addComponent: pending({
-      key: "scene.addComponent",
-      summary: "Adding a component",
-      sprint: 3,
-      ids: ["POP-ADD-COMPONENT"],
-    }),
-    getTrainingCopies: pending({
-      key: "scene.trainingCopies",
-      summary: "Training copies and what changes between them",
-      sprint: 3,
-      ids: ["POP-TRAINING-COPIES"],
-    }),
-    setTrainingCopies: pending({
-      key: "scene.setTrainingCopies",
-      summary: "Changing the number of training copies",
-      sprint: 3,
-      ids: ["POP-TRAINING-COPIES"],
-    }),
+    // Variations per copy arrive with randomized training.
     toggleVariation: pending({
       key: "scene.toggleVariation",
       summary: "Changing what varies between copies",
-      sprint: 3,
+      sprint: 5,
       ids: ["POP-TRAINING-COPIES"],
-    }),
-    getGuide: pending({
-      key: "scene.guide",
-      summary: "The getting started guide",
-      sprint: 3,
-      ids: ["STA-WORLD-EMPTY"],
-    }),
-    getPropertyReference: pending({
-      key: "scene.propertyReference",
-      summary: "The property types reference",
-      sprint: 3,
-      ids: ["REF-PROPERTY-TYPES"],
     }),
   },
   prototype: createSceneFixture,

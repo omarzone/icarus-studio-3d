@@ -23,6 +23,8 @@ export type ViewportPanelProps = {
   // Cards, pills and buttons floating over the view; they position themselves (see viewport-overlays.tsx).
   overlays?: ReactNode;
   tint?: "proposal";
+  // Project whose compiled scene the view draws; workspaces without an engine scene leave it out.
+  scene?: string;
   className?: string;
 };
 
@@ -41,10 +43,11 @@ export function ViewportPanel({
   toolbar,
   overlays,
   tint,
+  scene,
   className = "flex-1",
 }: ViewportPanelProps) {
   const [active, setActive] = useState(tabs[0]?.id ?? "scene");
-  const surface = { label, tint, overlays };
+  const surface = { label, tint, overlays, scene };
   return (
     <Panel
       id="PNL-VIEWPORT"

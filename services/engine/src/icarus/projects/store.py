@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ValidationIssue
-from icarus.contracts.operations import EditOperation, OperationBatch
+from icarus.contracts.operations import EditOperation, OperationBatch, RenameProject
 from icarus.contracts.project import Project, ProjectState, ProjectSummary, Revision
 from icarus.design.checks import design_report
 from icarus.library.templates import TEMPLATES, template_operations
@@ -23,6 +23,10 @@ PROJECT_ID = re.compile(r"^[0-9a-f]{12}$")
 
 
 class UnknownProject(LookupError):
+    pass
+
+
+class UnknownRevision(LookupError):
     pass
 
 
@@ -102,7 +106,13 @@ class ProjectStore:
         )
 
     def _commit(
-        self, directory: Path, project: Project, report: DesignReport, batch: OperationBatch, parent: int | None
+        self,
+        directory: Path,
+        project: Project,
+        report: DesignReport,
+        batch: OperationBatch,
+        parent: int | None,
+        restored_from: int | None = None,
     ) -> ProjectState:
         numbers = [int(path.stem) for path in (directory / "snapshots").glob("*.json")]
         revision = Revision(
@@ -112,6 +122,7 @@ class ProjectStore:
             summary=batch.summary,
             operations=batch.operations,
             created_at=datetime.now(UTC),
+            restored_from=restored_from,
         )
         snapshot = _Snapshot(revision=revision, project=project, report=report)
         write_atomic(directory / "snapshots" / f"{revision.number}.json", snapshot.model_dump_json())
@@ -141,6 +152,7 @@ class ProjectStore:
                 ProjectSummary(
                     id=state.project.id,
                     name=state.project.name,
+                    description=state.project.description,
                     revision=state.revision.number,
                     updated_at=state.revision.created_at,
                 )
@@ -155,6 +167,30 @@ class ProjectStore:
         directory.mkdir(parents=True)
         batch = OperationBatch(operations=operations, summary=f"Created from {TEMPLATES[template].label}")
         return self._commit(directory, project, report, batch, None)
+
+    def duplicate(self, project_id: str, name: str) -> ProjectState:
+        source = self.state(project_id).project
+        copy_id = uuid.uuid4().hex[:12]
+        project = source.model_copy(update={"id": copy_id, "name": name})
+        report, _ = design_report(project)
+        directory = self.root / copy_id
+        directory.mkdir(parents=True)
+        batch = OperationBatch(
+            operations=[RenameProject(op="rename_project", name=name)], summary=f"Duplicated from {source.name}"
+        )
+        return self._commit(directory, project, report, batch, None)
+
+    def restore(self, project_id: str, number: int) -> ProjectState:
+        with self._locked(project_id) as directory:
+            if not (directory / "snapshots" / f"{number}.json").is_file():
+                raise UnknownRevision(number)
+            head = self._head(directory)
+            old = self._snapshot(directory, number)
+            batch = OperationBatch(
+                operations=[RenameProject(op="rename_project", name=old.project.name)],
+                summary=f"Restored revision {number}",
+            )
+            return self._commit(directory, old.project, old.report, batch, head.current, restored_from=number)
 
     def state(self, project_id: str) -> ProjectState:
         with self._locked(project_id) as directory:

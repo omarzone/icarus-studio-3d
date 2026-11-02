@@ -8,6 +8,7 @@ export const sceneKeys = {
   inspection: (scene: string) => ["scene", scene, "inspection"] as const,
   copies: (scene: string) => ["scene", scene, "copies"] as const,
   guide: (scene: string) => ["scene", scene, "guide"] as const,
+  description: (scene: string) => ["scene", scene, "description"] as const,
   componentKinds: ["scene", "component-kinds"] as const,
   reference: ["scene", "property-reference"] as const,
 };
@@ -27,6 +28,11 @@ export function useGuide(scene: string) {
   return useQuery({ queryKey: sceneKeys.guide(scene), queryFn: () => port.getGuide(scene) });
 }
 
+export function useSceneDescription(scene: string) {
+  const port = usePort(scenePort);
+  return useQuery({ queryKey: sceneKeys.description(scene), queryFn: () => port.getSceneDescription(scene) });
+}
+
 // Writes what an edit returned into the cache so every panel shows it at once.
 export function useSceneCache(scene: string) {
   const client = useQueryClient();
@@ -35,6 +41,15 @@ export function useSceneCache(scene: string) {
       client.setQueryData(sceneKeys.tree(scene), tree);
       void client.invalidateQueries({ queryKey: sceneKeys.inspection(scene) });
     },
-    inspection: (inspection: Inspection) => client.setQueryData(sceneKeys.inspection(scene), inspection),
+    // Everything else about the scene (tree, guide, viewport) and the project's history is re-read.
+    inspection: (inspection: Inspection) => {
+      client.setQueryData(sceneKeys.inspection(scene), inspection);
+      void client.invalidateQueries({
+        predicate: (query) =>
+          (query.queryKey[0] === "scene" && query.queryKey[1] === scene && query.queryKey[2] !== "inspection") ||
+          query.queryKey[0] === "projects" ||
+          query.queryKey[0] === "revisions",
+      });
+    },
   };
 }

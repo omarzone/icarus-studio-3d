@@ -1,5 +1,6 @@
 import type { DockviewApi } from "dockview-react";
 import { useState } from "react";
+import { useUndoShortcuts } from "../undo-shortcuts.ts";
 import { WorkspaceHeader, type WorkspaceHeaderProps } from "../workspace-header/workspace-header.tsx";
 import { type DockPanels, storageKey } from "./dock-layout.ts";
 import { DockLayoutMenu } from "./dock-layout-menu.tsx";
@@ -13,6 +14,7 @@ type Props = {
 
 // Workspace shell whose panels can be rearranged; the header stays fixed above them.
 export function DockWorkspaceShell({ header, layoutKey, panels }: Props) {
+  useUndoShortcuts();
   const [api, setApi] = useState<DockviewApi | null>(null);
   return (
     <div className="grid h-full grid-rows-[52px_minmax(0,1fr)] border border-line-strong bg-app text-fg">

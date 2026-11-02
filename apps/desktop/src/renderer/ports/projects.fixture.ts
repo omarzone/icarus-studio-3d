@@ -95,5 +95,10 @@ export function createProjectsFixture(): ProjectsPort {
       projects = projects.filter((item) => item.id !== id);
     },
     getFootprint: async (id) => FOOTPRINTS_FIXTURE[find(id).id] ?? { trainingRuns: 0, runsBytes: 0 },
+    createProject: async ({ name }) => {
+      const created = { ...find("park-pilot"), id: `new-${projects.length}`, name, status: "draft" as const };
+      projects = [...projects, created];
+      return created;
+    },
   };
 }

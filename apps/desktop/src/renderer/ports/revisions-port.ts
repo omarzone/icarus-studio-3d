@@ -1,5 +1,6 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
+import { revisionViews } from "./project-views.ts";
 import { createRevisionsFixture } from "./revisions.fixture.ts";
 
 export type RevisionAuthor = "you" | "copilot";
@@ -19,22 +20,30 @@ export type RevisionsPort = {
   listRevisions: (projectId: string) => Promise<RevisionSummary[]>;
   // Restoring never rewrites history: it appends a new revision equal to the restored one.
   restoreRevision: (input: { projectId: string; revisionId: string }) => Promise<RevisionSummary>;
+  undo: (projectId: string) => Promise<void>;
+  redo: (projectId: string) => Promise<void>;
 };
 
 export const revisionsPort = definePort<RevisionsPort>({
   app: {
-    listRevisions: pending({
-      key: "revisions.list",
-      summary: "The history of a project",
-      sprint: 2,
-      ids: ["MOD-HISTORY", "POP-PROJECT-MENU"],
-    }),
-    restoreRevision: pending({
-      key: "revisions.restore",
-      summary: "Restoring a revision",
-      sprint: 2,
-      ids: ["MOD-HISTORY"],
-    }),
+    listRevisions: async (projectId) => {
+      const [revisions, state] = await Promise.all([engineApi.revisions(projectId), engineApi.project(projectId)]);
+      return revisionViews(revisions, state.revision.number, new Date());
+    },
+    restoreRevision: async ({ projectId, revisionId }) => {
+      const state = await engineApi.restoreRevision(projectId, Number(revisionId));
+      const [view] = revisionViews([state.revision], state.revision.number, new Date());
+      if (!view) {
+        throw new Error("The engine did not return the restored revision");
+      }
+      return view;
+    },
+    undo: async (projectId) => {
+      await engineApi.undo(projectId);
+    },
+    redo: async (projectId) => {
+      await engineApi.redo(projectId);
+    },
   },
   prototype: createRevisionsFixture,
 });

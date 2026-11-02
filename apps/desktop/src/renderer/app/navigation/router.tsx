@@ -71,5 +71,6 @@ function frozenStore(store: StoreApi<NavigationState>, state: NavigationState): 
     close: live.close,
     back: live.back,
     reset: live.reset,
+    replaceParams: live.replaceParams,
   }));
 }

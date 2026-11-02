@@ -112,8 +112,10 @@ def _apply(project: Project, operation: EditOperation) -> None:
             if not any(item.id == body_id for item in project.bodies):
                 raise _fail(f"bodies.{body_id}", f"There is no body {body_id!r}")
             project.bodies = [item for item in project.bodies if item.id != body_id]
-        case RenameProject(name=name):
+        case RenameProject(name=name, description=description):
             project.name = name
+            if description is not None:
+                project.description = description
         case SetTaskFamily(family=family):
             project.task.family = family
         case SetRewardTerm(term=term):

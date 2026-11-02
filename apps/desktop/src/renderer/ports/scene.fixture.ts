@@ -128,5 +128,8 @@ export function createSceneFixture(): ScenePort {
     },
     getGuide: async (scene) => find(scene).guide,
     getPropertyReference: async () => PROPERTY_REFERENCE,
+    getSceneDescription: async () => null,
+    // The prototype has no 3D scene to drag in.
+    moveObject: async ({ scene }) => inspectionOf(find(scene)),
   };
 }

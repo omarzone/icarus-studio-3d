@@ -37,10 +37,12 @@ export function ValueField({
 }: Props) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
+  // After a commit the field shows the stored value again; the engine's answer updates it if the change landed.
   const commit = () => {
-    if (draft !== value && !onCommit(draft)) {
-      setDraft(value);
+    if (draft !== value) {
+      onCommit(draft);
     }
+    setDraft(value);
   };
   return (
     <input

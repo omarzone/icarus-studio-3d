@@ -24,7 +24,7 @@ export type Type7 = "vector";
  * @minItems 3
  * @maxItems 3
  */
-export type Value6 = [unknown, unknown, unknown];
+export type Value6 = [number, number, number];
 export type Type8 = "count";
 export type Value7 = number;
 export type Type9 = "asset";
@@ -107,23 +107,29 @@ export type Status = "pass" | "fail" | "skip";
 export type Checks = DesignCheck[];
 export type DurationMs = number;
 export type Ok = boolean;
+export type Name3 = string;
 export type ApiVersion = number;
 export type Status1 = "ok";
 export type Version = string;
 export type Components1 = ComponentKindSpec[];
-export type DefaultWeight = number;
 export type Description = string;
-export type Family = "none" | "navigation" | "locomotion";
+export type Icon2 = string;
+export type Id5 = string;
 export type Label4 = string;
+export type Pieces = PieceInfo[];
+export type DefaultWeight = number;
+export type Description1 = string;
+export type Family = "none" | "navigation" | "locomotion";
+export type Label5 = string;
 export type Term = string;
 export type Version1 = number;
 export type WeightMax = number;
 export type WeightMin = number;
 export type RewardTerms = RewardTermInfo[];
-export type Description1 = string;
+export type Description2 = string;
 export type Family1 = "none" | "navigation" | "locomotion";
-export type Id5 = string;
-export type Label5 = string;
+export type Id6 = string;
+export type Label6 = string;
 export type Templates = TemplateInfo[];
 export type Version2 = string;
 export type Author = "user" | "copilot";
@@ -165,7 +171,7 @@ export type Operations = [
     | SetBrain
   )[]
 ];
-export type Name3 = string;
+export type Name4 = string;
 export type Object2 = string;
 export type Op4 = "rename_object";
 export type Object3 = string;
@@ -193,7 +199,8 @@ export type Value12 =
   | ReadonlyValue;
 export type Body = string;
 export type Op8 = "remove_body";
-export type Name4 = string;
+export type Description3 = string | null;
+export type Name5 = string;
 export type Op9 = "rename_project";
 export type Family2 = "none" | "navigation" | "locomotion";
 export type Op10 = "set_task_family";
@@ -208,8 +215,9 @@ export type Seed1 = number | null;
 export type Template2 = string | null;
 export type Summary = string;
 export type Bodies = BodySpec[];
-export type Id6 = string;
-export type Name5 = string;
+export type Description4 = string;
+export type Id7 = string;
+export type Name6 = string;
 export type SchemaVersion = 1;
 export type Family3 = "none" | "navigation" | "locomotion";
 export type Rewards = RewardTermSpec[];
@@ -236,56 +244,58 @@ export type Operations1 = (
   | SetBrain
 )[];
 export type Parent2 = number | null;
+export type RestoredFrom = number | null;
 export type Summary1 = string;
-export type Id7 = string;
-export type Name6 = string;
+export type Description5 = string;
+export type Id8 = string;
+export type Name7 = string;
 export type Revision1 = number;
 export type UpdatedAt = string;
-export type Name7 = string;
+export type Name8 = string;
 export type Parent3 = string | null;
 /**
  * @minItems 3
  * @maxItems 3
  */
-export type Position = [unknown, unknown, unknown];
+export type Position = [number, number, number];
 /**
  * @minItems 4
  * @maxItems 4
  */
-export type Quaternion = [unknown, unknown, unknown, unknown];
+export type Quaternion = [number, number, number, number];
 export type Bodies1 = SceneBody[];
 export type Body1 = string;
 export type Color = string;
-export type Name8 = string;
-/**
- * @minItems 3
- * @maxItems 3
- */
-export type Position1 = [unknown, unknown, unknown];
-/**
- * @minItems 4
- * @maxItems 4
- */
-export type Quaternion1 = [unknown, unknown, unknown, unknown];
-export type Shape = "plane" | "box" | "sphere" | "capsule" | "cylinder";
-/**
- * @minItems 3
- * @maxItems 3
- */
-export type Size = [unknown, unknown, unknown];
-export type Geoms = SceneGeom[];
-/**
- * @minItems 3
- * @maxItems 3
- */
-export type Direction = [unknown, unknown, unknown];
-export type Intensity = number;
 export type Name9 = string;
 /**
  * @minItems 3
  * @maxItems 3
  */
-export type Position2 = [unknown, unknown, unknown];
+export type Position1 = [number, number, number];
+/**
+ * @minItems 4
+ * @maxItems 4
+ */
+export type Quaternion1 = [number, number, number, number];
+export type Shape = "plane" | "box" | "sphere" | "capsule" | "cylinder";
+/**
+ * @minItems 3
+ * @maxItems 3
+ */
+export type Size = [number, number, number];
+export type Geoms = SceneGeom[];
+/**
+ * @minItems 3
+ * @maxItems 3
+ */
+export type Direction = [number, number, number];
+export type Intensity = number;
+export type Name10 = string;
+/**
+ * @minItems 3
+ * @maxItems 3
+ */
+export type Position2 = [number, number, number];
 export type Lights = SceneLight[];
 export type Revision2 = number;
 export type Code1 = string;
@@ -556,6 +566,13 @@ export interface DesignReport {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DuplicateProject".
+ */
+export interface DuplicateProject {
+  name: Name3;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "HealthStatus".
  */
 export interface HealthStatus {
@@ -569,9 +586,23 @@ export interface HealthStatus {
  */
 export interface LibraryCatalog {
   components: Components1;
+  pieces?: Pieces;
   reward_terms: RewardTerms;
   templates: Templates;
   version: Version2;
+}
+/**
+ * A ready-made object from the library that can be placed in a world.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PieceInfo".
+ */
+export interface PieceInfo {
+  description: Description;
+  icon: Icon2;
+  id: Id5;
+  label: Label4;
+  object: ObjectSpec;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -579,9 +610,9 @@ export interface LibraryCatalog {
  */
 export interface RewardTermInfo {
   default_weight: DefaultWeight;
-  description: Description;
+  description: Description1;
   family: Family;
-  label: Label4;
+  label: Label5;
   term: Term;
   version: Version1;
   weight_max: WeightMax;
@@ -592,10 +623,10 @@ export interface RewardTermInfo {
  * via the `definition` "TemplateInfo".
  */
 export interface TemplateInfo {
-  description: Description1;
+  description: Description2;
   family: Family1;
-  id: Id5;
-  label: Label5;
+  id: Id6;
+  label: Label6;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -611,7 +642,7 @@ export interface OperationBatch {
  * via the `definition` "RenameObject".
  */
 export interface RenameObject {
-  name: Name3;
+  name: Name4;
   object: Object2;
   op: Op4;
 }
@@ -657,7 +688,8 @@ export interface RemoveBody {
  * via the `definition` "RenameProject".
  */
 export interface RenameProject {
-  name: Name4;
+  description?: Description3;
+  name: Name5;
   op: Op9;
 }
 /**
@@ -725,8 +757,9 @@ export interface SetBrain {
 export interface Project {
   bodies: Bodies;
   brain: BrainSpec;
-  id: Id6;
-  name: Name5;
+  description?: Description4;
+  id: Id7;
+  name: Name6;
   schema_version: SchemaVersion;
   task: TaskSpec;
   world: WorldSpec;
@@ -767,6 +800,7 @@ export interface Revision {
   number: Number;
   operations: Operations1;
   parent: Parent2;
+  restored_from?: RestoredFrom;
   summary: Summary1;
 }
 /**
@@ -774,8 +808,9 @@ export interface Revision {
  * via the `definition` "ProjectSummary".
  */
 export interface ProjectSummary {
-  id: Id7;
-  name: Name6;
+  description?: Description5;
+  id: Id8;
+  name: Name7;
   revision: Revision1;
   updated_at: UpdatedAt;
 }
@@ -784,7 +819,7 @@ export interface ProjectSummary {
  * via the `definition` "SceneBody".
  */
 export interface SceneBody {
-  name: Name7;
+  name: Name8;
   parent: Parent3;
   position: Position;
   quaternion: Quaternion;
@@ -806,7 +841,7 @@ export interface SceneDescription {
 export interface SceneGeom {
   body: Body1;
   color: Color;
-  name: Name8;
+  name: Name9;
   position: Position1;
   quaternion: Quaternion1;
   shape: Shape;
@@ -819,7 +854,7 @@ export interface SceneGeom {
 export interface SceneLight {
   direction: Direction;
   intensity: Intensity;
-  name: Name9;
+  name: Name10;
   position: Position2;
 }
 /**

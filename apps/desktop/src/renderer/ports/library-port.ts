@@ -1,6 +1,7 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
 import { createLibraryFixture } from "./library.fixture.ts";
+import { libraryItems, placePiece } from "./library-engine.ts";
 
 // Ready-made pieces the user drags into a world; thumbnails are real 3D renders made by the engine.
 export type LibraryShelf = "library" | "community" | "my-files";
@@ -23,18 +24,12 @@ export type LibraryPort = {
 
 export const libraryPort = definePort<LibraryPort>({
   app: {
-    listItems: pending({
-      key: "library.list",
-      summary: "The library of ready-made pieces",
-      sprint: 3,
-      ids: ["SCR-WORLD", "STA-WORLD-EMPTY", "STA-WORLD-EMPTY-NOGUIDE"],
-    }),
-    previewItem: pending({
-      key: "library.preview",
-      summary: "Previewing a library piece in the world",
-      sprint: 3,
-      ids: ["SCR-WORLD", "STA-WORLD-EMPTY"],
-    }),
+    listItems: async ({ shelf, search }) => libraryItems(await engineApi.library(), shelf, search),
+    previewItem: async ({ scene, id }) => {
+      const [state, catalog] = await Promise.all([engineApi.project(scene), engineApi.library()]);
+      const operation = placePiece(state.project, catalog, id);
+      await engineApi.applyOperations(scene, [operation], `Placed ${operation.object.name}`);
+    },
   },
   prototype: createLibraryFixture,
 });

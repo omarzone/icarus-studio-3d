@@ -24,3 +24,12 @@ it("goes back to the previous screen with its parameters", () => {
   store.getState().back();
   expect(store.getState()).toMatchObject({ screen: "SCR-TRAIN", params: { project: "park-pilot" } });
 });
+
+it("replaces the parameters of the current screen without a history step", () => {
+  const store = createNavigationStore(start);
+  store.getState().go("SCR-WORLD", { template: "parking_car" });
+  store.getState().replaceParams({ project: "0123456789ab" });
+  expect(store.getState()).toMatchObject({ screen: "SCR-WORLD", params: { project: "0123456789ab" } });
+  store.getState().back();
+  expect(store.getState().screen).toBe("SCR-HOME");
+});

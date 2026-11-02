@@ -1,7 +1,7 @@
 // SCR-WORLD · STA-WORLD-EMPTY · STA-WORLD-EMPTY-NOGUIDE · STA-WORLD-BUILDING · STA-WORLD-PROPOSAL
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { copilotPanel, HOME } from "../../app/shell/dock/dock-layout.ts";
@@ -19,11 +19,14 @@ import {
 } from "../../editor/viewport/viewport-overlays.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { copilotPort } from "../../ports/copilot-port.ts";
+import { buttonClass } from "../../ui/button-styles.ts";
+import { ErrorState, LoadingState } from "../../ui/states.tsx";
 import { useBuildProgress } from "../copilot/build-progress-card.tsx";
 import { ChatPanel, copilotKey } from "../copilot/chat-panel.tsx";
 import { GuideCard, guideLabel, ShowGuidePill } from "./guide-card.tsx";
 import { LibraryPanel } from "./library/library-panel.tsx";
 import { useProjectName } from "./use-project-name.ts";
+import { useWorldScene } from "./use-world-scene.ts";
 import { WORLD_CONFIGS, WORLD_VARIANTS, type WorldConfig, type WorldVariant } from "./world-variants.ts";
 
 const PANEL_ROUTES = { "training-copies": "POP-TRAINING-COPIES" } as const;
@@ -33,8 +36,30 @@ export function WorldScreen() {
   const screen = useNavigation((state) => state.screen);
   const variant = WORLD_VARIANTS[screen] ?? "world";
   const config = WORLD_CONFIGS[variant];
-  const project = useProjectName(config.hasProject);
-  const guide = useGuide(config.scene);
+  const world = useWorldScene(config.scene);
+  switch (world.kind) {
+    case "ready":
+      return <WorldWorkspace variant={variant} config={config} scene={world.scene} />;
+    case "creating":
+      return <LoadingState label="Creating your project" />;
+    case "failed":
+      return (
+        <ErrorState
+          title="The project could not be created"
+          detail={world.reason}
+          action={
+            <Act cta="Try again" onClick={world.retry} className={buttonClass("primary")}>
+              Try again
+            </Act>
+          }
+        />
+      );
+  }
+}
+
+function WorldWorkspace({ variant, config, scene }: { variant: WorldVariant; config: WorldConfig; scene: string }) {
+  const project = useProjectName(config.hasProject || scene !== config.scene);
+  const guide = useGuide(scene);
   const go = useNavigation((state) => state.go);
   return (
     <DockWorkspaceShell
@@ -51,15 +76,13 @@ export function WorldScreen() {
         explorer: {
           title: "Explorer",
           home: HOME.left,
-          render: () => <ExplorerPanel scene={config.scene} onAction={() => go("SCR-IDEAS")} />,
+          render: () => <ExplorerPanel scene={scene} onAction={() => go("SCR-IDEAS")} />,
         },
         inspector: {
           title: "Inspector",
           home: HOME.below("explorer", 392),
           optionsLabel: "Inspector options",
-          render: () => (
-            <InspectorPanel scene={config.scene} addComponentTo="POP-ADD-COMPONENT" panelRoutes={PANEL_ROUTES} />
-          ),
+          render: () => <InspectorPanel scene={scene} addComponentTo="POP-ADD-COMPONENT" panelRoutes={PANEL_ROUTES} />,
         },
         viewport: {
           title: "Viewport",
@@ -68,9 +91,10 @@ export function WorldScreen() {
           render: () => (
             <ViewportPanel
               label="The project's world"
+              scene={scene}
               toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} />}
               tint={variant === "proposal" ? "proposal" : undefined}
-              overlays={<WorldOverlays variant={variant} config={config} />}
+              overlays={<WorldOverlays variant={variant} config={config} scene={scene} />}
             />
           ),
         },
@@ -80,7 +104,7 @@ export function WorldScreen() {
                 title: "Library",
                 home: HOME.below("viewport", 168),
                 minimumHeight: 120,
-                render: () => <LibraryPanel scene={config.scene} importLabel={config.importLabel ?? ""} />,
+                render: () => <LibraryPanel scene={scene} importLabel={config.importLabel ?? ""} />,
               },
             }
           : {}),
@@ -97,15 +121,15 @@ export function WorldScreen() {
   );
 }
 
-function WorldOverlays({ variant, config }: { variant: WorldVariant; config: WorldConfig }) {
+function WorldOverlays({ variant, config, scene }: { variant: WorldVariant; config: WorldConfig; scene: string }) {
   switch (variant) {
     case "world":
       return null;
     case "empty":
     case "empty-noguide":
-      return <GuideOverlay scene={config.scene} hidden={variant === "empty-noguide"} />;
+      return <GuideOverlay scene={scene} hidden={variant === "empty-noguide"} />;
     case "building":
-      return <BuildingOverlay scene={config.scene} />;
+      return <BuildingOverlay scene={scene} />;
     case "proposal":
       return <ProposalOverlay conversation={config.conversation} />;
   }

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Response
 
 from icarus.contracts.operations import OperationBatch
-from icarus.contracts.project import CreateProject, ProjectState, ProjectSummary, Revision
+from icarus.contracts.project import CreateProject, DuplicateProject, ProjectState, ProjectSummary, Revision
 from icarus.contracts.scene import SceneDescription
 from icarus.design.compiler import compile_project
 from icarus.design.scene import scene_description
@@ -43,6 +43,16 @@ def apply_operations(request: Request, project_id: str, batch: OperationBatch) -
 @router.get("/{project_id}/revisions")
 def list_revisions(request: Request, project_id: str) -> list[Revision]:
     return _store(request).revisions(project_id)
+
+
+@router.post("/{project_id}/duplicate", status_code=201)
+def duplicate_project(request: Request, project_id: str, body: DuplicateProject) -> ProjectState:
+    return _store(request).duplicate(project_id, body.name)
+
+
+@router.post("/{project_id}/revisions/{number}/restore")
+def restore_revision(request: Request, project_id: str, number: int) -> ProjectState:
+    return _store(request).restore(project_id, number)
 
 
 @router.post("/{project_id}/undo")

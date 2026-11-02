@@ -1,5 +1,6 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
+import { templateView } from "./project-views.ts";
 import { createTemplatesFixture } from "./templates.fixture.ts";
 
 // How a template starts: an empty world, an example project, a body that copies a video, or a real brain map.
@@ -18,12 +19,7 @@ export type TemplatesPort = {
 
 export const templatesPort = definePort<TemplatesPort>({
   app: {
-    listTemplates: pending({
-      key: "templates.list",
-      summary: "Starter templates from the library",
-      sprint: 3,
-      ids: ["SCR-HOME", "STA-HOME-EMPTY"],
-    }),
+    listTemplates: async () => (await engineApi.library()).templates.map(templateView),
   },
   prototype: createTemplatesFixture,
 });

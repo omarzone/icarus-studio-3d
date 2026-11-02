@@ -4,7 +4,14 @@ import pytest
 
 from icarus.contracts.operations import OperationBatch, SetProperty
 from icarus.contracts.properties import NumberValue
-from icarus.projects.store import NothingToRedo, NothingToUndo, ProjectStore, RejectedBatch, UnknownProject
+from icarus.projects.store import (
+    NothingToRedo,
+    NothingToUndo,
+    ProjectStore,
+    RejectedBatch,
+    UnknownProject,
+    UnknownRevision,
+)
 
 
 def mass_batch(value: float) -> OperationBatch:
@@ -106,3 +113,28 @@ def test_a_failed_head_move_keeps_the_previous_revision(store, project_id, monke
 def test_ids_that_are_not_engine_ids_are_unknown(store, bad):
     with pytest.raises(UnknownProject):
         store.state(bad)
+
+
+def test_duplicate_copies_the_current_document_as_a_new_project(store, project_id):
+    store.apply(project_id, mass_batch(1200))
+    copy = store.duplicate(project_id, "Parking copy")
+    assert copy.project.id != project_id
+    assert copy.project.name == "Parking copy"
+    assert copy.revision.number == 1
+    assert car_mass(copy) == 1200
+
+
+def test_restore_appends_a_revision_equal_to_the_old_one(store, project_id):
+    store.apply(project_id, mass_batch(1200))
+    store.apply(project_id, mass_batch(1500))
+    restored = store.restore(project_id, 1)
+    assert restored.revision.number == 4
+    assert restored.revision.restored_from == 1
+    assert restored.revision.parent == 3
+    assert car_mass(restored) == 900
+    assert not restored.can_redo
+
+
+def test_restoring_an_unknown_revision_is_refused(store, project_id):
+    with pytest.raises(UnknownRevision):
+        store.restore(project_id, 9)
