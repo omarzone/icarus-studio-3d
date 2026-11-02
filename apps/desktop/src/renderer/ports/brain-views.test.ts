@@ -1,7 +1,17 @@
-import type { LibraryCatalog } from "@icarus/contracts";
+import type { EditOperation, LibraryCatalog, Project } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
 import { isLibraryCatalog, isProject } from "../engine-client/response-checks.ts";
-import { addTermOperation, learningView, rewardOptions, sensesActions, weightOperation } from "./brain-views.ts";
+import {
+  addRayOperation,
+  addTermOperation,
+  learningView,
+  rayDirection,
+  removeInputOperation,
+  renameInputOperation,
+  rewardOptions,
+  sensesActions,
+  weightOperation,
+} from "./brain-views.ts";
 import parking from "./testdata/parking-car.json";
 
 const { project, catalog } = (() => {
@@ -11,11 +21,51 @@ const { project, catalog } = (() => {
   return { project: parking.project, catalog: parking.catalog };
 })();
 
+// The library as it is now: distance rays carry a name and a heading.
+const library: LibraryCatalog = catalog;
+const named: LibraryCatalog = {
+  ...library,
+  components: library.components.map((kind) =>
+    kind.kind === "distance_ray"
+      ? {
+          ...kind,
+          unique: false,
+          properties: [
+            { id: "name", label: "Name", type: "text", default: { type: "text", value: "" } },
+            { id: "heading", label: "Heading", type: "number", unit: "°", default: { type: "number", value: 0 } },
+            ...kind.properties,
+          ],
+        }
+      : kind,
+  ),
+};
+
+function withOperation(doc: Project, operation: EditOperation): Project {
+  if (operation.op !== "add_component") {
+    throw new Error("only adding is replayed here");
+  }
+  const bodies = doc.bodies.map((body) => ({
+    ...body,
+    objects: body.objects.map((obj) =>
+      obj.id === operation.object ? { ...obj, components: [...obj.components, operation.component] } : obj,
+    ),
+  }));
+  return { ...doc, bodies };
+}
+
 describe("sensesActions", () => {
   it("maps body sensors to inputs and motors to outputs", () => {
     const view = sensesActions(project, catalog);
     expect(view.inputs).toEqual([
-      { id: "car/distance_ray", name: "Distance ray", detail: "Car · 5 rays · 10 m", enabled: true },
+      {
+        id: "car/distance_ray",
+        name: "Car distance",
+        detail: "Car · 5 rays · 10 m · ahead",
+        enabled: true,
+        renamable: false,
+        removable: true,
+        lockedReason: expect.stringContaining("remove the sensor"),
+      },
     ]);
     expect(view.outputs.map((output) => output.name)).toEqual([
       "Front left steering",
@@ -28,7 +78,58 @@ describe("sensesActions", () => {
       name: "Rear left wheel",
       detail: "Torque · up to 400 N",
       enabled: true,
+      lockedReason: expect.stringContaining("remove the motor"),
     });
+  });
+
+  it("names a second, added ray on its own and offers renaming when the library has ray names", () => {
+    const operation = addRayOperation(project, named);
+    expect(operation).toMatchObject({
+      op: "add_component",
+      object: "car",
+      component: {
+        id: "distance_ray_2",
+        kind: "distance_ray",
+        properties: { name: { type: "text", value: "Ray 2" }, count: { type: "count", value: 1 } },
+      },
+    });
+    const inputs = sensesActions(withOperation(project, operation), named).inputs;
+    expect(inputs.map((input) => [input.id, input.name, input.detail, input.renamable])).toEqual([
+      ["car/distance_ray", "Car distance", "Car · 5 rays · 10 m · ahead", true],
+      ["car/distance_ray_2", "Ray 2", "Car · 1 ray · 5 m · ahead", true],
+    ]);
+  });
+});
+
+describe("sensor operations", () => {
+  it("renames a ray through its name property, trimmed, and removes it through its component", () => {
+    expect(renameInputOperation(project, "car/distance_ray", "  Front  ")).toEqual({
+      op: "set_property",
+      object: "car",
+      component: "distance_ray",
+      property: "name",
+      value: { type: "text", value: "Front" },
+    });
+    expect(removeInputOperation(project, "car/distance_ray")).toEqual({
+      op: "remove_component",
+      object: "car",
+      component: "distance_ray",
+    });
+  });
+
+  it("refuses a sensor that is no longer on the body", () => {
+    expect(() => removeInputOperation(project, "car/gone")).toThrow("no longer on the body");
+  });
+
+  it("says where rays point the way the engine names them", () => {
+    expect([0, 30, -15, 180, -180, 390].map(rayDirection)).toEqual([
+      "ahead",
+      "30° left",
+      "15° right",
+      "behind",
+      "behind",
+      "30° left",
+    ]);
   });
 });
 

@@ -100,7 +100,8 @@ def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
     return int(mujoco.mj_name2id(model, kind, name))
 
 
-def _sensors(model: mujoco.MjModel, names: dict[str, str], agent_mass: float) -> list[SensorInfo]:
+def _sensors(compiled: CompiledModel, names: dict[str, str], agent_mass: float) -> list[SensorInfo]:
+    model = compiled.model
     sensors: list[SensorInfo] = []
     for index in range(model.nsensor):
         kind = _KINDS.get(int(model.sensor_type[index]))
@@ -111,8 +112,8 @@ def _sensors(model: mujoco.MjModel, names: dict[str, str], agent_mass: float) ->
         address, dim = int(model.sensor_adr[index]), int(model.sensor_dim[index])
         match kind:
             case "ray":
-                number = int(name.rsplit("ray", 1)[1]) + 1
-                info = (f"{owner} distance {number}", 0.0, float(model.sensor_cutoff[index]), "m")
+                label = compiled.ray_labels.get(name, f"{owner} distance")
+                info = (label, 0.0, float(model.sensor_cutoff[index]), "m")
             case "accel":
                 info = (f"{owner} acceleration", 0.0, ACCEL_RANGE, "m/s²")
             case "gyro":
@@ -212,7 +213,7 @@ def build_world(project: Project) -> LiveWorld:
         agent_geoms=agent_geoms,
         ground_geoms=ground,
         goal=_goal(project, model),
-        sensors=_sensors(model, names, agent_mass),
+        sensors=_sensors(compiled, names, agent_mass),
         actuators=_actuators(model, names),
         geom_objects={
             model.geom(i).name: model.geom(i).name for i in range(model.ngeom) if model.geom(i).name in names

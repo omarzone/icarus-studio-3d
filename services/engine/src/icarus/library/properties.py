@@ -11,6 +11,7 @@ from icarus.contracts.properties import (
     RangeValue,
     SliderValue,
     SwitchValue,
+    TextValue,
     VectorValue,
 )
 
@@ -134,6 +135,11 @@ def count(id: str, label: str, lo: int, hi: int, default: int) -> PropertySchema
     )
 
 
+def text(id: str, label: str, *, hint: str | None = None) -> PropertySchema:
+    """A short name the person types; empty means the default name."""
+    return PropertySchema(id=id, label=label, type="text", default=TextValue(type="text", value=""), hint=hint)
+
+
 def reference(id: str, label: str, hint: str) -> PropertySchema:
     """An object id; empty means none."""
     return PropertySchema(id=id, label=label, type="asset", default=AssetValue(type="asset", value=""), hint=hint)
@@ -164,6 +170,9 @@ def check_value(schema: PropertySchema, value: PropertyValue) -> str | None:
         case VectorValue():
             if any(_outside(schema, item) for item in value.value):
                 return f"Every axis of {schema.label} must be {_bounds(schema)}"
+        case TextValue():
+            if any(not character.isprintable() for character in value.value):
+                return f"{schema.label} must be plain text on one line"
         case ChoiceValue() | ListValue():
             if schema.options is not None and value.value not in {option.value for option in schema.options}:
                 return f"{schema.label} has no option {value.value!r}"

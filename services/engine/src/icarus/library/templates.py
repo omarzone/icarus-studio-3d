@@ -50,7 +50,7 @@ def _car() -> list[Part]:
             (4, 1.8, 0.6),
             900,
             "#c8553d",
-            extra={"distance_ray": {"range": 10, "count": 5}},
+            extra={"distance_ray": {"name": "Front", "range": 10, "count": 5}},
             style="car_body",
         )
     ]

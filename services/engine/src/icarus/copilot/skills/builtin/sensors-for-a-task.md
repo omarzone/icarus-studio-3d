@@ -3,7 +3,7 @@ name: sensors-for-a-task
 title: Give a body the senses its task needs
 when: The person asks what the body can see or feel, or a body must react to obstacles, balance or contact.
 tools: [library, inspect_object, try, look, propose]
-version: 1
+version: 2
 ---
 The brain sees only its observation: its sensors plus what the task adds. Navigation already adds forward and side
 speed, turn rate, joint angles and the goal's distance and bearing; locomotion adds every joint's angle and speed.
@@ -11,7 +11,12 @@ Add a sensor only for what is missing, because every sensor added later prevents
 
 1. **Rays for obstacles.** A `distance_ray` fans rays forward from its part and reports each distance divided by
    its range (0 touching, 1 nothing in range). `distance_ray.count` = 5–8 covers the front; `distance_ray.range` =
-   5–10 m (the car template uses 10). More rays only help in cluttered worlds.
+   5–10 m (the car template uses 10). More rays only help in cluttered worlds. The rays fan 30° to each side of
+   `distance_ray.heading` (0 ahead, 90 left, -90 right, 180 behind). A part can carry several `distance_ray`
+   components, each with its own id: for a side or the back, add another through an add_component operation with
+   a new component id such as rear_ray, heading 180 and count 1. Name each with
+   `distance_ray.name` (a text value up to 40 characters, such as Front or Rear): the brain inputs, Play's senses
+   and the rays in the view carry that name, and a fan adds each ray's direction ("Front 30° left").
 2. **Tilt for low obstacles.** Rays leave level with the part that carries them. When obstacles are lower than
    that height h, set `distance_ray.tilt` below zero (its range is -60 to 30 degrees): a ray tilted by angle a meets the ground
    at h / tan(a). For a car's rays at 0.5 m and a crate 3 m ahead, `distance_ray.tilt` = -10–-5 meets the crate

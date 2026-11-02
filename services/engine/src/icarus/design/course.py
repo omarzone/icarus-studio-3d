@@ -7,6 +7,7 @@ import numpy as np
 from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, is_floor_patch
 from icarus.design.components import view
+from icarus.design.sensors import ray_sites
 
 # A world object this long along one side is a lane boundary, not an obstacle on the way.
 BOUNDARY_LENGTH = 4.0
@@ -141,11 +142,7 @@ def _ray_sites(project: Project, compiled: CompiledModel) -> list[tuple[int, flo
     sites: list[tuple[int, float]] = []
     for body in project.bodies:
         for obj in body.objects:
-            ray = view(obj, "distance_ray")
-            if ray is None:
-                continue
-            for index in range(ray.count("count")):
-                sites.append((compiled.model.site(f"{obj.id}:ray{index}").id, ray.number("range")))
+            sites += [(compiled.model.site(ray.site).id, ray.range) for ray in ray_sites(obj)]
     return sites
 
 

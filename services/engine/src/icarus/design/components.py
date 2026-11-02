@@ -12,6 +12,7 @@ from icarus.contracts.properties import (
     RangeValue,
     SliderValue,
     SwitchValue,
+    TextValue,
     VectorValue,
 )
 from icarus.library.components import default_component
@@ -42,7 +43,7 @@ class ComponentView:
 
     def text(self, prop: str) -> str:
         value = self._properties[prop]
-        if isinstance(value, ChoiceValue | ListValue | AssetValue | ColorValue):
+        if isinstance(value, ChoiceValue | ListValue | AssetValue | ColorValue | TextValue):
             return value.value
         raise TypeError(f"{prop} is a {value.type} value")
 
@@ -60,3 +61,8 @@ class ComponentView:
 def view(obj: ObjectSpec, kind: str) -> ComponentView | None:
     component = next((item for item in obj.components if item.kind == kind), None)
     return ComponentView(component) if component else None
+
+
+def components_of(obj: ObjectSpec, kind: str) -> list[ComponentSpec]:
+    """Every component of a kind an object can carry more than once, in the object's order."""
+    return [item for item in obj.components if item.kind == kind]

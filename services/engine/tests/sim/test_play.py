@@ -33,7 +33,8 @@ def test_the_frame_lists_every_geom_pose_and_the_live_readings(parking):
     info = session.info()
     assert [geom.name for geom in frame.geoms] == [geom.name for geom in info.scene.geoms]
     assert [reading.unit for reading in frame.senses] == ["m"] * 5
-    assert [reading.label for reading in frame.senses][0] == "Car distance 1"
+    fan = ["30° right", "15° right", "ahead", "15° left", "30° left"]
+    assert [reading.label for reading in frame.senses] == [f"Front {direction}" for direction in fan]
     assert len(frame.actions) == 4
     assert info.brain == UNTRAINED_BRAIN
     assert [tool.id for tool in info.tools] == ["move", "push", "add-object", "light", "wind", "slow", "reset"]

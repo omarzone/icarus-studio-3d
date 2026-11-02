@@ -3,7 +3,19 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 PropertyType = Literal[
-    "number", "slider", "range", "choice", "list", "switch", "color", "vector", "count", "asset", "panel", "readonly"
+    "number",
+    "slider",
+    "range",
+    "choice",
+    "list",
+    "switch",
+    "color",
+    "vector",
+    "count",
+    "asset",
+    "panel",
+    "readonly",
+    "text",
 ]
 
 Vector3 = tuple[float, float, float]
@@ -74,6 +86,12 @@ class ReadonlyValue(_Value):
     value: str
 
 
+# A short name the person types, such as a sensor's own name.
+class TextValue(_Value):
+    type: Literal["text"]
+    value: str = Field(max_length=40)
+
+
 PropertyValue = Annotated[
     NumberValue
     | SliderValue
@@ -86,7 +104,8 @@ PropertyValue = Annotated[
     | CountValue
     | AssetValue
     | PanelValue
-    | ReadonlyValue,
+    | ReadonlyValue
+    | TextValue,
     Field(discriminator="type"),
 ]
 

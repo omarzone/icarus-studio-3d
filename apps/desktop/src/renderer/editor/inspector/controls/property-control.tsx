@@ -33,7 +33,7 @@ function toneOf(property: Property): ControlTone {
   return property.state === "proposed" ? "proposed" : "default";
 }
 
-// The one control of each of the 12 property types.
+// The one control of each of the 13 property types.
 export function PropertyControl({ property, onChange, panelRoutes }: Props) {
   if (property.state === "locked") {
     return <ReadOnly text={formatPropertyValue(property)} locked />;
@@ -271,8 +271,30 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
       return <PanelLink label={value.value} to={panelRoutes?.[value.panel]} tone={tone} />;
     case "readonly":
       return <ReadOnly text={value.value} locked={false} />;
+    case "text":
+      return (
+        <ValueField
+          label={label}
+          value={value.value}
+          mono={false}
+          tone={tone}
+          placeholder="Default name"
+          onCommit={(text) => {
+            const name = text.trim();
+            if (name.length > TEXT_MAX) {
+              return false;
+            }
+            onChange({ ...value, value: name });
+            return true;
+          }}
+          className={`${fieldBox} w-full`}
+        />
+      );
   }
 }
+
+// Mirrors the engine's TextValue limit.
+const TEXT_MAX = 40;
 
 const withUnit = (value: number, unit: string | undefined) =>
   unit === "°" ? `${value}°` : unit ? `${value} ${unit}` : String(value);

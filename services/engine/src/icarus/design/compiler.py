@@ -12,7 +12,7 @@ from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.looks import GeomLook, geom_looks
-from icarus.design.sensors import add_actuator, add_sensors
+from icarus.design.sensors import add_actuator, add_sensors, ray_labels
 from icarus.design.sky import add_sky, world_sky
 from icarus.design.sun_path import SunPath, world_sun
 from icarus.design.surfaces import SURFACE_FRICTION
@@ -39,6 +39,8 @@ class CompiledModel:
     sky: SceneSky | None = None
     # Object id → how its geom is drawn; never part of the physics.
     looks: dict[str, GeomLook] = field(default_factory=dict)
+    # Rangefinder name → the name its rays carry in the brain, Play and the view.
+    ray_labels: dict[str, str] = field(default_factory=dict)
 
 
 def _fmt(values) -> str:
@@ -264,7 +266,14 @@ def compile_project(project: Project) -> CompiledModel:
     except ValueError as error:
         raise CompileError(_readable(str(error), project)) from error
     objects = {obj.id: obj.id for obj in all_objects(project)}
-    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project), looks=geom_looks(project))
+    return CompiledModel(
+        mjcf=mjcf,
+        model=model,
+        objects=objects,
+        sky=world_sky(project),
+        looks=geom_looks(project),
+        ray_labels=ray_labels(project),
+    )
 
 
 __all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "to_mjcf"]

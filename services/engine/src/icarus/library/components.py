@@ -12,6 +12,7 @@ from icarus.library.properties import (
     slider,
     span,
     switch,
+    text,
     vector,
 )
 
@@ -29,6 +30,11 @@ STYLE_HINT = (
     "How the part is drawn inside its shape: car_body (box: shell, cabin, windows, lights), wheel (cylinder: tire and "
     "rim), shell and joint (robot body and limbs), crate, wall, curb, post, cone, lamp_post, tree, ball, marking "
     "(paint on the ground, usually a static part without a collider)"
+)
+RAY_NAME_HINT = "How the brain and the senses name these rays, such as Front or Left; empty uses the part's name"
+RAY_HEADING_HINT = (
+    "Where the rays point around the part: 0 is straight ahead, above zero turns them left and below zero right; "
+    "several rays fan 30° to each side of it"
 )
 SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 CLOCK_HINT = (
@@ -162,11 +168,13 @@ _KINDS = [
         "ray",
         "Senses",
         [
+            text("name", "Name", hint=RAY_NAME_HINT),
+            number("heading", "Heading", "°", -180, 180, 0, hint=RAY_HEADING_HINT),
             number("range", "Range", "m", 0.05, 50, 5),
             count("count", "Rays", 1, 32, 5),
             number("tilt", "Tilt", "°", -60, 30, 0, hint="Below zero the rays look down, to see low obstacles"),
         ],
-        unique=True,
+        unique=False,
     ),
     _kind(
         "balance",

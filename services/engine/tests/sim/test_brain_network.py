@@ -2,6 +2,10 @@ import numpy as np
 import pytest
 from stable_baselines3 import PPO
 
+from icarus.contracts.operations import AddComponent
+from icarus.contracts.properties import CountValue, TextValue
+from icarus.library.components import default_component
+from icarus.projects.operations import apply_operations
 from icarus.sim.brain_network import input_labels, output_labels, read_activations, read_network
 from icarus.sim.env import ProjectEnv
 from icarus.sim.model_state import build_world, observation
@@ -23,6 +27,23 @@ def test_every_observation_value_has_a_label_and_sensor_values_name_their_sensor
 def test_navigation_labels_end_with_the_goal(parking):
     labels = [label.label for label in input_labels(build_world(parking))]
     assert labels[-3:] == ["Goal distance", "Goal direction ahead", "Goal direction left"]
+
+
+def test_a_rear_ray_added_to_the_car_is_one_more_input_after_the_named_front_fan(parking):
+    rear = default_component("distance_ray", "rear")
+    rear.properties |= {"name": TextValue(type="text", value="Rear"), "count": CountValue(type="count", value=1)}
+    before = build_world(parking)
+    after = build_world(apply_operations(parking, [AddComponent(op="add_component", object="car", component=rear)]))
+    assert observation(after).shape[0] == observation(before).shape[0] + 1
+    rays = [label.label for label in input_labels(after)][:6]
+    assert rays == [
+        "Front 30° right",
+        "Front 15° right",
+        "Front ahead",
+        "Front 15° left",
+        "Front 30° left",
+        "Rear",
+    ]
 
 
 def test_outputs_are_the_actuators_in_action_order(parking):
