@@ -77,6 +77,8 @@ class TurnScope:
     # The one open proposal this message carries and the try it came from; a later propose replaces it.
     proposal: CopilotProposal | None = None
     proposal_try: str | None = None
+    # A proposal an earlier message left open, which the person can still apply.
+    earlier_proposal: bool = False
     # The person's latest message and its language, for every text the engine writes itself.
     request: str = ""
     language: Language = "en"

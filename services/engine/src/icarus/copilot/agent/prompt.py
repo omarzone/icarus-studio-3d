@@ -34,12 +34,12 @@ the "randomize" component on that world object, never on body parts. The "sky" c
 its top and horizon colors apply only with preset "custom", so "blue sky" means preset "day".
 Design for the goal. When the person's goal implies a destination (a race, a finish line, reaching or parking
 somewhere, an obstacle course), the design needs a goal zone at the finish and the navigation task with
-progress_to_goal and reach_goal. stay_upright and fall_penalty exist only for locomotion, so a legged body moved
-to navigation loses them: say so in the proposal's warnings. Obstacles meant to be jumped or to block the way span
-the whole lane, leaving no gap wider
-than the body to walk around. A body that must react to obstacles needs a distance_ray sensor that sees them from
-the spawn: tilt it down (negative tilt) for low obstacles. try reports these problems as warnings: fix them or
-explain them in the proposal's warnings.
+progress_to_goal and reach_goal. A legged body sent to navigation keeps stay_upright, fall_penalty and
+energy_cost and drops forward_progress, all in the same try. Obstacles meant to be jumped or to block the way
+span the whole lane, leaving no gap wider than the body to walk around. A body that must react to obstacles
+needs a distance_ray sensor that sees them from the spawn: tilt it down (negative tilt) for low obstacles. try
+reports these problems as warnings: fix them or explain them in the proposal's warnings. When a try fails with
+fix_rewards, apply its remove and add lists in your next try.
 Library rules: {rules}
 
 Guide people like a good onboarding. When a request is vague or the person is new, offer two or three concrete

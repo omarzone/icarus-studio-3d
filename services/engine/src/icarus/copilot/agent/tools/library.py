@@ -7,9 +7,10 @@ from icarus.contracts.project import Project
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnScope
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.context import property_schema
+from icarus.copilot.step_words import step_said
 from icarus.library.components import COMPONENTS
 from icarus.library.pieces import PIECES
-from icarus.library.rewards import REWARD_TERMS
+from icarus.library.rewards import REWARD_TERMS, term_families
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects
 
@@ -59,7 +60,7 @@ def _entries() -> dict[str, dict[str, Any]]:
         entries[term] = {
             "type": "reward_term",
             "label": info.label,
-            "family": info.family,
+            "families": sorted(term_families(term)),
             "weight": [info.weight_min, info.weight_max],
             "default_weight": info.default_weight,
             "description": info.description,
@@ -86,17 +87,22 @@ def library(scope: TurnScope, args: LibraryArgs) -> Observation:
         entry = entries.get(args.kind.strip())
         if entry is None:
             text = f"There is no library entry `{args.kind}`. Ids: {', '.join(sorted(entries))}"
-            return Observation(text, ok=False, summary=f"Looked up {args.kind[:60]} in the library: not found")
+            return Observation(
+                text, ok=False, summary=step_said("library_missing", scope.language, name=args.kind[:60])
+            )
         if entry["type"] == "template":
             entry["operations_for_this_project"] = template_additions(scope.state.project, args.kind.strip())
-        return Observation(compact({"id": args.kind.strip(), **entry}), summary=f"Read {entry['label']} in the library")
+        return Observation(
+            compact({"id": args.kind.strip(), **entry}),
+            summary=step_said("library_read", scope.language, name=entry["label"]),
+        )
     words = (args.query or "").lower().split()
     found = [
         {"id": entry_id, "type": entry["type"], "label": entry["label"]}
         for entry_id, entry in entries.items()
         if any(word in f"{entry_id} {entry['label']}".lower() for word in words)
     ][:MATCHES]
-    summary = f"Searched the library for “{(args.query or '')[:40]}”: {len(found)} found"
+    summary = step_said("library_search", scope.language, query=(args.query or "")[:40], count=len(found))
     return Observation(compact(found) if found else "Nothing in the library matches.", summary=summary)
 
 

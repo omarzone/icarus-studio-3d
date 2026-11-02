@@ -7,6 +7,7 @@ from pydantic import Field
 from icarus.contracts.scene import SceneDescription, SceneZone
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnScope
 from icarus.copilot.agent.tools.inspect import compact, known_ids
+from icarus.copilot.step_words import step_said
 from icarus.design.compiler import CompiledModel, compile_project
 from icarus.design.scene import scene_description
 from icarus.projects.document import find_object
@@ -36,6 +37,7 @@ VIEW_WORDS = {
 ZONE_WORDS = {"spawn_point": "blue", "goal_zone": "green", "zone": "amber"}
 ZONE_KINDS = {"spawn_point": "spawn point", "goal_zone": "goal zone", "zone": "zone"}
 NEARBY = 10
+WHOLE_SCENE = "the whole scene"
 WIDTH, HEIGHT = 640, 400
 
 
@@ -98,7 +100,7 @@ def _frame(
         everything = [box for items in boxes.values() for box in items]
         everything += [_Box(zone.position, zone.size) for zone in scene.zones]
         box = _box(everything)
-        return ("the whole scene", box, 0.0) if box else "The scene has nothing solid to look at"
+        return (WHOLE_SCENE, box, 0.0) if box else "The scene has nothing solid to look at"
     body = next((item for item in project.bodies if item.id == target), None)
     names = [compiled.objects[obj.id] for obj in body.objects if obj.id in compiled.objects] if body else []
     if target in compiled.objects:
@@ -155,7 +157,9 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
         tried = scope.tries.get(args.on_try)
         if tried is None or tried.compiled is None:
             return Observation(
-                f"There is no passing try `{args.on_try}` to look at.", ok=False, summary="Could not look at the change"
+                f"There is no passing try `{args.on_try}` to look at.",
+                ok=False,
+                summary=step_said("look_no_try", scope.language),
             )
         compiled = tried.compiled
     if compiled is None:
@@ -163,7 +167,7 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
     scene = scene_description(compiled, scope.state.revision.number)
     framed = _frame(scope, compiled, scene, args.target)
     if isinstance(framed, str):
-        return Observation(framed, ok=False, summary="Could not find what to look at")
+        return Observation(framed, ok=False, summary=step_said("look_no_target", scope.language))
     what, box, heading = framed
     camera = _camera(args, box, heading)
     zones = scene.zones if args.zones else []
@@ -179,7 +183,10 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
         "nearby_world_frame": _nearby(compiled, scene, box),
     }
     label = f"{what}{candidate} {VIEW_WORDS[args.view]}"
-    summary = f"Looked at {label}"[:200]
+    shown = step_said("whole_scene", scope.language) if what == WHOLE_SCENE else what
+    tried = step_said("in_try", scope.language) if args.on_try else ""
+    view = step_said(f"view_{args.view}", scope.language)
+    summary = step_said("looked", scope.language, what=shown, tried=tried, view=view)
     described = f"Zones: {_zone_line(zones)}. Facts: {compact(facts)}"
     if not scope.can_see:
         return Observation(f"Described {label} in words (pictures are off). {described}", summary=summary)
@@ -192,7 +199,7 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
             "The picture could not be rendered: it came out blank. Do not describe it or guess why; tell the person "
             f"the picture failed and describe the scene only from these facts. {described}"
         )
-        return Observation(text, ok=False, summary="The picture could not be rendered")
+        return Observation(text, ok=False, summary=step_said("look_blank", scope.language))
     if scope.take_view_slot():
         info = scope.services.attachments.add_bytes(scope.project_id, f"{label[:80]}.png", "image/png", png, "view")
         with scope.guard:

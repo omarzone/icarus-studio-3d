@@ -205,15 +205,19 @@ def course_report(project: Project, compiled: CompiledModel) -> CourseReport:
     return report
 
 
+def legged(project: Project) -> bool:
+    """Whether a body stands on legs, which its balance sensor tells."""
+    return any(view(obj, "balance") for body in project.bodies for obj in body.objects)
+
+
 def posture_warning(before: Project, after: Project) -> str | None:
-    """A legged body (one with a balance sensor) whose task loses the terms that keep it up, or None."""
-    legged = any(view(obj, "balance") for body in after.bodies for obj in body.objects)
+    """A legged body whose task loses the terms that keep it up, or None."""
     had = {term.term for term in before.task.rewards}
     has = {term.term for term in after.task.rewards}
     lost = [term for term in POSTURE_TERMS if term in had and term not in has]
-    if not legged or not lost:
+    if not legged(after) or not lost:
         return None
     return (
-        f"The body walks on legs but the task no longer has {' and '.join(lost)}, which only locomotion tasks "
-        "can use: nothing now tells it to stay up, so it may learn to throw itself forward and fall"
+        f"The body walks on legs but the task no longer has {' and '.join(lost)}: nothing now tells it to stay "
+        "up, so it may learn to throw itself forward and fall; navigation tasks keep these terms, so add them back"
     )

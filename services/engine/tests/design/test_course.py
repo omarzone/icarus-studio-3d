@@ -68,4 +68,5 @@ def test_a_legged_body_losing_its_upright_and_fall_terms_is_warned():
     after = apply_operations(before, navigation)
     warning = posture_warning(before, after)
     assert warning is not None and "stay_upright" in warning and "fall_penalty" in warning
+    assert "navigation" in warning and "only locomotion" not in warning
     assert posture_warning(before, before) is None

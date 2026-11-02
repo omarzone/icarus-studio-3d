@@ -9,6 +9,7 @@ from icarus.copilot.agent.tools.look import LookArgs, look
 from icarus.copilot.agent.tools.proposing import ProposeArgs, propose
 from icarus.copilot.agent.tools.trying import TryArgs, try_change
 from icarus.copilot.context import NO_RUN
+from icarus.library.templates import Part
 from icarus.projects.store import ProjectStore
 from icarus.sim.views import BlankPicture
 from icarus.training.run_store import RunStore
@@ -82,3 +83,24 @@ def test_a_try_warns_about_lost_posture_terms_and_a_missing_finish_and_the_propo
     assert "stay_upright and fall_penalty" in tried["warnings"][0] and "goal zone" in tried["warnings"][1]
     propose(scope, ProposeArgs(try_id="t1", summary="Race", explanation="Switch to a race.", warnings=[]))
     assert scope.proposal is not None and scope.proposal.warnings == tried["warnings"]
+
+
+def test_a_try_that_switches_family_and_keeps_terms_of_the_old_one_says_which_to_remove_and_add(tmp_path):
+    store = ProjectStore(tmp_path / "projects")
+    project_id = store.create("Race", "walker_robot").project.id
+    services = ToolServices(store, RunStore(tmp_path / "runs"), None, None, None)  # type: ignore[arg-type]
+    scope = TurnScope(project_id, store.state(project_id), "ask", services, request="quiero una carrera")
+    switch = {"operations": [{"op": "set_task_family", "family": "navigation"}], "look": None}
+    tried = json.loads(try_change(scope, TryArgs.model_validate(switch)).text)
+    assert not tried["passed"]
+    fix = tried["fix_rewards"]
+    assert fix["remove"] == ["forward_progress"] and fix["add"] == ["progress_to_goal", "reach_goal"]
+    assert fix["keep"] == ["energy_cost", "fall_penalty", "stay_upright"]
+    assert "remove_reward_term" in fix["how"] and "forward_progress" in fix["how"]
+    finish = Part("finish", "Finish", None, {"transform": {"position": (10, 0, 0)}, "goal_zone": {"radius": 1.0}})
+    following: list[dict] = [{"op": "create_object", "target": "world", "object": finish.spec().model_dump()}]
+    following += [*switch["operations"], {"op": "remove_reward_term", "term": "forward_progress"}]
+    following += [{"op": "set_reward_term", "term": {"term": term, "weight": 1}} for term in fix["add"]]
+    again = json.loads(try_change(scope, TryArgs.model_validate({"operations": following, "look": None})).text)
+    assert again["passed"], again["checks"]
+    assert "fix_rewards" not in again

@@ -135,6 +135,17 @@ def test_ask_mode_denies_apply_and_never_writes(copilot, store, project_id, monk
     assert answer.steps[1].summary == "Could not apply: not allowed in ask mode"
 
 
+def test_the_steps_under_a_spanish_answer_are_in_spanish(copilot, project_id, monkeypatch, tmp_path):
+    inspect = tool_step("inspect_object", object="car")
+    script(monkeypatch, tmp_path, default=[inspect, TRY_NIGHT, APPLY_NIGHT, answering("Te propongo la noche.")])
+    answer = say(copilot, project_id, "quiero que sea de noche").messages[-1]
+    assert [step.summary for step in answer.steps] == [
+        "Revisé Car",
+        "Probé 1 cambio: pasó todas las revisiones",
+        "No pude aplicar: no se permite en modo preguntar",
+    ]
+
+
 def test_propose_needs_a_try_that_passed_in_this_turn(copilot, project_id, monkeypatch, tmp_path):
     unknown = tool_step("propose", try_id="t9", summary="Make it night", explanation="Dims the Sun.", warnings=[])
     script(monkeypatch, tmp_path, default=[unknown, answering("I need to try it first.")])

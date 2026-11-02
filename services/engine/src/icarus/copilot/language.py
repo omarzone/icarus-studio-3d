@@ -157,6 +157,10 @@ TEXTS: dict[str, dict[Language, str]] = {
         "en": "I have not changed the project yet: I proposed the change, and Apply adds it.",
         "es": "Todavía no cambié el proyecto: te propuse el cambio y Aplicar lo añade.",
     },
+    "nothing_proposed": {
+        "en": "No change is ready yet: ask me for it and I will try it and show it to you before anything changes.",
+        "es": "Todavía no hay ningún cambio listo: pídemelo y lo pruebo y te lo enseño antes de tocar nada.",
+    },
     "failed": {"en": "I could not finish: {failure}.", "es": "No pude terminar: {failure}."},
     "failed_after": {
         "en": "{done} Then I could not finish: {failure}.",
@@ -218,10 +222,27 @@ _CODE_WORDS: dict[str, dict[Language, str]] = {
     "success_rate": {"en": "success rate", "es": "tasa de éxito"},
     "episode_length": {"en": "attempt length", "es": "duración del intento"},
     "episode_return": {"en": "score", "es": "puntuación"},
+    "episode_seconds": {"en": "attempt seconds", "es": "segundos por intento"},
+    "best_step": {"en": "best checkpoint step", "es": "paso del mejor punto guardado"},
+    "total_steps": {"en": "total steps", "es": "pasos totales"},
+    "recommended_steps": {"en": "recommended steps", "es": "pasos recomendados"},
+    "far_below_recommended": {"en": "far below the recommended steps", "es": "muy por debajo de lo recomendado"},
+    "control_rate_hz": {"en": "decisions per second", "es": "decisiones por segundo"},
+    "latest_evaluation": {"en": "latest evaluation", "es": "última evaluación"},
+    "latest_training": {"en": "latest training attempts", "es": "últimos intentos de entrenamiento"},
+    "reward_terms": {"en": "reward parts", "es": "partes de la recompensa"},
 }
 _CLAIMS = re.compile(
     r"\b(?:arreglé|cambié|apliqué|añadí|agregué|puse|modifiqué|corregí|quité|subí|bajé)\b"
     r"|\bI(?:'ve| have)?\s+(?:already\s+)?(?:applied|changed|fixed|added|updated|modified|removed)\b",
+    re.IGNORECASE,
+)
+# The Apply button named as something to press, or a change said to be proposed or prepared.
+_POINTS_TO_APPLY = re.compile(
+    r"(?:\*\*|[\"“«'])\s*(?:Apply|Aplicar)\s*(?:\*\*|[\"”»'])|\b(?:Apply|Aplicar)\s+(?:button|below|abajo)\b"
+    r"|\b(?:press|click|tap|hit|pulsa|presiona|pulses|presiones|toca|le das a|le damos a|dale a|das clic en|"
+    r"haz clic en)\s+(?:on\s+|en\s+)?(?:the\s+|el\s+bot[oó]n\s+)?(?:\*\*|[\"“«'])?(?:Apply|Aplicar)\b"
+    r"|\bI(?:'ve| have)?\s+(?:already\s+)?(?:proposed|prepared)\b|\b(?:propuse|preparé|dejé preparado)\b",
     re.IGNORECASE,
 )
 _ASKS_TO_FIX = re.compile(r"\b(?:arr[eé]gl|corr[ií]g|mej[oó]r|soluci[oó]n|fix|repair|improve|solve)", re.IGNORECASE)
@@ -245,6 +266,11 @@ def detect(text: str) -> Language:
 def claims_change(text: str) -> bool:
     """Whether the text says, in the first person, that the project was already changed."""
     return bool(_CLAIMS.search(text))
+
+
+def points_to_apply(text: str) -> bool:
+    """Whether the text sends the person to the Apply button or says a change was proposed or prepared."""
+    return bool(_POINTS_TO_APPLY.search(text))
 
 
 def asks_to_fix(text: str) -> bool:

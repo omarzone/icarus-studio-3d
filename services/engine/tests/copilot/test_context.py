@@ -2,6 +2,7 @@ import json
 
 from icarus.contracts.training import MetricPoint, StartRun
 from icarus.copilot.context import design_reference, project_context
+from icarus.copilot.language import plain_words
 from icarus.training.run_store import RunStore
 from tests.training.conftest import state_of
 
@@ -99,3 +100,28 @@ def test_bodies_bring_their_size_for_clearance_checks(tmp_path):
     car = next(body for body in context["project"]["bodies"] if body["id"] == "car_body")
     length, width, height = car["size"]
     assert length >= 4 and width >= 1.8 and height > 0.5
+
+
+def _keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value) | {key for item in value.values() for key in _keys(item)}
+    if isinstance(value, list):
+        return {key for item in value for key in _keys(item)}
+    return set()
+
+
+def test_every_run_figure_the_model_reads_has_plain_words_in_both_languages(tmp_path):
+    state = state_of("parking_car")
+    runs = RunStore(tmp_path)
+    folder = runs.folder(runs.create(state, StartRun(total_steps=30_000, copies=4), threads=2).run_id)
+    folder.append_metric(eval_point(25_000, success_rate=0.5, failure_rate=0.25))
+    training = MetricPoint(
+        kind="train", step=26_000, elapsed=9.0, episode_return=-1.0, episode_length=410, reward_terms={"reach_goal": 1}
+    )
+    folder.append_metric(training)
+    run = json.loads(project_context(state, runs, None, None))["latest_run"]
+    codes = sorted(key for key in _keys(run) if "_" in key)
+    for language in ("en", "es"):
+        leaked = [code for code in codes if "_" in plain_words(code, language)]
+        assert leaked == [], (language, leaked)
+    assert plain_words("failure_rate", "es") == "tasa de fallos"

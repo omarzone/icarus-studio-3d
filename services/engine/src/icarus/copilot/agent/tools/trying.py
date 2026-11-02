@@ -13,14 +13,17 @@ from icarus.contracts.project import Project
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TryResult, TurnScope
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.agent.tools.look import LookArgs, View, look
-from icarus.copilot.language import implies_destination
+from icarus.copilot.language import Language, implies_destination
 from icarus.copilot.proposal_changes import proposal_changes
 from icarus.copilot.scratch_stages import placement_problem, trainability_problem
+from icarus.copilot.step_words import step_said
 from icarus.design.checks import design_report
 from icarus.design.compiler import CompiledModel, compile_project
-from icarus.design.course import course_report, posture_warning
+from icarus.design.course import POSTURE_TERMS, course_report, legged, posture_warning
+from icarus.library.rewards import CORE_TERMS, term_fits
 from icarus.projects.operations import OperationError, apply_operations
 
+PLACEMENT = "placement of "
 _TASK_OPS = (AddBody, RemoveBody, SetTaskFamily, SetRewardTerm, RemoveRewardTerm)
 
 
@@ -63,7 +66,7 @@ def _checks(scope: TurnScope, candidate: Project, operations: list[EditOperation
             and placement_problem(before, body.id) == problem
         ):
             problem = None
-        checks.append({"check": f"placement of {body.name}", "ok": problem is None, "detail": problem})
+        checks.append({"check": f"{PLACEMENT}{body.name}", "ok": problem is None, "detail": problem})
     if candidate.task.family != "none" and touches_body_or_task(scope.state.project, operations):
         problem = trainability_problem(candidate)
         checks.append({"check": "trainable", "ok": problem is None, "detail": problem})
@@ -96,10 +99,36 @@ def _lacks_destination(scope: TurnScope, project: Project) -> bool:
     )
 
 
+def _check_name(check: str, language: Language) -> str:
+    if check.startswith(PLACEMENT):
+        return step_said("check_placement", language, name=check.removeprefix(PLACEMENT))
+    return step_said(f"check_{check}", language)
+
+
+def _words(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def reward_fix(project: Project) -> dict | None:
+    """Which reward terms a task must drop and add to fit its family, said so one try can fix it; None when they fit."""
+    family = project.task.family
+    has = {term.term for term in project.task.rewards}
+    remove = sorted(term for term in has if not term_fits(term, family))
+    if not remove:
+        return None
+    wanted = [*CORE_TERMS[family], *(POSTURE_TERMS if legged(project) and family != "none" else ())]
+    add = [term for term in wanted if term not in has]
+    keep = sorted(has - set(remove))
+    how = f"The {family} task cannot use {_words(remove)}: in the same try, remove_reward_term {_words(remove)}"
+    how += f" and set_reward_term {_words(add)}" if add else ""
+    how += f"; keep {_words(keep)}" if keep else ""
+    return {"remove": remove, "add": add, "keep": keep, "how": how}
+
+
 def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     try_id = scope.next_try_id()
-    project, count = scope.state.project, len(args.operations)
-    noun = "change" if count == 1 else "changes"
+    project, count, language = scope.state.project, len(args.operations), scope.language
+    changes = step_said("changes_one" if count == 1 else "changes_many", language, count=count)
     try:
         candidate = apply_operations(project, args.operations)
     except OperationError as error:
@@ -109,16 +138,18 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
             "passed": False,
             "checks": [{"check": "operations", "ok": False, "detail": str(error)}],
         }
-        return Observation(compact(result), ok=False, summary=f"Tried {count} {noun}: not valid")
+        return Observation(compact(result), ok=False, summary=step_said("tried_invalid", language, changes=changes))
     report, compiled = design_report(candidate)
     checks = [
         {"check": check.label, "ok": check.status != "fail", "detail": check.detail if check.status == "fail" else None}
         for check in report.checks
     ]
+    names = [step_said(f"check_{check.id}", language) for check in report.checks]
     problems = [f"{check.label}: {check.detail}" for check in report.checks if check.status == "fail"]
     if compiled is not None and not problems:
         more, problems = _checks(scope, candidate, args.operations)
         checks += more
+        names += [_check_name(check["check"], language) for check in more]
     if compiled is None and not problems:
         problems = ["the design does not compile"]
     warnings: list[str] = []
@@ -134,12 +165,18 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
         result_extra["rays_see"] = seen
     base = scope.state.revision.number
     scope.tries[try_id] = TryResult(try_id, args.operations, base, problems, compiled, tuple(warnings))
-    changes = [change.model_dump(exclude_none=True) for change in proposal_changes(project, args.operations)]
-    result = {"try_id": try_id, "passed": not problems, "changes": changes, "checks": checks, **result_extra}
-    failed = next((check["check"] for check in checks if not check["ok"]), None)
-    summary = f"Tried {count} {noun}: {failed} check failed" if failed else f"Tried {count} {noun}: all checks passed"
+    listed = [change.model_dump(exclude_none=True) for change in proposal_changes(project, args.operations)]
+    result = {"try_id": try_id, "passed": not problems, "changes": listed, "checks": checks, **result_extra}
+    if problems and (fix := reward_fix(candidate)):
+        result["fix_rewards"] = fix
+    failed = next((name for check, name in zip(checks, names, strict=True) if not check["ok"]), None)
+    summary = (
+        step_said("tried_failed", language, changes=changes, check=failed)
+        if failed
+        else step_said("tried_passed", language, changes=changes)
+    )
     if warnings:
-        summary += f", {len(warnings)} warning{'s' if len(warnings) > 1 else ''}"
+        summary += step_said("warnings_one" if len(warnings) == 1 else "warnings_many", language, count=len(warnings))
     observation = Observation(compact(result), ok=not problems, summary=summary)
     if problems or args.look is None:
         return observation

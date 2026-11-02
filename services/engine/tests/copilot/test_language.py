@@ -1,4 +1,4 @@
-from icarus.copilot.language import count, detect, plain_words
+from icarus.copilot.language import count, detect, plain_words, points_to_apply
 
 
 def test_the_conversation_language_comes_from_the_persons_own_words():
@@ -20,3 +20,11 @@ def test_codes_become_plain_words_in_the_persons_language():
 
 def test_counts_are_grouped_the_way_the_language_writes_them():
     assert (count(100_000, "es"), count(100_000, "en")) == ("100.000", "100,000")
+
+
+def test_pointing_to_the_apply_button_is_recognized_in_both_languages_and_in_bold():
+    assert points_to_apply('Si le das a "Aplicar", luego podrás entrenar.')
+    assert points_to_apply("¿Le damos a **Aplicar** para que sea una carrera?")
+    assert points_to_apply("Press **Apply** to add it.") and points_to_apply("I proposed a finish line.")
+    assert not points_to_apply("¿Quieres que aplique esa versión?")
+    assert not points_to_apply("I can add a finish line. Should I prepare it?")

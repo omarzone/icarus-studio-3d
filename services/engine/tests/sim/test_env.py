@@ -4,13 +4,47 @@ import pytest
 from gymnasium.utils.env_checker import check_env
 
 from icarus.sim.env import ProjectEnv
-from icarus.sim.model_state import GOAL_DISTANCE_SCALE
-from tests.sim.conftest import project_from
+from icarus.sim.model_state import GOAL_DISTANCE_SCALE, observation
+from tests.sim.conftest import project_from, walker_navigation
 
 
 @pytest.mark.parametrize("template", ["parking_car", "walker_robot"])
 def test_check_env_passes(template):
     check_env(ProjectEnv(project_from(template)), skip_render_check=True)
+
+
+def test_a_walker_sent_to_a_finish_passes_check_env_and_is_rewarded_for_staying_up():
+    env = ProjectEnv(walker_navigation())
+    check_env(env, skip_render_check=True)
+    env.reset(seed=0)
+    _, _, _, _, info = env.step(np.zeros(len(env.world.actuators), dtype=np.float32))
+    assert info["reward_parts"]["stay_upright"] > 0
+    assert {"progress_to_goal", "reach_goal", "fall_penalty", "energy_cost"} <= set(info["reward_parts"])
+
+
+def test_a_walker_lying_on_its_side_on_the_way_to_a_finish_has_fallen_and_is_penalized():
+    env = ProjectEnv(walker_navigation())
+    env.reset(seed=0)
+    world = env.world
+    address = int(world.model.jnt_qposadr[int(world.model.body_jntadr[world.agent])])
+    world.data.qpos[address + 2] = 0.2
+    world.data.qpos[address + 3 : address + 7] = [np.cos(np.pi / 4), np.sin(np.pi / 4), 0, 0]
+    mujoco.mj_forward(world.model, world.data)
+    _, _, terminated, _, info = env.step(np.zeros(len(world.actuators), dtype=np.float32))
+    assert terminated and info["failed"] and not info["is_success"]
+    assert info["reward_parts"]["fall_penalty"] < 0
+
+
+def test_a_walker_sent_to_a_finish_starts_at_its_spawn_and_observes_its_joint_speeds():
+    env = ProjectEnv(walker_navigation())
+    env.reset(seed=1)
+    spawn = env.world.data.qpos.copy()
+    env.reset(seed=2)
+    np.testing.assert_array_equal(spawn, env.world.data.qpos)
+    speeds = [address for _, address in env.world.joint_addresses]
+    env.world.data.qvel[speeds] = np.linspace(-2, 2, len(speeds))
+    tail = observation(env.world)[-len(speeds) :]
+    np.testing.assert_allclose(tail, np.linspace(-2, 2, len(speeds)), rtol=1e-6)
 
 
 def first_observations(env: ProjectEnv, seed: int, count: int = 50) -> np.ndarray:

@@ -1,6 +1,7 @@
 import pytest
 
 from icarus.contracts.copilot import SendMessage
+from icarus.copilot.agent.ending import listed_options
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
 from icarus.copilot.chat_training import ChatTrainer, TrainerReply, TrainingRequest
@@ -172,3 +173,66 @@ def test_the_trainer_speaks_the_persons_language(store):
     trainer = ChatTrainer(store, None, None, None)  # type: ignore[arg-type]
     empty = store.create("Empty", "empty_world").project.id
     assert trainer.act(empty, TrainingRequest(action="start"), "es").text.startswith("No empecé a entrenar")
+
+
+def test_an_answer_that_says_press_apply_with_nothing_proposed_is_sent_back_then_corrected(
+    copilot, project_id, monkeypatch
+):
+    pressing = answer_call('Te preparo la meta y los sensores. Si le das a "Aplicar", luego podrás entrenar.')
+    bodies = model(monkeypatch, [pressing, pressing])
+    answer = say(copilot, project_id, "quiero una carrera")
+    assert "no open proposal" in str(bodies[1]["messages"][-1]["content"])
+    assert answer.text.startswith("Todavía no hay ningún cambio listo")
+    assert "Aplicar" not in answer.text and "Te preparo la meta y los sensores." in answer.text
+    assert [action.kind for action in answer.actions if action.kind in ("apply", "discard")] == []
+
+
+def test_an_answer_that_says_it_proposed_a_change_that_does_not_exist_is_sent_back(copilot, project_id, monkeypatch):
+    claimed = answer_call("I proposed a finish line and rays. Check it below.")
+    fixed = answer_call("I can add a finish line and rays. Should I prepare it?")
+    bodies = model(monkeypatch, [claimed, fixed])
+    answer = say(copilot, project_id, "make it a race")
+    assert "no open proposal" in str(bodies[1]["messages"][-1]["content"])
+    assert answer.text == "I can add a finish line and rays. Should I prepare it?"
+
+
+QA_OPTIONS = """¿Quieres que lo mejoremos en 2 pasos antes de entrenar?
+
+**Opción A (recomendada para carrera):** Ponerle 3 ojos al frente para que vea las vallas a distancia.
+**Opción B:** Cambiar la tarea para que gane un premio grande al llegar a la meta verde.
+**Opción C:** Entrenar así como está y ver qué pasa (será más difícil para él).
+
+¿qué prefieres hacer?"""
+
+
+def test_bold_option_lines_from_a_real_answer_become_send_buttons():
+    options = listed_options(QA_OPTIONS)
+    assert [label for label, _ in options] == [
+        "Ponerle 3 ojos al frente para que vea las vallas a distancia",
+        "Cambiar la tarea para que gane un premio grande al llegar a",
+        "Entrenar así como está y ver qué pasa",
+    ]
+    assert options[0][1] == "Opción A: Ponerle 3 ojos al frente para que vea las vallas a distancia."
+    assert all(len(label) <= 60 for label, _ in options)
+
+
+def test_option_headings_and_english_options_become_send_buttons_and_never_more_than_four():
+    headings = "Te propongo:\n\n### Opción 1: Pista corta\nDiez metros.\n\n### Opción 2: Pista larga\nVeinte metros."
+    assert listed_options(headings) == [
+        ("Pista corta", "Opción 1: Pista corta"),
+        ("Pista larga", "Opción 2: Pista larga"),
+    ]
+    english = "\n".join(f"**Option {n}:** Plan number {n}" for n in range(1, 6))
+    assert [label for label, _ in listed_options(english)] == [f"Plan number {n}" for n in range(1, 5)]
+    assert listed_options("**Opción A:** solo una") == []
+
+
+def test_pointing_to_apply_is_fine_while_an_earlier_message_still_has_an_open_proposal(
+    copilot, project_id, monkeypatch
+):
+    model(monkeypatch, [TRY_NIGHT, PROPOSE_NIGHT, answer_call("Propongo bajar el sol.")])
+    say(copilot, project_id, "hazlo de noche")
+    pointing = answer_call("Sigue pendiente la noche: si le das a **Aplicar** se añade.")
+    bodies = model(monkeypatch, [pointing])
+    answer = say(copilot, project_id, "muéstrame una foto")
+    assert len(bodies) == 1 and answer.text == "Sigue pendiente la noche: si le das a **Aplicar** se añade."

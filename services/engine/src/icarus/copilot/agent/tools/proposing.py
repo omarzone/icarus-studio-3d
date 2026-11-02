@@ -7,6 +7,7 @@ from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TryResu
 from icarus.copilot.candidate import dry_run, new_proposal
 from icarus.copilot.grounding import unsupported_numbers
 from icarus.copilot.language import say
+from icarus.copilot.step_words import step_said
 from icarus.projects.operations import OperationError
 from icarus.projects.store import RejectedBatch
 
@@ -42,17 +43,17 @@ def _unbacked(scope: TurnScope, tried: TryResult, texts: list[str]) -> list[str]
 def propose(scope: TurnScope, args: ProposeArgs) -> Observation:
     tried = _passed(scope, args.try_id)
     if isinstance(tried, str):
-        return Observation(tried, ok=False, summary="Could not propose a change that has not passed a try")
+        return Observation(tried, ok=False, summary=step_said("propose_untried", scope.language))
     if tried.base_revision != scope.state.revision.number:
         return Observation(
             "The project changed since that try; try the change again.",
             ok=False,
-            summary="Could not propose: the project changed",
+            summary=step_said("propose_moved", scope.language),
         )
     unbacked = _unbacked(scope, tried, [args.summary, args.explanation, *args.warnings])
     if unbacked:
         text = f"These numbers are not in the project, the tool results or the conversation: {', '.join(unbacked)}"
-        return Observation(text, ok=False, summary="Could not propose: its description cites unbacked numbers")
+        return Observation(text, ok=False, summary=step_said("propose_unbacked", scope.language))
     has_runs = bool(scope.services.runs.list_runs(scope.project_id))
     warnings = [*args.warnings, *(text for text in tried.warnings if text not in args.warnings)]
     proposal = new_proposal(
@@ -69,23 +70,25 @@ def propose(scope: TurnScope, args: ProposeArgs) -> Observation:
         text = "Proposal ready. In autopilot apply it with apply and the same try_id; the engine applies it otherwise."
     else:
         text = "Proposal ready; the person sees it with Apply and Discard buttons and decides."
-    return Observation(text, summary=f"Proposed “{args.summary}”"[:200])
+    return Observation(text, summary=step_said("proposed", scope.language, summary=args.summary))
 
 
 def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
     tried = _passed(scope, args.try_id)
     if isinstance(tried, str):
-        return Observation(tried, ok=False, summary="Could not apply a change that has not passed a try")
+        return Observation(tried, ok=False, summary=step_said("apply_untried", scope.language))
     services = scope.services
     head = services.projects.state(scope.project_id)
     if head.revision.number != tried.base_revision and isinstance(dry_run(head.project, tried.operations), str):
         return Observation(
-            "The project changed since the try; try again.", ok=False, summary="Could not apply: the project changed"
+            "The project changed since the try; try again.", ok=False, summary=step_said("apply_moved", scope.language)
         )
     unbacked = _unbacked(scope, tried, [args.summary])
     if unbacked:
         return Observation(
-            f"The summary cites unbacked numbers: {', '.join(unbacked)}", ok=False, summary="Could not apply"
+            f"The summary cites unbacked numbers: {', '.join(unbacked)}",
+            ok=False,
+            summary=step_said("apply_failed", scope.language),
         )
     proposal = new_proposal(head.project, head.revision.number, args.summary, args.summary, tried.operations, [], False)
     try:
@@ -93,14 +96,17 @@ def apply(scope: TurnScope, args: ApplyArgs) -> Observation:
             scope.project_id, OperationBatch(operations=tried.operations, author="copilot", summary=args.summary)
         )
     except (RejectedBatch, OperationError) as error:
-        return Observation(f"The project refused the change: {error}", ok=False, summary="Could not apply the change")
+        return Observation(
+            f"The project refused the change: {error}", ok=False, summary=step_said("apply_failed", scope.language)
+        )
     proposal.status, proposal.applied_revision = "applied", state.revision.number
     scope.applied.append(proposal)
     scope.state, scope.head_compiled, scope.proposal, scope.proposal_try = state, None, None, None
     revision = state.revision.number
     scope.side_effects.append(say("applied", scope.language, summary=args.summary, revision=revision))
     return Observation(
-        f"Applied as revision {revision}.", summary=f"Applied “{args.summary}” as revision {revision}"[:200]
+        f"Applied as revision {revision}.",
+        summary=step_said("applied", scope.language, summary=args.summary, revision=revision),
     )
 
 

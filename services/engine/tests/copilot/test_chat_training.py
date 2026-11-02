@@ -83,7 +83,7 @@ def test_in_ask_mode_asking_to_train_offers_a_train_button_instead_of_starting(c
     answer = say(copilot, project_id, "entrénalo")
     assert runs.list_runs(project_id) == []
     assert [(action.kind, action.label) for action in answer.actions] == [("train", "Entrenar ahora")]
-    assert [(step.tool, step.summary) for step in answer.steps] == [("train", "Offered a Train button")]
+    assert [(step.tool, step.summary) for step in answer.steps] == [("train", "Ofrecí un botón para entrenar")]
 
 
 def test_in_autopilot_asking_to_train_starts_a_run_and_asking_to_stop_stops_it(copilot, runs, project_id, trains):

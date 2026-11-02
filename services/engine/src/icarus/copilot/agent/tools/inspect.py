@@ -6,6 +6,7 @@ from pydantic import Field
 from icarus.contracts.training import MetricPoint
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnScope
 from icarus.copilot.context import NO_RUN, object_detail, run_facts
+from icarus.copilot.step_words import step_said
 from icarus.projects.document import all_objects
 
 CURVE_POINTS = 20
@@ -34,12 +35,12 @@ def inspect_object(scope: TurnScope, args: InspectArgs) -> Observation:
     if body is not None:
         parts = [object_detail(scope.state, obj.id) for obj in body.objects]
         detail = {"body": body.id, "name": body.name, "parts": parts}
-        return Observation(compact(detail), summary=f"Inspected {body.name}")
+        return Observation(compact(detail), summary=step_said("inspected", scope.language, name=body.name))
     found = object_detail(scope.state, args.object)
     if found is None:
         text = f"There is no object or body `{args.object}`. Valid ids: {known_ids(scope)}"
-        return Observation(text, ok=False, summary=f"Looked for {args.object[:60]}, which does not exist")
-    return Observation(compact(found), summary=f"Inspected {found['name']}")
+        return Observation(text, ok=False, summary=step_said("object_missing", scope.language, name=args.object[:60]))
+    return Observation(compact(found), summary=step_said("inspected", scope.language, name=found["name"]))
 
 
 class ReadRunArgs(ToolArgs):
@@ -64,13 +65,15 @@ def read_run(scope: TurnScope, args: ReadRunArgs) -> Observation:
     runs = scope.services.runs
     statuses = runs.list_runs(scope.project_id)
     if not statuses:
-        return Observation(NO_RUN, summary="Checked the training runs: none yet", run_facts=True)
+        return Observation(NO_RUN, summary=step_said("no_runs", scope.language), run_facts=True)
     wanted = args.run.strip().lower()
     status = statuses[0] if wanted in ("", "latest") else None
     status = status or next((s for s in statuses if wanted in (s.run_id.lower(), s.name.lower())), None)
     if status is None:
         names = ", ".join(item.name for item in statuses[:10])
-        return Observation(f"There is no run `{args.run}`. Runs: {names}", ok=False, summary="Looked for a run")
+        return Observation(
+            f"There is no run `{args.run}`. Runs: {names}", ok=False, summary=step_said("run_missing", scope.language)
+        )
     facts = run_facts(scope.state, runs, status)
     picked: dict[str, Any] = {"name": facts["name"]}
     if "status" in args.sections:
@@ -89,7 +92,7 @@ def read_run(scope: TurnScope, args: ReadRunArgs) -> Observation:
     if "failures" in args.sections:
         latest = facts["latest_training"] or {}
         picked |= {"failure": facts["failure"], "failure_rate": latest.get("failure_rate")}
-    return Observation(compact(picked), summary=f"Read the results of {status.name}", run_facts=True)
+    return Observation(compact(picked), summary=step_said("run_read", scope.language, name=status.name), run_facts=True)
 
 
 INSPECT_OBJECT = Tool(

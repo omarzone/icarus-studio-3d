@@ -4,7 +4,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue
 from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
-from icarus.library.rewards import REWARD_TERMS
+from icarus.library.rewards import REWARD_TERMS, term_families, term_fits
 from icarus.projects.document import all_objects, containers
 
 
@@ -82,8 +82,9 @@ def _reward_issues(project: Project) -> list[ValidationIssue]:
         path = f"task.rewards.{term.term}"
         if info is None:
             issues.append(ValidationIssue(path=path, message=f"{term.term!r} is not a library reward term"))
-        elif info.family != project.task.family:
-            issues.append(ValidationIssue(path=path, message=f"{info.label} is for {info.family} tasks"))
+        elif not term_fits(term.term, project.task.family):
+            families = " and ".join(sorted(term_families(term.term)))
+            issues.append(ValidationIssue(path=path, message=f"{info.label} is for {families} tasks"))
         elif not info.weight_min <= term.weight <= info.weight_max:
             bounds = f"between {info.weight_min:g} and {info.weight_max:g}"
             issues.append(ValidationIssue(path=path, message=f"{info.label} weight must be {bounds}"))

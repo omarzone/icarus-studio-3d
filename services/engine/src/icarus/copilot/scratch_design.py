@@ -4,7 +4,7 @@ from icarus.copilot.client import ModelClient
 from icarus.copilot.scratch_plan import ScratchPlan
 from icarus.copilot.scratch_stages import ScratchDesign, assemble
 from icarus.design.surfaces import SURFACE_FRICTION
-from icarus.library.rewards import REWARD_TERMS
+from icarus.library.rewards import REWARD_TERMS, term_families
 
 # A whole design is a long answer: legged bodies took longer than the default minute in measurements.
 PLAN_SECONDS = 100.0
@@ -62,7 +62,11 @@ Design notes: {outline}"""
 
 def scratch_system() -> str:
     terms = {
-        term: {"family": info.family, "weight": [info.weight_min, info.weight_max], "does": info.description}
+        term: {
+            "families": sorted(term_families(term)),
+            "weight": [info.weight_min, info.weight_max],
+            "does": info.description,
+        }
         for term, info in REWARD_TERMS.items()
     }
     compact = {"separators": (",", ":"), "ensure_ascii": False}

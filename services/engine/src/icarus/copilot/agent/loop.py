@@ -23,21 +23,12 @@ from icarus.copilot.agent.tools import REGISTRY
 from icarus.copilot.agent.tools.base import Effect, Observation, Tool, TurnScope, tool_definition
 from icarus.copilot.client import ContextOverflow, CopilotError, InputRejected, ModelClient, ToolCall, schema_problems
 from icarus.copilot.language import say
+from icarus.copilot.step_words import STEP_TEXTS, step_said
 
 log = logging.getLogger(__name__)
 
 _POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="agent-tools")
 ANSWER_TOOL = "answer"
-VERBS = {
-    "inspect_object": "inspect",
-    "read_run": "read the run",
-    "library": "read the library",
-    "look": "look",
-    "try": "try the change",
-    "propose": "propose",
-    "apply": "apply",
-    "train": "train",
-}
 HINTS = {
     "inspect_object": "Ask inspect_object for one part instead of the whole body.",
     "read_run": "Ask read_run for fewer sections.",
@@ -87,9 +78,15 @@ def note(text: str) -> dict:
     return {"role": "user", "content": text}
 
 
-def _rejected(tool: Tool[Any] | None, text: str, reason: str) -> Observation:
-    verb = VERBS.get(tool.name, "act") if tool else "act"
-    return Observation(text, ok=False, summary=f"Could not {verb}: {reason}")
+def _rejected(scope: TurnScope, tool: Tool[Any] | None, text: str, reason: str) -> Observation:
+    """A call the engine did not run; reason is a step_words key without its reason_ prefix."""
+    language = scope.language
+    verb = step_said(f"verb_{tool.name}" if tool and f"verb_{tool.name}" in STEP_TEXTS else "verb_act", language)
+    return Observation(
+        text,
+        ok=False,
+        summary=step_said("rejected", language, verb=verb, reason=step_said(f"reason_{reason}", language)),
+    )
 
 
 def _encoded(data: dict[str, Any]) -> list[str]:
@@ -114,47 +111,45 @@ def _plan(scope: TurnScope, call: ToolCall, budget: TurnBudget, off: frozenset[s
         planned.result = Observation(text or f"No tool named `{call.name}`. Available: {listed}", ok=False)
         return planned
     if off is not None and tool.name not in off:
-        planned.result = _rejected(tool, TOOLS_OFF, "tools were off")
+        planned.result = _rejected(scope, tool, TOOLS_OFF, "tools_off")
         return planned
     if index >= budget.limits.max_calls_per_step:
         text = "Too many calls in one step; call it again next step if you still need it"
-        planned.result = _rejected(tool, text, "too many calls at once")
+        planned.result = _rejected(scope, tool, text, "too_many")
         return planned
     try:
         data = json.loads(call.arguments or "{}")
     except ValueError:
         data = None
     if not isinstance(data, dict):
-        planned.result = _rejected(
-            tool, "Arguments must be one JSON object; the tool was not run.", "arguments were not JSON"
-        )
+        planned.result = _rejected(scope, tool, "Arguments must be one JSON object; the tool was not run.", "not_json")
         return planned
     try:
         args = tool.args.model_validate(data)
     except ValidationError as error:
         listed = "\n".join([*(f"- {problem}" for problem in schema_problems(error)), *_encoded(data)])
         planned.result = _rejected(
-            tool, f"The arguments do not fit; the tool was not run:\n{listed}", "arguments did not fit"
+            scope, tool, f"The arguments do not fit; the tool was not run:\n{listed}", "did_not_fit"
         )
         return planned
     key = (call.name, " ".join(call.arguments.split()))
     if budget.repeated[key] >= 2:
         budget.force("repeated")
-        planned.result = _rejected(tool, "You already did this twice; the result has not changed.", "repeated step")
+        planned.result = _rejected(scope, tool, "You already did this twice; the result has not changed.", "repeated")
         return planned
     budget.repeated[key] += 1
     allowed, why = permission(tool.name, args, scope.autonomy)
     if allowed == "deny":
-        planned.result = _rejected(tool, why, "not allowed in ask mode")
+        planned.result = _rejected(scope, tool, why, "ask_mode")
         return planned
     capped = budget.cap_reached(tool.name)
     if capped:
-        planned.result = _rejected(tool, capped, "limit reached")
+        planned.result = _rejected(scope, tool, capped, "limit")
         return planned
     budget.tool_calls[tool.name] += 1
     if allowed == "offer":
         scope.train_offered = True
-        planned.result = Observation(why, summary="Offered a Train button")
+        planned.result = Observation(why, summary=step_said("train_offered", scope.language))
         return planned
     planned.args, planned.effect = args, tool.effect_for(args)
     return planned
@@ -168,7 +163,7 @@ def _run(scope: TurnScope, item: _Planned, budget: TurnBudget) -> None:
         item.result = tool.run(scope, args)
     except Exception as error:  # A tool bug is told to the model instead of ending the person's turn.
         log.exception("copilot tool %s failed", tool.name)
-        item.result = _rejected(tool, f"The tool failed: {error}", "it failed")
+        item.result = _rejected(scope, tool, f"The tool failed: {error}", "failed")
 
 
 def _run_parallel(scope: TurnScope, items: list[_Planned], budget: TurnBudget) -> None:
@@ -180,7 +175,7 @@ def _run_parallel(scope: TurnScope, items: list[_Planned], budget: TurnBudget) -
             future.result(timeout=max(0.1, min(tool.timeout_s, budget.deadline - time.monotonic())))
         except FutureTimeout:
             # MuJoCo work cannot be interrupted, so the late result is thrown away.
-            item.result = _rejected(tool, "The tool took too long and was stopped", "it took too long")
+            item.result = _rejected(scope, tool, "The tool took too long and was stopped", "too_long")
 
 
 def _segments(planned: list[_Planned]) -> list[list[_Planned]]:
@@ -235,7 +230,7 @@ def execute_batch(scope: TurnScope, calls: list[ToolCall], budget: TurnBudget, o
                 scope.percent_sources.append(shown[item.call.id])
         batch.summaries[item.call.id] = result.summary
         if item.tool is not None:
-            summary = result.summary or f"Used {item.tool.name}"
+            summary = result.summary or step_said("used", scope.language, tool=item.tool.name)
             scope.steps.append(AgentStep(tool=item.tool.step, summary=summary[:200], ok=result.ok))
         if result.image is not None and scope.can_see:
             batch.images.append((result.image_label or item.call.name, result.image))

@@ -57,6 +57,7 @@ def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -
     context = lean_context(state, services.runs, message.selection, message.workspace, _open_proposal(conversation))
     language = detect(message.text)
     scope = TurnScope(project_id, state, conversation.autonomy, services, request=message.text, language=language)
+    scope.earlier_proposal = any(item.status == "open" for item in conversation.proposals)
     return scope, context
 
 

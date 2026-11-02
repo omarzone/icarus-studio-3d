@@ -10,7 +10,7 @@ from icarus.design.compiler import CompiledModel, CompileError, compile_project
 from icarus.design.scene import object_extents, scene_description
 from icarus.library.components import COMPONENTS
 from icarus.library.pieces import PIECES
-from icarus.library.rewards import REWARD_TERMS
+from icarus.library.rewards import REWARD_TERMS, term_families, term_fits
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
 from icarus.projects.operations import apply_operations, empty_project
@@ -90,9 +90,13 @@ def _library(state: ProjectState) -> dict[str, Any]:
             if kind in used or kind in ("light", "material", "randomize", "sky")
         },
         "reward_terms": {
-            term: {"label": info.label, "family": info.family, "weight": [info.weight_min, info.weight_max]}
+            term: {
+                "label": info.label,
+                "families": sorted(term_families(term)),
+                "weight": [info.weight_min, info.weight_max],
+            }
             for term, info in REWARD_TERMS.items()
-            if info.family == state.project.task.family
+            if term_fits(term, state.project.task.family)
         },
         "pieces": {piece_id: piece.description for piece_id, piece in PIECES.items()},
         "templates": {template_id: info.description for template_id, info in TEMPLATES.items()},
@@ -255,7 +259,7 @@ def lean_context(
         "library": {
             "component_kinds": sorted(COMPONENTS),
             "pieces": sorted(PIECES),
-            "reward_terms": sorted(term for term, info in REWARD_TERMS.items() if info.family == project.task.family),
+            "reward_terms": sorted(term for term in REWARD_TERMS if term_fits(term, project.task.family)),
             "task_families": sorted({info.family for info in REWARD_TERMS.values()}),
             "templates": {template_id: info.label for template_id, info in TEMPLATES.items()},
         },
@@ -317,7 +321,7 @@ def design_reference() -> str:
             for kind, spec in COMPONENTS.items()
         },
         "reward_terms": {
-            term: {"family": info.family, "weight": [info.weight_min, info.weight_max]}
+            term: {"families": sorted(term_families(term)), "weight": [info.weight_min, info.weight_max]}
             for term, info in REWARD_TERMS.items()
         },
     }

@@ -14,6 +14,7 @@ from icarus.library.components import default_component
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.operations import apply_operations, empty_project
 from icarus.projects.validation import validate_project
+from tests.sim.conftest import walker_navigation
 
 
 def point_motor_at_arm(project):
@@ -69,10 +70,16 @@ def test_reward_term_from_another_family_is_reported(base):
         point_motor_at_arm(base),
         [
             SetTaskFamily(op="set_task_family", family="navigation"),
-            SetRewardTerm(op="set_reward_term", term=RewardTermSpec(term="stay_upright", weight=0.5)),
+            SetRewardTerm(op="set_reward_term", term=RewardTermSpec(term="forward_progress", weight=1)),
         ],
     )
-    assert [issue.path for issue in validate_project(project)] == ["task.rewards.stay_upright"]
+    assert [issue.path for issue in validate_project(project)] == ["task.rewards.forward_progress"]
+
+
+def test_a_walker_sent_to_a_finish_keeps_its_upright_fall_and_energy_terms():
+    project = walker_navigation()
+    assert validate_project(project) == []
+    assert {"stay_upright", "fall_penalty", "energy_cost"} <= {term.term for term in project.task.rewards}
 
 
 @pytest.mark.parametrize("template", list(TEMPLATES))

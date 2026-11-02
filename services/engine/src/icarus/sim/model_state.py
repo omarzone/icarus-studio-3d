@@ -18,7 +18,7 @@ GRAVITY = 9.81
 # Display ranges for magnitudes that have no physical limit: about 3 g and 10 rad/s.
 ACCEL_RANGE = 30.0
 GYRO_RANGE = 10.0
-# Locomotion ends when the root drops below this fraction of its start height.
+# A legged body has fallen once its root drops below this fraction of its start height.
 FALL_HEIGHT = 0.4
 # Goal distances are observed in tens of metres so they sit near the -1..1 range the policy expects.
 GOAL_DISTANCE_SCALE = 10.0
@@ -83,6 +83,8 @@ class LiveWorld:
     joint_addresses: list[tuple[int, int]]
     # qpos address and range of the body's limited joints, such as steering, which navigation observes.
     limited_joints: list[tuple[int, float, float]]
+    # A body with a balance sensor stands on legs: it falls by dropping, not only by turning over.
+    legged: bool
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -191,6 +193,7 @@ def build_world(project: Project) -> LiveWorld:
         start_height=0.0,
         joint_addresses=_joint_addresses(model, body_objects),
         limited_joints=_limited_joints(model, body_objects),
+        legged=bool(project.bodies) and any(view(obj, "balance") for obj in project.bodies[0].objects),
     )
     reset_world(world)
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
@@ -252,6 +255,8 @@ def observation(world: LiveWorld) -> np.ndarray:
     ]
     if world.family == "navigation":
         parts += _navigation_state(world)
+        if world.legged:
+            parts.append(np.array([world.data.qvel[address] for _, address in world.joint_addresses], dtype=float))
     if world.family == "locomotion":
         data = world.data
         parts.append(np.array([data.qpos[address] for address, _ in world.joint_addresses], dtype=float))
@@ -294,11 +299,12 @@ def reward_state(world: LiveWorld) -> RewardState:
     else:
         position, rotation = data.xpos[world.agent], data.xmat[world.agent].reshape(3, 3)
     up = float(rotation[2, 2])
+    dropped = world.agent is not None and float(position[2]) < FALL_HEIGHT * world.start_height
     match world.family:
         case "locomotion":
-            fallen = world.agent is not None and float(position[2]) < FALL_HEIGHT * world.start_height
+            fallen = dropped
         case "navigation":
-            fallen = up < 0
+            fallen = up < 0 or (world.legged and dropped)
         case "none":
             fallen = False
     goal = data.site_xpos[world.goal.site] if world.goal else None

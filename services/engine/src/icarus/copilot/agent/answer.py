@@ -1,3 +1,4 @@
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -5,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from icarus.contracts.copilot import ChatAction
 from icarus.copilot.agent.tools.base import TurnScope
 from icarus.copilot.grounding import unsupported_numbers, without_unbacked
-from icarus.copilot.language import claims_change, say
+from icarus.copilot.language import claims_change, points_to_apply, say
 from icarus.training.run_store import TERMINAL_STATES
 
 # Screens and states a navigate button may open, from docs/design/screens.md; Results joins once it works.
@@ -71,6 +72,16 @@ def _false_claim(scope: TurnScope, text: str) -> bool:
     return scope.autonomy == "ask" and scope.proposal is not None and claims_change(text)
 
 
+def _phantom_proposal(scope: TurnScope, text: str) -> bool:
+    """An answer pointing to Apply, or to a change it proposed, while this turn left nothing to apply."""
+    return scope.proposal is None and not scope.applied and not scope.earlier_proposal and points_to_apply(text)
+
+
+def _without_phantom(text: str) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return " ".join(sentence for sentence in sentences if not points_to_apply(sentence))
+
+
 def check(scope: TurnScope, final: FinalAnswer) -> list[str]:
     """What is wrong with an answer: unbacked numbers, a change claimed but only proposed, buttons that cannot work."""
     problems: list[str] = []
@@ -87,6 +98,12 @@ def check(scope: TurnScope, final: FinalAnswer) -> list[str]:
             "Your answer says the change was made, but it is only proposed: the person adds it with Apply. Say what "
             "you propose and that Apply adds it."
         )
+    if _phantom_proposal(scope, final.answer):
+        problems.append(
+            "Your answer sends the person to Apply or says you proposed a change, but this turn has no open "
+            "proposal: nothing is waiting to be applied. Either try the change and propose it now, or describe what "
+            "you would change and ask whether to prepare it, without mentioning Apply."
+        )
     problems += [problem for action in final.actions if (problem := action_problem(scope, action))]
     return problems
 
@@ -96,12 +113,14 @@ def degraded(scope: TurnScope, final: FinalAnswer) -> FinalAnswer:
     text = without_unbacked(final.answer, scope.sources, scope.percent_sources) or say("unsupported", scope.language)
     if _false_claim(scope, text):
         text = f"{say('proposed_not_applied', scope.language)} {text}"
+    if _phantom_proposal(scope, text):
+        text = f"{say('nothing_proposed', scope.language)} {_without_phantom(text)}".strip()
     suggestions = [item for item in final.suggestions if not _unbacked(scope, item)]
     actions = [action for action in final.actions if action_problem(scope, action) is None]
     return FinalAnswer(answer=text, suggestions=suggestions, actions=actions)
 
 
-def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[str]) -> list[ChatAction]:
+def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[tuple[str, str]]) -> list[ChatAction]:
     """The engine's buttons first (the open proposal, a training start held back), then one per option the answer
     lists, then the model's, deduplicated."""
     language = scope.language
@@ -113,7 +132,7 @@ def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[str]
         ]
     if scope.train_offered and _trainable(scope):
         actions.append(ChatAction(label=say("train_now", language), kind="train"))
-    actions += [ChatAction(label=option[:60], kind="send", target=option) for option in options]
+    actions += [ChatAction(label=label, kind="send", target=message) for label, message in options]
     actions += [ChatAction(label=draft.label, kind=draft.kind, target=draft.target) for draft in drafts]
     unique: list[ChatAction] = []
     for action in actions:

@@ -6,6 +6,7 @@ from icarus.contracts.training import MAX_COPIES, MAX_STEPS
 from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnScope
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.chat_training import TrainingRequest
+from icarus.copilot.step_words import step_said
 from icarus.training.run_store import TERMINAL_STATES
 
 
@@ -21,7 +22,7 @@ def _status(scope: TurnScope) -> Observation:
     active = [s for s in scope.services.runs.list_runs(scope.project_id) if s.state not in TERMINAL_STATES]
     if not active:
         return Observation(
-            "No run of this project is training.", summary="Checked training: nothing is running", run_facts=True
+            "No run of this project is training.", summary=step_said("training_idle", scope.language), run_facts=True
         )
     status = active[0]
     facts = {
@@ -32,7 +33,9 @@ def _status(scope: TurnScope) -> Observation:
         "copies": status.copies,
         "success_rate": status.success_rate,
     }
-    return Observation(compact(facts), summary=f"Checked {status.name}", run_facts=True)
+    return Observation(
+        compact(facts), summary=step_said("training_checked", scope.language, name=status.name), run_facts=True
+    )
 
 
 def train(scope: TurnScope, args: TrainArgs) -> Observation:
@@ -43,7 +46,7 @@ def train(scope: TurnScope, args: TrainArgs) -> Observation:
     scope.reports.append(reply.text)
     if reply.acted:
         scope.side_effects.append(reply.text)
-    verb = "Started training" if args.action == "start" else "Stopped training"
+    verb = step_said("training_started" if args.action == "start" else "training_stopped", scope.language)
     return Observation(reply.text, ok=reply.acted, summary=verb if reply.acted else reply.text.rstrip(".")[:200])
 
 

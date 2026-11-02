@@ -74,7 +74,43 @@ _TERMS = [
     ),
     _term("stay_upright", "Stay upright", "locomotion", 0, 5, 0.5, "Reward for keeping the torso up."),
     _term("energy_cost", "Save energy", "locomotion", -1, 0, -0.001, "A penalty proportional to motor effort."),
-    _term("fall_penalty", "Do not fall", "locomotion", -100, 0, -10, "A penalty when the body falls over."),
+    _term(
+        "fall_penalty",
+        "Do not fall",
+        "locomotion",
+        -100,
+        0,
+        -10,
+        "A penalty when the body falls over.",
+        version=2,
+    ),
 ]
 
 REWARD_TERMS: dict[str, RewardTermInfo] = {term.term: term for term in _TERMS}
+
+# Posture and effort do not depend on where the body goes, so a legged body racing to a goal keeps them.
+_ALSO_FOR: dict[str, frozenset[TaskFamily]] = {
+    "stay_upright": frozenset({"navigation"}),
+    "fall_penalty": frozenset({"navigation"}),
+    "energy_cost": frozenset({"navigation"}),
+}
+
+
+# The terms without which a family has nothing to learn toward.
+CORE_TERMS: dict[TaskFamily, tuple[str, ...]] = {
+    "navigation": ("progress_to_goal", "reach_goal"),
+    "locomotion": ("forward_progress",),
+    "none": (),
+}
+
+
+def term_families(term: str) -> frozenset[TaskFamily]:
+    info = REWARD_TERMS.get(term)
+    if info is None:
+        return frozenset()
+    own: frozenset[TaskFamily] = frozenset({info.family})
+    return own | _ALSO_FOR.get(term, own)
+
+
+def term_fits(term: str, family: TaskFamily) -> bool:
+    return family in term_families(term)
