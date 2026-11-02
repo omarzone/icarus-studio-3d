@@ -209,14 +209,20 @@ class CopilotMemory:
     def turn_facts(self, project_id: str, message: str) -> list[MemoryFact]:
         """For every turn: the person's newest preferences, which rarely share words with a request, then the
         project facts most relevant to the message."""
-        person = sorted(self.facts(None), key=lambda fact: fact.time, reverse=True)[:TURN_FACTS]
+        person = _newest_first(self.facts(None))[:TURN_FACTS]
         return [*person, *_ranked(self.facts(project_id), message, TURN_FACTS)]
+
+
+def _newest_first(facts: list[MemoryFact]) -> list[MemoryFact]:
+    # Facts are stored oldest first, so among equal times the later one in the list is the newer.
+    return sorted(reversed(facts), key=lambda fact: fact.time, reverse=True)
 
 
 def _ranked(facts: list[MemoryFact], query: str, limit: int) -> list[MemoryFact]:
     wanted = _words(query)
+    facts = _newest_first(facts)
     if not wanted:
-        return sorted(facts, key=lambda fact: fact.time, reverse=True)[:limit]
+        return facts[:limit]
     words = [_words(fact.text) for fact in facts]
     weight = {
         word: math.log(1 + len(facts) / sum(word in each for each in words))

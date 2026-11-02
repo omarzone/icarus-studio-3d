@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -134,12 +135,32 @@ def test_turn_facts_always_bring_the_person_preferences_and_only_relevant_projec
     assert texts == ["Responde siempre en español", "The car slides on ice above 3 m/s"]
 
 
-def test_turn_facts_keep_only_the_newest_person_facts(tmp_path):
+class _StoppedClock(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def stopped_clock(monkeypatch):
+    """Every fact gets the same time, as on a clock too coarse to tell quick facts apart."""
+    monkeypatch.setattr("icarus.copilot.memory.datetime", _StoppedClock)
+
+
+def test_turn_facts_keep_only_the_newest_person_facts(tmp_path, stopped_clock):
     book = memory(tmp_path)
     for index in range(8):
         book.remember(None, f"Preference number {index}", MemorySource(kind="message", id=f"m{index}"))
     texts = [fact.text for fact in book.turn_facts(PROJECT, "anything")]
     assert texts == [f"Preference number {index}" for index in (7, 6, 5, 4, 3)]
+
+
+def test_facts_with_the_same_time_rank_newest_first_by_when_they_were_kept(tmp_path, stopped_clock):
+    book = memory(tmp_path)
+    for index in range(4):
+        book.remember(PROJECT, f"Wheel grip test {index}", MemorySource(kind="message", id=f"m{index}"))
+    assert [fact.text for fact in book.recall(PROJECT, "", 2)] == ["Wheel grip test 3", "Wheel grip test 2"]
+    assert [fact.text for fact in book.recall(PROJECT, "wheel grip", 2)] == ["Wheel grip test 3", "Wheel grip test 2"]
 
 
 @pytest.mark.parametrize(("project_id", "cap"), [(PROJECT, PROJECT_CAP), (None, PERSON_CAP)])

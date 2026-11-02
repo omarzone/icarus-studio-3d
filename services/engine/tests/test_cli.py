@@ -1,6 +1,7 @@
 import io
 import sys
 
+from icarus import cli
 from icarus.cli import exit_when_stdin_closes, parse_args
 from icarus.contracts.training import StartRun
 from icarus.training.run_store import RunStore
@@ -17,6 +18,14 @@ def test_cli_defaults_to_localhost():
 def test_cli_takes_a_projects_directory(tmp_path):
     assert parse_args(["--port", "9100", "--projects-dir", str(tmp_path)]).projects_dir == tmp_path
     assert parse_args(["--port", "9100"]).projects_dir is None
+
+
+def test_the_engine_picks_a_rendering_backend_before_it_loads_the_app(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(cli, "prepare_rendering", lambda: calls.append("prepare"))
+    monkeypatch.setattr("uvicorn.run", lambda *_args, **_kwargs: calls.append("serve"))
+    cli.main(["--port", "9100"])
+    assert calls == ["prepare", "serve"]
 
 
 def test_the_engine_stops_its_training_run_before_exiting_when_its_parent_closes_stdin(tmp_path, monkeypatch):

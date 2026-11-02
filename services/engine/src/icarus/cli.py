@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO
 
+from icarus.sim.offscreen_gl import prepare_rendering
+
 if TYPE_CHECKING:
     from icarus.training.supervisor import Supervisor
 
@@ -51,6 +53,8 @@ def main(argv: list[str] | None = None) -> None:
     import uvicorn
 
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    # Before MuJoCo is imported; training workers inherit the backend through the environment.
+    prepare_rendering()
     if args.projects_dir is not None:
         os.environ["ICARUS_PROJECTS_DIR"] = str(args.projects_dir)
     if not args.exit_with_stdin:

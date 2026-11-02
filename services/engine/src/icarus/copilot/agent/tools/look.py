@@ -193,7 +193,8 @@ def look(scope: TurnScope, args: LookArgs) -> Observation:
     try:
         png = scope.services.views.render(compiled, camera, zones, timeout=20)
     except RenderUnavailable:
-        return Observation(f"No picture could be rendered on this machine. {described}", summary=summary)
+        text = f"No picture could be rendered on this machine (no OpenGL); describe it from these facts. {described}"
+        return Observation(text, ok=False, summary=step_said("look_no_gl", scope.language))
     except BlankPicture:
         text = (
             "The picture could not be rendered: it came out blank. Do not describe it or guess why; tell the person "

@@ -216,6 +216,7 @@ def test_a_service_without_tools_gets_the_single_reply_path_from_then_on(copilot
     assert ["tools" in body for body in bodies] == [True, False, False]
 
 
+@pytest.mark.needs_gl
 def test_look_attaches_a_real_render_with_the_goal_zone_and_old_pictures_are_retired(
     copilot, project_id, monkeypatch, tmp_path
 ):
@@ -230,8 +231,6 @@ def test_look_attaches_a_real_render_with_the_goal_zone_and_old_pictures_are_ret
     bodies = model(monkeypatch, [*looking, answer_call("Here is the parking spot.")])
     answer = say(copilot, project_id, "show me the parking spot")
     first = tool_results(bodies[1])["c1_0"]
-    if first.startswith("No picture could be rendered"):
-        pytest.skip("no offscreen OpenGL context on this machine")
     assert "goal:goal_zone (green)" in first and "spawn:spawn_point (blue)" in first
     assert [item.kind for item in answer.attachments] == ["view", "view", "view"]
     picture = AttachmentStore(tmp_path / "projects").get(answer.attachments[0].id).content()

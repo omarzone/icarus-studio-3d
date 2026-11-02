@@ -23,6 +23,7 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "look_no_target": {"en": "Could not find what to look at", "es": "No encontré qué mirar"},
     "looked": {"en": "Looked at {what}{tried} {view}", "es": "Miré {what}{tried} {view}"},
     "look_blank": {"en": "The picture could not be rendered", "es": "No se pudo generar la imagen"},
+    "look_no_gl": {"en": "No picture: this machine cannot render", "es": "Sin imagen: este equipo no puede renderizar"},
     "whole_scene": {"en": "the whole scene", "es": "toda la escena"},
     "in_try": {"en": " in the tried change", "es": " en el cambio probado"},
     "view_front": {"en": "from the front", "es": "de frente"},

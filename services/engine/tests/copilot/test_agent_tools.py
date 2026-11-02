@@ -11,7 +11,7 @@ from icarus.copilot.agent.tools.trying import TryArgs, try_change
 from icarus.copilot.context import NO_RUN
 from icarus.library.templates import Part
 from icarus.projects.store import ProjectStore
-from icarus.sim.views import BlankPicture
+from icarus.sim.views import BlankPicture, RenderUnavailable
 from icarus.training.run_store import RunStore
 
 
@@ -67,6 +67,21 @@ def test_a_blank_picture_is_a_failed_look_that_tells_the_model_not_to_describe_i
     assert not seen.ok and seen.image is None
     assert "could not be rendered" in seen.text and "Do not describe it" in seen.text
     assert seen.summary == "The picture could not be rendered"
+
+
+class _NoGlViews:
+    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+        raise RenderUnavailable("no OpenGL on this machine")
+
+
+def test_a_machine_without_opengl_makes_a_failed_look_that_still_describes_the_scene(tmp_path):
+    store = ProjectStore(tmp_path / "projects")
+    project_id = store.create("Parking", "parking_car").project.id
+    services = ToolServices(store, RunStore(tmp_path / "runs"), None, None, _NoGlViews())  # type: ignore[arg-type]
+    seen = look(TurnScope(project_id, store.state(project_id), "ask", services), LookArgs())
+    assert not seen.ok and seen.image is None
+    assert "No picture could be rendered on this machine" in seen.text and "Zones:" in seen.text
+    assert seen.summary == "No picture: this machine cannot render"
 
 
 def test_a_try_warns_about_lost_posture_terms_and_a_missing_finish_and_the_proposal_carries_it(tmp_path):

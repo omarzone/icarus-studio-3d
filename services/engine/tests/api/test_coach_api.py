@@ -48,6 +48,7 @@ def evaluated_run(app, client: TestClient, steps: tuple[int, ...] = (0,)) -> Run
     return folder
 
 
+@pytest.mark.needs_gl
 def test_a_diagnosis_is_grounded_stored_and_posted_with_its_pictures(app, client, monkeypatch, tmp_path):
     folder = evaluated_run(app, client)
     script(monkeypatch, tmp_path, coach=[{"match": ["diagnose"], **LOOK}, findings(), answering("Keep training.")])
@@ -72,6 +73,7 @@ def test_a_diagnosis_is_grounded_stored_and_posted_with_its_pictures(app, client
     assert {action["kind"] for action in message["actions"]} == {"navigate", "send"}
 
 
+@pytest.mark.needs_gl
 def test_a_diagnosis_citing_a_number_not_in_the_run_is_rejected(app, client, monkeypatch, tmp_path):
     folder = evaluated_run(app, client)
     invented = findings(summary="The car reaches the spot in 41.7% of episodes.")
@@ -128,6 +130,7 @@ def test_a_run_without_evaluations_cannot_be_diagnosed(app, client):
     assert client.get(f"/runs/{run_id}/diagnoses").json() == []
 
 
+@pytest.mark.needs_gl
 def test_failure_groups_of_a_checkpoint_come_with_their_pictures(app, client):
     folder = evaluated_run(app, client, steps=(0, 25_000))
 

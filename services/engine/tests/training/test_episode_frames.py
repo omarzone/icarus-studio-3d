@@ -43,6 +43,7 @@ def test_a_walker_records_how_far_it_went_forward():
     assert abs(record.forward) < 5
 
 
+@pytest.mark.needs_gl
 def test_a_checkpoint_stores_at_most_eight_pictures_of_its_first_episodes(tmp_path, parking_state):
     store = RunStore(tmp_path)
     folder = store.folder(store.create(parking_state, StartRun(total_steps=10_000, copies=1), 1, 3).run_id)

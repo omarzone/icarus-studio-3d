@@ -8,7 +8,7 @@ from icarus.design.compiler import compile_project
 from icarus.design.scene import scene_description
 from icarus.library.templates import template_operations
 from icarus.projects.operations import apply_operations, empty_project
-from icarus.sim.views import CameraSpec, RenderUnavailable, ViewRenderer, encode_png, is_blank
+from icarus.sim.views import CameraSpec, ViewRenderer, encode_png, is_blank
 
 
 def decoded(png: bytes) -> np.ndarray:
@@ -50,39 +50,33 @@ def greenish(pixels: np.ndarray) -> int:
     return int(np.sum((green > red + 30) & (green > blue + 30)))
 
 
+@pytest.mark.needs_gl
 def test_a_top_view_of_the_goal_is_a_png_of_the_asked_size_with_the_goal_zone_drawn(parking, renderer):
     compiled, zones = parking
     goal = next(zone for zone in zones if zone.kind == "goal_zone")
     camera = CameraSpec(lookat=goal.position, distance=8.0, azimuth=90.0, elevation=-89.0, width=160, height=100)
-    try:
-        with_zones = renderer.render(compiled, camera, zones)
-    except RenderUnavailable as error:
-        pytest.skip(f"no offscreen OpenGL context: {error}")
+    with_zones = renderer.render(compiled, camera, zones)
     without = renderer.render(compiled, camera, [])
     pixels = decoded(with_zones)
     assert pixels.shape == (100, 160, 3)
     assert greenish(pixels) > greenish(decoded(without)) + 50
 
 
+@pytest.mark.needs_gl
 def test_renders_stay_visible_after_many_distinct_models_and_when_returning_to_the_first(renderer):
     models = [
         compile_project(apply_operations(empty_project("000000000000", template), template_operations(template)))
         for template in ("empty_world", "parking_car", "walker_robot", "humanoid", "walker_robot")
     ]
     camera = CameraSpec(lookat=(0.0, 0.0, 0.5), distance=4.0, azimuth=-135.0, elevation=-30.0, width=96, height=64)
-    try:
-        frames = [decoded(renderer.render(compiled, camera, [])) for compiled in models]
-    except RenderUnavailable as error:
-        pytest.skip(f"no offscreen OpenGL context: {error}")
+    frames = [decoded(renderer.render(compiled, camera, [])) for compiled in models]
     frames.append(decoded(renderer.render(models[0], camera, [])))
     assert all(frame.std() > 1.0 and frame.max() > 20 for frame in frames)
 
 
+@pytest.mark.needs_gl
 def test_a_frame_of_one_color_is_blank_and_a_rendered_scene_is_not(parking, renderer):
     assert is_blank(np.zeros((40, 60, 3), np.uint8)) and is_blank(np.full((40, 60, 3), 200, np.uint8))
     compiled, zones = parking
-    try:
-        png = renderer.render(compiled, CameraSpec((0.0, 0.0, 0.5), 6.0, -135.0, -30.0, 96, 64), zones)
-    except RenderUnavailable as error:
-        pytest.skip(f"no offscreen OpenGL context: {error}")
+    png = renderer.render(compiled, CameraSpec((0.0, 0.0, 0.5), 6.0, -135.0, -30.0, 96, 64), zones)
     assert not is_blank(decoded(png))

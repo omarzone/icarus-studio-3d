@@ -10,6 +10,7 @@ import numpy as np
 
 from icarus.contracts.scene import SceneZone
 from icarus.design.compiler import CompiledModel
+from icarus.sim.offscreen_gl import rendering_available
 
 # Zones are annotations on the picture only: spawn blue, goal green, any other zone amber.
 ZONE_COLORS = {
@@ -112,6 +113,8 @@ def render_view(
 
 def open_renderer(model: mujoco.MjModel, width: int, height: int) -> mujoco.Renderer:
     """An offscreen renderer on the calling thread, which then owns its OpenGL context."""
+    if not rendering_available():
+        raise RenderUnavailable("no OpenGL on this machine")
     model.vis.global_.offwidth = max(model.vis.global_.offwidth, width)
     model.vis.global_.offheight = max(model.vis.global_.offheight, height)
     try:
