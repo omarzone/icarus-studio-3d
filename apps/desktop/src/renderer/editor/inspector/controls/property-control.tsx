@@ -134,6 +134,18 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
       );
     }
     case "choice":
+      // A segmented row only fits a few options in the inspector's width; more read better as a list.
+      if (value.options.length > MAX_SEGMENTS) {
+        return (
+          <ListControl
+            label={label}
+            value={value.value}
+            options={value.options.map((option) => ({ value: option, label: option }))}
+            tone={tone}
+            onPick={(next) => onChange({ ...value, value: next })}
+          />
+        );
+      }
       return (
         <span role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-control bg-control p-0.5">
           {value.options.map((option) => {
@@ -146,7 +158,7 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
                 aria-checked={active}
                 aria-current={active ? "true" : undefined}
                 onClick={() => onChange({ ...value, value: option })}
-                className={`flex-1 rounded-control py-1 text-meta ${
+                className={`min-w-0 flex-1 truncate rounded-control py-1 text-meta ${
                   active
                     ? "bg-selected font-semibold text-on-selected"
                     : "text-fg-secondary hover:bg-fill-hover hover:text-fg"
@@ -295,6 +307,7 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
 
 // Mirrors the engine's TextValue limit.
 const TEXT_MAX = 40;
+const MAX_SEGMENTS = 3;
 
 const withUnit = (value: number, unit: string | undefined) =>
   unit === "°" ? `${value}°` : unit ? `${value} ${unit}` : String(value);
