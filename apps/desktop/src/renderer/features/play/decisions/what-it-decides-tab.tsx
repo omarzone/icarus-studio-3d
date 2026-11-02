@@ -36,7 +36,7 @@ export function WhatItDecidesTab({ bars, brain, choice }: Props) {
   );
 }
 
-function entriesOf(choice: BrainChoice): MenuEntry[] {
+export function entriesOf(choice: BrainChoice): MenuEntry[] {
   const idle = { disabled: true, run: () => undefined };
   if (choice.failure !== undefined) {
     return [{ label: "Trained brains could not be listed", hint: choice.failure, ...idle }];

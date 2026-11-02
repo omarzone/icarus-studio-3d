@@ -8,13 +8,14 @@ import { useProjectName } from "../../ui/project-name.ts";
 import { NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { DecisionsPanel } from "./decisions/decisions-panel.tsx";
+import type { BrainChoice } from "./decisions/what-it-decides-tab.tsx";
 import { EventsPanel } from "./events/events-panel.tsx";
 import { PlayHeader } from "./play-header/play-header.tsx";
 import { PlayShell } from "./play-shell.tsx";
 import { PLAY_CONFIGS, PLAY_VARIANTS, type PlayConfig } from "./play-variants.ts";
 import { PlayViewport } from "./play-viewport.tsx";
 import { SensesPanel } from "./senses/senses-panel.tsx";
-import { usePlayBrain, usePlayConnection, usePlayLayout } from "./use-play-session.ts";
+import { usePlayBrain, usePlayBrains, usePlayConnection, usePlayLayout, usePlaySession } from "./use-play-session.ts";
 import { VisionPanel } from "./vision/vision-panel.tsx";
 
 // Play mode: the current brain live in its world; the panels follow what the body senses and what brain it has.
@@ -36,9 +37,16 @@ function PlaySession({ config, project }: { config: PlayConfig; project: { id: s
   // Only the app names the brain in the header; the prototype keeps its design.
   const brain = usePlayBrain(project.id);
   const app = useRuntimeMode() === "app";
+  const brains = usePlayBrains(project.id);
+  const playing = usePlaySession(project.id).data?.decisions?.playing;
+  const choice: BrainChoice | undefined = app
+    ? { brains: brains.data, failure: brains.error?.message, playing, onChoose: choose }
+    : undefined;
   return (
     <PlayShell
-      header={<PlayHeader project={project.name} returnTo={config.returnTo} brain={app ? brain : undefined} />}
+      header={
+        <PlayHeader project={project.name} returnTo={config.returnTo} brain={app ? brain : undefined} choice={choice} />
+      }
       left={
         <>
           <SensesPanel project={project.id} className={layout?.vision ? "flex-1" : "flex-none"} />

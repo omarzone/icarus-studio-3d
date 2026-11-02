@@ -8,6 +8,8 @@ import { useNotices } from "../../../app/runtime/notices.ts";
 import { useRuntimeMode } from "../../../app/runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../../../app/shell/window-frame.tsx";
 import { buttonClass } from "../../../ui/button-styles.ts";
+import { MenuButton } from "../../../ui/menu.tsx";
+import { type BrainChoice, entriesOf } from "../decisions/what-it-decides-tab.tsx";
 import { playExit } from "./play-exit.ts";
 
 type Props = {
@@ -16,6 +18,8 @@ type Props = {
   returnTo: ScreenId;
   // Which brain is playing, in words from the engine ("Trained brain: Run 3 at 200,000 steps"); app only.
   brain?: string;
+  // Lets the brain chip pick another trained brain; app only.
+  choice?: BrainChoice;
 };
 
 const PLAYING_PURPOSE =
@@ -23,7 +27,7 @@ const PLAYING_PURPOSE =
 const RECORD_PENDING = "Record: save a clip of this session. Not available yet.";
 
 // Replaces the workspace header while playing; Stop returns to the workspace Play was started from.
-export function PlayHeader({ project, returnTo, brain }: Props) {
+export function PlayHeader({ project, returnTo, brain, choice }: Props) {
   useTitleBarHeight(tokens.size.headerWorkspace);
   const app = useRuntimeMode() === "app";
   const notify = useNotices((state) => state.notify);
@@ -50,7 +54,7 @@ export function PlayHeader({ project, returnTo, brain }: Props) {
           <span aria-hidden className="size-2 rounded-full bg-ok" />
           Playing · nothing you do here changes the project
         </span>
-        {brain ? <BrainChip brain={brain} /> : null}
+        {brain ? <BrainChip brain={brain} choice={choice} /> : null}
         <GoTo
           to={exit.screen}
           cta="Stop"
@@ -85,17 +89,35 @@ export function PlayHeader({ project, returnTo, brain }: Props) {
 }
 
 // Which brain Play runs, so it is clear whether this is the untrained brain or the result of a run.
-function BrainChip({ brain }: { brain: string }) {
+function BrainChip({ brain, choice }: { brain: string; choice: BrainChoice | undefined }) {
   const trained = brain.startsWith("Trained");
+  const chip = "flex h-8 max-w-100 items-center gap-2 rounded-full bg-control px-3.5 text-ui";
+  const face = (
+    <>
+      <BrainCircuit size={14} strokeWidth={1.75} className="shrink-0 text-fg-secondary" aria-hidden />
+      <span className="truncate">{brain}</span>
+    </>
+  );
   return (
     <span className="flex items-center gap-2">
-      <span
-        title="Play runs the best trained brain of this revision, or random actions until a run beats them"
-        className="flex h-8 max-w-100 items-center gap-2 rounded-full bg-control px-3.5 text-ui"
-      >
-        <BrainCircuit size={14} strokeWidth={1.75} className="shrink-0 text-fg-secondary" aria-hidden />
-        <span className="truncate">{brain}</span>
-      </span>
+      {choice ? (
+        <MenuButton
+          label="Choose the brain that plays"
+          entries={entriesOf(choice)}
+          align="start"
+          className={`${chip} hover:bg-control-raised active:opacity-80`}
+        >
+          {face}
+          <ChevronDown size={12} strokeWidth={1.75} className="shrink-0 text-fg-tertiary" aria-hidden />
+        </MenuButton>
+      ) : (
+        <span
+          title="Play runs the best trained brain of this revision, or random actions until a run beats them"
+          className={chip}
+        >
+          {face}
+        </span>
+      )}
       {trained ? null : (
         <GoTo
           to="MOD-START-TRAINING"
