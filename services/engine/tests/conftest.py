@@ -16,6 +16,12 @@ def offline_copilot(request, monkeypatch, tmp_path_factory):
         monkeypatch.delenv(variable, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def private_runs(monkeypatch, tmp_path_factory):
+    """Runs default to the user's folder, and an engine started without a runs folder moves old runs into it."""
+    monkeypatch.setenv("ICARUS_RUNS_DIR", str(tmp_path_factory.mktemp("runs")))
+
+
 def pytest_configure(config):
     prepare_rendering()
 

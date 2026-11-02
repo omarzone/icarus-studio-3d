@@ -1,9 +1,11 @@
 import asyncio
+from dataclasses import dataclass
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from icarus.contracts.play import (
+    PlayBrainOption,
     PlayCommand,
     PlayCommandEnvelope,
     PlayErrorMessage,
@@ -11,6 +13,7 @@ from icarus.contracts.play import (
     PlayFrameMessage,
     PlayMessageEnvelope,
     PlayReady,
+    PlaySessionInfo,
 )
 from icarus.contracts.project import Project
 from icarus.copilot.language import Language
@@ -19,6 +22,7 @@ from icarus.projects.store import ProjectStore, UnknownProject
 from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
 from icarus.sim.policy import UNTRAINED_BRAIN, CheckpointPolicy, Policy, RandomPolicy, untrained_after
+from icarus.training.play_brains import BrainUnavailable, brain_options, chosen_checkpoint
 from icarus.training.run_store import RunStore
 
 router = APIRouter()
@@ -40,25 +44,68 @@ def _error(text: str) -> PlayErrorMessage:
     return PlayErrorMessage(type="error", message=text)
 
 
-def _brain(runs: RunStore, project: Project, revision: int) -> Policy:
+@dataclass(frozen=True)
+class _Choice:
+    run_id: str
+    step: int
+
+
+@dataclass(frozen=True)
+class _Brain:
+    policy: Policy
+    run_id: str | None = None
+    step: int | None = None
+
+
+def _brain(runs: RunStore, project: Project, revision: int) -> _Brain:
     """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions."""
     trained = runs.trained_checkpoint(project.id, revision, project)
     if trained is not None:
         status, path = trained
         label = f"Trained brain: {status.name} at {status.best_step:,} steps"
         try:
-            return CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+            policy = CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+            return _Brain(policy, status.run_id, status.best_step)
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
     ended = runs.latest_ended(project.id, revision, project)
     label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
-    return RandomPolicy(compile_project(project).model.nu, project.brain.seed, label)
+    return _Brain(RandomPolicy(compile_project(project).model.nu, project.brain.seed, label))
 
 
-def _open_session(store: ProjectStore, runs: RunStore, project_id: str, language: Language) -> PlaySession:
+def _chosen_brain(runs: RunStore, project: Project, choice: _Choice) -> _Brain:
+    path, label = chosen_checkpoint(runs, project, choice.run_id, choice.step)
+    try:
+        policy = CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+    except Exception as error:  # noqa: BLE001 - a checkpoint that will not load is reported, not played
+        raise BrainUnavailable(f"That brain could not be loaded: {error}") from error
+    return _Brain(policy, choice.run_id, choice.step)
+
+
+def _open_session(
+    store: ProjectStore, runs: RunStore, project_id: str, language: Language, choice: _Choice | None
+) -> tuple[PlaySession, PlaySessionInfo]:
     state = store.state(project_id)
-    brain = _brain(runs, state.project, state.revision.number)
-    return PlaySession(state.project, state.revision.number, brain, state.project.brain.seed, language)
+    project, revision = state.project, state.revision.number
+    brain = _brain(runs, project, revision) if choice is None else _chosen_brain(runs, project, choice)
+    session = PlaySession(project, revision, brain.policy, project.brain.seed, language)
+    return session, session.info().model_copy(update={"run_id": brain.run_id, "step": brain.step})
+
+
+def _choice(websocket: WebSocket) -> _Choice | None:
+    """The brain the user picked for this session (`?run=<id>&step=<n>`); without one, Play picks the default."""
+    run_id = websocket.query_params.get("run")
+    step = websocket.query_params.get("step")
+    if run_id is None or step is None or not step.isdigit():
+        return None
+    return _Choice(run_id, int(step))
+
+
+@router.get("/projects/{project_id}/play/brains")
+def play_brains(request: Request, project_id: str) -> list[PlayBrainOption]:
+    """Every trained brain of the project Play could use, newest first, with whether it fits the body now."""
+    state = request.app.state.store.state(project_id)
+    return brain_options(request.app.state.runs, state.project, state.revision.number)
 
 
 async def _receive(websocket: WebSocket, inbox: asyncio.Queue[Inbound]) -> None:
@@ -107,16 +154,18 @@ async def play(websocket: WebSocket, project_id: str) -> None:
     try:
         state = websocket.app.state
         language = await asyncio.to_thread(state.copilot.language, project_id)
-        session = await asyncio.to_thread(_open_session, state.store, state.runs, project_id, language)
+        session, info = await asyncio.to_thread(
+            _open_session, state.store, state.runs, project_id, language, _choice(websocket)
+        )
     except UnknownProject:
         await _send(websocket, _error(f"There is no project {project_id!r}"))
         await websocket.close(code=UNKNOWN_PROJECT)
         return
-    except CompileError as error:
+    except (CompileError, BrainUnavailable) as error:
         await _send(websocket, _error(str(error)))
-        await websocket.close(code=UNPLAYABLE)
+        await websocket.close(code=UNPLAYABLE, reason=str(error)[:120])
         return
-    await _send(websocket, PlayReady(type="ready", session=session.info()))
+    await _send(websocket, PlayReady(type="ready", session=info))
     inbox: asyncio.Queue[Inbound] = asyncio.Queue()
     receiver = asyncio.create_task(_receive(websocket, inbox))
     try:
