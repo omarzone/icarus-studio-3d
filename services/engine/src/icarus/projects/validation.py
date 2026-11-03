@@ -7,6 +7,7 @@ from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
 from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, term_fits
 from icarus.library.skin_objects import SKIN_ID
+from icarus.projects.agents import agent_issues, agent_project
 from icarus.projects.document import all_objects, containers
 
 WORLD_ONLY = frozenset({"sky", "ground"})
@@ -191,4 +192,19 @@ def validate_project(project: Project) -> list[ValidationIssue]:
         issues += _hierarchy_issues(objects)
     for obj in all_objects(project):
         issues += _component_issues(obj, ids)
-    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)
+    issues += _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)
+    return issues + _agents_issues(project)
+
+
+def _agents_issues(project: Project) -> list[ValidationIssue]:
+    """Each agent's references, then its own task and brain checked as the one-agent project it trains."""
+    issues = agent_issues(project)
+    if issues:
+        return issues
+    for agent in project.agents:
+        if agent.task is None and agent.brain is None:
+            continue
+        alone = agent_project(project, agent.id)
+        for issue in _reward_issues(alone) + _brain_issues(alone):
+            issues.append(issue.model_copy(update={"path": f"agents.{agent.id}.{issue.path}"}))
+    return issues

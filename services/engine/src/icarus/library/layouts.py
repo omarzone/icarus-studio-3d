@@ -170,6 +170,11 @@ class Layout:
             "start": self.world(self.site.start),
             "goal": self.world(self.site.goal) if self.site.goal else None,
             "path_m": round(self.path_m, 1),
+            **(
+                {"lanes": [{"start": self.world(a), "goal": self.world(b)} for a, b in self.site.lanes]}
+                if self.site.lanes
+                else {}
+            ),
             **self.site.notes,
         }
 

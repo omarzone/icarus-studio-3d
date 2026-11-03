@@ -10,6 +10,7 @@ from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
 from icarus.design.reachable import reachable
 from icarus.design.vehicle import BRAKE_SUFFIX
+from icarus.projects.agents import agent_project
 from icarus.projects.document import all_objects
 from icarus.projects.validation import validate_project
 
@@ -100,6 +101,21 @@ def _sensors(compiled: CompiledModel, _: dict[str, str]) -> Outcome:
     return "pass", f"All {model.nsensor} sensors read finite values"
 
 
+def _reachable(project: Project, compiled: CompiledModel) -> Outcome:
+    """Start and goal clear; with several agents each one compiled alone, as it trains, in its own lane."""
+    if not project.agents:
+        return reachable(project, compiled)
+    for agent in project.agents:
+        alone = agent_project(project, agent.id)
+        try:
+            status, detail = reachable(alone, compile_project(alone))
+        except CompileError as error:
+            return "fail", f"{agent.name} does not build on its own: {error.reason}"
+        if status == "fail":
+            return "fail", f"{agent.name}: {detail}"
+    return "pass", f"Each of the {len(project.agents)} agents builds on its own with a clear start and goal"
+
+
 PHYSICS: list[tuple[CheckId, Callable[[CompiledModel, dict[str, str]], Outcome]]] = [
     ("settles", _settles),
     ("actuators", _actuators),
@@ -135,7 +151,7 @@ def design_report(project: Project) -> tuple[DesignReport, CompiledModel | None]
         return finish(None)
     add("compiles", "pass", f"{compiled.model.nbody - 1} parts, {compiled.model.njnt} joints")
     try:
-        status, detail = reachable(project, compiled)
+        status, detail = _reachable(project, compiled)
     except (mujoco.FatalError, ValueError) as error:
         status, detail = "fail", f"The physics engine stopped: {str(error).strip().splitlines()[0]}"
     add("reachable", status, detail)
