@@ -24,6 +24,7 @@ from icarus.api import (
     project_runs,
     projects,
     runs,
+    skins,
     storage,
     tasks,
 )
@@ -55,6 +56,7 @@ from icarus.event_log import EventLog
 from icarus.events import EventBus
 from icarus.library.templates import UnknownTemplate
 from icarus.projects.operations import OperationError
+from icarus.projects.skins import SkinRejected, SkinStore, UnknownSkin
 from icarus.projects.store import (
     NothingToRedo,
     NothingToUndo,
@@ -170,7 +172,9 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(404, ApiError(code="not_found", message=f"There are no ideas {exc.args[0]!r}"))
         case UnknownAttachment():
             return _error(404, ApiError(code="not_found", message="There is no such attachment"))
-        case AttachmentRejected():
+        case UnknownSkin():
+            return _error(404, ApiError(code="not_found", message="There is no such model"))
+        case AttachmentRejected() | SkinRejected():
             return _error(422, ApiError(code="invalid", message=str(exc)))
         case UnknownBuild():
             return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
@@ -270,6 +274,7 @@ def create_app(
     app.state.model_settings = ModelSettingsStore(data_folder)
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.attachments = AttachmentStore(projects_folder)
+    app.state.skins = SkinStore(projects_folder)
     views = ViewRenderer()
     conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
@@ -336,6 +341,7 @@ def create_app(
     app.include_router(runs.router)
     app.include_router(copilot.router)
     app.include_router(attachments.router)
+    app.include_router(skins.router)
     app.include_router(coach.router)
     app.include_router(ideas.router)
     app.include_router(model_settings.router)
@@ -368,6 +374,8 @@ def create_app(
         UnknownBuild,
         UnknownAttachment,
         AttachmentRejected,
+        SkinRejected,
+        UnknownSkin,
         WarmStartRefused,
         NothingToDiagnose,
         AutopilotBusy,
