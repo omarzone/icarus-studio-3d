@@ -9,6 +9,7 @@ from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.context import property_schema
 from icarus.copilot.step_words import step_said
 from icarus.library.components import COMPONENTS
+from icarus.library.layouts import RECIPES, recipe_parameters
 from icarus.library.pieces import PIECES
 from icarus.library.rewards import REWARD_TERMS, term_families
 from icarus.library.templates import TEMPLATES, template_operations
@@ -65,6 +66,9 @@ def _entries() -> dict[str, dict[str, Any]]:
             "default_weight": info.default_weight,
             "description": info.description,
         }
+    for recipe_id, recipe in RECIPES.items():
+        entries[recipe_id] = {"type": "layout", "label": recipe.label, "description": recipe.description}
+        entries[recipe_id]["parameters"] = recipe_parameters(recipe_id)
     for template_id, template in TEMPLATES.items():
         entries[template_id] = {"type": "template", "label": template.label, "family": template.family}
         entries[template_id]["description"] = template.description
@@ -100,7 +104,7 @@ def library(scope: TurnScope, args: LibraryArgs) -> Observation:
     found = [
         {"id": entry_id, "type": entry["type"], "label": entry["label"]}
         for entry_id, entry in entries.items()
-        if any(word in f"{entry_id} {entry['label']}".lower() for word in words)
+        if any(word in f"{entry_id} {entry['label']} {entry['type']}".lower() for word in words)
     ][:MATCHES]
     summary = step_said("library_search", scope.language, query=(args.query or "")[:40], count=len(found))
     return Observation(compact(found) if found else "Nothing in the library matches.", summary=summary)
@@ -111,8 +115,9 @@ LIBRARY = Tool(
     description=(
         "Read the library, the only source of what can be built: a component kind with its property schemas and "
         "ranges, a ready-made piece with the valid values of its components, a reward term with its weight range, "
-        "or a template with the operations that add its bodies and task to this project (try them as they are or "
-        "adapted). Give an exact id in kind, or words in query to find up to 8 entries."
+        "a template with the operations that add its bodies and task to this project (try them as they are or "
+        "adapted), or a layout recipe with its parameters for the layout tool. Give an exact id in kind, or words "
+        "in query to find up to 8 entries; the query layout lists the recipes."
     ),
     args=LibraryArgs,
     step="library",

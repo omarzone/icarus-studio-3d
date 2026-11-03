@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from icarus.contracts.operations import (
     AddBody,
@@ -23,6 +23,8 @@ from icarus.contracts.properties import (
 from icarus.contracts.scene import GeomStyle
 from icarus.contracts.specs import BodySpec, RewardTermSpec
 from icarus.design.surfaces import SURFACE_FRICTION
+from icarus.library.layout_params import LayoutRecipe
+from icarus.library.layouts import LayoutParams, expand_layout
 from icarus.library.templates import Part, Raw, solid
 
 Shape = Literal["box", "sphere", "capsule", "cylinder"]
@@ -35,6 +37,7 @@ _COLOR = r"^#[0-9a-fA-F]{6}$"
 # Where the empty world keeps its ground, sun and spawn point.
 GROUND, SUN, SPAWN = "ground", "sun", "spawn"
 AREA_HEIGHT = 1.0
+_LAYOUT: TypeAdapter[LayoutParams] = TypeAdapter(LayoutParams)
 
 
 class _Plan(BaseModel):
@@ -131,6 +134,13 @@ class PlanGoal(_Plan):
     radius: float = Field(ge=0.1, le=20)
 
 
+class PlanLayout(_Plan):
+    """A layout recipe that lays out the whole place at its defaults around the agent's start."""
+
+    recipe: LayoutRecipe
+    seed: int = Field(ge=0, le=99_999)
+
+
 class PlanWorld(_Plan):
     # The visual concept in one sentence, and the colors every object takes from.
     look: str = Field(min_length=1, max_length=300)
@@ -144,6 +154,7 @@ class PlanWorld(_Plan):
     areas: list[PlanArea] = Field(max_length=6)
     lamps: list[PlanLamp] = Field(max_length=4)
     goal: PlanGoal | None
+    layout: PlanLayout | None = None
 
 
 class PlanReward(_Plan):
@@ -208,6 +219,9 @@ def world_operations(world: PlanWorld, start: tuple[float, float]) -> list[EditO
         _set(SUN, "light", "color", ColorValue(type="color", value=world.sun_color)),
         _set(SPAWN, "transform", "position", _vector((start[0], start[1], 0.0))),
     ]
+    if world.layout:
+        recipe = {"recipe": world.layout.recipe, "seed": world.layout.seed, "spawn": False, "goal": world.goal is None}
+        operations += expand_layout(_LAYOUT.validate_python(recipe), None, start).operations
     operations += [_create("world", _prop(prop)) for prop in world.props]
     for area in world.areas:
         zone: dict[str, Raw] = {"size": (area.size[0], area.size[1], AREA_HEIGHT)}

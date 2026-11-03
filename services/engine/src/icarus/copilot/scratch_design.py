@@ -30,7 +30,11 @@ so they rest on the ground. Give the ground a fitting surface, color and frictio
 point lights above the scene. Keep the space free where the body starts and along the path it must take, keep props
 at least 1 m from the body's start, and keep the whole scene within about 30 m. Give parts and props a style that
 fits them (car_body, wheel, shell, joint; wall, crate, curb, post, cone, lamp_post, tree, ball, marking): the style
-only changes the drawing inside the shape, and plain draws the bare shape.
+only changes the drawing inside the shape, and plain draws the bare shape. When the request is clearly one of
+these places, name it in "layout" with a seed and code lays the whole place out around the body's start, with its
+goal when you give none: parking_lot, room, maze (or a corridor), city_block, warehouse, forest (or a park),
+obstacle_course, terrain_steps. Then add only the few props the request asks for beyond it; otherwise leave
+"layout" null.
 
 Body: one root part (parent null) is the agent; the first body is the one that learns. Every other part names its
 parent and has a position relative to the parent's center; give it a joint to move (hinge or slide, anchor relative

@@ -125,20 +125,21 @@ def reward_fix(project: Project) -> dict | None:
     return {"remove": remove, "add": add, "keep": keep, "how": how}
 
 
-def try_change(scope: TurnScope, args: TryArgs) -> Observation:
+def tried(scope: TurnScope, operations: list[EditOperation]) -> tuple[dict, str]:
+    """Runs a try of the operations and stores it on the turn: the result the model reads and the step line."""
     try_id = scope.next_try_id()
-    project, count, language = scope.state.project, len(args.operations), scope.language
+    project, count, language = scope.state.project, len(operations), scope.language
     changes = step_said("changes_one" if count == 1 else "changes_many", language, count=count)
     try:
-        candidate = apply_operations(project, args.operations)
+        candidate = apply_operations(project, operations)
     except OperationError as error:
-        scope.tries[try_id] = TryResult(try_id, args.operations, scope.state.revision.number, [str(error)], None)
+        scope.tries[try_id] = TryResult(try_id, operations, scope.state.revision.number, [str(error)], None)
         result = {
             "try_id": try_id,
             "passed": False,
             "checks": [{"check": "operations", "ok": False, "detail": str(error)}],
         }
-        return Observation(compact(result), ok=False, summary=step_said("tried_invalid", language, changes=changes))
+        return result, step_said("tried_invalid", language, changes=changes)
     report, compiled = design_report(candidate)
     checks = [
         {"check": check.label, "ok": check.status != "fail", "detail": check.detail if check.status == "fail" else None}
@@ -147,7 +148,7 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     names = [step_said(f"check_{check.id}", language) for check in report.checks]
     problems = [f"{check.label}: {check.detail}" for check in report.checks if check.status == "fail"]
     if compiled is not None and not problems:
-        more, problems = _checks(scope, candidate, args.operations)
+        more, problems = _checks(scope, candidate, operations)
         checks += more
         names += [_check_name(check["check"], language) for check in more]
     if compiled is None and not problems:
@@ -164,8 +165,8 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
         result_extra = {"warnings": warnings, "warnings_already_there": [text for text in found if text in before]}
         result_extra["rays_see"] = seen
     base = scope.state.revision.number
-    scope.tries[try_id] = TryResult(try_id, args.operations, base, problems, compiled, tuple(warnings))
-    listed = [change.model_dump(exclude_none=True) for change in proposal_changes(project, args.operations)]
+    scope.tries[try_id] = TryResult(try_id, operations, base, problems, compiled, tuple(warnings))
+    listed = [change.model_dump(exclude_none=True) for change in proposal_changes(project, operations)]
     result = {"try_id": try_id, "passed": not problems, "changes": listed, "checks": checks, **result_extra}
     if problems and (fix := reward_fix(candidate)):
         result["fix_rewards"] = fix
@@ -177,15 +178,25 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     )
     if warnings:
         summary += step_said("warnings_one" if len(warnings) == 1 else "warnings_many", language, count=len(warnings))
-    observation = Observation(compact(result), ok=not problems, summary=summary)
-    if problems or args.look is None:
+    return result, summary
+
+
+def observed(scope: TurnScope, result: dict, summary: str, spec: LookSpec | None) -> Observation:
+    """A try's result as the model reads it, with the candidate rendered when it passed and a camera was asked."""
+    observation = Observation(compact(result), ok=bool(result["passed"]), summary=summary)
+    if not result["passed"] or spec is None:
         return observation
     seen = look(
-        scope, LookArgs(target=args.look.target, view=args.look.view, distance_m=args.look.distance_m, on_try=try_id)
+        scope, LookArgs(target=spec.target, view=spec.view, distance_m=spec.distance_m, on_try=result["try_id"])
     )
     return Observation(
         f"{observation.text}\n{seen.text}", image=seen.image, image_label=seen.image_label, summary=summary
     )
+
+
+def try_change(scope: TurnScope, args: TryArgs) -> Observation:
+    result, summary = tried(scope, args.operations)
+    return observed(scope, result, summary, args.look)
 
 
 TRY = Tool(

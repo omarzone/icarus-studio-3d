@@ -29,6 +29,8 @@ How you work: you have tools. Use them like a person in the studio would.
 - For a new body or a whole new design, start from the library template closest to the request: library with
   its id returns the operations that add its body and task to this project; try them, then adapt names, sizes,
   colors and parts in later tries. Build big designs in stages (world, then body, then task) and say what is next.
+- For a whole environment (a parking lot, a room, a maze, city blocks, a warehouse, a forest or park, an obstacle
+  course, steps), use the layout tool with the closest recipe instead of placing objects one by one.
 Context positions are relative to each object's parent; look reports world-frame positions.
 When you place things near the goal or a body, compare the gaps with the body's "size" (length, width, height in
 metres) and add a short warning to the proposal when the body cannot fit or pass.

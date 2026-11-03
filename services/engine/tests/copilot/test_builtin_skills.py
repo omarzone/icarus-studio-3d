@@ -7,6 +7,7 @@ from icarus.copilot.agent.tools.inspect import RunSection
 from icarus.copilot.agent.tools.look import View
 from icarus.copilot.skill_tool import builtin_skills, known_tool_names
 from icarus.library.components import COMPONENTS, SKY_PRESETS, SURFACES
+from icarus.library.layouts import RECIPES
 from icarus.library.pieces import PIECES
 from icarus.library.rewards import REWARD_TERMS
 from icarus.library.templates import TEMPLATES
@@ -27,6 +28,7 @@ EXPECTED = {
     "push-an-object",
     "jump-and-climb",
     "move-a-joint",
+    "build-an-environment",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.
@@ -38,6 +40,7 @@ _WORDS = (
     | set(SURFACES)
     | set(TEMPLATES)
     | set(PIECES)
+    | set(RECIPES)
 )
 # A step budget next to a percentage reads as a promised result: "300k steps parked 40%".
 _PROMISED_RESULT = re.compile(r"\d+(?:k|M)\b[^.]*?\d+%")

@@ -162,7 +162,12 @@ def stage_problem(project: Project, stage: Stage, plan: ScratchPlan) -> str | No
     problem = _report_problem(project)
     if problem:
         return problem
-    if stage.id == "world" and plan.task.family == "navigation" and plan.world.goal is None:
+    if (
+        stage.id == "world"
+        and plan.task.family == "navigation"
+        and plan.world.goal is None
+        and plan.world.layout is None
+    ):
         return "A navigation task needs a goal in the world"
     if stage.id.startswith("body:"):
         return placement_problem(project, stage.id.removeprefix("body:"))
