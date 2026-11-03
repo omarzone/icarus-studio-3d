@@ -144,6 +144,24 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     },
     "colliders_only": {"en": " (physical shapes only)", "es": " (solo formas físicas)"},
     "view_free": {"en": "from a free camera", "es": "desde una cámara libre"},
+    "behavior_tests_listed": {
+        "en": "Read the {count} behavior tests",
+        "es": "Leí las {count} pruebas de comportamiento",
+    },
+    "behavior_test_added": {"en": "Added the behavior test {name}", "es": "Agregué la prueba de comportamiento {name}"},
+    "behavior_test_passed": {
+        "en": "{name} passed at checkpoint {step}",
+        "es": "{name} pasó en el punto de control {step}",
+    },
+    "behavior_test_not_passed": {
+        "en": "{name} did not pass at checkpoint {step}",
+        "es": "{name} no pasó en el punto de control {step}",
+    },
+    "behavior_test_failed": {
+        "en": "Could not run the behavior test",
+        "es": "No pude correr la prueba de comportamiento",
+    },
+    "verb_behavior_test": {"en": "run behavior tests", "es": "correr pruebas de comportamiento"},
     "verb_find_objects": {"en": "search the scene", "es": "buscar en la escena"},
     "verb_pattern": {"en": "make copies", "es": "hacer copias"},
     "verb_edit_group": {"en": "edit the group", "es": "editar el grupo"},

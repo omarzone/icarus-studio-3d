@@ -45,6 +45,8 @@ class Evaluation:
     episodes: list[EpisodeRecord] = field(default_factory=list)
     states: list[EpisodeStates] = field(default_factory=list, compare=False)
     world: LiveWorld | None = field(default=None, compare=False)
+    # Ground position of the body's root after reset and after every control step, per episode.
+    paths: list[list[tuple[float, float]]] = field(default_factory=list, compare=False)
 
     def metric(self, step: int, elapsed: float) -> MetricPoint:
         return MetricPoint(
@@ -70,6 +72,7 @@ class _Episode:
     outcome: str
     record: EpisodeRecord
     states: EpisodeStates | None
+    path: list[tuple[float, float]]
 
 
 def _lower_first(text: str) -> str:
@@ -93,6 +96,7 @@ class _EpisodeRun:
         self.gait = GaitMeter(world, self.start) if measures_gait(world) else None
         self.frames: list[RolloutFrame] = []
         self.times, self.qpos = [float(world.data.time)], [world.data.qpos.copy()]
+        self.path = [self.start.position[:2]]
         self.first_touch: str | None = None
         self.touched: tuple[str, float, int] | None = None
         self.total, self.length, self.info, self.done, self.terminated = 0.0, 0, {}, False, False
@@ -106,6 +110,7 @@ class _EpisodeRun:
         time = float(world.data.time)
         if self.gait is not None:
             self.gait.add(env.state)
+        self.path.append(env.state.position[:2])
         if self.keep:
             self.times.append(time)
             self.qpos.append(world.data.qpos.copy())
@@ -165,6 +170,7 @@ class _EpisodeRun:
             outcome,
             summary,
             states,
+            [(round(float(x), 3), round(float(y), 3)) for x, y in self.path],
         )
 
 
@@ -181,17 +187,22 @@ def _actions(policy: Policy, observations: list[np.ndarray]) -> list[np.ndarray]
     return [policy.act(observation) for observation in observations]
 
 
-def evaluate(project: Project, policy: Policy, episodes: int, step: int) -> Evaluation:
-    """Run a brain without randomization on seeds EVALUATION_SEED + k, recording the first episode as a rollout,
-    every episode as a record and the states of the first PICTURED_EPISODES.
+def evaluate(
+    project: Project,
+    policy: Policy,
+    episodes: int,
+    step: int,
+    seeds: list[int] | None = None,
+    pictured: int = PICTURED_EPISODES,
+) -> Evaluation:
+    """Run a brain without randomization on seeds EVALUATION_SEED + k (or the seeds given), recording the first
+    episode as a rollout, every episode as a record and the states of the first `pictured`.
 
     The episodes advance together: one brain call answers all of them, and MuJoCo steps them on several threads.
     """
-    runs = [
-        _EpisodeRun(_checkpoint_env(project, step), EVALUATION_SEED + k, k, k == 0, k < PICTURED_EPISODES)
-        for k in range(episodes)
-    ]
-    with ThreadPoolExecutor(max_workers=min(EVALUATION_THREADS, episodes)) as pool:
+    chosen = seeds if seeds is not None else [EVALUATION_SEED + k for k in range(episodes)]
+    runs = [_EpisodeRun(_checkpoint_env(project, step), seed, k, k == 0, k < pictured) for k, seed in enumerate(chosen)]
+    with ThreadPoolExecutor(max_workers=min(EVALUATION_THREADS, len(runs))) as pool:
         active = runs
         while active:
             actions = _actions(policy, [run.observation for run in active])
@@ -211,7 +222,7 @@ def evaluate(project: Project, policy: Policy, episodes: int, step: int) -> Eval
         reward_terms=terms,
         rollout=Rollout(
             step=step,
-            seed=EVALUATION_SEED,
+            seed=chosen[0],
             geoms=env.moving_geoms,
             frames=first.frames,
             episode_return=first.episode_return,
@@ -220,4 +231,5 @@ def evaluate(project: Project, policy: Policy, episodes: int, step: int) -> Eval
         episodes=[result.record for result in results],
         states=[result.states for result in results if result.states is not None],
         world=env.world,
+        paths=[result.path for result in results],
     )

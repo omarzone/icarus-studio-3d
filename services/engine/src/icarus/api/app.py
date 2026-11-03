@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from icarus import __version__
 from icarus.api import (
     attachments,
+    behavior,
     brain,
     coach,
     copilot,
@@ -70,6 +71,9 @@ from icarus.sim.views import ViewRenderer
 from icarus.storage.data_folder import projects_dir, runs_dir
 from icarus.storage.data_folder_move import DataFolderMover, MoveRefused
 from icarus.tasks import TaskContext, TaskRegistry
+from icarus.training.behavior_match import NotComparable
+from icarus.training.behavior_tests import BehaviorTestStore, TestRefused, UnknownTest
+from icarus.training.recording_export import RecordingMissing
 from icarus.training.run_store import TERMINAL_STATES, RunStore, UnknownRun
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
 from icarus.training.supervisor import NotTrainable, RunInProgress, WarmStartRefused
@@ -182,6 +186,12 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(
                 409 if exc.conflict else 422, ApiError(code="conflict" if exc.conflict else "invalid", message=str(exc))
             )
+        case UnknownTest():
+            return _error(404, ApiError(code="not_found", message=f"There is no behavior test {exc.args[0]!r}"))
+        case RecordingMissing():
+            return _error(404, ApiError(code="not_found", message=str(exc)))
+        case TestRefused() | NotComparable():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
         case SettingsRejected():
             details = {exc.field: exc.message}
             return _error(422, ApiError(code="invalid", message=exc.message, details=details))
@@ -276,6 +286,8 @@ def create_app(
     app.state.attachments = AttachmentStore(projects_folder)
     app.state.skins = SkinStore(projects_folder)
     views = ViewRenderer()
+    app.state.views = views
+    app.state.behavior_tests = BehaviorTestStore(runs_folder)
     conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
         app.state.store,
@@ -348,6 +360,7 @@ def create_app(
     app.include_router(events.router)
     app.include_router(tasks.router)
     app.include_router(brain.router)
+    app.include_router(behavior.router)
     app.include_router(notes.router)
     app.include_router(project_runs.router)
     app.include_router(storage.router)
@@ -381,6 +394,10 @@ def create_app(
         AutopilotBusy,
         NoAutopilot,
         MoveRefused,
+        UnknownTest,
+        TestRefused,
+        NotComparable,
+        RecordingMissing,
     ):
         app.add_exception_handler(error, _domain_error)
     return app
