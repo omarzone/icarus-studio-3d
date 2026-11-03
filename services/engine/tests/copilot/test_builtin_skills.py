@@ -27,6 +27,7 @@ EXPECTED = {
     "push-an-object",
     "jump-and-climb",
     "move-a-joint",
+    "build-a-scene",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.

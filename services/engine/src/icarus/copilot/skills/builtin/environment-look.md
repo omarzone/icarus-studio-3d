@@ -2,7 +2,7 @@
 name: environment-look
 title: Make the world look like the request
 when: The person asks for a theme, colors, a sky, a mood, decoration or a scene that looks like a place.
-tools: [library, inspect_object, try, look, propose]
+tools: [library, inspect_object, find_objects, pattern, edit_matching, try, look, propose]
 version: 1
 ---
 The look never changes physics except where a surface sets friction; the body learns the same task in a pretty
@@ -23,10 +23,13 @@ world. Make it readable first: the camera must show the body, the goal and the o
    frame the space, ramps and platforms change height, floor markings (static boxes 0.01 to 0.02 m tall) show
    lanes and spots, decoration fills the edges, movable crates and balls (`box`, `ball`) can be pushed. Rest each
    prop on the ground, keep 1 m clear around the start and the path, and keep the scene within about 30 m.
+   Repeat a prop with `pattern` (rows, grids, rings, seeded scatter) and keep_clear the spawn and the path;
+   recolor many at once with `edit_matching` after checking the filter with `find_objects`.
 5. **Vary the look per copy.** `randomize.color` shifts a world object's color between copies; it helps a brain
    that will see different scenes and costs nothing in physics.
 6. **Check.** `try`, then `look` with view `three_quarter` at the whole scene and with view `onboard` from the
-   body. The goal and obstacles must stand out from the ground; nothing floats or hides the path. Then `propose`.
+   body (both in one contact sheet with shots). The goal and obstacles must stand out from the ground; nothing
+   floats or hides the path. Mode colliders shows whether decoration hides a real obstacle. Then `propose`.
 
 Done when the proposal has a stated palette, a fitting sky and ground, props that each have a role, and a
 three-quarter view where the body, the goal and the obstacles are easy to tell apart.

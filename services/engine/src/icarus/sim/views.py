@@ -20,6 +20,7 @@ ZONE_COLORS = {
     "zone": (1.0, 0.7, 0.1, 0.45),
 }
 RENDERERS_KEPT = 2
+SHEET_GAP = 6
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -48,6 +49,8 @@ class CameraSpec:
     elevation: float
     width: int = 640
     height: int = 400
+    # Vertical field of view in degrees; None keeps the model's.
+    fov: float | None = None
 
 
 def _chunk(tag: bytes, data: bytes) -> bytes:
@@ -81,6 +84,45 @@ def _zone_geoms(scene: mujoco.MjvScene, zones: list[SceneZone]) -> None:
         scene.ngeom += 1
 
 
+# Colliders mode paints what the physics touches by role and hides what only decorates.
+COLLIDER_COLORS = {
+    "floor": (0.55, 0.57, 0.6, 1.0),
+    "static": (0.36, 0.56, 0.9, 1.0),
+    "moving": (0.96, 0.56, 0.2, 1.0),
+}
+
+
+# A geom group the default scene option does not draw.
+HIDDEN_GROUP = 3
+
+
+def _paint_colliders(scene: mujoco.MjvScene, model: mujoco.MjModel) -> None:
+    for index in range(scene.ngeom):
+        geom = scene.geoms[index]
+        if geom.objtype != mujoco.mjtObj.mjOBJ_GEOM or geom.objid < 0:
+            continue
+        number = geom.objid
+        if model.geom_type[number] == mujoco.mjtGeom.mjGEOM_PLANE:
+            role = "floor"
+        else:
+            role = "static" if model.body_weldid[model.geom_bodyid[number]] == 0 else "moving"
+        geom.rgba[:] = COLLIDER_COLORS[role]
+        geom.matid = -1
+
+
+def contact_sheet(cells: list[np.ndarray], columns: int, cell: tuple[int, int], gap: int = 0) -> np.ndarray:
+    """Pictures of one size in rows of `columns`, left to right then top to bottom, with a dark gap between them."""
+    height, width = cell
+    rows = max(1, -(-len(cells) // columns))
+    shape = (rows * height + (rows - 1) * gap, columns * width + (columns - 1) * gap, 3)
+    sheet = np.full(shape, 24 if gap else 0, np.uint8)
+    for number, pixels in enumerate(cells):
+        row, column = divmod(number, columns)
+        top, left = row * (height + gap), column * (width + gap)
+        sheet[top : top + height, left : left + width] = pixels[:height, :width]
+    return sheet
+
+
 def _camera(camera: CameraSpec) -> mujoco.MjvCamera:
     free = mujoco.MjvCamera()
     free.type = mujoco.mjtCamera.mjCAMERA_FREE
@@ -92,24 +134,71 @@ def _camera(camera: CameraSpec) -> mujoco.MjvCamera:
 
 
 def render_pixels(
-    renderer: mujoco.Renderer, data: mujoco.MjData, camera: CameraSpec, zones: list[SceneZone]
+    renderer: mujoco.Renderer,
+    data: mujoco.MjData,
+    camera: CameraSpec,
+    zones: list[SceneZone],
+    colliders: bool = False,
 ) -> np.ndarray:
     """A state MuJoCo already computed, seen from a free camera, with zones drawn over it, as RGB pixels."""
-    renderer.update_scene(data, _camera(camera))
-    _zone_geoms(renderer.scene, zones)
+    model = renderer.model
+    fovy, groups = model.vis.global_.fovy, model.geom_group.copy()
+    if camera.fov is not None:
+        model.vis.global_.fovy = camera.fov
+    if colliders:
+        # Decoration touches nothing, so it leaves the scene for this one picture.
+        model.geom_group[(model.geom_contype == 0) & (model.geom_conaffinity == 0)] = HIDDEN_GROUP
+    try:
+        renderer.update_scene(data, _camera(camera))
+    finally:
+        model.vis.global_.fovy = fovy
+        model.geom_group[:] = groups
+    scene = renderer.scene
+    # The renderer is reused, so every render sets these flags again.
+    scene.flags[mujoco.mjtRndFlag.mjRND_SKYBOX] = not colliders
+    scene.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = not colliders
+    if colliders:
+        _paint_colliders(scene, model)
+    _zone_geoms(scene, zones)
     return renderer.render()
 
 
+def _blank(pixels: np.ndarray) -> BlankPicture:
+    return BlankPicture(f"every pixel is close to {pixels.reshape(-1, 3).mean(axis=0).round().tolist()}")
+
+
 def render_view(
-    renderer: mujoco.Renderer, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone]
+    renderer: mujoco.Renderer,
+    compiled: CompiledModel,
+    camera: CameraSpec,
+    zones: list[SceneZone],
+    colliders: bool = False,
 ) -> bytes:
     """The compiled initial state MuJoCo computes, seen from a free camera, with zones drawn over it, as PNG."""
     data = mujoco.MjData(compiled.model)
     mujoco.mj_forward(compiled.model, data)
-    pixels = render_pixels(renderer, data, camera, zones)
+    pixels = render_pixels(renderer, data, camera, zones, colliders)
     if is_blank(pixels):
-        raise BlankPicture(f"every pixel is close to {pixels.reshape(-1, 3).mean(axis=0).round().tolist()}")
+        raise _blank(pixels)
     return encode_png(pixels)
+
+
+def render_sheet(
+    renderer: mujoco.Renderer,
+    compiled: CompiledModel,
+    cameras: list[CameraSpec],
+    zones: list[SceneZone],
+    columns: int,
+    colliders: bool = False,
+) -> bytes:
+    """Several cameras on the same initial state tiled into one PNG; it fails only when every picture is blank."""
+    data = mujoco.MjData(compiled.model)
+    mujoco.mj_forward(compiled.model, data)
+    cells = [render_pixels(renderer, data, camera, zones, colliders).copy() for camera in cameras]
+    if all(is_blank(pixels) for pixels in cells):
+        raise _blank(cells[0])
+    height, width = cells[0].shape[:2]
+    return encode_png(contact_sheet(cells, columns, (height, width), gap=SHEET_GAP))
 
 
 def open_renderer(model: mujoco.MjModel, width: int, height: int) -> mujoco.Renderer:
@@ -153,15 +242,39 @@ class ViewRenderer:
             release_renderer(oldest)
         return renderer
 
-    def _render(self, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone]) -> bytes:
+    def _render(self, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone], colliders: bool) -> bytes:
         renderer = self._renderer(compiled.model, camera.width, camera.height)
-        return render_view(renderer, compiled, camera, zones)
+        return render_view(renderer, compiled, camera, zones, colliders)
 
     def render(
-        self, compiled: CompiledModel, camera: CameraSpec, zones: list[SceneZone], timeout: float | None = None
+        self,
+        compiled: CompiledModel,
+        camera: CameraSpec,
+        zones: list[SceneZone],
+        timeout: float | None = None,
+        colliders: bool = False,
     ) -> bytes:
         with self._lock:
-            future = self._thread.submit(self._render, compiled, camera, zones)
+            future = self._thread.submit(self._render, compiled, camera, zones, colliders)
+        return future.result(timeout)
+
+    def render_sheet(
+        self,
+        compiled: CompiledModel,
+        cameras: list[CameraSpec],
+        zones: list[SceneZone],
+        columns: int,
+        timeout: float | None = None,
+        colliders: bool = False,
+    ) -> bytes:
+        """Cameras of one size tiled into a contact sheet, rendered on the views thread."""
+
+        def task() -> bytes:
+            renderer = self._renderer(compiled.model, cameras[0].width, cameras[0].height)
+            return render_sheet(renderer, compiled, cameras, zones, columns, colliders)
+
+        with self._lock:
+            future = self._thread.submit(task)
         return future.result(timeout)
 
     def run[T](self, task: Callable[[], T], timeout: float | None = None) -> T:

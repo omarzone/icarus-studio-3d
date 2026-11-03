@@ -55,7 +55,7 @@ def test_a_template_brings_the_operations_that_add_its_body_and_task_to_this_pro
 
 
 class _BlankViews:
-    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+    def render(self, compiled, camera, zones, timeout=None, colliders=False) -> bytes:
         raise BlankPicture("every pixel is the same")
 
 
@@ -70,7 +70,7 @@ def test_a_blank_picture_is_a_failed_look_that_tells_the_model_not_to_describe_i
 
 
 class _NoGlViews:
-    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+    def render(self, compiled, camera, zones, timeout=None, colliders=False) -> bytes:
         raise RenderUnavailable("no OpenGL on this machine")
 
 
