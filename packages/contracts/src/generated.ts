@@ -63,8 +63,77 @@ export interface PpoSpec {
  * via the `definition` "TaskSpec".
  */
 export interface TaskSpec {
-  family: "none" | "navigation" | "locomotion";
+  family: "none" | "navigation" | "locomotion" | "imitation";
+  motion?: MotionReference | null;
   rewards: RewardTermSpec[];
+}
+/**
+ * The motion an imitation task tracks, frozen in the project so every run keeps the reference it learned.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionReference".
+ */
+export interface MotionReference {
+  clip: string;
+  focus?: [number, number] | null;
+  fps: number;
+  name: string;
+  /**
+   * @minItems 1
+   * @maxItems 10
+   */
+  tracks:
+    | [SegmentTrack]
+    | [SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack]
+    | [SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack, SegmentTrack]
+    | [
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack
+      ]
+    | [
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack,
+        SegmentTrack
+      ];
+  view: "side" | "front";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SegmentTrack".
+ */
+export interface SegmentTrack {
+  angles: (number | null)[];
+  part: string;
+  segment:
+    | "torso"
+    | "head"
+    | "left_upper_arm"
+    | "left_forearm"
+    | "right_upper_arm"
+    | "right_forearm"
+    | "left_thigh"
+    | "left_shin"
+    | "right_thigh"
+    | "right_shin";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -348,6 +417,42 @@ export interface AttachmentUpload {
   text?: string | null;
 }
 /**
+ * A mesh file to turn into a body: OBJ, STL, glTF or GLB, base64.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutoRigStart".
+ */
+export interface AutoRigStart {
+  data: string;
+  height?: number | null;
+  name: string;
+}
+/**
+ * An auto-rig as it runs: the steps with the one running now, and the body it made once done.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "AutoRigStatus".
+ */
+export interface AutoRigStatus {
+  body?: string | null;
+  file: string;
+  message?: string | null;
+  percent: number;
+  revision?: number | null;
+  shape?: string | null;
+  state: "running" | "done" | "failed" | "stopped";
+  steps: RigStep[];
+  task_id: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RigStep".
+ */
+export interface RigStep {
+  state: "done" | "running" | "todo";
+  text: string;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "AutopilotLogLine".
  */
@@ -383,6 +488,17 @@ export interface AutopilotStatus {
   run_ids: string[];
   started_at: string;
   state: "running" | "waiting_approval" | "done" | "stopped" | "failed";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BoneWeight".
+ */
+export interface BoneWeight {
+  coverage: number;
+  name: string;
+  part: string;
+  problem?: string | null;
+  vertices: number;
 }
 /**
  * What every neuron of a checkpoint's policy computes for the first observation of an evaluation episode.
@@ -859,6 +975,7 @@ export interface CopilotProposal {
       | SetTaskFamily
       | SetRewardTerm
       | RemoveRewardTerm
+      | SetMotionReference
       | SetBrain
       | AddAgent
       | RemoveAgent
@@ -878,6 +995,7 @@ export interface CopilotProposal {
       | SetTaskFamily
       | SetRewardTerm
       | RemoveRewardTerm
+      | SetMotionReference
       | SetBrain
       | AddAgent
       | RemoveAgent
@@ -989,7 +1107,7 @@ export interface RenameProject {
  */
 export interface SetTaskFamily {
   agent?: string | null;
-  family: "none" | "navigation" | "locomotion";
+  family: "none" | "navigation" | "locomotion" | "imitation";
   op: "set_task_family";
 }
 /**
@@ -1009,6 +1127,17 @@ export interface RemoveRewardTerm {
   agent?: string | null;
   op: "remove_reward_term";
   term: string;
+}
+/**
+ * Sets or clears (None) the motion an imitation task tracks.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SetMotionReference".
+ */
+export interface SetMotionReference {
+  agent?: string | null;
+  op: "set_motion_reference";
+  reference: MotionReference | null;
 }
 /**
  * Changes the brain and how it practices; fields left out keep their value.
@@ -1216,7 +1345,7 @@ export interface DesignCheck {
 export interface DesignIdea {
   body: string;
   estimate_minutes: number;
-  family: "none" | "navigation" | "locomotion";
+  family: "none" | "navigation" | "locomotion" | "imitation";
   id: string;
   learns: string;
   recommended: boolean;
@@ -2012,7 +2141,7 @@ export interface TaskStartedEvent {
 export interface TaskInfo {
   finished_at?: string | null;
   id: string;
-  kind: "training_run" | "autopilot" | "diagnosis" | "ideas" | "build" | "agent_turn";
+  kind: "training_run" | "autopilot" | "diagnosis" | "ideas" | "build" | "agent_turn" | "auto_rig" | "pose_tracking";
   parent_task_id?: string | null;
   progress?: number | null;
   project_id: string | null;
@@ -2232,6 +2361,30 @@ export interface IdeaSet {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "Keypoint".
+ */
+export interface Keypoint {
+  name:
+    | "head"
+    | "neck"
+    | "left_shoulder"
+    | "right_shoulder"
+    | "left_elbow"
+    | "right_elbow"
+    | "left_wrist"
+    | "right_wrist"
+    | "left_hip"
+    | "right_hip"
+    | "left_knee"
+    | "right_knee"
+    | "left_ankle"
+    | "right_ankle";
+  score?: number;
+  x: number;
+  y: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "LibraryCatalog".
  */
 export interface LibraryCatalog {
@@ -2253,7 +2406,7 @@ export interface VaultBodyInfo {
   body: BodySpec;
   color: string;
   description: string;
-  family: "none" | "navigation" | "locomotion";
+  family: "none" | "navigation" | "locomotion" | "imitation";
   id: string;
   label: string;
   rewards: RewardTermSpec[];
@@ -2279,8 +2432,8 @@ export interface PieceInfo {
 export interface RewardTermInfo {
   default_weight: number;
   description: string;
-  families?: ("none" | "navigation" | "locomotion")[];
-  family: "none" | "navigation" | "locomotion";
+  families?: ("none" | "navigation" | "locomotion" | "imitation")[];
+  family: "none" | "navigation" | "locomotion" | "imitation";
   label: string;
   term: string;
   version: number;
@@ -2293,7 +2446,7 @@ export interface RewardTermInfo {
  */
 export interface TemplateInfo {
   description: string;
-  family: "none" | "navigation" | "locomotion";
+  family: "none" | "navigation" | "locomotion" | "imitation";
   id: string;
   label: string;
 }
@@ -2341,6 +2494,185 @@ export interface ModelSettingsPatch {
   } | null;
 }
 /**
+ * Who to copy, onto which body and how the video sees them; fields left out keep their value.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionChoice".
+ */
+export interface MotionChoice {
+  person?: ("largest" | "left" | "right") | null;
+  target?: string | null;
+  view?: ("side" | "front") | null;
+}
+/**
+ * A reference video of a project, its choices and, once tracked, the copied person's pose in every frame.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionClip".
+ */
+export interface MotionClip {
+  created_at: string;
+  frames?: TrackedFrame[];
+  id: string;
+  people?: number;
+  person?: "largest" | "left" | "right";
+  target?: string | null;
+  video: MotionVideo;
+  view?: "side" | "front";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrackedFrame".
+ */
+export interface TrackedFrame {
+  keypoints: Keypoint[];
+  time: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionVideo".
+ */
+export interface MotionVideo {
+  duration: number;
+  fps: number;
+  frames: number;
+  height: number;
+  name: string;
+  start: number;
+  width: number;
+}
+/**
+ * The reference against what a trained brain did with it, measured on its latest evaluation episode.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionComparison".
+ */
+export interface MotionComparison {
+  clip: string;
+  fps: number;
+  match: number[];
+  overall: number;
+  parts: PartMatch[];
+  reference: (number | null)[][];
+  result: (number | null)[][];
+  run_id: string;
+  run_name: string;
+  segments: (
+    | "torso"
+    | "head"
+    | "left_upper_arm"
+    | "left_forearm"
+    | "right_upper_arm"
+    | "right_forearm"
+    | "left_thigh"
+    | "left_shin"
+    | "right_thigh"
+    | "right_shin"
+  )[];
+  step: number;
+  weakest: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PartMatch".
+ */
+export interface PartMatch {
+  match: number;
+  part: string;
+  segment:
+    | "torso"
+    | "head"
+    | "left_upper_arm"
+    | "left_forearm"
+    | "right_upper_arm"
+    | "right_forearm"
+    | "left_thigh"
+    | "left_shin"
+    | "right_thigh"
+    | "right_shin";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionExportFile".
+ */
+export interface MotionExportFile {
+  content: string;
+  frames: number;
+  media_type: string;
+  name: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionExportRequest".
+ */
+export interface MotionExportRequest {
+  format?: "json" | "bvh";
+  loop?: boolean;
+  root_motion?: boolean;
+  source?: "physics" | "reference";
+}
+/**
+ * Pose tracking of a clip as it runs: the frame being read and how it ended.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionTracking".
+ */
+export interface MotionTracking {
+  clip: string;
+  frame: number;
+  frames: number;
+  message?: string | null;
+  model: string | null;
+  state: "idle" | "running" | "done" | "failed" | "stopped";
+}
+/**
+ * Start training a body to imitate the tracked clip.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionTrain".
+ */
+export interface MotionTrain {
+  copies?: number | null;
+  focus?: "even" | "weakest";
+  total_steps?: number | null;
+  warm?: boolean;
+}
+/**
+ * A reference video the app sampled into still frames at an even rate; the video file itself stays on the
+ * person's computer.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionVideoUpload".
+ */
+export interface MotionVideoUpload {
+  duration: number;
+  fps: number;
+  /**
+   * @minItems 2
+   * @maxItems 240
+   */
+  frames: [string, string, ...string[]];
+  height: number;
+  name: string;
+  start?: number;
+  width: number;
+}
+/**
+ * Everything the motion workspace shows for a project: its clip, the tracking, the pose model and the latest
+ * comparison.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MotionWorkspace".
+ */
+export interface MotionWorkspace {
+  clip: MotionClip | null;
+  comparison: MotionComparison | null;
+  pose_model: string | null;
+  reference: MotionReference | null;
+  run_id?: string | null;
+  tracking: MotionTracking | null;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "MoveCommand".
  */
@@ -2378,6 +2710,7 @@ export interface OperationBatch {
       | SetTaskFamily
       | SetRewardTerm
       | RemoveRewardTerm
+      | SetMotionReference
       | SetBrain
       | AddAgent
       | RemoveAgent
@@ -2397,6 +2730,7 @@ export interface OperationBatch {
       | SetTaskFamily
       | SetRewardTerm
       | RemoveRewardTerm
+      | SetMotionReference
       | SetBrain
       | AddAgent
       | RemoveAgent
@@ -2412,6 +2746,16 @@ export interface OperationBatch {
 export interface PauseCommand {
   paused: boolean;
   tool: "pause";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PersonPose".
+ */
+export interface PersonPose {
+  /**
+   * @maxItems 32
+   */
+  keypoints: Keypoint[];
 }
 /**
  * The brain one agent of a project with several plays with.
@@ -2691,6 +3035,59 @@ export interface PlayProgressMessage {
   type: "progress";
 }
 /**
+ * What the `pose` capability answers for one picture: every person it sees with their keypoints.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PoseEstimate".
+ */
+export interface PoseEstimate {
+  /**
+   * @maxItems 8
+   */
+  people:
+    | []
+    | [PersonPose]
+    | [PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose, PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose]
+    | [PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose, PersonPose];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PoseOption".
+ */
+export interface PoseOption {
+  id: string;
+  label: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PoseRequest".
+ */
+export interface PoseRequest {
+  body?: string | null;
+  pose: string;
+}
+/**
+ * A test pose taken in MuJoCo: the joints set, whether parts overlap and whether the motors hold it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PoseResult".
+ */
+export interface PoseResult {
+  holds: boolean;
+  joints: number;
+  label: string;
+  overlaps: string[];
+  pose: string;
+  sag_degrees: number;
+  scene: SceneDescription;
+  seconds: number;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "Project".
  */
@@ -2745,6 +3142,7 @@ export interface Revision {
     | SetTaskFamily
     | SetRewardTerm
     | RemoveRewardTerm
+    | SetMotionReference
     | SetBrain
     | AddAgent
     | RemoveAgent
@@ -2764,6 +3162,38 @@ export interface ProjectSummary {
   name: string;
   revision: number;
   updated_at: string;
+}
+/**
+ * The design tests run now on the current revision, the rig audit and the test poses the body can take.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RigCheck".
+ */
+export interface RigCheck {
+  findings: RigFinding[];
+  poses: PoseOption[];
+  report: DesignReport;
+}
+/**
+ * A problem in a body found by the rig audit, with whether the engine has a fix for it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RigFinding".
+ */
+export interface RigFinding {
+  fixable: boolean;
+  id: string;
+  part: string;
+  text: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RigFixResult".
+ */
+export interface RigFixResult {
+  applied: string[];
+  check: RigCheck;
+  revision: number | null;
 }
 /**
  * The first deterministic evaluation episode of a checkpoint, replayed exactly as MuJoCo computed it.
@@ -2922,6 +3352,16 @@ export interface SkinInfo {
   name: string;
   size: number;
   triangles: number;
+}
+/**
+ * How an auto-rigged body's mesh is bound to its parts; each vertex follows one part (rigid binding).
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SkinWeights".
+ */
+export interface SkinWeights {
+  body: string | null;
+  bones: BoneWeight[];
 }
 /**
  * What the desktop or the copilot asks for when it starts training the current revision.

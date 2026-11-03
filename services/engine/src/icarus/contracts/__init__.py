@@ -21,9 +21,28 @@ from icarus.contracts.errors import ApiError, ValidationErrorBody
 from icarus.contracts.events import EngineEventEnvelope, TaskInfo
 from icarus.contracts.health import HealthStatus
 from icarus.contracts.library import LibraryCatalog
+from icarus.contracts.motion import (
+    MotionChoice,
+    MotionExportFile,
+    MotionExportRequest,
+    MotionTracking,
+    MotionTrain,
+    MotionVideoUpload,
+    MotionWorkspace,
+    PoseEstimate,
+)
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.play import PlayBrainOption, PlayCommandEnvelope, PlayMessageEnvelope
 from icarus.contracts.project import CreateProject, DuplicateProject, Project, ProjectState, ProjectSummary, Revision
+from icarus.contracts.rig import (
+    AutoRigStart,
+    AutoRigStatus,
+    PoseRequest,
+    PoseResult,
+    RigCheck,
+    RigFixResult,
+    SkinWeights,
+)
 from icarus.contracts.scene import SceneDescription
 from icarus.contracts.skins import SkinImport, SkinImported, SkinInfo
 from icarus.contracts.storage import ChangeDataFolder, DataFolderCheck, DataFolderChoice, DataFolderMove, StorageInfo
@@ -95,6 +114,21 @@ MODELS: tuple[type[BaseModel], ...] = (
     SkinInfo,
     SkinImport,
     SkinImported,
+    AutoRigStart,
+    AutoRigStatus,
+    RigCheck,
+    RigFixResult,
+    PoseRequest,
+    PoseResult,
+    SkinWeights,
+    PoseEstimate,
+    MotionVideoUpload,
+    MotionChoice,
+    MotionTracking,
+    MotionWorkspace,
+    MotionTrain,
+    MotionExportRequest,
+    MotionExportFile,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]
