@@ -198,7 +198,7 @@ export function learningHistory(record: RunRecord | undefined): LearningHistory 
     current: checkpoint.step === best,
   }));
   const training = ["starting", "running", "stopping"].includes(record.run.state);
-  return { training, checkpoints };
+  return { training, checkpoints, run: record.run.run_id };
 }
 
 function basis(sides: readonly ComparedRecord[]): string {

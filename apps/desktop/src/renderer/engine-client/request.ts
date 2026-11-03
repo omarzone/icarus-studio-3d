@@ -73,3 +73,31 @@ export async function request<T>(
   }
   return body;
 }
+
+// A file the engine sends (a picture or an animation), with the same errors as `request`.
+export async function requestFile(
+  path: string,
+  init: RequestInit,
+  type: string,
+  { url = engineUrl(), fetchFn = fetch }: RequestOptions = {},
+): Promise<Blob> {
+  const base = await url.current();
+  let response: Response;
+  try {
+    response = await fetchFn(`${base}${path}`, init);
+  } catch {
+    throw new EngineUnavailable("The engine did not answer");
+  }
+  if (!response.ok) {
+    const body = await readJson(response);
+    if (isApiError(body)) {
+      throw new EngineError(body.code, body.message);
+    }
+    throw new EngineResponseInvalid(path);
+  }
+  const file = await response.blob();
+  if (!file.type.startsWith(type)) {
+    throw new EngineResponseInvalid(path);
+  }
+  return file;
+}

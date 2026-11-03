@@ -1,10 +1,10 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AgentComparison } from "./agent-comparison.ts";
 import { createResultsFixture } from "./results.fixture.ts";
 import { createEngineResultsPort } from "./results-engine.ts";
+import type { Replay } from "./training-port.ts";
 
-// Results of training: fair comparisons, how it learned, where it fails, the timelapse and reference tests.
+// Results of training: fair comparisons, how it learned, where it fails, the timelapse and behavior tests.
 
 export type Tone = "ok" | "warn" | "danger" | "neutral";
 
@@ -51,7 +51,8 @@ export type Checkpoint =
   | { id: string; reached: true; step: string; label: string; detail?: string; current: boolean }
   | { id: string; reached: false; step: string; eta: string };
 
-export type LearningHistory = { training: boolean; checkpoints: readonly Checkpoint[] };
+// `run` is the run the checkpoints belong to, when the engine has one.
+export type LearningHistory = { training: boolean; checkpoints: readonly Checkpoint[]; run?: string };
 
 // `frame` is the address of a picture of the group's first episode, when the engine rendered one.
 export type FailureGroup = { id: string; title: string; count: string; frame?: string };
@@ -73,25 +74,26 @@ export type FailureReplay = {
   empty?: boolean;
 };
 
+// The checkpoints of one run whose recorded episodes play back to back in one scene; `run` is null without one.
 export type Timelapse = {
   eyebrow: string;
   title: string;
-  frames: readonly { id: string; label: string }[];
+  run: string | null;
+  frames: readonly { id: string; label: string; step: number }[];
   current: string;
-  at: string;
-  length: string;
-  played: number;
 };
 
 export type ReferenceTestState = "pass" | "warn" | "not-run";
 
 export type ReferenceTest = { id: string; name: string; short: string; state: ReferenceTestState };
 
-export type ReferenceTests = { selected: string; tests: readonly ReferenceTest[] };
+// `judged` names the checkpoints the tests run on ("Run 3 · checkpoint 250k").
+export type ReferenceTests = { selected: string; tests: readonly ReferenceTest[]; judged?: string };
 
-export type Recording = { id: string; name: string; detail: string };
+// A recorded evaluation episode of a checkpoint; `run` and `step` play it, absent for imported recordings.
+export type Recording = { id: string; name: string; detail: string; run?: string; step?: number };
 
-// Points of a walking path inside a round arena, in arena units from 0 to 100.
+// Points of a path, in view units from 0 to 100 (both sides share one scale).
 export type Path = readonly (readonly [number, number])[];
 
 export type ReferenceComparison = {
@@ -99,9 +101,17 @@ export type ReferenceComparison = {
   sides: readonly { id: string; title: string; detail: string; paths: readonly Path[] }[];
 };
 
-export type BehaviorMatch = { behavior: string; recorded: string; simulated: string; verdict: "close" | "off" };
+export type BehaviorMatch = { behavior: string; a: string; b: string; verdict: "close" | "off" };
 
-export type NeuronLink = { behavior: string; neurons: string };
+// What the two compared sides are called, the rows, and an overall similarity when it was measured.
+export type BehaviorMatchTable = { columns: readonly [string, string]; rows: readonly BehaviorMatch[]; note?: string };
+
+export type NeuronLayer = {
+  layer: string;
+  detail: string;
+  // The most active neurons, the strongest first; `activity` is from 0 to 1.
+  neurons: readonly { id: string; label: string; activity: number }[];
+};
 
 export type ProposalStatus = "open" | "applied" | "discarded" | "outdated";
 
@@ -133,76 +143,26 @@ export type ResultsPort = {
   getFailureReplay: (project: string) => Promise<FailureReplay>;
   getTimelapse: (project: string) => Promise<Timelapse>;
   selectTimelapseFrame: (input: { project: string; id: string }) => Promise<Timelapse>;
+  // A checkpoint's recorded evaluation episode, replayed exactly as MuJoCo computed it.
+  getRecordingReplay: (input: { project: string; run: string; step: number }) => Promise<Replay>;
+  // The recorded episode as an animated picture to save.
+  exportRecording: (input: { project: string; run: string; step: number }) => Promise<Blob>;
   getReferenceTests: (project: string) => Promise<ReferenceTests>;
   selectReferenceTest: (input: { project: string; id: string }) => Promise<ReferenceTests>;
+  // Runs the selected test on the compared checkpoints on the engine.
+  runReferenceTest: (project: string) => Promise<ReferenceTests>;
+  // Adds a test with new fixed starts.
+  addReferenceTest: (project: string) => Promise<ReferenceTests>;
   listRecordings: (project: string) => Promise<Recording[]>;
   getReferenceComparison: (input: { project: string; test: string }) => Promise<ReferenceComparison>;
-  getBehaviorMatch: (project: string) => Promise<BehaviorMatch[]>;
-  getNeuronLinks: (project: string) => Promise<NeuronLink[]>;
+  getBehaviorMatch: (project: string) => Promise<BehaviorMatchTable>;
+  getNeurons: (project: string) => Promise<NeuronLayer[]>;
   listDiagnoses: (project: string) => Promise<DiagnosisView[]>;
   // Asks the coach about a run (the newest when none is given); it also posts in the project conversation.
   diagnose: (input: { project: string; run?: string }) => Promise<DiagnosisView>;
 };
 
-const referenceIds = ["STA-RESULTS-REFERENCE"] as const;
-
 export const resultsPort = definePort<ResultsPort>({
-  app: {
-    ...createEngineResultsPort(),
-    listTestRuns: pending({
-      key: "results.testRuns",
-      summary: "Every test run with pass or fail",
-      sprint: 7,
-      ids: ["STA-RESULTS-FAILURES"],
-    }),
-    getTimelapse: pending({
-      key: "results.timelapse",
-      summary: "The timelapse of how it learned",
-      sprint: 7,
-      ids: ["SCR-TIMELAPSE"],
-    }),
-    selectTimelapseFrame: pending({
-      key: "results.timelapseFrame",
-      summary: "Jumping to a checkpoint in the timelapse",
-      sprint: 7,
-      ids: ["SCR-TIMELAPSE"],
-    }),
-    getReferenceTests: pending({
-      key: "results.referenceTests",
-      summary: "Tests against recorded real behavior",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-    selectReferenceTest: pending({
-      key: "results.selectReferenceTest",
-      summary: "Opening a behavior test",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-    listRecordings: pending({
-      key: "results.recordings",
-      summary: "Recordings imported for comparison",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-    getReferenceComparison: pending({
-      key: "results.referenceComparison",
-      summary: "Recorded and simulated behavior side by side",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-    getBehaviorMatch: pending({
-      key: "results.behaviorMatch",
-      summary: "How close each behavior is to the recordings",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-    getNeuronLinks: pending({
-      key: "results.neurons",
-      summary: "Which neurons drive each behavior",
-      sprint: 11,
-      ids: [...referenceIds],
-    }),
-  },
+  app: createEngineResultsPort(),
   prototype: createResultsFixture,
 });

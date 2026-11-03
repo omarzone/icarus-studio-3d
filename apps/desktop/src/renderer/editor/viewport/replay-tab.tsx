@@ -1,18 +1,10 @@
 // TAB-REPLAY
 import { Pause, Play } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { CheckpointMark, Replay } from "../../ports/training-port.ts";
-import {
-  advance,
-  frameAt,
-  nextSpeed,
-  type PlayerState,
-  playerAt,
-  scrub,
-  startPlayer,
-  togglePlaying,
-} from "../../scene/rollout-player.ts";
+import { frameAt, nextSpeed, playerAt, scrub, togglePlaying } from "../../scene/rollout-player.ts";
+import { useRolloutPlayer } from "../../scene/use-rollout-player.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { Select } from "../../ui/select.tsx";
@@ -93,28 +85,6 @@ function ReplayLoader({ project, marks, step, autoplay, onChoose }: LoaderProps)
   );
 }
 
-// Moves the player with the screen's frames while it plays.
-function usePlayer(duration: number, autoplay: boolean) {
-  const [player, setPlayer] = useState<PlayerState>(() =>
-    autoplay ? togglePlaying(startPlayer(duration)) : startPlayer(duration),
-  );
-  useEffect(() => {
-    if (!player.playing) {
-      return;
-    }
-    let last = performance.now();
-    let frame = requestAnimationFrame(function tick(now) {
-      // Measured before the update: React may run the updater after `last` has moved on.
-      const seconds = Math.max(0, now - last) / 1000;
-      setPlayer((state) => advance(state, seconds));
-      last = now;
-      frame = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [player.playing]);
-  return [player, setPlayer] as const;
-}
-
 type PlayerProps = {
   replay: Replay;
   marks: readonly CheckpointMark[];
@@ -124,7 +94,7 @@ type PlayerProps = {
 };
 
 function ReplayPlayer({ replay, marks, step, autoplay, onChoose }: PlayerProps) {
-  const [player, setPlayer] = usePlayer(replay.duration, autoplay);
+  const [player, setPlayer] = useRolloutPlayer(replay.duration, autoplay);
   const times = useMemo(() => replay.frames.map((frame) => frame.time), [replay]);
   const start = times[0] ?? 0;
   const shownFrame = replay.frames[frameAt(times, start + player.time)];

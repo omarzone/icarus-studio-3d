@@ -12,14 +12,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
 | `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
 
-## Sprint 7
-
-| Action | What it does | Used in |
-|---|---|---|
-| `results.testRuns` | Every test run with pass or fail | `STA-RESULTS-FAILURES` |
-| `results.timelapse` | The timelapse of how it learned | `SCR-TIMELAPSE` |
-| `results.timelapseFrame` | Jumping to a checkpoint in the timelapse | `SCR-TIMELAPSE` |
-
 ## Sprint 8
 
 | Action | What it does | Used in |
@@ -80,13 +72,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `brain.loadSource` | Loading a brain into the body | `MOD-BRAIN-SOURCE` |
 | `brain.source` | The brains that can drive this body | `MOD-BRAIN-SOURCE` |
 | `brain.wiring` | How the brain's neurons connect to the body | `STA-BRAIN-CONNECTOME` |
-| `results.behaviorMatch` | How close each behavior is to the recordings | `STA-RESULTS-REFERENCE` |
-| `results.neurons` | Which neurons drive each behavior | `STA-RESULTS-REFERENCE` |
-| `results.recordings` | Recordings imported for comparison | `STA-RESULTS-REFERENCE` |
-| `results.referenceComparison` | Recorded and simulated behavior side by side | `STA-RESULTS-REFERENCE` |
-| `results.referenceSummary` | The overall match against recordings | `STA-RESULTS-REFERENCE` |
-| `results.referenceTests` | Tests against recorded real behavior | `STA-RESULTS-REFERENCE` |
-| `results.selectReferenceTest` | Opening a behavior test | `STA-RESULTS-REFERENCE` |
 
 ## Sprint 12
 

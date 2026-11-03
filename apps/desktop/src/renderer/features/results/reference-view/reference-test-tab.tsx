@@ -2,7 +2,7 @@
 import { tokens } from "@icarus/ui-tokens";
 import type { ReferenceComparison } from "../../../ports/results-port.ts";
 
-// Recorded and simulated behavior side by side: walking paths inside the same round arena.
+// Two brains' behavior side by side: the paths their bodies took from the same starts, on one scale.
 export function ReferenceTestTab({ comparison }: { comparison: ReferenceComparison }) {
   return (
     <div className="flex h-full gap-2 p-2">
@@ -12,8 +12,7 @@ export function ReferenceTestTab({ comparison }: { comparison: ReferenceComparis
             <span className="font-semibold">{side.title}</span>
             <span className="text-meta text-fg-tertiary">{side.detail}</span>
           </div>
-          <svg role="img" aria-label={`${side.title}: walking paths`} viewBox="0 0 100 100" className="h-full w-full">
-            <circle cx="50" cy="50" r="46" fill="none" stroke="var(--ic-line-dashed)" strokeWidth="0.6" />
+          <svg role="img" aria-label={`${side.title}: paths`} viewBox="0 0 100 100" className="h-full w-full">
             {side.paths.map((path, index) => (
               <polyline
                 // biome-ignore lint/suspicious/noArrayIndexKey: paths keep their recording order.
@@ -26,6 +25,13 @@ export function ReferenceTestTab({ comparison }: { comparison: ReferenceComparis
                 strokeLinejoin="round"
               />
             ))}
+            {side.paths.map((path, index) => {
+              const start = path[0];
+              return start ? (
+                // biome-ignore lint/suspicious/noArrayIndexKey: starts keep their path order.
+                <circle key={index} cx={start[0]} cy={start[1]} r="1.1" fill={tokens.viz.networkWire} />
+              ) : null;
+            })}
           </svg>
         </div>
       ))}

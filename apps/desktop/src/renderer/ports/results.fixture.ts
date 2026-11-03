@@ -1,12 +1,12 @@
 import { ARENA_WALKS } from "./arena-walks.fixture.ts";
 import type {
-  BehaviorMatch,
+  BehaviorMatchTable,
   Comparison,
   DiagnosisView,
   FailureReplay,
   Failures,
   LearningHistory,
-  NeuronLink,
+  NeuronLayer,
   Recording,
   ReferenceTests,
   ResultRun,
@@ -121,17 +121,15 @@ const REPLAY: FailureReplay = {
 const TIMELAPSE: Timelapse = {
   eyebrow: "Park Pilot · how it learned",
   title: "Checkpoint 250k · parks 71%",
+  run: null,
   frames: [
-    { id: "0", label: "Start · circles" },
-    { id: "25k", label: "25k · hits a car" },
-    { id: "50k", label: "50k · reaches lot" },
-    { id: "100k", label: "100k · 12%" },
-    { id: "250k", label: "250k · 71%" },
+    { id: "0", label: "Start · circles", step: 0 },
+    { id: "25k", label: "25k · hits a car", step: 25_000 },
+    { id: "50k", label: "50k · reaches lot", step: 50_000 },
+    { id: "100k", label: "100k · 12%", step: 100_000 },
+    { id: "250k", label: "250k · 71%", step: 250_000 },
   ],
   current: "250k",
-  at: "0:48",
-  length: "1:00",
-  played: 0.8,
 };
 
 const REFERENCE_TESTS: ReferenceTests = {
@@ -149,17 +147,33 @@ const RECORDINGS: readonly Recording[] = [
   { id: "lab-looming", name: "Looming shadow", detail: "12 trials · lab recordings" },
 ];
 
-const MATCH: readonly BehaviorMatch[] = [
-  { behavior: "Walking speed", recorded: "17 mm/s", simulated: "18 mm/s", verdict: "close" },
-  { behavior: "Tripod gait", recorded: "98%", simulated: "96%", verdict: "close" },
-  { behavior: "Turn after a looming shadow", recorded: "55 ms", simulated: "62 ms", verdict: "close" },
-  { behavior: "Grooming starts after dust", recorded: "1.2 s", simulated: "1.9 s", verdict: "off" },
-];
+const MATCH: BehaviorMatchTable = {
+  columns: ["Real flies", "Your fly"],
+  rows: [
+    { behavior: "Walking speed", a: "17 mm/s", b: "18 mm/s", verdict: "close" },
+    { behavior: "Tripod gait", a: "98%", b: "96%", verdict: "close" },
+    { behavior: "Turn after a looming shadow", a: "55 ms", b: "62 ms", verdict: "close" },
+    { behavior: "Grooming starts after dust", a: "1.2 s", b: "1.9 s", verdict: "off" },
+  ],
+};
 
-const NEURONS: readonly NeuronLink[] = [
-  { behavior: "Walking speed", neurons: "DNg11, DNg100 · ventral nerve cord" },
-  { behavior: "Turn after a looming shadow", neurons: "LPLC2, giant fiber" },
-  { behavior: "Grooming starts after dust", neurons: "Antennal touch neurons · not wired to the front legs" },
+const NEURONS: readonly NeuronLayer[] = [
+  {
+    layer: "Walking speed",
+    detail: "Ventral nerve cord",
+    neurons: [
+      { id: "dng11", label: "DNg11", activity: 0.8 },
+      { id: "dng100", label: "DNg100", activity: 0.6 },
+    ],
+  },
+  {
+    layer: "Turn after a looming shadow",
+    detail: "Visual escape",
+    neurons: [
+      { id: "lplc2", label: "LPLC2", activity: 0.9 },
+      { id: "giant-fiber", label: "Giant fiber", activity: 0.7 },
+    ],
+  },
 ];
 
 const DIAGNOSIS: DiagnosisView = {
@@ -214,7 +228,11 @@ export function createResultsFixture(): ResultsPort {
       timelapse = { ...timelapse, current: id };
       return timelapse;
     },
+    getRecordingReplay: () => Promise.reject(new Error("The prototype has no recorded episodes")),
+    exportRecording: () => Promise.reject(new Error("The prototype has no recorded episodes")),
     getReferenceTests: async () => tests,
+    runReferenceTest: async () => tests,
+    addReferenceTest: async () => tests,
     selectReferenceTest: async ({ id }) => {
       tests = { ...tests, selected: id };
       return tests;
@@ -227,8 +245,8 @@ export function createResultsFixture(): ResultsPort {
         { id: "simulated", title: "Your fly", detail: "Connectome brain · 5 walks", paths: ARENA_WALKS.simulated },
       ],
     }),
-    getBehaviorMatch: async () => [...MATCH],
-    getNeuronLinks: async () => [...NEURONS],
+    getBehaviorMatch: async () => MATCH,
+    getNeurons: async () => [...NEURONS],
     listDiagnoses: async () => [...diagnoses],
     diagnose: async () => {
       const made = { ...DIAGNOSIS, id: `diagnosis-${diagnoses.length + 1}` };
