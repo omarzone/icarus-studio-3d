@@ -66,6 +66,12 @@ const SURFACES: Record<Surface, true> = {
   rubber: true,
   wood: true,
   metal: true,
+  plastic: true,
+  sand: true,
+  dirt: true,
+  fabric: true,
+  stone: true,
+  glass: true,
 };
 const FINISHES: Record<Finish, true> = {
   plain: true,

@@ -21,6 +21,7 @@ LOOK_PROPERTIES = {
     ),
     "distance_ray": frozenset({"name"}),
     "plate": frozenset({"color", "sink"}),
+    "ground": frozenset({"decal", "decal_cell"}),
 }
 # How a brain practices shapes the next run, not what a finished brain can drive; the checkpoint keeps its own layers.
 PRACTICE_FIELDS = frozenset({"copies", "seed", "training_steps", "layers", "ppo"})

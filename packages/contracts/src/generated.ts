@@ -1275,6 +1275,8 @@ export interface SceneGeom {
   body: string;
   cast_shadow?: boolean;
   color: string;
+  decal?: ("grid" | "studs") | null;
+  decal_cell?: number;
   emissive?: number;
   finish?:
     | (
@@ -1294,6 +1296,30 @@ export interface SceneGeom {
     | null;
   ground?: boolean;
   light_role?: ("brake" | "reverse" | "head") | null;
+  material?:
+    | (
+        | "plastic"
+        | "smooth_plastic"
+        | "wood"
+        | "wood_planks"
+        | "brick"
+        | "cobblestone"
+        | "concrete"
+        | "metal"
+        | "diamond_plate"
+        | "corroded_metal"
+        | "grass"
+        | "sand"
+        | "ground"
+        | "ice"
+        | "glass"
+        | "neon"
+        | "marble"
+        | "granite"
+        | "fabric"
+        | "foil"
+      )
+    | null;
   metalness?: number;
   name: string;
   ornaments?: SceneOrnament[];
@@ -1309,7 +1335,7 @@ export interface SceneGeom {
   quaternion: [number, number, number, number];
   reflectance?: number;
   roughness?: number;
-  shape: "plane" | "box" | "sphere" | "capsule" | "cylinder";
+  shape: "plane" | "box" | "sphere" | "capsule" | "cylinder" | "wedge" | "corner_wedge";
   /**
    * @minItems 3
    * @maxItems 3
@@ -1370,7 +1396,24 @@ export interface SceneGeom {
         | "road_arrow"
       )
     | null;
-  surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
+  surface?:
+    | (
+        | "asphalt"
+        | "concrete"
+        | "grass"
+        | "snow"
+        | "ice"
+        | "rubber"
+        | "wood"
+        | "metal"
+        | "plastic"
+        | "sand"
+        | "dirt"
+        | "fabric"
+        | "stone"
+        | "glass"
+      )
+    | null;
   transparency?: number;
 }
 /**

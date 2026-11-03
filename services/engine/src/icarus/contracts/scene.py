@@ -68,8 +68,55 @@ OrnamentStyle = Literal["crown_round", "crown_cone", "crown_oval", "lamp_arm", "
 ORNAMENT_STYLES: list[str] = list(get_args(OrnamentStyle))
 
 # What a part is made of, for its look: roughness, shine and the grain on its face.
-GeomSurface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
+GeomSurface = Literal[
+    "asphalt",
+    "concrete",
+    "grass",
+    "snow",
+    "ice",
+    "rubber",
+    "wood",
+    "metal",
+    "plastic",
+    "sand",
+    "dirt",
+    "fabric",
+    "stone",
+    "glass",
+]
 GEOM_SURFACES: list[str] = list(get_args(GeomSurface))
+
+# What a part is made of, picked from a palette: it sets the drawn look and, through the surface, the friction.
+MaterialPreset = Literal[
+    "plastic",
+    "smooth_plastic",
+    "wood",
+    "wood_planks",
+    "brick",
+    "cobblestone",
+    "concrete",
+    "metal",
+    "diamond_plate",
+    "corroded_metal",
+    "grass",
+    "sand",
+    "ground",
+    "ice",
+    "glass",
+    "neon",
+    "marble",
+    "granite",
+    "fabric",
+    "foil",
+]
+MATERIAL_PRESETS: list[str] = list(get_args(MaterialPreset))
+
+# Marks drawn on a ground slab's top: a line grid or raised studs, one per cell; drawing only.
+GroundDecal = Literal["grid", "studs"]
+GROUND_DECALS: list[str] = list(get_args(GroundDecal))
+
+# Shapes a part can have: MuJoCo primitives, plus wedges built by the engine as convex mesh colliders.
+GeomShape = Literal["plane", "box", "sphere", "capsule", "cylinder", "wedge", "corner_wedge"]
 
 # The pattern a part's faces are drawn with; drawing only, never friction (the surface sets that).
 GeomFinish = Literal[
@@ -140,7 +187,8 @@ class SceneGeom(BaseModel):
 
     name: str
     body: str
-    shape: Literal["plane", "box", "sphere", "capsule", "cylinder"]
+    # A wedge rises from its +y edge to full height along its -y edge; a corner wedge peaks over its +x, -y corner.
+    shape: GeomShape
     # Full extents in metres (MuJoCo stores half sizes).
     size: Vector3
     position: Vector3
@@ -170,6 +218,11 @@ class SceneGeom(BaseModel):
     ground: bool = False
     # Look-only shapes drawn on this geom at their own size; they never change its collider.
     ornaments: list[SceneOrnament] = []
+    # The palette material the part is made of; None draws it from its finish and surface.
+    material: MaterialPreset | None = None
+    # Marks on a ground slab's top, with the cell size in metres; None draws none.
+    decal: GroundDecal | None = None
+    decal_cell: float = 1
 
 
 class SceneLight(BaseModel):

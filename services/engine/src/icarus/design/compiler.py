@@ -8,7 +8,7 @@ import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
-from icarus.contracts.scene import SceneSky
+from icarus.contracts.scene import GeomShape, SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.decor import WorldDecor, world_decor
@@ -19,6 +19,8 @@ from icarus.design.sky import add_sky, world_sky
 from icarus.design.sun_path import SunPath, world_sun
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.design.vehicle import VehicleLayout, add_vehicle_actuators, vehicle_layouts
+from icarus.design.wedges import MESH_SHAPES, add_wedge_mesh
+from icarus.library.materials import SLIPPERY
 from icarus.projects.document import all_objects, containers
 
 TIMESTEP = 0.002
@@ -54,6 +56,8 @@ class CompiledModel:
     grounds: frozenset[str] = frozenset()
     # Floor plates, displays and eyes as the project sets them; their poses come from the model.
     decor: WorldDecor = field(default_factory=WorldDecor)
+    # Geom name → shape and full size of parts the engine builds as meshes (wedges), which MuJoCo re-centers.
+    meshes: dict[str, tuple[GeomShape, tuple[float, float, float]]] = field(default_factory=dict)
 
 
 def _fmt(values) -> str:
@@ -102,6 +106,18 @@ def _friction(obj: ObjectSpec) -> float | None:
     return SURFACE_FRICTION[material.text("surface")] if material else None
 
 
+def _contact(attributes: dict[str, str], obj: ObjectSpec) -> None:
+    """Color, friction and, for a slippery palette material, contact settings that win over what touches it."""
+    material = view(obj, "material")
+    if material:
+        attributes["rgba"] = _rgba(material.text("color"))
+        if material.text("preset") in SLIPPERY:
+            attributes["priority"] = "1"
+    friction = _friction(obj)
+    if friction is not None:
+        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+
+
 def _add_ground(body: ET.Element, obj: ObjectSpec, ground: ComponentView) -> None:
     """A static slab whose top is the object's height, so the drawn floor and the one bodies stand on agree."""
     if _is_dynamic(obj):
@@ -114,16 +130,19 @@ def _add_ground(body: ET.Element, obj: ObjectSpec, ground: ComponentView) -> Non
         "pos": _fmt([0, 0, -thickness / 2]),
         "mass": "0",
     }
-    material = view(obj, "material")
-    if material:
-        attributes["rgba"] = _rgba(material.text("color"))
-    friction = _friction(obj)
-    if friction is not None:
-        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+    _contact(attributes, obj)
     ET.SubElement(body, "geom", attributes)
 
 
-def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, float]) -> None:
+def _shape_attributes(root: ET.Element, obj: ObjectSpec, shape: str, size: tuple[float, float, float]):
+    if shape in MESH_SHAPES:
+        if min(size) <= 0:
+            raise CompileError(f"{obj.name} has a zero size")
+        return {"type": "mesh", "mesh": add_wedge_mesh(root, obj.id, shape, size)}
+    return {"type": shape, "size": _fmt(_geom_size(obj, shape, size))}
+
+
+def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, float], root: ET.Element) -> None:
     ground = view(obj, "ground")
     if ground is not None:
         _add_ground(body, obj, ground)
@@ -134,17 +153,12 @@ def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, floa
     shape = mesh.text("shape")
     size = mesh.vector("size")
     scaled = (size[0] * scale[0], size[1] * scale[1], size[2] * scale[2])
-    attributes = {"name": obj.id, "type": shape, "size": _fmt(_geom_size(obj, shape, scaled))}
+    attributes = {"name": obj.id, **_shape_attributes(root, obj, shape, scaled)}
     physics = view(obj, "physics_body")
     attributes["mass"] = _fmt([physics.number("mass")]) if physics and _is_dynamic(obj) else "0"
     if shape == "plane" and _is_dynamic(obj):
         raise CompileError(f"{obj.name} is a plane, and planes can only be static")
-    material = view(obj, "material")
-    if material:
-        attributes["rgba"] = _rgba(material.text("color"))
-    friction = _friction(obj)
-    if friction is not None:
-        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+    _contact(attributes, obj)
     collider = view(obj, "collider")
     if collider:
         attributes["solref"] = _fmt([0.02, 1 - 0.9 * collider.number("restitution")])
@@ -264,7 +278,7 @@ def _add_body(
         _add_joint(body, obj, joint)
     elif obj.parent is None and _is_dynamic(obj):
         ET.SubElement(body, "freejoint", {"name": f"{obj.id}:free"})
-    _add_geom(body, obj, scale)
+    _add_geom(body, obj, scale, root)
     if _is_dynamic(obj) and view(obj, "mesh") is None:
         physics = view(obj, "physics_body")
         mass = physics.number("mass") if physics else 1.0
@@ -314,6 +328,18 @@ def to_mjcf(project: Project) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
+def _meshes(project: Project) -> dict[str, tuple[GeomShape, tuple[float, float, float]]]:
+    meshes: dict[str, tuple[GeomShape, tuple[float, float, float]]] = {}
+    for obj in all_objects(project):
+        mesh, transform = view(obj, "mesh"), view(obj, "transform")
+        if mesh is None or view(obj, "ground") is not None or mesh.text("shape") not in MESH_SHAPES:
+            continue
+        size, scale = mesh.vector("size"), transform.vector("scale") if transform else (1.0, 1.0, 1.0)
+        shape = "wedge" if mesh.text("shape") == "wedge" else "corner_wedge"
+        meshes[obj.id] = (shape, (size[0] * scale[0], size[1] * scale[1], size[2] * scale[2]))
+    return meshes
+
+
 def compile_project(project: Project) -> CompiledModel:
     """Build the MuJoCo model of a structurally valid project."""
     mjcf = to_mjcf(project)
@@ -333,6 +359,7 @@ def compile_project(project: Project) -> CompiledModel:
         sensor_scales=sensor_scales(project),
         grounds=frozenset(obj.id for obj in project.world.objects if view(obj, "ground")),
         decor=world_decor(project),
+        meshes=_meshes(project),
     )
 
 

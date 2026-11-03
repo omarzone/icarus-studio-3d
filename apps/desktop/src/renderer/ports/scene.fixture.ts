@@ -152,6 +152,9 @@ export function createSceneFixture(): ScenePort {
     moveObject: async ({ scene }) => inspectionOf(find(scene)),
     rotateObject: async ({ scene }) => inspectionOf(find(scene)),
     scaleObject: async ({ scene }) => inspectionOf(find(scene)),
+    // The prototype has no world to build in; parts and slabs exist only against the engine.
+    insertPart: async ({ scene }) => find(scene).tree,
+    makeGroundSlab: async (scene) => inspectionOf(find(scene)),
     renameObject: async ({ scene, id, name }) =>
       editRows(scene, (rows) => rows.map((row) => (row.id === id ? { ...row, name } : row))),
     duplicateObject: async ({ scene, id }) => {

@@ -28,7 +28,19 @@ export type Finish =
   | "roof";
 
 // A surface's own grain, or a pattern only a part's finish draws.
-export type Grain = NonNullable<SceneGeom["surface"]> | "brick" | "tiles" | "road" | "fabric" | "blocks";
+export type Grain =
+  | NonNullable<SceneGeom["surface"]>
+  | "brick"
+  | "tiles"
+  | "road"
+  | "blocks"
+  | "wood_grain"
+  | "cobblestone"
+  | "diamond_plate"
+  | "corroded"
+  | "marble"
+  | "granite"
+  | "foil";
 
 // Physically based settings for a Three.js standard or physical material; `color` replaces the part's color, and
 // `shade` darkens it. `grain` lays a procedural texture over the color.
@@ -138,5 +150,17 @@ export function surfaceLook(surface: SceneGeom["surface"], ground: boolean): Mat
       return { roughness: 0.75, metalness: 0, grain };
     case "metal":
       return { roughness: 0.35, metalness: 0.85, grain };
+    case "plastic":
+      return { roughness: 0.55, metalness: 0, grain };
+    case "sand":
+      return { roughness: 0.96, metalness: 0, grain };
+    case "dirt":
+      return { roughness: 0.95, metalness: 0, grain };
+    case "fabric":
+      return { roughness: 0.97, metalness: 0, grain };
+    case "stone":
+      return { roughness: 0.9, metalness: 0, grain };
+    case "glass":
+      return { roughness: 0.05, metalness: 0.2, clearcoat: 1, opacity: 0.45 };
   }
 }

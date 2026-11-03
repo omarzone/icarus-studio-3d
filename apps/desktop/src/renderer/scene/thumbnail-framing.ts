@@ -27,6 +27,8 @@ const EMPTY: SceneBounds = { center: [0, 0, 0], radius: 4 };
 function reach({ shape, size: [x, y, z] }: SceneGeom): number {
   switch (shape) {
     case "box":
+    case "wedge":
+    case "corner_wedge":
       return Math.hypot(x, y, z) / 2;
     case "sphere":
       return x / 2;

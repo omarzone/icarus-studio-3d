@@ -23,6 +23,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { bevelRadius, geomShape } from "./geom-shape.ts";
 import { drawnSize, isGround } from "./ground-geom.ts";
+import { groundMarks } from "./ground-marks.ts";
 import { metricUVs } from "./metric-uv.ts";
 import { partFinish } from "./part-finish.ts";
 import { floorDepth } from "./scene-materials.ts";
@@ -32,6 +33,7 @@ import type { Grain, MaterialLook } from "./visual-styles/finishes.ts";
 import { type OrnamentParts, ornamentParts } from "./visual-styles/ornaments.ts";
 import { plainLook, styledLook } from "./visual-styles/part-look.ts";
 import { type StylePart, styleParts } from "./visual-styles/visual-style.ts";
+import { wedgeGeometry } from "./wedge-geometry.ts";
 
 // Geometries, materials and grain images are shared by every geom that draws the same way (the copies of a training
 // run all reuse one set), and live as long as the app: each is small and the set of distinct parts is bounded.
@@ -73,6 +75,8 @@ function primitive(geom: SceneGeom, build: Build = { rounded: false, metric: fal
         return new CylinderGeometry(...shape.args);
       case "capsule":
         return new CapsuleGeometry(...shape.args);
+      case "wedge":
+        return wedgeGeometry(shape.shape, shape.size);
     }
   })();
   const created = build.metric && shape.kind === "box" ? metricUVs(made, shape.args) : made;
@@ -107,13 +111,19 @@ function grainTexture(grain: Grain): DataTexture {
   return texture;
 }
 
-// A pattern laid in metres on every face (see metricUVs) rather than stretched over each face.
-const metricGrain = (grain: Grain | undefined) => grain === "blocks";
+// A pattern laid in metres on every face (see metricUVs) rather than stretched over each face: blocks, wedges (whose
+// faces are always measured), palette materials and ground slabs on boxes, whose sides then show the same pattern.
+function metricPattern(grain: Grain | undefined, geom: SceneGeom): boolean {
+  if (geom.shape === "wedge" || geom.shape === "corner_wedge" || grain === "blocks") {
+    return true;
+  }
+  return geom.shape === "box" && (Boolean(geom.material) || geom.ground === true);
+}
 
 // How often the grain repeats so one tile covers its metres on the geom's widest faces (x and MuJoCo y).
-function repeats(grain: Grain, geom: SceneGeom): [number, number] {
+function repeats(grain: Grain, geom: SceneGeom, metric: boolean): [number, number] {
   const metres = grainMetres(grain);
-  if (metricGrain(grain)) {
+  if (metric) {
     return [1 / metres, 1 / metres];
   }
   const [x, y] = drawnSize(geom);
@@ -121,8 +131,8 @@ function repeats(grain: Grain, geom: SceneGeom): [number, number] {
   return [round(x), round(y)];
 }
 
-function material(look: MaterialLook, color: string, geom: SceneGeom): Material {
-  const repeat = look.grain ? repeats(look.grain, geom) : null;
+function material(look: MaterialLook, color: string, geom: SceneGeom, metric = false): Material {
+  const repeat = look.grain ? repeats(look.grain, geom, metric) : null;
   const finish = partFinish(geom);
   const key = JSON.stringify([look, color, repeat, isGround(geom), finish]);
   const cached = materials.get(key);
@@ -160,8 +170,8 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
   return created;
 }
 
-function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Mesh {
-  const created = new Mesh(geometry, material(look, geom.color, geom));
+function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom, metric = false): Mesh {
+  const created = new Mesh(geometry, material(look, geom.color, geom, metric));
   created.castShadow = !isGround(geom) && !look.decal && geom.cast_shadow !== false;
   created.receiveShadow = true;
   return created;
@@ -224,9 +234,14 @@ export function ornamentObject(geom: SceneGeom, ornament: SceneOrnament): Group 
 export function geomObject(geom: SceneGeom): Object3D {
   const pieces = parts(geom);
   const look = plainLook(geom);
+  const metric = metricPattern(look.grain, geom);
   const drawn = pieces
     ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, styledLook(piece.finish, geom), geom)))
-    : mesh(primitive(geom, { rounded: true, metric: metricGrain(look.grain) }), look, geom);
+    : mesh(primitive(geom, { rounded: true, metric }), look, geom, metric);
+  const marks = groundMarks(geom);
+  if (marks) {
+    drawn.add(marks);
+  }
   const object = geom.skin ? skinnedObject(geom, geom.skin, drawn) : drawn;
   if (geom.light_role) {
     ownLampMaterials(drawn, geom);

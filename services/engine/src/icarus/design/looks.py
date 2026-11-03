@@ -10,7 +10,9 @@ from icarus.contracts.scene import (
     GeomFinish,
     GeomStyle,
     GeomSurface,
+    GroundDecal,
     LightRole,
+    MaterialPreset,
     OrnamentStyle,
     SceneOrnament,
     SceneSkin,
@@ -24,6 +26,8 @@ _SURFACES = set(get_args(GeomSurface))
 _FINISHES = set(get_args(GeomFinish))
 _ROLES = set(get_args(LightRole))
 _ORNAMENTS = set(get_args(OrnamentStyle))
+_PRESETS = set(get_args(MaterialPreset))
+_DECALS = set(get_args(GroundDecal))
 
 
 @dataclass(frozen=True)
@@ -43,6 +47,9 @@ class GeomLook:
     light_role: LightRole | None = None
     bevel: float = 0
     ornaments: tuple[SceneOrnament, ...] = ()
+    material: MaterialPreset | None = None
+    decal: GroundDecal | None = None
+    decal_cell: float = 1
 
 
 def _turn(rotation_deg: tuple[float, float, float]) -> tuple[float, float, float, float]:
@@ -105,6 +112,9 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
         surface = ground.text("kind") if ground else material.text("surface")
         style = material.text("style")
         finish = material.text("finish")
+        preset = material.text("preset")
+        floor = view(obj, "ground")
+        decal = floor.text("decal") if floor else ""
         light = view(obj, "vehicle_light")
         role = light.text("role") if light else ""
         looks[obj.id] = GeomLook(
@@ -121,5 +131,8 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
             light_role=cast(LightRole, role) if role in _ROLES else None,
             bevel=material.number("bevel"),
             ornaments=ornaments,
+            material=cast(MaterialPreset, preset) if preset in _PRESETS else None,
+            decal=cast(GroundDecal, decal) if decal in _DECALS else None,
+            decal_cell=floor.number("decal_cell") if floor else 1,
         )
     return looks

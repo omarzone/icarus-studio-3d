@@ -3,6 +3,7 @@ from icarus.contracts.objects import ComponentSpec
 from icarus.contracts.properties import PropertySchema
 from icarus.contracts.scene import GEOM_FINISHES, GEOM_STYLES, GEOM_SURFACES
 from icarus.library.decor_kinds import DECOR_KINDS
+from icarus.library.materials import CUSTOM, MATERIAL_HINT, MATERIAL_OPTIONS
 from icarus.library.properties import (
     choice,
     color,
@@ -25,8 +26,15 @@ SURFACES = GEOM_SURFACES
 # Friction is what the physics uses; the kind names the look, and these values and colors match each kind.
 SURFACE_HINT = (
     "Friction and look: asphalt 1 dark grey, concrete 0.9 light grey, grass 0.6 green, snow 0.3 white, "
-    "ice 0.05 pale blue, rubber 1.2 black, wood 0.7 brown, metal 0.5 steel"
+    "ice 0.05 pale blue, rubber 1.2 black, wood 0.7 brown, metal 0.5 steel, plastic 0.6 smooth, sand 0.45 loose, "
+    "dirt 0.75 earthy, fabric 0.8 soft, stone 0.85 grey, glass 0.4 clear"
 )
+SHAPE_HINT = (
+    "Wedge: a ramp that rises from its +Y edge to full height along its -Y edge. Corner wedge: a slope that peaks "
+    "over its +X, -Y corner. Both are solid convex colliders; turn them with Rotation"
+)
+MODE_HINT = "Static parts stay anchored where they are, like the ground; dynamic parts fall, roll and can be pushed"
+DECAL_HINT = "Drawing only: lines or raised studs on the slab's top, one per cell, to judge sizes and distances"
 # The style only changes the drawing, never the collider: the drawing stays inside the part's shape.
 STYLE_HINT = (
     "How the part is drawn inside its shape: car_body (box: shell, cabin, windows, lights), wheel (cylinder: tire and "
@@ -40,7 +48,7 @@ STYLE_HINT = (
 )
 FINISH_HINT = (
     "Pattern on the faces, drawing only: brick, concrete, asphalt (with lane lines), wood planks, tiles, "
-    "painted_metal, glass, grass, fabric, rubber; plain keeps the style's own look"
+    "painted_metal, glass, grass, fabric, rubber; plain keeps the style's own look. A palette Material draws its own"
 )
 ADJUST_HINT = "Drawing only: 0.5 keeps the finish's own, lower for less, higher for more"
 EMISSIVE_HINT = "Drawing only: glow in the part's color; lights a style's windows and lamp heads, else the whole part"
@@ -120,7 +128,13 @@ _KINDS = [
         "mesh",
         "Shape",
         [
-            listing("shape", "Shape", ["box", "sphere", "capsule", "cylinder", "plane"], "box"),
+            listing(
+                "shape",
+                "Shape",
+                ["box", "sphere", "capsule", "cylinder", "plane", "wedge", "corner_wedge"],
+                "box",
+                hint=SHAPE_HINT,
+            ),
             vector("size", "Size", "m", 0.001, 100, (1, 1, 1), hint="Full width, depth and height"),
         ],
         unique=True,
@@ -132,6 +146,7 @@ _KINDS = [
         "Shape",
         [
             color("color", "Color", "#8a8f98"),
+            listing("preset", "Material", MATERIAL_OPTIONS, CUSTOM, hint=MATERIAL_HINT),
             listing("surface", "Surface", SURFACES, "rubber", hint=SURFACE_HINT),
             listing("style", "Style", GEOM_STYLES, "plain", hint=STYLE_HINT),
             slider("transparency", "Transparency", 0, 1, 0.05, 0, hint="Drawing only: sensors still see it"),
@@ -178,7 +193,7 @@ _KINDS = [
         "physics",
         "Physics",
         [
-            choice("mode", "Mode", ["static", "dynamic"], "dynamic"),
+            choice("mode", "Mode", ["static", "dynamic"], "dynamic", hint=MODE_HINT),
             number("mass", "Mass", "kg", 0.001, 10_000, 1),
             number("density", "Density", "kg/m³", 1, 20_000, 1000, expert=True),
         ],
@@ -316,7 +331,11 @@ _KINDS = [
         "Ground",
         "terrain",
         "World",
-        [vector("size", "Size", "m", 0.05, 1000, (100, 100, 1), hint=GROUND_SIZE_HINT)],
+        [
+            vector("size", "Size", "m", 0.05, 1000, (100, 100, 1), hint=GROUND_SIZE_HINT),
+            choice("decal", "Marks", ["none", "grid", "studs"], "none", hint=DECAL_HINT),
+            number("decal_cell", "Mark spacing", "m", 0.25, 50, 1, hint="Size of one cell of the marks"),
+        ],
         unique=True,
     ),
     _kind(

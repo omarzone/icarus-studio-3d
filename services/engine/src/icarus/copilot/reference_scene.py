@@ -47,8 +47,9 @@ height (z); cylinders and capsules run along their own z and take (diameter, dia
 4. Use a layout recipe when the place is clearly one of them: {recipes}.
 5. Prefer library pieces when one fits; give each an id, its x, y and heading, and a size, color or finish only to
    match the picture. Pieces rest on the ground (lift_m raises them). Pieces: {pieces}
-6. Anything no piece fits is a compound object built of parts (box, sphere, capsule, cylinder): "scenery" for
-   things that stay put (a house, a fountain, a kiosk), "body" for things that move (a car with turning wheels).
+6. Anything no piece fits is a compound object built of parts (box, sphere, capsule, cylinder, wedge, corner_wedge
+   for slopes and roofs): "scenery" for things that stay put (a house, a fountain, a kiosk), "body" for things
+   that move (a car with turning wheels).
    Root parts sit from the object's origin on the ground; other parts sit from their parent's center. Give each
    part a look: color, style (wheel, car_body, shell, wall, tree...), finish (glass for windows, brick, wood,
    painted_metal...), roughness, metalness, emissive for lights. collides is true for what physics touches and

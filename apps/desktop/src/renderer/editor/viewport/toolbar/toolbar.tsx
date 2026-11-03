@@ -1,6 +1,6 @@
 // PNL-TOOLBAR
 import type { LucideIcon } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 import type { RouteId } from "../../../app/navigation/catalog-id.ts";
 import { Act, GoTo } from "../../../app/navigation/go-to.tsx";
 import { useNotices } from "../../../app/runtime/notices.ts";
@@ -30,15 +30,25 @@ export type ToolbarProps = {
   actions?: Readonly<Record<string, () => void>>;
   // Tools that cannot act right now in the app, by tool label, with the reason said on hover and click.
   unavailable?: Readonly<Record<string, string>>;
+  // Controls after the last group, behind a divider (the World workspace's building menus).
+  trailing?: ReactNode;
 };
 
-const toolClass = (selected: boolean) =>
+export const toolClass = (selected: boolean) =>
   `flex h-11.5 min-w-16.5 flex-col items-center justify-center gap-1 rounded-button px-1.5 ${
-    selected ? "bg-selected text-on-selected" : "text-fg-tool hover:bg-fill-hover hover:text-fg"
+    selected ? "bg-selected text-on-selected" : "text-fg-tool hover:bg-fill-hover hover:text-fg active:opacity-80"
   } aria-disabled:opacity-35 aria-disabled:hover:bg-transparent`;
 
 // The strip of tools above the viewport, in groups separated by dividers.
-export function Toolbar({ groups, selected, active, overrides, actions = {}, unavailable = {} }: ToolbarProps) {
+export function Toolbar({
+  groups,
+  selected,
+  active,
+  overrides,
+  actions = {},
+  unavailable = {},
+  trailing,
+}: ToolbarProps) {
   const [chosen, setMode] = useState(selected);
   const mode = active ?? chosen;
   const runtime = useRuntimeMode();
@@ -113,6 +123,12 @@ export function Toolbar({ groups, selected, active, overrides, actions = {}, una
           })}
         </Fragment>
       ))}
+      {trailing ? (
+        <>
+          <span aria-hidden className="mx-1 h-8.5 w-px bg-line-divider" />
+          {trailing}
+        </>
+      ) : null}
     </div>
   );
 }

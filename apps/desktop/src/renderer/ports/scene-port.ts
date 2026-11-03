@@ -146,6 +146,8 @@ export type Inspection =
       sections: readonly InspectorSection[];
       // Only scene objects have components; runs, brains and clips show settings without them.
       components: boolean;
+      // An older project's endless floor plane, which the user may turn into a slab with edges.
+      planeFloor?: boolean;
     };
 
 export type PropertyEdit = { scene: string; section: string; property: string; value: PropertyValue };
@@ -212,7 +214,22 @@ export type ScenePort = {
     delta: readonly [number, number, number, number];
   }) => Promise<Inspection>;
   // Stretches an object along its own axes by these factors (1 keeps an axis), as a gizmo drag ends.
-  scaleObject: (input: { scene: string; id: string; factor: readonly [number, number, number] }) => Promise<Inspection>;
+  // With a move snap, the stretched sides land on multiples of it.
+  scaleObject: (input: {
+    scene: string;
+    id: string;
+    factor: readonly [number, number, number];
+    snap?: number | null;
+  }) => Promise<Inspection>;
+  // Adds a basic part (box, sphere, cylinder, wedge, corner_wedge, capsule) resting on a point, and selects it.
+  insertPart: (input: {
+    scene: string;
+    shape: string;
+    at: readonly [number, number, number];
+    snap: number | null;
+  }) => Promise<SceneTree>;
+  // Turns the selected endless floor plane into a ground slab with edges; only when the user asks.
+  makeGroundSlab: (scene: string) => Promise<Inspection>;
   renameObject: (input: { scene: string; id: string; name: string }) => Promise<SceneTree>;
   // Copies the object and what is nested in it, and selects the copy.
   duplicateObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
