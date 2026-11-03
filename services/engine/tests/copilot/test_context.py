@@ -85,7 +85,7 @@ def test_a_piece_copied_from_the_design_reference_builds_the_same_model_as_the_l
 def test_the_design_reference_says_what_each_body_can_do_and_what_the_library_cannot():
     reference = json.loads(design_reference())
     car = reference["templates"]["parking_car"]["abilities"]["car_body"]
-    assert car["motors"] == 4 and "distance_ray" in car["sensors"]
+    assert car["motors"] == 0 and car["vehicle"] and {"distance_ray", "speed", "target"} <= set(car["sensors"])
     assert reference["templates"]["humanoid"]["abilities"]["humanoid_body"]["motors"] == 12
     movement = reference["rules"]["movement"]
     assert "hinge" in movement and "fly" in movement and "thruster" in movement

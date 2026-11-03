@@ -170,7 +170,7 @@ def test_a_change_that_fails_its_try_is_never_proposed(copilot, store, project_i
 
 def test_asking_about_the_selection_explains_it_from_its_values(copilot, project_id):
     answer = say(copilot, project_id, "what does this do?", selection="steer_left").messages[-1]
-    assert "35" in answer.text and "2000" in answer.text and answer.proposal_id is None
+    assert "35" in answer.text and "vehicle" in answer.text and answer.proposal_id is None
 
 
 def test_the_proposal_scene_shows_the_change_before_it_is_applied(copilot, project_id):

@@ -39,7 +39,9 @@ def test_a_body_is_inspected_part_by_part_with_schemas(scope):
     observation = inspect_object(scope, InspectArgs(object="car_body"))
     parts = json.loads(observation.text)["parts"]
     steering = next(part for part in parts if part["id"] == "steer_left")
-    assert steering["components"]["motor"]["schema"] and observation.summary == "Inspected Car"
+    car = next(part for part in parts if part["id"] == "car")
+    assert steering["components"]["joint"]["schema"] and car["components"]["vehicle"]["schema"]
+    assert observation.summary == "Inspected Car"
 
 
 def test_reading_runs_before_any_training_says_so_exactly(scope):
