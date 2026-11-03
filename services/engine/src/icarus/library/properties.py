@@ -82,12 +82,21 @@ def span(id: str, label: str, unit: str, lo: float, hi: float, default: tuple[fl
     )
 
 
-def choice(id: str, label: str, options: list[str], default: str, *, hint: str | None = None) -> PropertySchema:
+def choice(
+    id: str,
+    label: str,
+    options: list[str],
+    default: str,
+    *,
+    hint: str | None = None,
+    labels: dict[str, str] | None = None,
+) -> PropertySchema:
+    named = labels or {}
     return PropertySchema(
         id=id,
         label=label,
         type="choice",
-        options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
+        options=[PropertyOption(value=option, label=named.get(option, option.capitalize())) for option in options],
         default=ChoiceValue(type="choice", value=default),
         hint=hint,
     )
