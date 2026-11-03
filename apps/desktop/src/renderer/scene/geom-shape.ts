@@ -1,4 +1,5 @@
 import type { SceneGeom } from "@icarus/contracts";
+import { drawnSize } from "./ground-geom.ts";
 
 // Three geometry arguments for a MuJoCo geom: MuJoCo local z (the axis of cylinders and capsules) is Three's y.
 export type GeomShapeArgs =
@@ -8,7 +9,7 @@ export type GeomShapeArgs =
   | { kind: "capsule"; args: [radius: number, length: number, capSegments: number, radialSegments: number] };
 
 export function geomShape(geom: SceneGeom): GeomShapeArgs {
-  const [x, y, z] = geom.size;
+  const [x, y, z] = drawnSize(geom);
   switch (geom.shape) {
     case "box":
       return { kind: "box", args: [x, z, y] };
@@ -21,4 +22,12 @@ export function geomShape(geom: SceneGeom): GeomShapeArgs {
     case "plane":
       return { kind: "box", args: [x, 0.002, y] };
   }
+}
+
+// Radius of a box's rounded edges as drawn: never more than a third of its thinnest side, and none for other shapes.
+export function bevelRadius(geom: Pick<SceneGeom, "shape" | "size" | "bevel">): number {
+  if (geom.shape !== "box" || !geom.bevel || geom.bevel <= 0) {
+    return 0;
+  }
+  return Math.min(geom.bevel, Math.min(...geom.size) / 3);
 }

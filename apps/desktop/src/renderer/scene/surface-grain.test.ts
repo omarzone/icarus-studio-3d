@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { grainImage } from "./surface-grain.ts";
 import type { Grain } from "./visual-styles/finishes.ts";
 
-const GRAINS: Grain[] = ["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"];
+const GRAINS: Grain[] = ["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal", "blocks"];
 
 describe("surface grain", () => {
   it("is the same image every time, so thumbnails and the viewport agree", () => {

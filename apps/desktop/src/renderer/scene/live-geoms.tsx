@@ -4,6 +4,7 @@ import { type RefObject, useEffect, useMemo, useRef } from "react";
 import { type Object3D, Quaternion } from "three";
 import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomObject, lampGlow } from "./geom-object.ts";
+import { isGround } from "./ground-geom.ts";
 import type { PosePlayer } from "./motion-player.ts";
 import { isDeliberateClick } from "./pick.ts";
 import { heldTrack, lerpPosition, nextTrack, type Poses, type PoseTrack, trackProgress } from "./pose-track.ts";
@@ -115,7 +116,7 @@ export function LiveGeoms({
             onClick={(event: ThreeEvent<MouseEvent>) => {
               event.stopPropagation();
               if (isDeliberateClick(event.delta)) {
-                pick.current(pickOf(geom.shape === "plane" ? null : geom.body, event));
+                pick.current(pickOf(isGround(geom) ? null : geom.body, event));
               }
             }}
           />

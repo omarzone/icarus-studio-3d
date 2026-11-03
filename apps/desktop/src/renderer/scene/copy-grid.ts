@@ -1,4 +1,5 @@
 import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
+import { isGround } from "./ground-geom.ts";
 import type { MotionPlayer, PosePlayer } from "./motion-player.ts";
 import type { Pose, Poses } from "./pose-track.ts";
 
@@ -58,7 +59,7 @@ function gridOffsets(
   return { offsets, extent: Math.max(columns * spacing[0], rows * spacing[1]) };
 }
 
-const solid = (geoms: readonly SceneGeom[]) => geoms.filter((geom) => geom.shape !== "plane");
+const solid = (geoms: readonly SceneGeom[]) => geoms.filter((geom) => !isGround(geom));
 
 function placeGeoms(geoms: readonly SceneGeom[], index: number, offset: readonly number[]): SceneGeom[] {
   return geoms.map((geom) => ({ ...geom, name: `${index}:${geom.name}`, position: shifted(geom.position, offset) }));

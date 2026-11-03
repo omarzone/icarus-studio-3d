@@ -1,5 +1,6 @@
-import type { SceneLight } from "@icarus/contracts";
+import type { SceneGeom, SceneLight } from "@icarus/contracts";
 import { toThreePosition, type Vector3 } from "./coordinates.ts";
+import { isGround } from "./ground-geom.ts";
 import type { SkyLook } from "./scene-sky.ts";
 import type { SceneBounds } from "./thumbnail-framing.ts";
 
@@ -87,7 +88,7 @@ export function shadowRadius(softness = 0.5): number {
   return 1 + 4 * Math.min(1, Math.max(0, softness));
 }
 
-// The color light bounces off: the first ground plane's, or `fallback` in a world without one.
-export function groundColor(geoms: readonly { shape: string; color: string }[], fallback: string): string {
-  return geoms.find((geom) => geom.shape === "plane")?.color ?? fallback;
+// The color light bounces off: the first ground's, or `fallback` in a world without one.
+export function groundColor(geoms: readonly Pick<SceneGeom, "shape" | "color" | "ground">[], fallback: string): string {
+  return geoms.find(isGround)?.color ?? fallback;
 }

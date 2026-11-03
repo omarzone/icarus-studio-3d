@@ -1,5 +1,6 @@
 import type { SceneBody, SceneDescription, SceneGeom } from "@icarus/contracts";
 import { toThreePosition } from "./coordinates.ts";
+import { isGround } from "./ground-geom.ts";
 import type { Pose } from "./pose-track.ts";
 import { conjugate, multiply, type Quaternion, rotate } from "./quaternion.ts";
 import { sceneBounds } from "./thumbnail-framing.ts";
@@ -20,7 +21,7 @@ export type AgentAnchor = {
 // Where the agent is and where it faces, in Three's axes; `yaw` turns about Three's y from +x.
 export type AgentPose = { position: [number, number, number]; forward: [number, number, number]; yaw: number };
 
-const solid = (geom: SceneGeom) => geom.shape !== "plane";
+const solid = (geom: SceneGeom) => !isGround(geom);
 
 function subtree(bodies: readonly SceneBody[], root: string): Set<string> {
   const names = new Set([root]);

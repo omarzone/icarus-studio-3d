@@ -62,6 +62,11 @@ describe("play tools", () => {
       piece: "box",
       at: [4, 1, 0],
     });
+    expect(pickAction("add-object", onGround, null, live, "sphere").action).toEqual({
+      tool: "add-object",
+      piece: "sphere",
+      at: [4, 1, 0],
+    });
   });
 
   it("acts at once for tools without a click, and cycles the speed", () => {

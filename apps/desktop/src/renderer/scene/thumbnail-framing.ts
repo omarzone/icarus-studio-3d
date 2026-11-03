@@ -1,5 +1,6 @@
 import type { SceneGeom, SceneZone } from "@icarus/contracts";
 import { toThreePosition, type Vector3 } from "./coordinates.ts";
+import { isGround } from "./ground-geom.ts";
 
 // A sphere around what a scene shows, in MuJoCo world axes.
 export type SceneBounds = { center: Vector3; radius: number };
@@ -39,11 +40,11 @@ function reach({ shape, size: [x, y, z] }: SceneGeom): number {
 
 type Sphere = { position: readonly [number, number, number]; reach: number };
 
-// Ground planes are left out: they span the whole world and would shrink the subject to a dot.
+// The ground is left out: it spans the whole world and would shrink the subject to a dot.
 // Task zones count, so a goal far from the agent is still in the picture.
 export function sceneBounds(geoms: readonly SceneGeom[], zones: readonly SceneZone[] = []): SceneBounds | null {
   const spheres: Sphere[] = [
-    ...geoms.filter((geom) => geom.shape !== "plane").map((geom) => ({ position: geom.position, reach: reach(geom) })),
+    ...geoms.filter((geom) => !isGround(geom)).map((geom) => ({ position: geom.position, reach: reach(geom) })),
     ...zones.map((zone) => ({
       position: zone.position,
       reach: zone.shape === "box" ? Math.hypot(...zone.size) / 2 : zone.size[0] / 2,

@@ -19,6 +19,8 @@ const METRES: Record<Grain, number> = {
   tiles: 1.2,
   road: 6,
   fabric: 0.4,
+  // Two blocks of a metre each way, in two tones like a checkerboard.
+  blocks: 2,
 };
 
 export function grainMetres(grain: Grain): number {
@@ -29,6 +31,23 @@ export function grainMetres(grain: Grain): number {
 const BRICK_ROWS = 16;
 const BRICKS_PER_ROW = 4;
 const TILES = 4;
+// Share of a block's side taken by the dark seam between blocks, and by the rounded edge shading inside it.
+const BLOCK_SEAM = 0.015;
+const BLOCK_EDGE = 0.08;
+
+// One face of a cube block: two tones in a checkerboard, a dark seam around it and its edge lit from the top left.
+function block(u: number, v: number, speck: number): number {
+  const fu = (u * 2) % 1;
+  const fv = (v * 2) % 1;
+  const tone = (Math.floor(u * 2) + Math.floor(v * 2)) % 2 === 0 ? 0.95 : 0.8;
+  const edge = Math.min(fu, 1 - fu, fv, 1 - fv);
+  if (edge < BLOCK_SEAM) {
+    return 0.45;
+  }
+  const lit = Math.min(fu, fv) < Math.min(1 - fu, 1 - fv) ? 0.06 : -0.08;
+  const rim = edge < BLOCK_EDGE ? lit * (1 - edge / BLOCK_EDGE) : 0;
+  return tone + rim + (speck - 0.5) * 0.02;
+}
 
 function joint(x: number, y: number, rows: number, columns: number, offset: boolean): boolean {
   const rowHeight = SIZE / rows;
@@ -109,6 +128,8 @@ function shade(grain: Grain, u: number, v: number, x: number, y: number): number
       const line = Math.abs(y - SIZE / 2) < 2 && x % (SIZE / 2) < SIZE / 4;
       return line ? 0.92 : 0.2 + fbm(u, v, 8, 14) * 0.06 + (speck > 0.97 ? 0.04 : 0);
     }
+    case "blocks":
+      return block(u, v, speck);
     case "fabric": {
       const warp = Math.sin(x * Math.PI * 0.5) * Math.sin(y * Math.PI * 0.5);
       return 0.8 + warp * 0.08 + fbm(u, v, 6, 15) * 0.08;
