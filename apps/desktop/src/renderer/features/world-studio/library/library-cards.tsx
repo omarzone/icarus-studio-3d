@@ -17,6 +17,13 @@ const CARD_MIN = "6.5rem";
 // A card keeps a readable thumbnail however short the docked panel is.
 const CARD_HEIGHT = "7.5rem";
 
+function cardTitle(item: LibraryItem): string {
+  if (item.kind === "body") {
+    return `Add ${item.name} as the agent, in place of the current body`;
+  }
+  return item.source ? `${item.name} · by ${item.source}` : item.name;
+}
+
 // Piece cards that wrap to the panel's width: 3D thumbnail surface on top, name below, the dashed import card last.
 export function LibraryCards({ items, onPreview, importLabel, scene = null }: Props) {
   return (
@@ -31,20 +38,27 @@ export function LibraryCards({ items, onPreview, importLabel, scene = null }: Pr
         <Act
           key={item.id}
           cta={item.name}
-          title={item.source ? `${item.name} · by ${item.source}` : item.name}
+          title={cardTitle(item)}
           onClick={() => onPreview(item.id)}
-          className="flex min-h-0 flex-col overflow-hidden rounded-card-sm bg-control text-left hover:bg-control-raised"
+          className="group flex min-h-0 flex-col overflow-hidden rounded-card-sm bg-control text-left hover:bg-control-raised"
         >
           {scene ? (
             <SceneThumbnail
-              cacheKey={`piece:${item.id}`}
+              cacheKey={`${item.kind === "body" ? "body" : "piece"}:${item.id}`}
               load={() => scene(item.id)}
               className="min-h-0 w-full flex-1"
             />
           ) : (
             <span aria-hidden className="min-h-0 w-full flex-1 bg-panel" />
           )}
-          <span className="truncate px-2.25 py-1.75 text-meta font-medium">{item.name}</span>
+          <span className="flex items-center gap-1.5 px-2.25 py-1.75">
+            <span className="min-w-0 flex-1 truncate text-meta font-medium">{item.name}</span>
+            {item.kind === "body" ? (
+              <span className="shrink-0 rounded-control bg-selected px-1.5 text-meta font-semibold text-on-selected group-hover:opacity-90 group-active:opacity-80">
+                Add
+              </span>
+            ) : null}
+          </span>
         </Act>
       ))}
       {importLabel ? (

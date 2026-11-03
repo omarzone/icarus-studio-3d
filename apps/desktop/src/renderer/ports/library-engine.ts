@@ -13,6 +13,7 @@ import { multiply, type Quaternion } from "../scene/quaternion.ts";
 import type { LibraryItem, LibraryShelf } from "./library-port.ts";
 import { pieceLook } from "./piece-look.ts";
 import { allObjects } from "./scene-views.ts";
+import { vaultItems } from "./vault-bodies.ts";
 
 // Pieces sit this far from the spawn point along x, so they never land on the agent.
 const PLACE_OFFSET = 3;
@@ -35,9 +36,10 @@ export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, searc
     return [];
   }
   const query = search.trim().toLowerCase();
-  return (catalog.pieces ?? [])
+  const pieces: LibraryItem[] = (catalog.pieces ?? [])
     .filter((piece) => !query || piece.label.toLowerCase().includes(query))
     .map((piece) => ({ id: piece.id, name: piece.label, kind: "prop", group: GROUPS[piece.category ?? "basics"] }));
+  return [...pieces, ...vaultItems(catalog, query)];
 }
 
 function spawnPosition(project: Project): [number, number, number] {

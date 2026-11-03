@@ -136,7 +136,7 @@ Center column, bottom strip in World. Ready-made pieces to drag into the world. 
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-LIBRARY` | Library | `library-tab.tsx` | Built-in environments, props, agents and bodies as cards with a 3D thumbnail; library pieces switch by category (Basics, Street, Buildings, Furniture, Nature, Props) and a search looks through all of them. Last card: dashed *Import a model or environment*. | Drag into the viewport, click to preview, Import → `MOD-IMPORT`. |
+| `TAB-LIBRARY` | Library | `library-tab.tsx` | Built-in environments, props, agents and bodies as cards with a 3D thumbnail; library pieces switch by category (Basics, Street, Buildings, Furniture, Nature, Props, Bodies) and a search looks through all of them. Body cards (the body vault) carry an *Add* mark: clicking one makes it the agent in place of the current body. Last card: dashed *Import a model or environment*. | Drag into the viewport, click to preview, Import → `MOD-IMPORT`. |
 | `TAB-LIBRARY-COMMUNITY` | Community | `community-tab.tsx` | Pieces published by others (worlds, bodies, brains), safe data only. | Drag in (creates a remix link), open its page → `SCR-CREATION`. |
 | `TAB-MY-FILES` | My files | `my-files-tab.tsx` | Files this user imported: models, environments, videos. | Drag in, rename, delete. |
 

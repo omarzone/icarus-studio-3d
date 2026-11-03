@@ -2,9 +2,11 @@ from fastapi import APIRouter, HTTPException
 
 from icarus.contracts.library import LibraryCatalog
 from icarus.contracts.scene import SceneDescription
+from icarus.library.body_vault import UnknownVaultBody
 from icarus.library.catalog import library_catalog
 from icarus.library.templates import UnknownTemplate
 from icarus.projects.template_scene import template_scene
+from icarus.projects.vault_scene import vault_body_scene
 
 router = APIRouter()
 
@@ -20,3 +22,11 @@ def get_template_scene(template_id: str) -> SceneDescription:
         return template_scene(template_id)
     except UnknownTemplate as error:
         raise HTTPException(status_code=404, detail=f"There is no template {template_id!r}") from error
+
+
+@router.get("/library/bodies/{body_id}/scene")
+def get_vault_body_scene(body_id: str) -> SceneDescription:
+    try:
+        return vault_body_scene(body_id)
+    except UnknownVaultBody as error:
+        raise HTTPException(status_code=404, detail=f"There is no vault body {body_id!r}") from error
