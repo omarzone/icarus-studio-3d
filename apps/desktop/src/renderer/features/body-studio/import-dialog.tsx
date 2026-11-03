@@ -18,6 +18,8 @@ import { readFile } from "../copilot/attachment-reading.ts";
 import { checkAttachment, formatBytes } from "../copilot/attachment-rules.ts";
 import { CheckLine } from "../copilot/chat-messages.tsx";
 
+const MODEL_FILES = ".glb,.gltf,.obj,.stl";
+
 // Sample body of the gallery and prototype; the app uses the open project's.
 const BODY = "dance-copy";
 
@@ -43,7 +45,10 @@ function Import({ body }: { body: string }) {
   const pick = async (file: File) => {
     const check = checkAttachment({ name: file.name, type: file.type, size: file.size }, 0);
     if (!check.ok || check.kind !== "model") {
-      setPicked({ name: file.name, problem: check.ok ? `${file.name} is not a .glb or .gltf model` : check.reason });
+      setPicked({
+        name: file.name,
+        problem: check.ok ? `${file.name} is not a .glb, .gltf, .obj or .stl model` : check.reason,
+      });
       return;
     }
     const read = await readFile(file, check);
@@ -61,7 +66,9 @@ function Import({ body }: { body: string }) {
             onStatic={() =>
               port.importStatic({ body, kind: preview.kind, file: picked && "file" in picked ? picked.file : null })
             }
-            onRig={() => port.importAndRig(body)}
+            onRig={() =>
+              port.importAndRig({ body, kind: preview.kind, file: picked && "file" in picked ? picked.file : null })
+            }
           />
         )}
       </QueryView>
@@ -103,7 +110,7 @@ function ImportBody({ preview, picked, onPick, onKind, onStatic, onRig }: BodyPr
         <input
           ref={input}
           type="file"
-          accept=".glb,.gltf"
+          accept={MODEL_FILES}
           hidden
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];

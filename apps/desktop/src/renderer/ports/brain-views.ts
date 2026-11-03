@@ -17,6 +17,7 @@ type RewardTermInfo = LibraryCatalog["reward_terms"][number];
 const CORE_TERMS: Readonly<Record<Family, readonly string[]>> = {
   navigation: ["progress_to_goal", "reach_goal"],
   locomotion: ["forward_progress"],
+  imitation: ["track_motion"],
   none: [],
 };
 
@@ -31,6 +32,11 @@ const GOALS: Readonly<Record<Family, Learning["goal"]>> = {
     success: "Move forward without falling",
     timeLimit: "30 s per episode",
     endsWhen: ["It falls", "Time runs out"],
+  },
+  imitation: {
+    success: "Copy the reference clip without falling",
+    timeLimit: "The clip's length per episode",
+    endsWhen: ["It falls", "The clip ends"],
   },
   none: { success: "No task chosen yet", timeLimit: "30 s per episode", endsWhen: ["It falls", "Time runs out"] },
 };

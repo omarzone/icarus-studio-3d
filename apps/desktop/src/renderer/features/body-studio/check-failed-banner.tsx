@@ -11,7 +11,7 @@ export function CheckFailedBanner({ body }: { body: string }) {
   const port = usePort(bodyPort);
   const client = useQueryClient();
   const check = useRigCheck(body);
-  const problems = check.data?.checks.filter((item) => item.tone === "warn").length ?? 0;
+  const problems = check.data?.problems ?? 0;
   if (problems === 0) {
     return null;
   }

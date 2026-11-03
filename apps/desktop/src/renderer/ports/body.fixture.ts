@@ -11,6 +11,7 @@ const POSES = [
 const POSE_HINT = "Move any bone to see how the joint limits feel.";
 
 const RIGGED: RigCheck = {
+  problems: 1,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
@@ -21,6 +22,7 @@ const RIGGED: RigCheck = {
 };
 
 const FAILED: RigCheck = {
+  problems: 2,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
@@ -31,6 +33,7 @@ const FAILED: RigCheck = {
 };
 
 const FIXED: RigCheck = {
+  problems: 0,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
@@ -70,6 +73,7 @@ const IMPORT: ImportPreview = {
 const AUTO_RIG: AutoRigProgress = {
   file: "dancer.glb",
   percent: 70,
+  state: "running",
   steps: [
     { text: "Read dancer.glb · 24k triangles", state: "done" },
     { text: "Detect body shape · humanoid", state: "done" },
@@ -102,7 +106,11 @@ export function createBodyFixture(): BodyPort {
   return {
     getRigCheck: async (body) => checks.get(body) ?? RIGGED,
     getParts: async () => PARTS,
-    applyPose: async () => undefined,
+    applyPose: async ({ id }) => ({
+      label: POSES.find((pose) => pose.id === id)?.label ?? id,
+      facts: [{ text: "Holds the pose for 1 s with its own motors", tone: "ok" }],
+      scene: null,
+    }),
     fixProblems: async (body) => {
       checks.set(body, FIXED);
       return FIXED;

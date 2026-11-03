@@ -6,8 +6,20 @@ import { MotionView } from "./motion-view.tsx";
 export function SideBySideTab({ compare }: { compare: MotionCompare }) {
   return (
     <div className="flex h-full gap-2 p-2">
-      <MotionView label="Reference video with the tracked skeleton" caption={compare.reference} />
-      <MotionView label="The character copying the pose in physics" caption={compare.character} />
+      <MotionView
+        label="Reference video with the tracked skeleton"
+        caption={compare.reference}
+        playback={compare.playback}
+        figures={["reference"]}
+        speed={compare.speed}
+      />
+      <MotionView
+        label="The character copying the pose in physics"
+        caption={compare.character}
+        playback={compare.playback}
+        figures={["result"]}
+        speed={compare.speed}
+      />
     </div>
   );
 }

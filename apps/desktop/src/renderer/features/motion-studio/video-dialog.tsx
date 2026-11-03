@@ -1,6 +1,7 @@
 // MOD-MOTION-VIDEO
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { Lock, Upload } from "lucide-react";
+import { useRef } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
@@ -13,6 +14,8 @@ import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
 import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
+import { videoFrames } from "../copilot/attachment-reading.ts";
+import { MOTION_SECONDS, MOTION_SIDE, motionFrameTimes, videoProblem } from "./motion-frames.ts";
 
 // Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
@@ -33,9 +36,35 @@ function Video({ clip }: { clip: string }) {
   const client = useQueryClient();
   const key = ["motion", clip, "video"] as const;
   const query = useQuery({ queryKey: key, queryFn: () => port.getVideoSource(clip) });
+  const update = { onSuccess: (next: VideoSource) => client.setQueryData(key, next) };
   const choose = useEngineAction(port.setVideoChoice);
-  const onChoose = (field: Field, id: string) =>
-    choose.mutate({ clip, field, id }, { onSuccess: (next: VideoSource) => client.setQueryData(key, next) });
+  const add = useEngineAction(async (file: File) => {
+    const problem = videoProblem(file);
+    if (problem) {
+      throw new Error(problem);
+    }
+    const stills = await videoFrames(file, motionFrameTimes, MOTION_SIDE);
+    const covered = motionFrameTimes(stills.duration).length;
+    const seconds = Math.min(stills.duration, MOTION_SECONDS);
+    return port.addVideo({
+      clip,
+      video: {
+        name: file.name,
+        duration: stills.duration,
+        fps: covered / seconds,
+        width: stills.width,
+        height: stills.height,
+        frames: stills.frames,
+      },
+    });
+  });
+  const onChoose = (field: Field, id: string) => choose.mutate({ clip, field, id }, update);
+  const video = query.data;
+  const blocked = !video?.hasVideo
+    ? "Choose a video first"
+    : !video.poseModel
+      ? "Connect a pose model first"
+      : undefined;
   return (
     <Dialog
       title="Copy motion from a video"
@@ -50,6 +79,8 @@ function Video({ clip }: { clip: string }) {
             cta="Track the motion"
             to="MOD-MOTION-TRACKING"
             run={() => port.trackMotion(clip)}
+            disabled={blocked !== undefined}
+            title={blocked}
             className={dialogButtonClass("primary")}
           >
             Track the motion
@@ -57,12 +88,29 @@ function Video({ clip }: { clip: string }) {
         </>
       }
     >
-      <QueryView query={query}>{(video) => <VideoBody video={video} onChoose={onChoose} />}</QueryView>
+      <QueryView query={query}>
+        {(source) => (
+          <VideoBody
+            video={source}
+            reading={add.isPending}
+            onPick={(file) => add.mutate(file, update)}
+            onChoose={onChoose}
+          />
+        )}
+      </QueryView>
     </Dialog>
   );
 }
 
-function VideoBody({ video, onChoose }: { video: VideoSource; onChoose: (field: Field, id: string) => void }) {
+type BodyProps = {
+  video: VideoSource;
+  reading: boolean;
+  onPick: (file: File) => void;
+  onChoose: (field: Field, id: string) => void;
+};
+
+function VideoBody({ video, reading, onPick, onChoose }: BodyProps) {
+  const input = useRef<HTMLInputElement>(null);
   return (
     <>
       <Segmented
@@ -72,8 +120,40 @@ function VideoBody({ video, onChoose }: { video: VideoSource; onChoose: (field: 
           onSelect: () => onChoose("source", source.id),
         }))}
       />
+      {video.poseModel ? null : (
+        <div role="alert" className="flex items-center gap-3 rounded-card bg-banner-warn px-3.5 py-3 text-body">
+          <span className="flex-1">
+            Tracking needs a pose model. Connect one in Settings to copy motion from a video.
+          </span>
+          <GoTo to="SCR-SETTINGS-MODELS" cta="Connect a pose model" className={dialogButtonClass("secondary")}>
+            Connect a pose model
+          </GoTo>
+        </div>
+      )}
       <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-3.5 rounded-card bg-control p-3">
-        <div role="img" aria-label={`First frame of ${video.file.name}`} className="h-37.5 rounded-card-sm bg-app" />
+        <Act
+          cta="Choose video"
+          aria-label={`Choose a video to copy, now ${video.file.name}`}
+          disabled={reading}
+          onClick={() => input.current?.click()}
+          className="flex h-37.5 flex-col items-center justify-center gap-1.5 rounded-card-sm bg-app text-meta text-fg-secondary hover:bg-fill-hover hover:text-fg active:opacity-80"
+        >
+          <Upload size={20} strokeWidth={1.75} aria-hidden />
+          {reading ? "Reading the video…" : "Choose video"}
+        </Act>
+        <input
+          ref={input}
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+          hidden
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = "";
+            if (file) {
+              onPick(file);
+            }
+          }}
+        />
         <div className="flex flex-col gap-2">
           <span className="font-semibold">{video.file.name}</span>
           <span className="text-ui text-fg-secondary">{video.file.facts}</span>

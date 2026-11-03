@@ -73,6 +73,7 @@ const CLIP: ClipTimeline = {
   current: 3,
   match: [0.29, 0.62, 0.71, 0.67, 0.38, 0.33, 0.62, 0.81, 0.76, 0.71, 0.19, 0.48, 0.71, 0.76],
   playhead: 0.31,
+  practice: true,
 };
 
 const COMPARE: MotionCompare = {
@@ -109,12 +110,15 @@ const VIDEO: VideoSource = {
   ],
   target: "dancer",
   privacy: "The video stays on your computer. Only the pose is used.",
+  poseModel: "Pose model",
+  hasVideo: true,
 };
 
 const TRACKING: TrackingProgress = {
   file: "salsa.mp4",
   frame: "frame 224 of 360",
   percent: 62,
+  state: "running",
   steps: [
     { text: "Find the dancer · person on the left", state: "done" },
     { text: "Track the pose in every frame · 224 / 360", state: "running" },
@@ -177,6 +181,10 @@ export function createMotionFixture(): MotionPort {
     },
     getPartMatch: async () => PARTS,
     getVideoSource: async () => video,
+    addVideo: async ({ video: picked }) => {
+      video = { ...video, file: { ...video.file, name: picked.name }, hasVideo: true };
+      return video;
+    },
     setVideoChoice: async ({ field, id }) => {
       video = { ...video, [field]: id };
       return video;
@@ -203,6 +211,10 @@ export function createMotionFixture(): MotionPort {
       };
       return exported;
     },
-    downloadAnimation: async () => undefined,
+    downloadAnimation: async () => ({
+      name: "salsa-physics.json",
+      mediaType: "application/json",
+      content: JSON.stringify({ format: "icarus-motion", name: "salsa.mp4", frames: [] }),
+    }),
   };
 }
