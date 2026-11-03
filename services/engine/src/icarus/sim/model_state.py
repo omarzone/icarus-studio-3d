@@ -1,6 +1,5 @@
 import math
 from dataclasses import dataclass, field
-from typing import Literal
 
 import mujoco
 import numpy as np
@@ -10,66 +9,20 @@ from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import TaskFamily
 from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch
 from icarus.design.components import view
-from icarus.design.sensors import HEADING_SUFFIX, TARGET_SUFFIX, YAW_SUFFIX
 from icarus.projects.document import all_objects
 from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
 from icarus.sim.rewards import RewardState
+from icarus.sim.sensor_info import GOAL_DISTANCE_SCALE, SensorInfo, sensor_infos
 from icarus.sim.vehicle import VehicleDrive, drive_vehicle, vehicle_drive
 
-SensorKind = Literal["ray", "accel", "gyro", "touch", "speed", "yaw", "target", "heading"]
-
 CONTROL_PERIOD = 0.05
-GRAVITY = 9.81
-# Display ranges for magnitudes that have no physical limit: about 3 g and 10 rad/s.
-ACCEL_RANGE = 30.0
-GYRO_RANGE = 10.0
 # A legged body has fallen once its root drops below this fraction of its start height.
 FALL_HEIGHT = 0.4
-# Goal distances are observed in tens of metres so they sit near the -1..1 range the policy expects.
-GOAL_DISTANCE_SCALE = 10.0
 # Coverage grid side in metres when the term does not set one; matches the library default.
 COVERAGE_CELL = 0.5
 # A vehicle has rolled over once its up axis leans past about 60° (its z component below this).
 VEHICLE_TIPPED = 0.5
-
-_KINDS: dict[int, SensorKind] = {
-    int(mujoco.mjtSensor.mjSENS_RANGEFINDER): "ray",
-    int(mujoco.mjtSensor.mjSENS_ACCELEROMETER): "accel",
-    int(mujoco.mjtSensor.mjSENS_GYRO): "gyro",
-    int(mujoco.mjtSensor.mjSENS_TOUCH): "touch",
-    int(mujoco.mjtSensor.mjSENS_VELOCIMETER): "speed",
-    int(mujoco.mjtSensor.mjSENS_FRAMEPOS): "target",
-    int(mujoco.mjtSensor.mjSENS_FRAMEXAXIS): "heading",
-}
-# What the brain reads from sensors that do not observe their raw axes, in order.
-_PARTS: dict[SensorKind, tuple[str, ...]] = {
-    "speed": ("forward speed", "side speed"),
-    "yaw": ("turn rate",),
-    "target": ("target distance", "target ahead", "target left"),
-    "heading": ("spot heading ahead", "spot heading left"),
-}
-
-
-@dataclass(frozen=True)
-class SensorInfo:
-    id: str
-    label: str
-    kind: SensorKind
-    address: int
-    dim: int
-    low: float
-    high: float
-    unit: str
-    # The reading the brain sees as 1, for speed and target sensors.
-    scale: float = 1.0
-    # The owner's name, for labels of the values the brain reads.
-    owner: str = ""
-
-    @property
-    def parts(self) -> tuple[str, ...]:
-        """Labels of the values the brain reads when they are not the raw axes; empty for raw readings."""
-        return tuple(f"{self.owner} {part}" for part in _PARTS.get(self.kind, ()))
 
 
 @dataclass(frozen=True)
@@ -134,45 +87,6 @@ class LiveWorld:
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
     return int(mujoco.mj_name2id(model, kind, name))
-
-
-def _sensors(compiled: CompiledModel, names: dict[str, str], agent_mass: float) -> list[SensorInfo]:
-    model = compiled.model
-    sensors: list[SensorInfo] = []
-    for index in range(model.nsensor):
-        kind = _KINDS.get(int(model.sensor_type[index]))
-        name = model.sensor(index).name
-        if kind == "gyro" and name.endswith(YAW_SUFFIX):
-            kind = "yaw"
-        if kind is None or (kind == "heading" and not name.endswith(HEADING_SUFFIX)):
-            continue
-        if kind == "target" and not name.endswith(TARGET_SUFFIX):
-            continue
-        owner = names.get(name.split(":")[0], name.split(":")[0])
-        address, dim = int(model.sensor_adr[index]), int(model.sensor_dim[index])
-        match kind:
-            case "ray":
-                label = compiled.ray_labels.get(name, f"{owner} distance")
-                info = (label, 0.0, float(model.sensor_cutoff[index]), "m")
-            case "accel":
-                info = (f"{owner} acceleration", 0.0, ACCEL_RANGE, "m/s²")
-            case "gyro":
-                info = (f"{owner} turn rate", 0.0, GYRO_RANGE, "rad/s")
-            case "touch":
-                info = (f"{owner} touch", 0.0, round(2 * agent_mass * GRAVITY), "N")
-            case "speed":
-                top = compiled.sensor_scales.get(name, 10.0)
-                info = (f"{owner} speed", -top, top, "m/s")
-            case "yaw":
-                info = (f"{owner} turn rate", -GYRO_RANGE, GYRO_RANGE, "rad/s")
-            case "target":
-                info = (f"{owner} target", 0.0, compiled.sensor_scales.get(name, GOAL_DISTANCE_SCALE), "m")
-            case "heading":
-                info = (f"{owner} spot heading", -180.0, 180.0, "°")
-        label, low, high, unit = info
-        scale = compiled.sensor_scales.get(name, 1.0)
-        sensors.append(SensorInfo(name, label, kind, address, dim, low, high, unit, scale, owner or ""))
-    return sensors
 
 
 def _actuators(model: mujoco.MjModel, names: dict[str, str], vehicle: VehicleDrive | None) -> list[ActuatorInfo]:
@@ -276,7 +190,7 @@ def build_world(project: Project) -> LiveWorld:
         agent_geoms=agent_geoms,
         ground_geoms=ground,
         goal=_goal(project, model),
-        sensors=_sensors(compiled, names, agent_mass),
+        sensors=sensor_infos(compiled, names, agent_mass),
         actuators=_actuators(model, names, vehicle),
         geom_objects={
             model.geom(i).name: model.geom(i).name for i in range(model.ngeom) if model.geom(i).name in names
