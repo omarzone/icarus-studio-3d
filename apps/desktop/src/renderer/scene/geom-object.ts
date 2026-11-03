@@ -1,4 +1,4 @@
-import type { SceneGeom } from "@icarus/contracts";
+import type { SceneGeom, SceneOrnament } from "@icarus/contracts";
 import {
   BoxGeometry,
   type BufferGeometry,
@@ -29,6 +29,7 @@ import { floorDepth } from "./scene-materials.ts";
 import { skinnedObject } from "./skin-models.ts";
 import { grainImage, grainMetres } from "./surface-grain.ts";
 import type { Grain, MaterialLook } from "./visual-styles/finishes.ts";
+import { type OrnamentParts, ornamentParts } from "./visual-styles/ornaments.ts";
 import { plainLook, styledLook } from "./visual-styles/part-look.ts";
 import { type StylePart, styleParts } from "./visual-styles/visual-style.ts";
 
@@ -36,6 +37,7 @@ import { type StylePart, styleParts } from "./visual-styles/visual-style.ts";
 // run all reuse one set), and live as long as the app: each is small and the set of distinct parts is bounded.
 const geometries = new Map<string, BufferGeometry>();
 const styled = new Map<string, StylePart[] | null>();
+const ornamented = new Map<string, OrnamentParts>();
 const materials = new Map<string, Material>();
 const grains = new Map<Grain, DataTexture>();
 
@@ -185,6 +187,37 @@ export function lampGlow(object: Object3D, on: boolean) {
   });
 }
 
+// An ornament drawn as a part of its own color at its own size: a geom-like look for the shared materials.
+function ornamentGeom(geom: SceneGeom, ornament: SceneOrnament, color: string): SceneGeom {
+  return {
+    name: geom.name,
+    body: geom.body,
+    shape: "box",
+    size: ornament.size,
+    position: [0, 0, 0],
+    quaternion: [1, 0, 0, 0],
+    color,
+    emissive: ornament.emissive ?? 0,
+  };
+}
+
+// A look-only ornament riding on its geom at its offset and turn (ADR 007 amendment): drawn at its own size, past
+// the collider, and never picked on its own; a click on it picks the part it rides on.
+export function ornamentObject(geom: SceneGeom, ornament: SceneOrnament): Group {
+  const key = `${ornament.style}:${ornament.size.map((value) => value.toFixed(4)).join(",")}`;
+  const parts = ornamented.get(key) ?? ornamentParts(ornament);
+  ornamented.set(key, parts);
+  const main = ornamentGeom(geom, ornament, ornament.color);
+  const accent = ornamentGeom(geom, ornament, ornament.accent ?? ornament.color);
+  const group = new Group().add(
+    ...parts.main.map((piece) => mesh(piece.geometry, styledLook(piece.finish, main), main)),
+    ...parts.accent.map((piece) => mesh(piece.geometry, styledLook(piece.finish, accent), accent)),
+  );
+  group.position.set(...toThreePosition(ornament.offset ?? [0, 0, 0]));
+  group.quaternion.set(...toThreeQuaternion(ornament.quaternion ?? [1, 0, 0, 0]));
+  return group;
+}
+
 // The Three object a geom is drawn with, placed at its pose: its styled pieces when it has a style that fits, else
 // its plain primitive in the material its surface gives; a skin's model fitted inside it once loaded (ADR 008).
 // Parts never decide physics; this only draws them.
@@ -197,6 +230,9 @@ export function geomObject(geom: SceneGeom): Object3D {
   const object = geom.skin ? skinnedObject(geom, geom.skin, drawn) : drawn;
   if (geom.light_role) {
     ownLampMaterials(drawn, geom);
+  }
+  for (const ornament of geom.ornaments ?? []) {
+    object.add(ornamentObject(geom, ornament));
   }
   object.position.set(...toThreePosition(geom.position));
   object.quaternion.set(...toThreeQuaternion(geom.quaternion));

@@ -1296,6 +1296,7 @@ export interface SceneGeom {
   light_role?: ("brake" | "reverse" | "head") | null;
   metalness?: number;
   name: string;
+  ornaments?: SceneOrnament[];
   /**
    * @minItems 3
    * @maxItems 3
@@ -1353,10 +1354,51 @@ export interface SceneGeom {
         | "crate_stack"
         | "puddle"
         | "parked_car"
+        | "trunk"
+        | "pole"
+        | "gate_post"
+        | "pickup"
+        | "hatchback"
+        | "suv"
+        | "bin"
+        | "hydrant"
+        | "planter"
+        | "sidewalk"
+        | "crosswalk"
+        | "dashed_line"
+        | "parking_mark"
+        | "road_arrow"
       )
     | null;
   surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
   transparency?: number;
+}
+/**
+ * A look-only shape riding on its geom; MuJoCo never compiles it, so physics, rays and training never see it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneOrnament".
+ */
+export interface SceneOrnament {
+  accent?: string;
+  color: string;
+  emissive?: number;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  offset?: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion?: [number, number, number, number];
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
+  style: "crown_round" | "crown_cone" | "crown_oval" | "lamp_arm" | "gate_arm" | "sign_plate" | "shrubs";
 }
 /**
  * A 3D model drawn over a part, fitted inside its collider (ADR 008); physics and training never read it.

@@ -117,6 +117,7 @@ export type {
   SceneEyes,
   SceneGeom,
   SceneLight,
+  SceneOrnament,
   ScenePlate,
   SceneRay,
   SceneSignals,

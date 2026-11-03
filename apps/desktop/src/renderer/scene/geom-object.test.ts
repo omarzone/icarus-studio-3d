@@ -28,6 +28,25 @@ describe("geom objects", () => {
     expect(lit).toMatchObject({ emissiveIntensity: 0 });
   });
 
+  it("draws a tree's crown above its thin trunk, past the collider, riding on the trunk's object", () => {
+    const trunk: SceneGeom = {
+      ...BASE,
+      name: "tree",
+      shape: "cylinder",
+      size: [0.35, 0.35, 3],
+      style: "trunk",
+      ornaments: [{ style: "crown_round", size: [3.6, 3.6, 3.4], offset: [0, 0, 2.6], color: "#4f8a3c" }],
+    };
+    const object = geomObject(trunk);
+    const crown = object.children.at(-1);
+    expect(crown).toBeInstanceOf(Group);
+    // MuJoCo's +z is Three's +y.
+    expect(crown?.position.toArray()).toEqual([0, 2.6, -0]);
+    const color = crown?.children[0] instanceof Mesh ? crown.children[0].material : null;
+    expect(color?.color.getHexString()).toBe("4f8a3c");
+    expect(crown?.children.every((child) => child instanceof Mesh && child.castShadow)).toBe(true);
+  });
+
   it("draws a geom without style or surface exactly as scenes always looked: one plain matte primitive", () => {
     const object = geomObject(BASE);
     expect(object).toBeInstanceOf(Mesh);

@@ -110,7 +110,7 @@ def test_free_bays_stay_free_and_the_goal_sits_in_an_empty_bay():
     notes = layout.site.notes
     assert notes["free_bays"] == [1, 2, 9, 12]
     assert notes["occupied_bays"] == [bay for bay in range(1, 17) if bay not in (1, 2, 9, 12)]
-    cars = [obj for obj in project.world.objects if obj.id.startswith("lot_parked_car")]
+    cars = [obj for obj in project.world.objects if obj.parent == "lot_cars"]
     assert len(cars) == 12
     width, depth, aisle = 2.7, 5.5, 6.5
     goal = next(obj for obj in project.world.objects if any(item.kind == "goal_zone" for item in obj.components))

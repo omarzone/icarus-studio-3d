@@ -2,7 +2,7 @@ import struct
 import threading
 import zlib
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -11,6 +11,7 @@ import numpy as np
 
 from icarus.contracts.scene import SceneZone
 from icarus.design.compiler import CompiledModel
+from icarus.design.looks import GeomLook
 from icarus.sim.offscreen_gl import rendering_available
 
 # Zones are annotations on the picture only: spawn blue, goal green, any other zone amber.
@@ -84,6 +85,36 @@ def _zone_geoms(scene: mujoco.MjvScene, zones: list[SceneZone]) -> None:
         scene.ngeom += 1
 
 
+# Leafy ornaments read as rounded crowns in a picture; arms, booms and plates as boxes.
+ROUND_ORNAMENTS = frozenset({"crown_round", "crown_cone", "crown_oval", "shrubs"})
+
+
+def _ornament_geoms(scene: mujoco.MjvScene, model: mujoco.MjModel, data: mujoco.MjData, looks: Mapping[str, GeomLook]):
+    """Ornaments drawn into the picture only, riding on their geoms; MuJoCo's model never holds them."""
+    for name, look in looks.items():
+        if not look.ornaments:
+            continue
+        geom = int(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name))
+        if geom < 0:
+            continue
+        frame = data.geom_xmat[geom].reshape(3, 3)
+        for ornament in look.ornaments:
+            if scene.ngeom >= scene.maxgeom:
+                return
+            turn = np.zeros(9)
+            mujoco.mju_quat2Mat(turn, np.asarray(ornament.quaternion, dtype=float))
+            rotation = frame @ turn.reshape(3, 3)
+            center = data.geom_xpos[geom] + frame @ np.asarray(ornament.offset, dtype=float)
+            round_ = ornament.style in ROUND_ORNAMENTS
+            kind = mujoco.mjtGeom.mjGEOM_ELLIPSOID if round_ else mujoco.mjtGeom.mjGEOM_BOX
+            rgba = [int(ornament.color[index : index + 2], 16) / 255 for index in (1, 3, 5)] + [1.0]
+            half = np.asarray(ornament.size, dtype=float) / 2
+            mujoco.mjv_initGeom(
+                scene.geoms[scene.ngeom], kind, half, center, rotation.flatten(), np.asarray(rgba, np.float32)
+            )
+            scene.ngeom += 1
+
+
 # Colliders mode paints what the physics touches by role and hides what only decorates.
 COLLIDER_COLORS = {
     "floor": (0.55, 0.57, 0.6, 1.0),
@@ -139,8 +170,10 @@ def render_pixels(
     camera: CameraSpec,
     zones: list[SceneZone],
     colliders: bool = False,
+    looks: Mapping[str, GeomLook] | None = None,
 ) -> np.ndarray:
-    """A state MuJoCo already computed, seen from a free camera, with zones drawn over it, as RGB pixels."""
+    """A state MuJoCo already computed, seen from a free camera, with zones drawn over it, as RGB pixels; with `looks`,
+    the parts' ornaments too, unless the picture shows only colliders."""
     model = renderer.model
     fovy, groups = model.vis.global_.fovy, model.geom_group.copy()
     if camera.fov is not None:
@@ -159,6 +192,8 @@ def render_pixels(
     scene.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = not colliders
     if colliders:
         _paint_colliders(scene, model)
+    elif looks:
+        _ornament_geoms(scene, model, data, looks)
     _zone_geoms(scene, zones)
     return renderer.render()
 
@@ -177,7 +212,7 @@ def render_view(
     """The compiled initial state MuJoCo computes, seen from a free camera, with zones drawn over it, as PNG."""
     data = mujoco.MjData(compiled.model)
     mujoco.mj_forward(compiled.model, data)
-    pixels = render_pixels(renderer, data, camera, zones, colliders)
+    pixels = render_pixels(renderer, data, camera, zones, colliders, compiled.looks)
     if is_blank(pixels):
         raise _blank(pixels)
     return encode_png(pixels)
@@ -194,7 +229,7 @@ def render_sheet(
     """Several cameras on the same initial state tiled into one PNG; it fails only when every picture is blank."""
     data = mujoco.MjData(compiled.model)
     mujoco.mj_forward(compiled.model, data)
-    cells = [render_pixels(renderer, data, camera, zones, colliders).copy() for camera in cameras]
+    cells = [render_pixels(renderer, data, camera, zones, colliders, compiled.looks).copy() for camera in cameras]
     if all(is_blank(pixels) for pixels in cells):
         raise _blank(cells[0])
     height, width = cells[0].shape[:2]

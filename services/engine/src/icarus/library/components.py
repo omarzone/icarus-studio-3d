@@ -33,7 +33,10 @@ STYLE_HINT = (
     "rim), shell and joint (robot body and limbs), crate, wall, curb, post, cone, lamp_post, tree, ball, marking "
     "(paint on the ground, usually a static part without a collider), stairs, step, slab, pillar, planks, speed_bump, "
     "wheel_stop, barrier, fence, sign, building, house, garage, table, bench, shelf, bush, rock, barrel, crate_stack, "
-    "puddle, parked_car (box: a car with its wheels)"
+    "puddle, parked_car, pickup, hatchback and suv (box: a vehicle with its wheels), trunk and pole (cylinder), "
+    "gate_post, bin, hydrant, planter, sidewalk (a slab with a curb edge), and paint without a collider: crosswalk, "
+    "dashed_line, parking_mark (a P), road_arrow. What reaches past the shape, like a crown or a lamp's arm, is an "
+    "ornament component"
 )
 FINISH_HINT = (
     "Pattern on the faces, drawing only: brick, concrete, asphalt (with lane lines), wood planks, tiles, "

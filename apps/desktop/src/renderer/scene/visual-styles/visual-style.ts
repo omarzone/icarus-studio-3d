@@ -5,10 +5,13 @@ import { bench, shelf, table } from "./furniture.ts";
 import { bush, rock } from "./nature.ts";
 import { parkedCar } from "./parked-car.ts";
 import { ball, barrel, cone, crate, crateStack, curb, lampPost, marking, post, tree, wall } from "./props.ts";
+import { crosswalk, dashedLine, parkingMark, roadArrow } from "./road-paint.ts";
 import { joint, shell } from "./robot.ts";
+import { bin, gatePost, hydrant, planter, pole, sidewalk, trunk } from "./street-furniture.ts";
 import { barrier, fence, puddle, sign, speedBump, wheelStop } from "./street-props.ts";
 import { pillar, planks, slab, stairs, step } from "./structures.ts";
 import type { Extents, StylePart } from "./style-parts.ts";
+import { hatchback, pickup, suv } from "./vehicles.ts";
 import { wheel } from "./wheel.ts";
 
 export type { StylePart } from "./style-parts.ts";
@@ -101,5 +104,33 @@ export function styleParts(geom: SceneGeom): StylePart[] | null {
       return shape === "box" ? puddle(extents) : null;
     case "parked_car":
       return shape === "box" ? parkedCar(extents) : null;
+    case "trunk":
+      return round(shape) ? trunk(extents) : null;
+    case "pole":
+      return round(shape) ? pole(extents) : null;
+    case "gate_post":
+      return shape === "box" ? gatePost(extents) : null;
+    case "pickup":
+      return shape === "box" ? pickup(extents) : null;
+    case "hatchback":
+      return shape === "box" ? hatchback(extents) : null;
+    case "suv":
+      return shape === "box" ? suv(extents) : null;
+    case "bin":
+      return round(shape) ? bin(extents) : null;
+    case "hydrant":
+      return round(shape) ? hydrant(extents) : null;
+    case "planter":
+      return shape === "box" ? planter(extents) : null;
+    case "sidewalk":
+      return shape === "box" ? sidewalk(extents) : null;
+    case "crosswalk":
+      return shape === "box" ? crosswalk(extents) : null;
+    case "dashed_line":
+      return shape === "box" ? dashedLine(extents) : null;
+    case "parking_mark":
+      return shape === "box" ? parkingMark(extents) : null;
+    case "road_arrow":
+      return shape === "box" ? roadArrow(extents) : null;
   }
 }

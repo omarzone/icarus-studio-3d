@@ -7,6 +7,7 @@ import type {
   SceneDescription,
   SceneGeom,
   SceneLight,
+  SceneOrnament,
 } from "@icarus/contracts";
 import { multiply, type Quaternion } from "../scene/quaternion.ts";
 import type { LibraryItem, LibraryShelf } from "./library-port.ts";
@@ -98,6 +99,50 @@ function rotationQuaternion([x, y, z]: readonly number[]): [number, number, numb
   return [w, qx, qy, qz];
 }
 
+const ORNAMENT_STYLES: readonly SceneOrnament["style"][] = [
+  "crown_round",
+  "crown_cone",
+  "crown_oval",
+  "lamp_arm",
+  "gate_arm",
+  "sign_plate",
+  "shrubs",
+];
+
+// A piece's ornaments as the engine exports them once placed: its crown, arm or plate drawn past the collider.
+function pieceOrnaments(components: readonly ComponentSpec[], scale: readonly number[]): SceneOrnament[] {
+  return components.flatMap((component) => {
+    if (component.kind !== "ornament") {
+      return [];
+    }
+    const own = [component];
+    const style = property(own, "ornament", "style");
+    const known = ORNAMENT_STYLES.find((item) => style?.type === "choice" && item === style.value);
+    if (!known) {
+      return [];
+    }
+    const color = property(own, "ornament", "color");
+    const accent = property(own, "ornament", "accent");
+    const glow = property(own, "ornament", "emissive");
+    const scaled = (value: readonly number[]): [number, number, number] => [
+      (value[0] ?? 0) * (scale[0] ?? 1),
+      (value[1] ?? 0) * (scale[1] ?? 1),
+      (value[2] ?? 0) * (scale[2] ?? 1),
+    ];
+    return [
+      {
+        style: known,
+        size: scaled(vectorOf(own, "ornament", "size", 1)),
+        offset: scaled(vectorOf(own, "ornament", "offset", 0)),
+        quaternion: rotationQuaternion(vectorOf(own, "ornament", "rotation", 0)),
+        color: color?.type === "color" ? color.value : FLOOR_COLOR,
+        ...(accent?.type === "color" ? { accent: accent.value } : {}),
+        emissive: glow?.type === "slider" ? glow.value : 0,
+      },
+    ];
+  });
+}
+
 // A still scene of one library piece on a floor, from the shape, size, color, tilt and look it carries.
 export function pieceScene(piece: PieceInfo): SceneDescription | null {
   const { components } = piece.object;
@@ -121,6 +166,7 @@ export function pieceScene(piece: PieceInfo): SceneDescription | null {
     quaternion: rotationQuaternion(vectorOf(components, "transform", "rotation", 0)),
     color: color?.type === "color" ? color.value : FLOOR_COLOR,
     ...pieceLook(components),
+    ornaments: pieceOrnaments(components, scale),
   };
   const floor: SceneGeom = {
     name: "floor",

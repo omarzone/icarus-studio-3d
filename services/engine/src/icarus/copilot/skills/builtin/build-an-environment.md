@@ -3,7 +3,7 @@ name: build-an-environment
 title: Lay out a whole environment in one call with a layout recipe
 when: The person asks for a place for any body to act in, such as a parking lot, a room or house, a maze or corridor, streets or a city, a warehouse, a forest or park, a race track or obstacle course, or steps and platforms.
 tools: [library, layout, pattern, look, try, propose]
-version: 2
+version: 3
 ---
 A layout recipe is engine code with parameters: it lays out dozens of named objects from the library in groups
 (one group per area, such as bays, parked cars, curbs, lamps), puts the spawn at its start and the goal zone at its
@@ -12,14 +12,17 @@ by one whenever the request is one of these places; it works the same for wheels
 
 1. **Pick the recipe.** `library` with the query layout lists them; read the closest one by its id for its
    parameters, ranges and defaults.
-   - `parking_lot`: rows of bays with cars parked in some and others free, curbs, lamp posts, an entry lane where
-     the start is. Choose free_bays and goal_bay for the spot to park in; occupancy sets how full it is.
+   - `parking_lot`: rows of bays with cars, pickups and SUVs parked in some and others free, curbs, street
+     lights, an entry lane where the start is, and by default its surroundings: grass or concrete ground, raised
+     sidewalks, one or two streets with dashed lines and crossings, barrier gates, trees, P marks and street
+     furniture (surroundings false lays out the bare lot). Choose free_bays and goal_bay for the spot to park in;
+     occupancy sets how full it is.
    - `room`: walls with doorways, a floor and scattered furniture; the start is inside the first doorway, the goal
      inside the last.
    - `maze`: seeded walls with a guaranteed way from start_cell to goal_cell; one row of cells is a corridor, and
      loops opens more than one way through.
-   - `city_block`: streets, curbed sidewalks, buildings of varied heights, lamps, trees and crossings; the start is
-     an intersection and goal_intersection the destination.
+   - `city_block`: streets with dashed center lines, curbed sidewalks, buildings of varied heights, street lights,
+     trees, zebra crossings, bins and hydrants; the start is an intersection and goal_intersection the destination.
    - `warehouse`: shelving rows with aisles, crates in the aisles, a loading door where the start is; goal_aisle
      picks the aisle to reach.
    - `forest`: trees and rocks around a clear winding path; park turns it into grass with benches and lamps.

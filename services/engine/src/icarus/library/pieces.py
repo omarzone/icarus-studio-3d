@@ -1,4 +1,5 @@
 from icarus.contracts.library import PieceCategory, PieceInfo
+from icarus.library.outdoor_pieces import OUTDOOR_PIECES
 from icarus.library.parts import Part, Raw, fixture, solid
 from icarus.library.plate_pieces import PLATE_PIECES
 
@@ -49,7 +50,7 @@ def _piece(id: str, label: str, icon: str, category: PieceCategory, description:
 
 
 # The physics sees each piece's whole shape: nothing passes under a table or between a fence's rails. The style only
-# draws the detail inside that shape (ADR 007), and the surface sets the friction.
+# draws the detail inside that shape (ADR 007), and the surface sets the friction; outdoor_pieces adds ornaments.
 _PIECES = [
     # Basics
     _piece(
@@ -165,8 +166,10 @@ _PIECES = [
         "Sidewalk slab",
         "grid",
         "street",
-        "A paved sidewalk 4 by 2 m and 12 cm high beside a road.",
-        _fixed("sidewalk", "Sidewalk", "box", (4, 2, 0.12), "#c4c0b8", "slab", "concrete", look={"finish": "tiles"}),
+        "A raised paved sidewalk 4 by 2 m and 15 cm high with a curb along its edges, beside a road.",
+        _fixed(
+            "sidewalk", "Sidewalk", "box", (4, 2, 0.15), "#c4c0b8", "sidewalk", "concrete", look={"finish": "tiles"}
+        ),
     ),
     _piece(
         "speed_bump",
@@ -302,14 +305,6 @@ _PIECES = [
     ),
     # Nature
     _piece(
-        "tree",
-        "Tree",
-        "terrain",
-        "nature",
-        "A tree 5 m tall; its collider is the whole column around trunk and crown.",
-        _fixed("tree", "Tree", "cylinder", (1.6, 1.6, 5), "#3f7d3a", "tree", "wood"),
-    ),
-    _piece(
         "bush",
         "Bush",
         "terrain",
@@ -342,6 +337,7 @@ _PIECES = [
         "A 30 kg steel barrel 0.9 m tall that can be pushed or knocked over.",
         _movable("barrel", "Barrel", "cylinder", (0.6, 0.6, 0.9), 30, "#2f6db3", "barrel", "metal"),
     ),
+    *OUTDOOR_PIECES,
     *PLATE_PIECES,
 ]
 
@@ -357,6 +353,8 @@ def piece_summary(piece: PieceInfo) -> str:
     mass = getattr(body.get("mass"), "value", None)
     sized = f" {size[0]:g}×{size[1]:g}×{size[2]:g} m (x, y, height)." if isinstance(size, tuple) else ""
     weight = " Fixed." if mode == "static" else f" Movable, {mass:g} kg." if mass is not None else ""
+    if not body and "collider" not in view:
+        weight = " Look-only: nothing collides with it."
     return f"{piece.description}{sized}{weight}"
 
 

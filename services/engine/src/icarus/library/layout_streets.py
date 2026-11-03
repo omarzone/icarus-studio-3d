@@ -1,9 +1,12 @@
 """Outdoor layouts for vehicles: a parking lot and a grid of city blocks."""
 
+import math
 import random
 
 from icarus.library.layout_params import CityBlock, ParkingLot
-from icarus.library.layout_site import FLOOR, PAINT, Site
+from icarus.library.layout_pieces import leafy_tree
+from icarus.library.layout_site import FLOOR, PAINT, Rect, Site
+from icarus.library.layout_surroundings import SIDEWALK, VERGE, LotFrame, surroundings
 
 CAR_COLORS = ("#c8553d", "#2f5d8a", "#e8e8e8", "#2b2d31", "#9aa3ad", "#7a1f2b", "#3d6b4f", "#d6a23a")
 BUILDING_COLORS = ("#c9c2b8", "#b7a99a", "#9fa8b3", "#d8cfc0", "#a39383", "#8c96a3")
@@ -11,6 +14,15 @@ ASPHALT, CONCRETE, LINE = "#33373e", "#b4b1aa", 0.12
 CAR = (4.3, 1.8, 1.45)
 CURB = (0.3, 0.15)
 LAMP = (0.3, 0.3, 5.0)
+STREET_LIGHT = (0.22, 0.22, 6.0)
+CROSSING_DEPTH = 3.0
+# Parked vehicles a mixed lot draws from, with how often each comes up and its length, width and height.
+VEHICLES = (
+    ("parked_car", 5, (4.3, 1.8, 1.45)),
+    ("hatchback", 2, (3.9, 1.75, 1.5)),
+    ("suv", 2, (4.7, 1.9, 1.75)),
+    ("pickup", 2, (5.3, 2.0, 1.85)),
+)
 
 
 def _row_spans(params: ParkingLot) -> list[tuple[float, float, int]]:
@@ -40,14 +52,25 @@ def parking_lot(params: ParkingLot, prefix: str) -> Site:
     middle = (length / 2, top / 2)
 
     pavement = site.group("pavement", "Pavement", middle)
-    site.add(
-        "floor",
-        pavement,
-        (length / 2 - params.entry_length / 2 + aisle / 2, top / 2),
-        (length + params.entry_length + aisle, top + 1.2, FLOOR),
-        name="Lot surface",
-        color=ASPHALT,
-    )
+    around = params.surroundings
+    # With surroundings the lot is paved curb to curb and the entry is a lane through the sidewalk.
+    lot = Rect(-1.0, -CURB[0], length + aisle, top + CURB[0]) if around else None
+    lane = Rect(-params.entry_length, aisle_y - aisle / 2, -1.0, aisle_y + aisle / 2)
+    if lot is None:
+        site.add(
+            "floor",
+            pavement,
+            (length / 2 - params.entry_length / 2 + aisle / 2, top / 2),
+            (length + params.entry_length + aisle, top + 1.2, FLOOR),
+            name="Lot surface",
+            color=ASPHALT,
+        )
+    else:
+        for name, rect in (("Lot surface", lot), ("Entry lane surface", lane)):
+            center = ((rect.x0 + rect.x1) / 2, (rect.y0 + rect.y1) / 2)
+            size = (rect.x1 - rect.x0, rect.y1 - rect.y0, FLOOR)
+            site.add("floor", pavement, center, size, name=name, color=ASPHALT)
+    kinds = random.Random(f"{params.seed}-vehicles")
 
     count = params.rows * params.bays_per_row
     goal_bay = params.goal_bay or (params.free_bays[0] if params.free_bays else rng.randint(1, count))
@@ -74,15 +97,13 @@ def parking_lot(params: ParkingLot, prefix: str) -> Site:
             if number in kept or rng.random() >= params.occupancy:
                 continue
             occupied.append(number)
-            site.add(
-                "parked_car",
-                cars,
-                center,
-                CAR,
-                name=f"Parked car in bay {number}",
-                yaw=90,
-                color=rng.choice(CAR_COLORS),
-            )
+            color = rng.choice(CAR_COLORS)
+            kind, size = "parked_car", CAR
+            if params.vehicles == "mixed":
+                kind, _, size = kinds.choices(VEHICLES, weights=[item[1] for item in VEHICLES])[0]
+            # A vehicle keeps half a metre free in its bay at least, whatever its kind.
+            size = (min(size[0], depth - 0.5), min(size[1], width - 0.5), size[2])
+            site.add(kind, cars, center, size, name=f"Parked vehicle in bay {number}", yaw=90, color=color)
 
     curbs = site.group("curbs", "Curbs", middle)
     lamp_lines: list[float] = []
@@ -98,7 +119,14 @@ def parking_lot(params: ParkingLot, prefix: str) -> Site:
         lamps = site.group("lamps", "Lamp posts", middle)
         for y in lamp_lines:
             for x in _spaced(length, params.lamp_spacing):
-                site.add("lamp_post", lamps, (x, y), LAMP)
+                if not around:
+                    site.add("lamp_post", lamps, (x, y), LAMP)
+                    continue
+                # Street lights reach their arm over the lot; those on a sidewalk stand on it.
+                outside = y < 0 or y > top
+                base = SIDEWALK if outside else CURB[1]
+                place = (x, y - 0.3) if y < 0 else (x, y + 0.3) if y > top else (x, y)
+                site.add("street_light", lamps, place, STREET_LIGHT, base=base, yaw=-90 if y > top else 90)
 
     entry = site.group("entry", "Entry lane", (-params.entry_length / 2, aisle_y))
     for side, y in (("left", aisle_y + aisle / 2), ("right", aisle_y - aisle / 2)):
@@ -110,30 +138,46 @@ def parking_lot(params: ParkingLot, prefix: str) -> Site:
             name=f"Entry {side} edge",
         )
 
-    if params.buildings or params.trees:
-        around = site.group("surroundings", "Surroundings", middle)
+    blocks: list[Rect] = []
+    if params.buildings or (params.trees and not around):
+        group = site.group("surroundings", "Surroundings", middle)
+        # Past the far sidewalk and its grass when the lot has surroundings.
+        far = top + CURB[0] + params.sidewalk_width + VERGE + 4.5 if around else top + 8
         if params.buildings:
             count_buildings = max(1, round(length / 12))
             span = length / count_buildings
             for index in range(count_buildings):
                 height = rng.uniform(6, 15)
-                site.add(
-                    "building",
-                    around,
-                    ((index + 0.5) * span, top + 8),
-                    (span - 2, 8, height),
-                    color=rng.choice(BUILDING_COLORS),
-                )
-        if params.trees:
+                spot = ((index + 0.5) * span, far)
+                site.add("building", group, spot, (span - 2, 8, height), color=rng.choice(BUILDING_COLORS))
+                blocks.append(Rect.around(spot, span - 2, 8))
+        if params.trees and not around:
             for x in _spaced(length, 6):
                 size = rng.uniform(1.2, 1.8)
-                site.add("tree", around, (x, -3.0), (size, size, rng.uniform(4, 6)))
+                site.add("tree", group, (x, -3.0), (size, size, rng.uniform(4, 6)))
+    laid: list[str] = []
+    if lot is not None:
+        if params.paint:
+            _lot_paint(site, params, aisle_y, length, lane)
+        frame = LotFrame(pavement=lot, lane=lane, aisle_y=aisle_y, entry_x=-params.entry_length)
+        laid = surroundings(site, params, frame, blocks)
     site.notes = {
         "goal_bay": goal_bay,
         "occupied_bays": occupied,
         "free_bays": sorted(set(range(1, count + 1)) - set(occupied)),
+        **({"surroundings": laid} if laid else {}),
     }
     return site
+
+
+def _lot_paint(site: Site, params: ParkingLot, aisle_y: float, length: float, lane: Rect) -> None:
+    """A P every few bays down the aisle, its top away from the entry, and an arrow on the entry lane pointing in."""
+    paint = site.group("paint", "Road paint", (length / 2, aisle_y))
+    every = max(2, round(12 / params.bay_width))
+    for bay in range(every // 2, params.bays_per_row, every):
+        site.add("parking_mark", paint, ((bay + 0.5) * params.bay_width, aisle_y), (1.6, 1.2, PAINT))
+    if lane.x1 - lane.x0 > 4:
+        site.add("road_arrow", paint, (lane.x1 - 1.8, aisle_y), (2.6, 0.9, PAINT), name="Entry arrow")
 
 
 def _spaced(length: float, spacing: float) -> list[float]:
@@ -144,6 +188,7 @@ def _spaced(length: float, spacing: float) -> list[float]:
 
 def city_block(params: CityBlock, prefix: str) -> Site:
     rng = random.Random(params.seed)
+    trees = random.Random(f"{params.seed}-trees")
     site = Site(prefix, "City blocks")
     street, walk, block = params.street_width, params.sidewalk_width, params.block_size
     pitch = block + street
@@ -156,35 +201,51 @@ def city_block(params: CityBlock, prefix: str) -> Site:
 
     streets = site.group("streets", "Streets", middle)
     site.add("floor", streets, middle, (span_x + street, span_y + street, FLOOR), name="Road surface", color=ASPHALT)
+    # Dashed center lines run between intersections and stop short of the crossings.
+    gap = street / 2 + (CROSSING_DEPTH + 1.0 if params.crossings else 0.5)
     for k in range(params.blocks_y + 1):
-        site.add(
-            "marking",
-            streets,
-            (span_x / 2, k * pitch),
-            (span_x + street, LINE, PAINT),
-            name=f"Center line east-west {k + 1}",
-        )
+        for i in range(params.blocks_x):
+            x0, x1 = i * pitch + gap, (i + 1) * pitch - gap
+            site.add(
+                "lane_dashes",
+                streets,
+                ((x0 + x1) / 2, k * pitch),
+                (x1 - x0, LINE, PAINT),
+                name=f"Center line east-west {k + 1}.{i + 1}",
+            )
     for k in range(params.blocks_x + 1):
-        site.add(
-            "marking",
-            streets,
-            (k * pitch, span_y / 2),
-            (LINE, span_y + street, PAINT),
-            name=f"Center line north-south {k + 1}",
-        )
+        for j in range(params.blocks_y):
+            y0, y1 = j * pitch + gap, (j + 1) * pitch - gap
+            site.add(
+                "lane_dashes",
+                streets,
+                (k * pitch, (y0 + y1) / 2),
+                (y1 - y0, LINE, PAINT),
+                yaw=90,
+                name=f"Center line north-south {k + 1}.{j + 1}",
+            )
     if params.crossings:
         crossings = site.group("crossings", "Crossings", middle)
-        stripes = [offset * street / 4 for offset in (-1.5, -0.5, 0.5, 1.5)]
-        for i in range(params.blocks_x):
+        reach = street / 2 + CROSSING_DEPTH / 2 + 0.3
+        for i in range(params.blocks_x + 1):
             for j in range(params.blocks_y + 1):
                 x, y = i * pitch, j * pitch
-                for stripe in stripes:
+                if i < params.blocks_x:
                     site.add(
-                        "marking",
+                        "crosswalk",
                         crossings,
-                        (x + street / 2 + 1.5, y + stripe),
-                        (2.5, 0.5, PAINT),
-                        name=f"Crossing stripe {i}.{j}",
+                        (x + reach, y),
+                        (CROSSING_DEPTH, street - 0.6, PAINT),
+                        name=f"Crossing east of {i}.{j}",
+                    )
+                if j < params.blocks_y:
+                    site.add(
+                        "crosswalk",
+                        crossings,
+                        (x, y + reach),
+                        (CROSSING_DEPTH, street - 0.6, PAINT),
+                        yaw=90,
+                        name=f"Crossing north of {i}.{j}",
                     )
 
     for bx in range(params.blocks_x):
@@ -205,18 +266,23 @@ def city_block(params: CityBlock, prefix: str) -> Site:
             _buildings(site, rng, group, params, (x0 + walk, y0 + walk), block - 2 * walk)
             inset = walk / 2
             if params.lamps:
-                for cx in (x0 + inset, x0 + block - inset):
-                    for cy in (y0 + inset, y0 + block - inset):
-                        site.add("lamp_post", group, (cx, cy), LAMP)
+                for cx, sx in ((x0 + inset, -1), (x0 + block - inset, 1)):
+                    for cy, sy in ((y0 + inset, -1), (y0 + block - inset, 1)):
+                        # The arm reaches out over the corner's streets.
+                        yaw = math.degrees(math.atan2(sy, sx))
+                        site.add("street_light", group, (cx, cy), STREET_LIGHT, base=CURB[1], yaw=yaw)
             if params.trees:
-                size = min(1.4, walk - 0.4)
                 for cx, cy in (
                     (center[0], y0 + inset),
                     (center[0], y0 + block - inset),
                     (x0 + inset, center[1]),
                     (x0 + block - inset, center[1]),
                 ):
-                    site.add("tree", group, (cx, cy), (size, size, rng.uniform(4, 6.5)))
+                    trunk, ornament = leafy_tree(trees, trees.uniform(4, 6.5))
+                    site.add("tree", group, (cx, cy), trunk, base=CURB[1], ornament=ornament)
+            if params.furniture:
+                site.add("trash_bin", group, (x0 + inset, y0 + inset + 2.0), (0.55, 0.55, 0.95), base=CURB[1])
+                site.add("fire_hydrant", group, (x0 + block - inset, y0 + inset + 2.0), (0.35, 0.35, 0.8), base=CURB[1])
     return site
 
 

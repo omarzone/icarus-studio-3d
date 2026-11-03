@@ -6,9 +6,16 @@ import type { SceneBounds } from "./thumbnail-framing.ts";
 
 type Vec3 = [number, number, number];
 
-// Square shadow map of the sun; one map covers every copy of a training run, so it stays sharp for one world and soft
-// for sixteen.
+// Square shadow map of the sun: the smallest that keeps a shadow texel about 3 cm across the shadow box, between 2048
+// and 4096. One map covers every copy of a training run, so it stays crisp for one world and softens for sixteen.
 export const SHADOW_MAP_SIZE = 2048;
+export const SHADOW_MAP_MAX = 4096;
+const SHADOW_TEXEL = 0.03;
+
+export function shadowMapSize(extent: number): number {
+  const wanted = (2 * extent) / SHADOW_TEXEL;
+  return wanted <= SHADOW_MAP_SIZE ? SHADOW_MAP_SIZE : SHADOW_MAP_MAX;
+}
 // Blur radius of the shadow edge, in shadow-map texels.
 export const SHADOW_SOFTNESS = 3;
 export const SHADOW_BIAS = -0.0004;

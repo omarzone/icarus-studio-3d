@@ -5,6 +5,7 @@ import random
 from collections import deque
 
 from icarus.library.layout_params import Forest, Maze, ObstacleCourse, TerrainSteps
+from icarus.library.layout_pieces import leafy_tree
 from icarus.library.layout_site import FLOOR, PAINT, LayoutError, Point, Rect, Site
 
 Cell = tuple[int, int]
@@ -172,8 +173,11 @@ def forest(params: Forest, prefix: str) -> Site:
                 ):
                     continue
                 placed.append(rect)
-                height = rng.uniform(4, 8) if kind == "tree" else size * rng.uniform(0.4, 0.8)
-                site.add(kind, plants, spot, (size, size * (1 if kind == "tree" else 0.8), height), yaw=yaw)
+                if kind == "tree":
+                    trunk, ornament = leafy_tree(rng, rng.uniform(4, 8))
+                    site.add(kind, plants, spot, trunk, ornament=ornament)
+                else:
+                    site.add(kind, plants, spot, (size, size * 0.8, size * rng.uniform(0.4, 0.8)), yaw=yaw)
                 break
     if params.park:
         _park_furniture(site, route, band)

@@ -9,6 +9,7 @@ import { fromThreePosition, fromThreeQuaternion, toThreePosition, toThreeQuatern
 import { GeomShape } from "./geom-geometry.tsx";
 import { geomGeometry, geomObject } from "./geom-object.ts";
 import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
+import { helperGridShown } from "./helper-grid.ts";
 import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import type { PosePlayer } from "./motion-player.ts";
@@ -304,8 +305,9 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
         exposure={props.exposure}
       />
       <Suns description={description} />
-      {/* The grid is an editing aid: Play, replays and training show the world as it is. */}
-      {props.mode === "play" ? null : (
+      {/* The grid is an editing aid: Play, replays and training show the world as it is, and so does a world
+      with its own ground. */}
+      {props.mode === "play" || !helperGridShown("auto", description.geoms) ? null : (
         <Grid
           infiniteGrid
           cellColor={colors.grid}
