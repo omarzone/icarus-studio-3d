@@ -133,6 +133,8 @@ class Site:
     goal_radius: float = 1.0
     goal_height: float = 0.0
     goal_name: str = "Goal"
+    # A bay's length, width and heading in degrees (the way a car faces once parked nose in), for a rectangular goal.
+    goal_spot: tuple[float, float, float] | None = None
     objects: list[ObjectSpec] = field(default_factory=list)
     footprints: list[Rect] = field(default_factory=list)
     notes: dict[str, Any] = field(default_factory=dict)

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.operations import CreateObject, EditOperation, SetProperty
 from icarus.contracts.project import Project
-from icarus.contracts.properties import NumberValue, PropertyValue, VectorValue
+from icarus.contracts.properties import ChoiceValue, NumberValue, PropertyValue, VectorValue
 from icarus.library.layout_courses import forest, maze, obstacle_course, terrain_steps
 from icarus.library.layout_interiors import room, warehouse
 from icarus.library.layout_params import (
@@ -221,11 +221,26 @@ def _markers(project: Project | None, site: Site, origin: Point, params: AnyLayo
             operations.append(_set(obj.id, ids["transform"], "position", VectorValue(type="vector", value=spot)))
             radius = NumberValue(type="number", value=site.goal_radius)
             operations.append(_set(obj.id, ids["goal_zone"], "radius", radius))
+            operations += _spot(obj.id, ids, site)
         elif found is None:
             components = {"transform": {"position": spot}, "goal_zone": {"radius": site.goal_radius}}
             part = Part(f"{site.prefix}_goal", site.goal_name, None, components)
             operations.append(CreateObject(op="create_object", target="world", object=part.spec()))
+            operations += _spot(part.id, {"transform": "transform", "goal_zone": "goal_zone"}, site)
     return operations
+
+
+def _spot(obj: str, ids: dict[str, str], site: Site) -> list[EditOperation]:
+    """A bay's goal as a rectangle the bay's size, turned to the bay; its success rules stay as the goal had them."""
+    if site.goal_spot is None:
+        return []
+    length, width, heading = site.goal_spot
+    return [
+        _set(obj, ids["goal_zone"], "shape", ChoiceValue(type="choice", value="rectangle")),
+        _set(obj, ids["goal_zone"], "length", NumberValue(type="number", value=length)),
+        _set(obj, ids["goal_zone"], "width", NumberValue(type="number", value=width)),
+        _set(obj, ids["transform"], "rotation", VectorValue(type="vector", value=(0, 0, heading))),
+    ]
 
 
 def expand_layout(params: AnyLayout, project: Project | None, start_at: Point | None = None) -> Layout:

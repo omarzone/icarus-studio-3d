@@ -121,6 +121,16 @@ def test_free_bays_stay_free_and_the_goal_sits_in_an_empty_bay():
     assert position.value[:2] == pytest.approx((ox + 3.5 * width, oy + depth + aisle + depth / 2))
 
 
+def test_the_goal_bay_becomes_a_rectangle_the_size_of_the_bay_facing_into_it():
+    layout, project = _laid_out("parking_lot", goal_bay=12)
+    goal = next(obj for obj in project.world.objects if any(item.kind == "goal_zone" for item in obj.components))
+    zone = next(item for item in goal.components if item.kind == "goal_zone").properties
+    rotation = next(item for item in goal.components if item.kind == "transform").properties["rotation"]
+    assert [zone[prop].model_dump()["value"] for prop in ("shape", "length", "width")] == ["rectangle", 5.5, 2.7]
+    # The second row opens toward the aisle below it, so a car drives in heading up the lot (+y).
+    assert isinstance(rotation, VectorValue) and rotation.value == (0, 0, 90)
+
+
 def test_a_bay_that_does_not_exist_is_refused_with_the_bay_numbers():
     with pytest.raises(ValidationError, match="1 to 16"):
         PARAMS.validate_python({"recipe": "parking_lot", "free_bays": [17]})

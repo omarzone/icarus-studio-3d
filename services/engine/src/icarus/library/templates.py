@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from icarus.contracts.library import TemplateInfo
 from icarus.contracts.operations import AddBody, CreateObject, EditOperation, SetRewardTerm, SetTaskFamily
 from icarus.contracts.specs import BodySpec, RewardTermSpec, TaskFamily
-from icarus.library.parts import Part, Raw, decoration, hinge, motor, solid
+from icarus.library.parts import Part, Raw, hinge, motor, solid
 from icarus.library.rewards import REWARD_TERMS
+from icarus.library.vehicle_templates import lot_markings, motorcycle, parking_car
 
 __all__ = ["TEMPLATES", "Part", "Raw", "UnknownTemplate", "solid", "template_operations"]
 
@@ -15,8 +16,6 @@ class UnknownTemplate(KeyError):
 
 SHELL = "#f1f1f1"
 JOINT = "#8b9098"
-# Painted lines a few millimetres proud of the ground.
-PAINT = 0.01
 
 
 def _world(sky: str) -> list[Part]:
@@ -37,102 +36,6 @@ def _world(sky: str) -> list[Part]:
         Part("spawn", "Spawn point", None, {"transform": {}, "spawn_point": {}}),
         Part("sky", "Sky", None, {"sky": {"preset": sky}}),
     ]
-
-
-def _car() -> list[Part]:
-    parts = [
-        solid(
-            "car",
-            "Car",
-            None,
-            (0, 0, 0.5),
-            "box",
-            (4, 1.8, 0.6),
-            900,
-            "#c8553d",
-            extra={"distance_ray": {"name": "Front", "range": 10, "count": 5}},
-            style="car_body",
-        )
-    ]
-    # Wide enough that a front wheel at full lock clears the body.
-    for side, y in (("left", 1.2), ("right", -1.2)):
-        knuckle = f"steer_{side}"
-        parts.append(
-            solid(
-                knuckle,
-                f"Front {side} steering",
-                "car",
-                (1.3, y, -0.2),
-                "sphere",
-                (0.12, 0.12, 0.12),
-                4,
-                "#2b2d31",
-                extra={"joint": hinge((0, 0, 1), (-35, 35)), "motor": motor("position", 2000)},
-                style="joint",
-            )
-        )
-        wheels: list[tuple[str, str, str, tuple[float, float, float], dict[str, Raw] | None]] = [
-            (f"wheel_front_{side}", f"Front {side} wheel", knuckle, (0.0, 0.0, 0.0), None),
-            (f"wheel_rear_{side}", f"Rear {side} wheel", "car", (-1.3, y, -0.2), motor("torque", 400)),
-        ]
-        for id, name, parent, position, drive in wheels:
-            extra: dict[str, dict[str, Raw]] = {"joint": hinge((0, 0, 1), (-180, 180))}
-            extra["collider"] = {"friction": 1.2}
-            if drive:
-                # Drag on the driven axle caps the top speed near 1.6 m/s and brakes the car when the drive is off.
-                extra["joint"] = extra["joint"] | {"damping": 80}
-                extra["motor"] = drive
-            parts.append(
-                solid(
-                    id,
-                    name,
-                    parent,
-                    position,
-                    "cylinder",
-                    (0.6, 0.6, 0.25),
-                    20,
-                    "#1f2023",
-                    # Turned so the wheel axis points left and a positive drive rolls the car forward.
-                    rotation=(-90, 0, 0),
-                    extra=extra,
-                    style="wheel",
-                )
-            )
-    parts.append(
-        Part("goal", "Parking spot", None, {"transform": {"position": (12, 0, 0)}, "goal_zone": {"radius": 1.5}})
-    )
-    return parts
-
-
-def _lot_markings() -> list[Part]:
-    """Painted bays around the parking spot: lines only, nothing the car can touch or its rays can see."""
-    white = "#e8eaed"
-    parts = [
-        decoration(
-            f"bay_line_{index}",
-            f"Bay line {index + 1}",
-            None,
-            (12, y, PAINT / 2),
-            "box",
-            (5, 0.12, PAINT),
-            white,
-            style="marking",
-        )
-        for index, y in enumerate((-6.5, -3.9, -1.3, 1.3, 3.9, 6.5))
-    ]
-    parts.append(
-        decoration(
-            "bay_end_line",
-            "Bay end line",
-            None,
-            (14.5, 0, PAINT / 2),
-            "box",
-            (0.12, 13.12, PAINT),
-            white,
-            style="marking",
-        )
-    )
-    return parts
 
 
 def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
@@ -285,10 +188,29 @@ def _templates() -> dict[str, _Template]:
                 "parking_car", "Parking car", "A car with steering and drive wheels and a parking spot.", "navigation"
             ),
             ("car_body", "Car"),
-            _car(),
-            ["reach_goal", "progress_to_goal", "collision_penalty", "time_penalty"],
+            parking_car(),
+            [
+                "reach_goal",
+                "progress_to_goal",
+                "spot_alignment",
+                "gentle_arrival",
+                "collision_penalty",
+                "time_penalty",
+            ],
             "day",
-            tuple(_lot_markings()),
+            tuple(lot_markings()),
+        ),
+        "motorcycle": _Template(
+            _template(
+                "motorcycle",
+                "Motorcycle",
+                "Two wheels in line with a steered fork and a driven rear wheel; its brain must learn to balance.",
+                "navigation",
+            ),
+            ("motorcycle_body", "Motorcycle"),
+            motorcycle(),
+            ["reach_goal", "progress_to_goal", "stay_upright", "fall_penalty", "time_penalty"],
+            "day",
         ),
         "walker_robot": _Template(
             _template("walker_robot", "Walker robot", "A torso on two jointed legs that learns to walk.", "locomotion"),

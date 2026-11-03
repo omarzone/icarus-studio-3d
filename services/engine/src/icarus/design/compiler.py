@@ -12,13 +12,16 @@ from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.looks import GeomLook, geom_looks
-from icarus.design.sensors import add_actuator, add_sensors, ray_labels
+from icarus.design.sensors import add_actuator, add_sensors, goal_object, ray_labels, sensor_scales
 from icarus.design.sky import add_sky, world_sky
 from icarus.design.sun_path import SunPath, world_sun
 from icarus.design.surfaces import SURFACE_FRICTION
+from icarus.design.vehicle import VehicleLayout, add_vehicle_actuators, vehicle_layouts
 from icarus.projects.document import all_objects, containers
 
 TIMESTEP = 0.002
+# A rectangular goal is a flat box on the ground; only its footprint counts.
+GOAL_HALF_HEIGHT = 0.01
 # A zone effect is a thin static floor patch whose contact settings win over whatever touches it (priority).
 PATCH_THICKNESS = 0.004
 PATCH_SUFFIX = ":patch"
@@ -41,6 +44,10 @@ class CompiledModel:
     looks: dict[str, GeomLook] = field(default_factory=dict)
     # Rangefinder name → the name its rays carry in the brain, Play and the view.
     ray_labels: dict[str, str] = field(default_factory=dict)
+    # Body root id → the vehicle it is, for bodies with a vehicle component.
+    vehicles: dict[str, VehicleLayout] = field(default_factory=dict)
+    # Speed and target sensor name → the reading the brain sees as 1.
+    sensor_scales: dict[str, float] = field(default_factory=dict)
 
 
 def _fmt(values) -> str:
@@ -170,7 +177,10 @@ def _add_markers(body: ET.Element, obj: ObjectSpec) -> None:
         if marker is None:
             continue
         attributes = {"name": f"{obj.id}:{kind}", "group": "4", "rgba": "0 0 0 0"}
-        if size == "size":
+        if kind == "goal_zone" and marker.text("shape") == "rectangle":
+            half = [marker.number("length") / 2, marker.number("width") / 2, GOAL_HALF_HEIGHT]
+            attributes |= {"type": "box", "size": _fmt(half)}
+        elif size == "size":
             attributes |= {"type": "box", "size": _fmt([value / 2 for value in marker.vector("size")])}
         else:
             attributes |= {"type": "sphere", "size": _fmt([marker.number(size) if size else 0.1])}
@@ -204,6 +214,7 @@ def _add_body(
     children: dict[str | None, list[ObjectSpec]],
     root: ET.Element,
     sun: SunPath | None,
+    goal: str | None = None,
 ):
     transform = view(obj, "transform")
     position = transform.vector("position") if transform else (0.0, 0.0, 0.0)
@@ -223,9 +234,9 @@ def _add_body(
     _add_light(body, obj, root, sun)
     _add_markers(body, obj)
     _add_zone_patch(body, obj)
-    add_sensors(body, root, obj)
+    add_sensors(body, root, obj, goal)
     for child in children.get(obj.id, []):
-        _add_body(body, child, children, root, sun)
+        _add_body(body, child, children, root, sun, goal)
 
 
 def _readable(message: str, project: Project) -> str:
@@ -247,14 +258,20 @@ def to_mjcf(project: Project) -> str:
         add_sky(root, sky)
     world = ET.SubElement(root, "worldbody")
     sun = world_sun(project)
+    goal = goal_object(project)
     for objects in containers(project):
         children: dict[str | None, list[ObjectSpec]] = {}
         for obj in objects:
             children.setdefault(obj.parent, []).append(obj)
         for obj in children.get(None, []):
-            _add_body(world, obj, children, root, sun)
+            _add_body(world, obj, children, root, sun, goal)
+    vehicles = vehicle_layouts(project)
+    owned = frozenset(item for layout in vehicles.values() for item in layout.owned)
     for obj in all_objects(project):
-        add_actuator(root, obj, project)
+        add_actuator(root, obj, project, owned)
+    for layout in vehicles.values():
+        actuators = root.find("actuator")
+        add_vehicle_actuators(actuators if actuators is not None else ET.SubElement(root, "actuator"), layout)
     return ET.tostring(root, encoding="unicode")
 
 
@@ -273,6 +290,8 @@ def compile_project(project: Project) -> CompiledModel:
         sky=world_sky(project),
         looks=geom_looks(project),
         ray_labels=ray_labels(project),
+        vehicles=vehicle_layouts(project),
+        sensor_scales=sensor_scales(project),
     )
 
 

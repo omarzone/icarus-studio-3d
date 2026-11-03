@@ -1,3 +1,5 @@
+import math
+
 import mujoco
 import numpy as np
 import pytest
@@ -88,8 +90,10 @@ def test_a_ray_saved_before_rays_had_names_and_headings_looks_ahead_under_its_pa
     ]
 
 
-def test_the_editor_scene_shows_the_car_rays_at_rest():
+def test_the_editor_scene_shows_the_car_rays_all_around_at_rest():
     project = apply_operations(empty_project("0123456789ab", "T"), template_operations("parking_car"))
     scene = scene_description(compile_project(project), revision=1)
-    assert [ray.sensor for ray in scene.rays] == [f"car:ray{index}" for index in range(5)]
+    assert [ray.sensor for ray in scene.rays] == [f"car:ray{index}" for index in range(16)]
     assert all(ray.range == 10 for ray in scene.rays)
+    headings = [round(math.degrees(math.atan2(ray.direction[1], ray.direction[0]))) for ray in scene.rays]
+    assert headings[0] == 0 and 180 in {abs(heading) for heading in headings}

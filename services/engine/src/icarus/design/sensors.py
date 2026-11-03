@@ -8,7 +8,11 @@ from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, components_of, view
 from icarus.projects.document import all_objects, find_object
 
-RAY_FAN_DEG = 30.0
+FULL_CIRCLE = 360.0
+SPEED_SUFFIX = ":speed"
+YAW_SUFFIX = ":speed:yaw"
+TARGET_SUFFIX = ":target"
+HEADING_SUFFIX = ":target:heading"
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,15 @@ def _base_label(obj: ObjectSpec, name: str, order: int) -> str:
     return f"{obj.name} distance" if order == 0 else f"{obj.name} distance {order + 1}"
 
 
+def _fan_offset(spread: float, rays: int, index: int) -> float:
+    """Degrees from the heading of one ray of a fan; a full circle spaces them evenly without doubling the back."""
+    if rays == 1:
+        return 0.0
+    if spread >= FULL_CIRCLE:
+        return FULL_CIRCLE * index / rays
+    return -spread / 2 + spread * index / (rays - 1)
+
+
 def ray_sites(obj: ObjectSpec) -> list[RaySite]:
     """Every ray of the object's distance rays in observation order; the first keeps the site names it always had."""
     sites: list[RaySite] = []
@@ -46,9 +59,9 @@ def ray_sites(obj: ObjectSpec) -> list[RaySite]:
         rays = ray.count("count")
         prefix = obj.id if order == 0 else f"{obj.id}:{component.id}"
         base = _base_label(obj, ray.text("name"), order)
+        spread = ray.number("spread")
         for index in range(rays):
-            offset = 0.0 if rays == 1 else -RAY_FAN_DEG + 2 * RAY_FAN_DEG * index / (rays - 1)
-            heading = ray.number("heading") + offset
+            heading = ray.number("heading") + _fan_offset(spread, rays, index)
             label = base if rays == 1 else f"{base} {_direction(heading)}"
             sites.append(RaySite(f"{prefix}:ray{index}", label, heading, ray.number("tilt"), ray.number("range")))
     return sites
@@ -68,7 +81,7 @@ def _section(root: ET.Element, tag: str) -> ET.Element:
     return section if section is not None else ET.SubElement(root, tag)
 
 
-def add_sensors(body: ET.Element, root: ET.Element, obj: ObjectSpec) -> None:
+def add_sensors(body: ET.Element, root: ET.Element, obj: ObjectSpec, goal: str | None = None) -> None:
     """Sites on the body and their sensors in the model's sensor section."""
     for ray in ray_sites(obj):
         tilt, angle = math.radians(ray.tilt), math.radians(ray.heading)
@@ -90,13 +103,51 @@ def add_sensors(body: ET.Element, root: ET.Element, obj: ObjectSpec) -> None:
         site = f"{obj.id}:touch"
         ET.SubElement(body, "site", {"name": site, "size": _fmt([touch.number("radius")]), "group": "4"})
         ET.SubElement(_section(root, "sensor"), "touch", {"name": site, "site": site})
+    _add_motion_sensors(body, root, obj, goal)
 
 
-def add_actuator(root: ET.Element, obj: ObjectSpec, project: Project) -> None:
+def _add_motion_sensors(body: ET.Element, root: ET.Element, obj: ObjectSpec, goal: str | None) -> None:
+    """Speed reads the part's own velocity and turn rate; target reads where the goal zone is and which way it
+    faces, both in the part's frame, as MuJoCo's frame sensors compute them."""
+    if view(obj, "speed"):
+        site = f"{obj.id}{SPEED_SUFFIX}"
+        ET.SubElement(body, "site", {"name": site, "size": "0.01", "group": "4"})
+        sensors = _section(root, "sensor")
+        ET.SubElement(sensors, "velocimeter", {"name": site, "site": site})
+        ET.SubElement(sensors, "gyro", {"name": f"{obj.id}{YAW_SUFFIX}", "site": site})
+    if view(obj, "target") and goal is not None:
+        site = f"{obj.id}{TARGET_SUFFIX}"
+        ET.SubElement(body, "site", {"name": site, "size": "0.01", "group": "4"})
+        goal_site = {"objtype": "site", "objname": f"{goal}:goal_zone", "reftype": "site", "refname": site}
+        sensors = _section(root, "sensor")
+        ET.SubElement(sensors, "framepos", {"name": site} | goal_site)
+        ET.SubElement(sensors, "framexaxis", {"name": f"{obj.id}{HEADING_SUFFIX}"} | goal_site)
+
+
+def sensor_scales(project: Project) -> dict[str, float]:
+    """Speed and target sensor name → the reading the brain sees as 1."""
+    scales: dict[str, float] = {}
+    for obj in all_objects(project):
+        speed, target = view(obj, "speed"), view(obj, "target")
+        if speed:
+            scales[f"{obj.id}{SPEED_SUFFIX}"] = speed.number("scale")
+        if target:
+            scales[f"{obj.id}{TARGET_SUFFIX}"] = target.number("range")
+    return scales
+
+
+def goal_object(project: Project) -> str | None:
+    return next((obj.id for obj in all_objects(project) if view(obj, "goal_zone")), None)
+
+
+def add_actuator(root: ET.Element, obj: ObjectSpec, project: Project, owned: frozenset[str] = frozenset()) -> None:
+    """The motor component's actuator, unless a vehicle drives that joint itself."""
     motor = view(obj, "motor")
     if motor is None:
         return
     target_id = motor.text("joint") or obj.id
+    if target_id in owned:
+        return
     found = find_object(project, target_id)
     joint = view(found[1], "joint") if found else None
     if joint is None or joint.text("kind") in {"ball", "fixed"}:
