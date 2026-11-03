@@ -76,7 +76,20 @@ describe("behavior tests on the Results views", () => {
   });
 
   it("puts both sides' paths on one scale, keeping the shape and flipping ground y to point up", () => {
-    const [first, second] = scaledPaths([[[[0, 0], [10, 0]]], [[[0, 0], [0, 5]]]]);
+    const [first, second] = scaledPaths([
+      [
+        [
+          [0, 0],
+          [10, 0],
+        ],
+      ],
+      [
+        [
+          [0, 0],
+          [0, 5],
+        ],
+      ],
+    ]);
     expect(first?.[0]).toEqual([
       [6, 72],
       [94, 72],
