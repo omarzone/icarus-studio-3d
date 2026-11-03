@@ -45,6 +45,9 @@ class RunConfig(_Model):
     evaluation_episodes: int = Field(ge=1)
     threads: int = Field(ge=1)
     warm_start: WarmStart | None = None
+    # In a project with several agents: the agent this run trains and the group of runs started with it.
+    agent: str | None = None
+    group: str | None = None
 
 
 RunState = Literal["starting", "running", "stopping", "done", "stopped", "failed"]
@@ -84,6 +87,19 @@ class RunStatus(_Model):
     phase: RunPhase | None = None
     # The checkpoint being tested while `phase` is "testing".
     testing_step: int | None = None
+    # In a project with several agents: the agent this run trains, its name and the group of runs started together.
+    agent: str | None = None
+    agent_name: str | None = None
+    group: str | None = None
+
+
+class RunGroup(_Model):
+    """The runs started together for a project with several agents, one per agent, in the agents' order."""
+
+    group_id: str
+    project_id: str
+    revision_number: int
+    runs: list[RunStatus]
 
 
 class MetricPoint(_Model):

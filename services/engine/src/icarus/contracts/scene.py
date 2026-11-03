@@ -254,6 +254,21 @@ class SceneRay(BaseModel):
     distance: float | None
 
 
+class SceneAgent(BaseModel):
+    """One agent of a project with several: which bodies of the scene are its own and which world objects its lane."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    # Its body's id in the project.
+    body: str
+    # Scene body names (object ids) of its parts, which its own runs and Play move.
+    parts: list[str]
+    # World objects only it sees: its spawn point, goal and lane objects such as its scoreboard.
+    lane: list[str] = []
+
+
 class SceneDescription(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -270,3 +285,5 @@ class SceneDescription(BaseModel):
     plates: list[ScenePlate] = []
     displays: list[SceneDisplay] = []
     eyes: list[SceneEyes] = []
+    # Every agent in a project with several, in the project's order; empty for one agent.
+    agents: list[SceneAgent] = []

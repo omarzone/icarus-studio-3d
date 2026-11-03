@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.design import DesignReport
 from icarus.contracts.operations import EditOperation
-from icarus.contracts.specs import BodySpec, BrainSpec, RewardTermSpec, TaskFamily, TaskSpec, WorldSpec
+from icarus.contracts.specs import AgentSpec, BodySpec, BrainSpec, RewardTermSpec, TaskFamily, TaskSpec, WorldSpec
 
 
 class Project(BaseModel):
@@ -19,6 +19,8 @@ class Project(BaseModel):
     bodies: list[BodySpec]
     task: TaskSpec
     brain: BrainSpec
+    # Several learners side by side, each training with only its own body; empty for one agent (the first body).
+    agents: list[AgentSpec] = Field(default_factory=list)
 
 
 class Revision(BaseModel):
@@ -68,6 +70,7 @@ class CreateProject(BaseModel):
 
 
 __all__ = [
+    "AgentSpec",
     "BodySpec",
     "BrainSpec",
     "CreateProject",
