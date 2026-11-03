@@ -12,9 +12,19 @@ export const trainingViewKeys = {
   replay: (project: string, run: string, step: number) => ["training", project, "replay", run, step] as const,
 };
 
+// A run's card must follow it to the end even when no stream watches it (started from the chat or the autopilot, or
+// not the selected one), so the list re-reads itself: often while a run trains, now and then otherwise.
+const ACTIVE_RUNS_REFRESH_MS = 2000;
+const IDLE_RUNS_REFRESH_MS = 10_000;
+
 export function useRunList(project: string) {
   const port = usePort(trainingPort);
-  return useQuery({ queryKey: trainingViewKeys.runs(project), queryFn: () => port.listRuns(project) });
+  return useQuery({
+    queryKey: trainingViewKeys.runs(project),
+    queryFn: () => port.listRuns(project),
+    refetchInterval: (query) =>
+      query.state.data?.runs.some((run) => run.status === "running") ? ACTIVE_RUNS_REFRESH_MS : IDLE_RUNS_REFRESH_MS,
+  });
 }
 
 // The id of the run the views show, undefined until the run list has loaded.

@@ -25,6 +25,8 @@ def test_a_stop_request_ends_the_run_stopped_with_a_final_evaluated_checkpoint(t
     final = folder.status()
     assert final.state == "stopped" and final.finished_at is not None
     assert 0 < final.step < 10_000
+    # Stop answers during practice instead of waiting for the rollout to fill.
+    assert final.step < quick(parking_state).project.brain.ppo.n_steps
     steps = [checkpoint.step for checkpoint in folder.checkpoints()]
     assert steps == [0, final.step]
     assert all(folder.checkpoint_path(step).is_file() and folder.rollout(step) for step in steps)

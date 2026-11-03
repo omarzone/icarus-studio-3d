@@ -9,6 +9,8 @@ from icarus.training.live_motion import LiveMotion, frame_rate
 from icarus.training.progress import EpisodeTally, RunProgress
 
 SNAPSHOT_PERIOD = 0.2
+# How often a stop request is looked for during practice, so Stop answers in about this long.
+STOP_CHECK_PERIOD = 0.5
 
 
 class TrainingCallback(BaseCallback):
@@ -28,6 +30,7 @@ class TrainingCallback(BaseCallback):
         self._marks = [step for step in progress.config.checkpoint_steps if step > 0]
         self._tally = EpisodeTally()
         self._last_snapshot = 0.0
+        self._last_stop_check = 0.0
         self._last_end = time.monotonic()
         self._last_end_step = 0
 
@@ -48,6 +51,10 @@ class TrainingCallback(BaseCallback):
             if done and "episode" in info:
                 self._tally.add(info)
         now = time.monotonic()
+        if now - self._last_stop_check >= STOP_CHECK_PERIOD:
+            self._last_stop_check = now
+            if self._stop_requested():
+                return False
         if self._motion is not None:
             self._capture(self._motion.record(infos, dones, now))
         while self._marks and self.num_timesteps >= self._marks[0]:
@@ -60,6 +67,12 @@ class TrainingCallback(BaseCallback):
             self._last_snapshot = now
             self._snapshot(now)
         return True
+
+    def _stop_requested(self) -> bool:
+        if not self.progress.stopping and self.progress.folder.stop_requested():
+            self.progress.stopping = True
+            self.progress.log("Stop requested: saving the brain and testing it one last time")
+        return self.progress.stopping
 
     def _capture(self, wanted: list[bool]) -> None:
         """Ask the copies that the live view needs a frame from to capture one on their next step."""
@@ -85,9 +98,7 @@ class TrainingCallback(BaseCallback):
         if now > self._last_end:
             self.progress.steps_per_second = (self.num_timesteps - self._last_end_step) / (now - self._last_end)
         self._last_end, self._last_end_step = now, self.num_timesteps
-        if not self.progress.stopping and self.progress.folder.stop_requested():
-            self.progress.stopping = True
-            self.progress.log("Stop requested: finishing the current rollout and saving a final checkpoint")
+        self._stop_requested()
         # PPO updates the brain from the rollout right after this returns; no step runs until it is done.
         self.progress.phase = "updating"
         self.progress.train_point(self._tally, self.num_timesteps)
