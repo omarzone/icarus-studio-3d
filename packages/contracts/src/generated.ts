@@ -989,7 +989,7 @@ export interface DataFolderMove {
  */
 export interface DesignCheck {
   detail: string;
-  id: "structure" | "compiles" | "settles" | "actuators" | "sensors";
+  id: "structure" | "compiles" | "reachable" | "settles" | "actuators" | "sensors";
   label: string;
   status: "pass" | "fail" | "skip";
 }
