@@ -2061,12 +2061,28 @@ export interface IdeaSet {
  * via the `definition` "LibraryCatalog".
  */
 export interface LibraryCatalog {
+  bodies?: VaultBodyInfo[];
   brain_settings?: PropertySchema[];
   components: ComponentKindSpec[];
   pieces?: PieceInfo[];
   reward_terms: RewardTermInfo[];
   templates: TemplateInfo[];
   version: string;
+}
+/**
+ * A ready-made body from the library's vault, added to a project as its agent.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "VaultBodyInfo".
+ */
+export interface VaultBodyInfo {
+  body: BodySpec;
+  color: string;
+  description: string;
+  family: "none" | "navigation" | "locomotion";
+  id: string;
+  label: string;
+  rewards: RewardTermSpec[];
 }
 /**
  * A ready-made object from the library that can be placed in a world.

@@ -141,6 +141,7 @@ export type {
   TrainingSnapshot,
   ValidationErrorBody,
   ValidationIssue,
+  VaultBodyInfo,
   VectorValue,
   WarmStart,
 } from "./generated.ts";

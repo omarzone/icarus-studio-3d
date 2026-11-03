@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.properties import PropertySchema
-from icarus.contracts.specs import TaskFamily
+from icarus.contracts.specs import BodySpec, RewardTermSpec, TaskFamily
 
 ComponentGroupName = Literal["Shape", "Physics", "Senses", "Brain", "Learning", "World"]
 
@@ -62,6 +62,22 @@ class PieceInfo(BaseModel):
     category: PieceCategory = "basics"
 
 
+class VaultBodyInfo(BaseModel):
+    """A ready-made body from the library's vault, added to a project as its agent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    description: str
+    # The task family it is built for and the reward terms, with weights, it suggests for it.
+    family: TaskFamily
+    rewards: list[RewardTermSpec]
+    color: str
+    # The body at the origin in its own color, standing on the ground; object ids are unprefixed.
+    body: BodySpec
+
+
 class LibraryCatalog(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -70,5 +86,6 @@ class LibraryCatalog(BaseModel):
     reward_terms: list[RewardTermInfo]
     templates: list[TemplateInfo]
     pieces: list[PieceInfo] = []
+    bodies: list[VaultBodyInfo] = []
     # How the brain practices, as the inspector shows it; ids are the fields of set_brain.
     brain_settings: list[PropertySchema] = []
