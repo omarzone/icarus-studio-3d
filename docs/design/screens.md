@@ -1885,6 +1885,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Sign in only when needed (sharing, remixing).
 - **Content:**
   - Why an account is needed, Continue with Google, GitHub or email, terms.
+  - In the app Google and GitHub open in the system browser and the profile fills in once the browser comes back. With a Supabase project, *Continue with email* opens an *Email* field and *Send sign-in link*, then says where the link went. Against a community server in development mode a line says so and every button signs in to its local test account.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Page:** no tabbed panels
 - **Dialog · Sign in to Icarus:** no tabbed panels
@@ -2096,6 +2097,9 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Mockup:** *Settings · profile* (`SettingsProfile`)
 - **Reached from:** `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Edit the public profile and signature.
+- **Content:**
+  - *Change photo* picks a PNG, JPEG or WebP picture; *Remove* goes back to the initials.
+  - Below the profile, **Community server**: the server address (default `http://127.0.0.1:8790`), the Supabase URL and anon key, a line saying how people sign in (Supabase, with the redirect URL to allow, or the server's development sign-in), *Save server* and *Sign out*. It shows even when signed out or when the server does not answer.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels

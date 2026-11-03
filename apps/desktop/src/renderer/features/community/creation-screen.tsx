@@ -4,6 +4,7 @@ import { Check, Play } from "lucide-react";
 import { useState } from "react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { accountPort } from "../../ports/account-port.ts";
@@ -40,10 +41,14 @@ function CreationPage({ creation }: { creation: CreationDetail }) {
   const vote = useEngineAction(community.vote);
   const remix = useEngineAction(community.remix);
   const follow = useEngineAction(account.follow);
+  const picture = useCommunityPicture(creation.picture);
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-6 pt-1">
       <div className="flex min-h-0 flex-col gap-3.5">
-        <div className="relative h-100 rounded-bubble bg-control">
+        <div className="relative h-100 overflow-hidden rounded-bubble bg-control">
+          {picture ? (
+            <img src={picture} alt="" aria-hidden draggable={false} className="size-full object-cover" />
+          ) : null}
           <GoTo
             to="SCR-TIMELAPSE"
             params={{ creation: creation.id }}

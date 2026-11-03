@@ -1,6 +1,7 @@
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AvatarTone } from "../ui/avatar.tsx";
+import { createCommunityCatalog } from "./catalog-community.ts";
 import { createCommunityFixture } from "./community.fixture.ts";
 
 export type CreationSort = "featured" | "recent" | "most-voted";
@@ -18,6 +19,8 @@ export type CreationSummary = {
   remixes: number;
   // Reference brains open straight into the brain workspace instead of a creation page.
   opensIn: "page" | "brain";
+  // Where the community keeps its picture (read with `getPicture`), or null for sample data.
+  picture: string | null;
 };
 
 export type CreationComment = { id: string; author: CommunityPerson; text: string };
@@ -52,36 +55,19 @@ export type CommunityPort = {
   vote: (id: string) => Promise<CreationDetail>;
   remix: (id: string) => Promise<void>;
   report: (report: CreationReport) => Promise<void>;
+  // A creation's or person's picture as a data URL, or null when there is none.
+  getPicture: (picture: string) => Promise<string | null>;
 };
 
 export const communityPort = definePort<CommunityPort>({
   app: {
-    listCategories: pending({
-      key: "community.categories",
-      summary: "Community categories",
-      sprint: 13,
-      ids: ["SCR-COMMUNITY"],
-    }),
-    listCreations: pending({
-      key: "community.list",
-      summary: "Creations from the community",
-      sprint: 13,
-      ids: ["SCR-HOME", "SCR-COMMUNITY"],
-    }),
-    getCreation: pending({
-      key: "community.creation",
-      summary: "Creation pages",
-      sprint: 13,
-      ids: ["SCR-CREATION"],
-    }),
-    vote: pending({ key: "community.vote", summary: "Voting for a creation", sprint: 13, ids: ["SCR-CREATION"] }),
+    ...createCommunityCatalog(),
     remix: pending({
       key: "community.remix",
       summary: "Remixing a creation into your projects",
       sprint: 13,
       ids: ["SCR-CREATION"],
     }),
-    report: pending({ key: "community.report", summary: "Reporting a creation", sprint: 13, ids: ["MOD-REPORT"] }),
   },
   prototype: createCommunityFixture,
 });

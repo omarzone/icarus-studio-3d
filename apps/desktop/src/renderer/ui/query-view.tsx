@@ -1,7 +1,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { NotAvailableYet } from "../app/runtime/pending.ts";
+import { CommunityNotConnected, CommunitySignedOut } from "../community-client/community-request.ts";
 import { CopilotNotConnected } from "../ports/copilot-connection.ts";
+import { CommunityNotConnectedState, CommunitySignedOutState } from "./community-states.tsx";
 import { CopilotNotConnectedState } from "./copilot-not-connected.tsx";
 import { ErrorState, LoadingState, NotAvailableYetState } from "./states.tsx";
 
@@ -14,7 +16,7 @@ type Props<T> = {
   errorTitle?: string;
 };
 
-// Renders loading, not-available, not-connected, error and empty states for an engine query, then the data.
+// Renders loading, not-available, not-connected, signed-out, error and empty states for an engine query, then the data.
 export function QueryView<T>({ query, children, isEmpty, empty, loading, errorTitle }: Props<T>) {
   if (query.isPending) {
     return loading ?? <LoadingState />;
@@ -25,6 +27,12 @@ export function QueryView<T>({ query, children, isEmpty, empty, loading, errorTi
     }
     if (query.error instanceof CopilotNotConnected) {
       return <CopilotNotConnectedState detail={query.error.message} />;
+    }
+    if (query.error instanceof CommunityNotConnected) {
+      return <CommunityNotConnectedState detail={query.error.message} />;
+    }
+    if (query.error instanceof CommunitySignedOut) {
+      return <CommunitySignedOutState />;
     }
     return <ErrorState title={errorTitle ?? "This could not be loaded"} detail={query.error.message} />;
   }

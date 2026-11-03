@@ -1,4 +1,4 @@
-import type { AccountPort, AccountSummary, Profile, ProfileCreation } from "./account-port.ts";
+import type { AccountPort, AccountSummary, CommunityConnection, Profile, ProfileCreation } from "./account-port.ts";
 
 // Sample data from the design, used only by the prototype, the design gallery and tests.
 const OWN: Profile = {
@@ -13,6 +13,9 @@ const OWN: Profile = {
   signatureOn: true,
   own: true,
   stats: { creations: 4, votes: 174, remixes: 23, followers: 58 },
+  picture: null,
+  following: false,
+  moderator: true,
 };
 
 const OTHERS: readonly Profile[] = [
@@ -28,6 +31,9 @@ const OTHERS: readonly Profile[] = [
     signatureOn: true,
     own: false,
     stats: { creations: 12, votes: 4100, remixes: 530, followers: 812 },
+    picture: null,
+    following: false,
+    moderator: false,
   },
 ];
 
@@ -57,11 +63,33 @@ export function createAccountFixture(): AccountPort {
     }
     return other;
   };
+  let connection: CommunityConnection = {
+    communityUrl: "http://127.0.0.1:8790",
+    supabaseUrl: "",
+    hasAnonKey: false,
+    authMode: "dev",
+    callbackUrl: "http://127.0.0.1:8791/auth/callback",
+  };
   return {
     getAccount: async () => account,
     signIn: async () => {
       account = { ...account, signedIn: true };
-      return account;
+      return { kind: "signed-in", account };
+    },
+    signOut: async () => {
+      account = { ...account, signedIn: false };
+    },
+    getConnection: async () => connection,
+    saveConnection: async ({ communityUrl, supabaseUrl, supabaseAnonKey }) => {
+      const hasAnonKey = supabaseAnonKey === undefined ? connection.hasAnonKey : supabaseAnonKey !== "";
+      connection = {
+        ...connection,
+        communityUrl: communityUrl || connection.communityUrl,
+        supabaseUrl,
+        hasAnonKey,
+        authMode: supabaseUrl && hasAnonKey ? "supabase" : "dev",
+      };
+      return connection;
     },
     getProfile: async (handle) => find(handle),
     listProfileCreations: async ({ handle, shelf }) =>

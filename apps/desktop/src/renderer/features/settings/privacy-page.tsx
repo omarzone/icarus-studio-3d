@@ -96,7 +96,15 @@ function PrivacyForm({
         </Act>
         <Act
           cta="Delete account"
-          onClick={() => deleteAccount.mutate(undefined)}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Delete your community account, your published creations and their files? This cannot be undone.",
+              )
+            ) {
+              deleteAccount.mutate(undefined, { onSuccess: () => client.invalidateQueries() });
+            }
+          }}
           className="inline-flex h-8.5 items-center rounded-button px-4 text-body text-danger hover:bg-danger-tint active:opacity-80"
         >
           Delete account

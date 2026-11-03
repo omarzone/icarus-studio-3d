@@ -13,7 +13,7 @@ function creation(
   votes: number,
   remixes: number,
 ): CreationSummary {
-  return { id, name, author, category, votes, remixes, opensIn: "page" };
+  return { id, name, author, category, votes, remixes, opensIn: "page", picture: null };
 }
 
 const CREATIONS: readonly CreationSummary[] = [
@@ -117,5 +117,6 @@ export function createCommunityFixture(): CommunityPort {
     },
     remix: async () => undefined,
     report: async () => undefined,
+    getPicture: async () => null,
   };
 }

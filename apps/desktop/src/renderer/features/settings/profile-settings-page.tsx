@@ -1,8 +1,9 @@
 // SCR-SETTINGS-PROFILE
 import { tokens } from "@icarus/ui-tokens";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { accountPort, type Profile } from "../../ports/account-port.ts";
@@ -11,7 +12,18 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
+import { CommunityServerSection } from "./community-server-section.tsx";
 import { SettingsLayout } from "./settings-layout.tsx";
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable"));
+    reader.onerror = () => reject(new Error("The picture could not be read"));
+    reader.readAsDataURL(file);
+  });
+}
 
 export function ProfileSettingsPage() {
   const account = usePort(accountPort);
@@ -19,6 +31,7 @@ export function ProfileSettingsPage() {
   return (
     <SettingsLayout section="profile" title="Profile" description="How people see you in the community.">
       <QueryView query={query}>{(profile) => <ProfileForm profile={profile} />}</QueryView>
+      <CommunityServerSection />
     </SettingsLayout>
   );
 }
@@ -35,21 +48,37 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const changePhoto = useEngineAction(account.changePhoto);
   const removePhoto = useEngineAction(account.removePhoto);
   const update = useEngineAction(account.updateProfile);
+  const photo = useCommunityPicture(profile.picture);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const refreshProfile = { onSuccess: () => client.invalidateQueries({ queryKey: ["profile"] }) };
   return (
     <>
       <div className="flex items-center gap-4">
-        <Avatar initials={profile.initials} tone={profile.tone} className="size-18 text-title-1" />
+        <Avatar initials={profile.initials} tone={profile.tone} photo={photo} className="size-18 text-title-1" />
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) {
+              void readAsDataUrl(file).then((dataUrl) => changePhoto.mutate(dataUrl, refreshProfile));
+            }
+          }}
+        />
         <span className="flex gap-2">
           <Act
             cta="Change photo"
-            onClick={() => changePhoto.mutate(undefined)}
+            onClick={() => photoInput.current?.click()}
             className={buttonClass("secondary", "h-8.5 px-4 text-body")}
           >
             Change photo
           </Act>
           <Act
             cta="Remove"
-            onClick={() => removePhoto.mutate(undefined)}
+            onClick={() => removePhoto.mutate(undefined, refreshProfile)}
             className={buttonClass("secondary", "h-8.5 px-4 text-body")}
           >
             Remove

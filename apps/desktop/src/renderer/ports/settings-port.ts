@@ -1,7 +1,7 @@
 import type { FolderChoice } from "../../shared/storage-bridge.ts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { AvatarTone } from "../ui/avatar.tsx";
+import { createCommunityPrivacy } from "./privacy-community.ts";
 import { createSettingsFixture } from "./settings.fixture.ts";
 import { createEngineModelSettings, createEngineTrainingSettings } from "./settings-engine.ts";
 import { createEngineStorage } from "./storage-engine.ts";
@@ -104,52 +104,11 @@ export type SettingsPort = {
 export const settingsPort = definePort<SettingsPort>({
   app: {
     ...createEngineModelSettings(),
-    getPrivacy: pending({
-      key: "settings.privacy",
-      summary: "Privacy settings",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-PRIVACY"],
-    }),
-    setPrivacy: pending({
-      key: "settings.privacy-set",
-      summary: "Changing privacy settings",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-PRIVACY"],
-    }),
-    unblock: pending({
-      key: "settings.unblock",
-      summary: "Unblocking people",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-PRIVACY"],
-    }),
-    downloadMyData: pending({
-      key: "settings.download-data",
-      summary: "Downloading your data",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-PRIVACY"],
-    }),
-    deleteAccount: pending({
-      key: "settings.delete-account",
-      summary: "Deleting your account",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-PRIVACY"],
-    }),
+    ...createCommunityPrivacy(),
     ...createEngineTrainingSettings(),
     // The main process restarts it; requests wait while it starts again.
     restartEngine: () => window.icarus.engine.restart(),
     ...createEngineStorage(),
-    getNotificationSettings: pending({
-      key: "settings.notifications",
-      summary: "Notification settings",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-NOTIFICATIONS"],
-    }),
-    setNotification: pending({
-      key: "settings.notifications-set",
-      summary: "Changing notification settings",
-      sprint: 13,
-      ids: ["SCR-SETTINGS-NOTIFICATIONS"],
-    }),
   },
   prototype: createSettingsFixture,
 });

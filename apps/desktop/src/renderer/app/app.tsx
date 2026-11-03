@@ -4,6 +4,7 @@ import { RememberWorkspace } from "../features/project/last-workspace.ts";
 import { AppProviders, HOME } from "./app-providers.tsx";
 import { Router } from "./navigation/router.tsx";
 import { RememberLocation, savedLocation } from "./navigation/saved-location.tsx";
+import { useCommunitySession } from "./runtime/use-community-session.ts";
 import { useOpenProjectShortcut } from "./shell/open-project-shortcut.ts";
 import { EngineDown } from "./system/engine-down.tsx";
 
@@ -37,5 +38,6 @@ export function App() {
 
 function AppShortcuts() {
   useOpenProjectShortcut();
+  useCommunitySession();
   return null;
 }
