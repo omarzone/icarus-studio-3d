@@ -21,6 +21,14 @@ def next_of(socket, kind: str, limit: int = 200) -> dict:
     raise AssertionError(f"No {kind} message")
 
 
+def opened(socket) -> dict:
+    """The first message after the opening progress: the session, or why it could not start."""
+    while True:
+        message = socket.receive_json()["message"]
+        if message["type"] != "progress":
+            return message
+
+
 def test_a_play_session_streams_frames_takes_commands_and_survives_bad_ones(tmp_path):
     client = TestClient(create_app(tmp_path))
     project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
