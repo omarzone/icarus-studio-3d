@@ -46,7 +46,8 @@ function runDetail(run: RunStatus): string {
       return run.state;
     case "running": {
       const where = `${steps} of ${compactNumber(run.total_steps)} steps`;
-      return success ? `${success} · ${where}` : where;
+      const detail = success ? `${success} · ${where}` : where;
+      return run.paused ? `paused · ${detail}` : detail;
     }
     case "done":
     case "stopped":
@@ -70,9 +71,9 @@ function viewStatus(state: RunStatus["state"]): RunSummary["status"] {
 }
 
 export function runSummary(run: RunStatus): RunSummary {
-  const status = viewStatus(run.state);
+  const status = run.paused && run.state === "running" ? "paused" : viewStatus(run.state);
   const summary: RunSummary = { id: run.run_id, name: run.name, status, detail: runDetail(run) };
-  if (status === "running") {
+  if (status === "running" || status === "paused") {
     summary.progress = run.total_steps > 0 ? Math.min(1, run.step / run.total_steps) : 0;
   }
   return summary;
@@ -197,7 +198,8 @@ export function stopSummary(run: RunStatus, checkpoints: readonly CheckpointInfo
     keeps.push(`Keep the best checkpoint (${compactNumber(best.step)})`);
   }
   keeps.push("Keep the metrics and replays");
-  return { run: lower(run.name), intro: `${where} ${result}`, keeps };
+  const held = run.paused ? " It is paused, holding its brain and copies where they were." : "";
+  return { run: lower(run.name), intro: `${where} ${result}${held}`, keeps, paused: Boolean(run.paused) };
 }
 
 // Only a best checkpoint past step 0 holds a trained brain worth promising.

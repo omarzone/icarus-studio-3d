@@ -27,7 +27,8 @@ describe("idea set view", () => {
     };
     const view = ideaSetView(set);
     expect(view.id).toBe("set-1");
-    expect(view.mix).toBeNull();
+    expect(view.mix).toEqual({ worldFrom: "Idea b", bodyFrom: "Idea a", worldIdea: "b", bodyIdea: "a" });
+    expect(ideaSetView({ ...set, ideas: [idea("a")] }).mix).toBeNull();
     expect(view.ideas.map((item) => [item.id, item.recommended])).toEqual([
       ["a", true],
       ["b", false],

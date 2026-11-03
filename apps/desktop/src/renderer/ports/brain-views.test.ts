@@ -10,6 +10,7 @@ import {
   renameInputOperation,
   rewardOptions,
   sensesActions,
+  toggleOperation,
   weightOperation,
 } from "./brain-views.ts";
 import parking from "./testdata/parking-car.json";
@@ -64,7 +65,6 @@ describe("sensesActions", () => {
         enabled: true,
         renamable: false,
         removable: true,
-        lockedReason: expect.stringContaining("remove the sensor"),
       },
     ]);
     expect(view.outputs.map((output) => output.name)).toEqual([
@@ -78,8 +78,23 @@ describe("sensesActions", () => {
       name: "Rear left wheel",
       detail: "Torque · up to 400 N",
       enabled: true,
-      lockedReason: expect.stringContaining("remove the motor"),
     });
+  });
+
+  it("turns senses and motors off through the whole list the brain leaves out, keeping one motor on", () => {
+    const off = toggleOperation(project, "senses", "car/distance_ray");
+    expect(off).toEqual({ op: "set_brain", muted_senses: ["car/distance_ray"] });
+    const motors = ["steer_left/motor", "wheel_rear_left/motor", "steer_right/motor"];
+    const muted = { ...project, brain: { ...project.brain, muted_senses: ["car/distance_ray"], muted_motors: motors } };
+    expect(toggleOperation(muted, "senses", "car/distance_ray")).toEqual({ op: "set_brain", muted_senses: [] });
+    const view = sensesActions(muted, catalog);
+    expect(view.inputs[0]?.enabled).toBe(false);
+    expect(view.outputs.map((output) => [output.enabled, output.lockedReason !== undefined])).toEqual([
+      [false, false],
+      [false, false],
+      [false, false],
+      [true, true],
+    ]);
   });
 
   it("names a second, added ray on its own and offers renaming when the library has ray names", () => {

@@ -2,6 +2,7 @@
 import type { RouteId } from "../../../app/navigation/catalog-id.ts";
 import { Act, GoTo } from "../../../app/navigation/go-to.tsx";
 import type { BrainShape } from "../../../ports/brain-port.ts";
+import { MIN_DECISIONS } from "../../../ports/brain-shape-views.ts";
 import { Switch } from "../../../ui/switch.tsx";
 import { ValueSlider } from "../value-slider.tsx";
 
@@ -37,7 +38,7 @@ export function ShapeTab({ shape, addLayerTo, onLayer, onRate, onRule, onAddLaye
         label="Decisions per second"
         value={rate.value}
         ratio={rate.value / rate.max}
-        onRatio={(ratio) => onRate(Math.max(1, Math.round(ratio * rate.max)))}
+        onRatio={(ratio) => onRate(Math.max(MIN_DECISIONS, Math.round(ratio * rate.max)))}
       />
       {addLayerTo ? (
         <GoTo to={addLayerTo} cta="+ Add a layer" className={addLayerClass}>
@@ -52,7 +53,13 @@ export function ShapeTab({ shape, addLayerTo, onLayer, onRate, onRule, onAddLaye
       <span className="leading-4 font-semibold">Episode rules</span>
       {shape.rules.map((rule) => (
         <span key={rule.id} className="flex items-center gap-2.5 text-ui">
-          <Switch label={rule.label} checked={rule.enabled} onChange={() => onRule(rule.id)} />
+          <Switch
+            label={rule.label}
+            checked={rule.enabled}
+            disabled={rule.lockedReason !== undefined}
+            disabledReason={rule.lockedReason}
+            onChange={() => onRule(rule.id)}
+          />
           {rule.label}
         </span>
       ))}

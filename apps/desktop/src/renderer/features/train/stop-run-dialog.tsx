@@ -31,6 +31,7 @@ function StopRun({ project }: { project: string }) {
   const stop = useEngineAction(port.stopRun);
   const runsCache = useRunsCache(project);
   const run = summary.data?.run ?? "this run";
+  const paused = summary.data?.paused ?? false;
   return (
     <Dialog
       title={`Stop ${run}?`}
@@ -40,11 +41,11 @@ function StopRun({ project }: { project: string }) {
             Keep training
           </CloseOverlay>
           <CloseOverlay
-            cta="Pause"
+            cta={paused ? "Resume" : "Pause"}
             onClick={() => void pause.mutateAsync(project).then(runsCache, () => undefined)}
             className={buttonClass("secondary", DIALOG_BUTTON)}
           >
-            Pause
+            {paused ? "Resume" : "Pause"}
           </CloseOverlay>
           <GoTo
             to="SCR-RESULTS"

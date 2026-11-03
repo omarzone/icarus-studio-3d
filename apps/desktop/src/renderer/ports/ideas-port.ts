@@ -1,5 +1,4 @@
 import type { SceneDescription } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createIdeasFixture } from "./ideas.fixture.ts";
 import { createEngineIdeas } from "./ideas-engine.ts";
@@ -22,7 +21,8 @@ export type Idea = {
 
 export type IdeaFilter = "whole" | "worlds" | "bodies";
 
-export type IdeaMix = { worldFrom: string; bodyFrom: string };
+// The mix the bar proposes: the ideas' titles to show, and their ids for the engine.
+export type IdeaMix = { worldFrom: string; bodyFrom: string; worldIdea: string; bodyIdea: string };
 
 // `prompt` is what the person asked for; sample sets have none.
 export type IdeaSet = { id: string; ideas: readonly Idea[]; mix: IdeaMix | null; prompt?: string };
@@ -34,15 +34,13 @@ export type IdeasPort = {
   getIdeas: (input: { set: string | null; filter: IdeaFilter }) => Promise<IdeaSet>;
   // Starts building a project from an idea and answers the build to follow.
   useIdea: (input: { set: string; idea: string }) => Promise<{ build: string }>;
-  tweakIdea: (id: string) => Promise<void>;
-  mixAndBuild: (mix: IdeaMix) => Promise<void>;
+  // The copilot revises one idea with the person's words and tests it again; answers the set with it changed.
+  tweakIdea: (input: { set: string; idea: string; words: string }) => Promise<IdeaSet>;
+  // Builds the world of one idea with the body of another and answers the build to follow.
+  mixAndBuild: (input: { set: string; mix: IdeaMix }) => Promise<{ build: string }>;
 };
 
 export const ideasPort = definePort<IdeasPort>({
-  app: {
-    ...createEngineIdeas(),
-    tweakIdea: pending({ key: "ideas.tweak", summary: "Tweaking an idea", sprint: 6, ids: ["SCR-IDEAS"] }),
-    mixAndBuild: pending({ key: "ideas.mix", summary: "Mixing parts of two ideas", sprint: 6, ids: ["SCR-IDEAS"] }),
-  },
+  app: createEngineIdeas(),
   prototype: createIdeasFixture,
 });

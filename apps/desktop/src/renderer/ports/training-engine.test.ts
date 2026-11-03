@@ -58,6 +58,14 @@ function engine(initial: RunStatus[]) {
       runs = runs.map((run) => (run.run_id === runId ? { ...run, state: "stopping" as const } : run));
       return runs[0] ?? status();
     }),
+    pauseRun: vi.fn(async (runId: string) => {
+      runs = runs.map((run) => (run.run_id === runId ? { ...run, paused: true } : run));
+      return runs[0] ?? status();
+    }),
+    resumeRun: vi.fn(async (runId: string) => {
+      runs = runs.map((run) => (run.run_id === runId ? { ...run, paused: false } : run));
+      return runs[0] ?? status();
+    }),
     metrics: vi.fn(async () => [trainPoint(16_384, { reward_terms: { reach_goal: 1 } })]),
     checkpoints: vi.fn(async () => [checkpoint(0, 0), checkpoint(25_000, 0.2)]),
     rollout: vi.fn(async (_runId: string, step: number) => rollout(step)),
@@ -97,6 +105,23 @@ function listener() {
   };
   return { calls, lives, changes };
 }
+
+describe("pausing a run on the engine", () => {
+  it("pauses the run training, shows it paused, and resumes it on the next press", async () => {
+    const { api } = engine([status({ run_id: "a", name: "Run 1" })]);
+    const port = createEngineTrainingPort(api, streams().open);
+    expect((await port.pauseRun("p")).runs[0]).toMatchObject({ status: "paused" });
+    expect(api.pauseRun).toHaveBeenCalledWith("a");
+    expect(await port.getStopSummary("p")).toMatchObject({ paused: true });
+    expect((await port.pauseRun("p")).runs[0]).toMatchObject({ status: "running" });
+    expect(api.resumeRun).toHaveBeenCalledWith("a");
+  });
+
+  it("says so when nothing is training", async () => {
+    const { api } = engine([status({ run_id: "a", name: "Run 1", state: "done" })]);
+    await expect(createEngineTrainingPort(api, streams().open).pauseRun("p")).rejects.toThrow("No run is training");
+  });
+});
 
 describe("training on the engine", () => {
   it("lists the runs and keeps the chosen one selected", async () => {

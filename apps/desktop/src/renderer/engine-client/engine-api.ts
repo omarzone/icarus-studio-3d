@@ -9,6 +9,7 @@ import type {
   IdeaSet,
   LibraryCatalog,
   MetricPoint,
+  MixIdeas,
   ModelSettings,
   ModelSettingsPatch,
   ProjectState,
@@ -22,6 +23,7 @@ import type {
   StartRun,
   TrainingSettings,
   TrainingSettingsPatch,
+  TweakIdea,
 } from "@icarus/contracts";
 import { isContextUsage } from "./context-usage-checks.ts";
 import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
@@ -80,6 +82,8 @@ export const engineApi = {
   runs: (id: string): Promise<RunStatus[]> => request(`${at(id)}/runs`, {}, isRunStatuses),
   run: (runId: string): Promise<RunStatus> => request(run(runId), {}, isRunStatus),
   stopRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/stop`, post(), isRunStatus),
+  pauseRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/pause`, post(), isRunStatus),
+  resumeRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/resume`, post(), isRunStatus),
   metrics: (runId: string): Promise<MetricPoint[]> => request(`${run(runId)}/metrics`, {}, isMetricPoints),
   checkpoints: (runId: string): Promise<CheckpointInfo[]> => request(`${run(runId)}/checkpoints`, {}, isCheckpoints),
   runScene: (runId: string): Promise<SceneDescription> => request(`${run(runId)}/scene`, {}, isSceneDescription),
@@ -101,6 +105,10 @@ export const engineApi = {
   createIdeas: (prompt: string): Promise<IdeaSet> => request("/ideas", post({ prompt }), isIdeaSet),
   ideas: (id: string): Promise<IdeaSet> => request(`/ideas/${encodeURIComponent(id)}`, {}, isIdeaSet),
   startBuild: (body: BuildIdea): Promise<BuildStatus> => request("/builds", post(body), isBuildStatus),
+  tweakIdea: (set: string, idea: string, body: TweakIdea): Promise<IdeaSet> =>
+    request(`/ideas/${encodeURIComponent(set)}/ideas/${encodeURIComponent(idea)}/tweak`, post(body), isIdeaSet),
+  mixIdeas: (set: string, body: MixIdeas): Promise<BuildStatus> =>
+    request(`/ideas/${encodeURIComponent(set)}/mix`, post(body), isBuildStatus),
   build: (id: string): Promise<BuildStatus> => request(`/builds/${encodeURIComponent(id)}`, {}, isBuildStatus),
   modelSettings: (): Promise<ModelSettings> => request("/settings/models", {}, isModelSettings),
   saveModelSettings: (patch: ModelSettingsPatch): Promise<ModelSettings> =>

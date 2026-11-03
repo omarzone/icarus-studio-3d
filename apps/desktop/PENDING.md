@@ -8,8 +8,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `ideas.mix` | Mixing parts of two ideas | `SCR-IDEAS` |
-| `ideas.tweak` | Tweaking an idea | `SCR-IDEAS` |
 | `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
 
 ## Sprint 7
@@ -19,22 +17,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `results.testRuns` | Every test run with pass or fail | `STA-RESULTS-FAILURES` |
 | `results.timelapse` | The timelapse of how it learned | `SCR-TIMELAPSE` |
 | `results.timelapseFrame` | Jumping to a checkpoint in the timelapse | `SCR-TIMELAPSE` |
-
-## Sprint 8
-
-| Action | What it does | Used in |
-|---|---|---|
-| `brain.addLayer` | Adding a layer to the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `brain.chooseSize` | Choosing a brain size | `MOD-BRAIN-SIZES` |
-| `brain.readings` | What the brain senses right now | `SCR-BRAIN`, `STA-BRAIN-CONNECTOME` |
-| `brain.setDecisionsPerSecond` | Changing how often the brain decides | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `brain.setLayerSize` | Changing a layer size | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `brain.shape` | The shape of the brain | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `brain.sizes` | Brain sizes with their training estimates | `MOD-BRAIN-SIZES` |
-| `brain.toggleInput` | Turning a sense on or off | `SCR-BRAIN` |
-| `brain.toggleOutput` | Turning an action on or off | `SCR-BRAIN` |
-| `brain.toggleRule` | Changing an episode rule | `STA-BRAIN-NETWORK`, `MOD-BRAIN-SIZES` |
-| `training.pause` | Pausing a training run | `MOD-STOP-RUN` |
 
 ## Sprint 9
 
@@ -75,11 +57,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `brain.activity` | Brain activity by region | `STA-BRAIN-CONNECTOME`, `MOD-BRAIN-SOURCE` |
-| `brain.behaviors` | Behaviors observed so far | `STA-BRAIN-CONNECTOME` |
-| `brain.loadSource` | Loading a brain into the body | `MOD-BRAIN-SOURCE` |
-| `brain.source` | The brains that can drive this body | `MOD-BRAIN-SOURCE` |
-| `brain.wiring` | How the brain's neurons connect to the body | `STA-BRAIN-CONNECTOME` |
 | `results.behaviorMatch` | How close each behavior is to the recordings | `STA-RESULTS-REFERENCE` |
 | `results.neurons` | Which neurons drive each behavior | `STA-RESULTS-REFERENCE` |
 | `results.recordings` | Recordings imported for comparison | `STA-RESULTS-REFERENCE` |

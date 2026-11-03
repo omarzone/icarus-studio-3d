@@ -20,20 +20,24 @@ const CORE_TERMS: Readonly<Record<Family, readonly string[]>> = {
   none: [],
 };
 
-// Mirrors the engine's episode rules (sim/env.py): 30 s, ends early on a fall or, navigating, on reaching the goal.
-const GOALS: Readonly<Record<Family, Learning["goal"]>> = {
-  navigation: {
-    success: "Reach the goal zone and stay there",
-    timeLimit: "30 s per episode",
-    endsWhen: ["It reaches the goal", "It falls", "Time runs out"],
-  },
-  locomotion: {
-    success: "Move forward without falling",
-    timeLimit: "30 s per episode",
-    endsWhen: ["It falls", "Time runs out"],
-  },
-  none: { success: "No task chosen yet", timeLimit: "30 s per episode", endsWhen: ["It falls", "Time runs out"] },
+const SUCCESS: Readonly<Record<Family, string>> = {
+  navigation: "Reach the goal zone and stay there",
+  locomotion: "Move forward without falling",
+  none: "No task chosen yet",
 };
+
+// Mirrors the engine's episode rules (sim/env.py): the task's seconds, a fall and, navigating, reaching the goal.
+function goalOf(task: Project["task"]): Learning["goal"] {
+  const endsWhen: string[] = [];
+  if (task.family === "navigation" && (task.end_on_success ?? true)) {
+    endsWhen.push("It reaches the goal");
+  }
+  if (task.end_on_fall ?? true) {
+    endsWhen.push("It falls");
+  }
+  endsWhen.push("Time runs out");
+  return { success: SUCCESS[task.family], timeLimit: `${task.episode_seconds ?? 30} s per episode`, endsWhen };
+}
 
 function propertyOf(component: ComponentSpec, id: string): string | number | null {
   const property = component.properties[id];
@@ -87,11 +91,12 @@ function senseName(obj: ObjectSpec, component: ComponentSpec, label: string): st
   return order === 0 ? `${obj.name} distance` : `${obj.name} distance ${order + 1}`;
 }
 
-const INPUT_LOCKED = "Every sensor on the body feeds the brain; remove the sensor to stop it";
-const OUTPUT_LOCKED = "The brain drives every motor of the body; remove the motor in Body to stop it";
+const LAST_MOTOR = "The brain needs at least one motor to move the body";
 
-// What the brain senses (the body's sensors) and what it moves (the body's motors).
+// What the brain senses (the body's sensors) and what it moves (the body's motors); turned-off ones stay on the body.
 export function sensesActions(project: Project, catalog: LibraryCatalog): SensesActions {
+  const mutedSenses = new Set(project.brain.muted_senses ?? []);
+  const mutedMotors = new Set(project.brain.muted_motors ?? []);
   const senses = new Map(catalog.components.filter((kind) => kind.group === "Senses").map((kind) => [kind.kind, kind]));
   const inputs: SenseInput[] = [];
   const outputs: ActionOutput[] = [];
@@ -104,10 +109,9 @@ export function sensesActions(project: Project, catalog: LibraryCatalog): Senses
           id: `${obj.id}/${component.id}`,
           name: senseName(obj, component, sense.label),
           detail: extra ? `${obj.name} · ${extra}` : obj.name,
-          enabled: true,
+          enabled: !mutedSenses.has(`${obj.id}/${component.id}`),
           renamable: sense.properties.some((schema) => schema.id === "name" && schema.type === "text"),
           removable: true,
-          lockedReason: INPUT_LOCKED,
         });
       }
       if (component.kind === "motor") {
@@ -118,13 +122,23 @@ export function sensesActions(project: Project, catalog: LibraryCatalog): Senses
           id: `${obj.id}/${component.id}`,
           name: obj.name,
           detail,
-          enabled: true,
-          lockedReason: OUTPUT_LOCKED,
+          enabled: !mutedMotors.has(`${obj.id}/${component.id}`),
         });
       }
     }
   }
-  return { inputs, outputs };
+  const driving = outputs.filter((output) => output.enabled);
+  const locked = outputs.map((output) =>
+    driving.length === 1 && output.enabled ? { ...output, lockedReason: LAST_MOTOR } : output,
+  );
+  return { inputs, outputs: locked };
+}
+
+// The set_brain operation that turns one sense or motor on or off, sending the whole list the brain leaves out.
+export function toggleOperation(project: Project, kind: "senses" | "motors", id: string): EditOperation {
+  const muted = (kind === "senses" ? project.brain.muted_senses : project.brain.muted_motors) ?? [];
+  const next = muted.includes(id) ? muted.filter((item) => item !== id) : [...muted, id];
+  return kind === "senses" ? { op: "set_brain", muted_senses: next } : { op: "set_brain", muted_motors: next };
 }
 
 function agentPart(project: Project): ObjectSpec {
@@ -217,7 +231,7 @@ export function learningView(project: Project, catalog: LibraryCatalog): Learnin
       kind: kindOf(family, spec.term, spec.weight, info),
     };
   });
-  return { reward, proposedChanges: 0, goal: GOALS[family], curriculum: [] };
+  return { reward, proposedChanges: 0, goal: goalOf(project.task), curriculum: [] };
 }
 
 function fits(info: RewardTermInfo, family: Family): boolean {

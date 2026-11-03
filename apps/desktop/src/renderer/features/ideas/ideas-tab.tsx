@@ -11,7 +11,7 @@ export type IdeasTabProps = {
   filter: IdeaFilter;
   onFilter: (filter: IdeaFilter) => void;
   onUse: (id: string) => void;
-  onTweak: (id: string) => void;
+  onTweak: (id: string, words: string) => Promise<unknown>;
   onMix: () => void;
 };
 
@@ -60,7 +60,12 @@ export function IdeasTab({ set, filter, onFilter, onUse, onTweak, onMix }: Ideas
       </div>
       <div className="grid flex-1 grid-cols-1 gap-3.5 @2xl:grid-cols-3">
         {set.ideas.map((idea) => (
-          <IdeaCard key={idea.id} idea={idea} onUse={() => onUse(idea.id)} onTweak={() => onTweak(idea.id)} />
+          <IdeaCard
+            key={idea.id}
+            idea={idea}
+            onUse={() => onUse(idea.id)}
+            onTweak={(words) => onTweak(idea.id, words)}
+          />
         ))}
       </div>
       {set.mix ? (

@@ -1,6 +1,6 @@
 import type { BuildStatus, DesignIdea, IdeaSet as EngineIdeaSet } from "@icarus/contracts";
 import type { BuildProgress } from "./build-progress-port.ts";
-import type { Idea, IdeaSet } from "./ideas-port.ts";
+import type { Idea, IdeaMix, IdeaSet } from "./ideas-port.ts";
 
 // Pure mappings from the copilot's ideas and builds onto the views that show them.
 
@@ -40,9 +40,17 @@ function ideaView(idea: DesignIdea): Idea {
   };
 }
 
+// The bar proposes the world of the second idea with the body of the recommended one; the engine tests the mix.
+function proposedMix(ideas: readonly DesignIdea[]): IdeaMix | null {
+  const [body, world] = ideas;
+  if (!body || !world) {
+    return null;
+  }
+  return { worldFrom: world.title, bodyFrom: body.title, worldIdea: world.id, bodyIdea: body.id };
+}
+
 export function ideaSetView(set: EngineIdeaSet): IdeaSet {
-  // Mixing parts of two ideas is not built yet, so the engine's sets never propose a mix.
-  return { id: set.id, ideas: set.ideas.map(ideaView), mix: null, prompt: set.prompt };
+  return { id: set.id, ideas: set.ideas.map(ideaView), mix: proposedMix(set.ideas), prompt: set.prompt };
 }
 
 export function buildProgressView(status: BuildStatus): BuildProgress {

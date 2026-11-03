@@ -37,7 +37,7 @@ const IDEAS: readonly Idea[] = [
 const SET: IdeaSet = {
   id: "parking",
   ideas: IDEAS,
-  mix: { worldFrom: "Street", bodyFrom: "Reverse with a camera" },
+  mix: { worldFrom: "Street", bodyFrom: "Reverse with a camera", worldIdea: "street", bodyIdea: "camera" },
 };
 
 export function createIdeasFixture(): IdeasPort {
@@ -45,7 +45,12 @@ export function createIdeasFixture(): IdeasPort {
     generateIdeas: async () => SET,
     getIdeas: async () => SET,
     useIdea: async () => ({ build: "park-pilot-building" }),
-    tweakIdea: async () => undefined,
-    mixAndBuild: async () => undefined,
+    tweakIdea: async ({ idea, words }) => ({
+      ...SET,
+      ideas: SET.ideas.map((item) =>
+        item.id === idea ? { ...item, learns: `${item.learns}, ${words.trim()}` } : item,
+      ),
+    }),
+    mixAndBuild: async () => ({ build: "park-pilot-building" }),
   };
 }
