@@ -2,6 +2,8 @@ from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict
 
+from icarus.contracts.decor import DisplayReading, PlateSignal, SceneDisplay, SceneEyes, ScenePlate
+
 Vector3 = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
 
@@ -194,6 +196,9 @@ class SceneSignals(BaseModel):
     goal: GoalSignal | None = None
     # None when the body is not a vehicle.
     lights: LightSignal | None = None
+    # Every floor plate's state and every display's value; empty without plates or displays.
+    plates: list[PlateSignal] = []
+    displays: list[DisplayReading] = []
 
 
 class SceneSky(BaseModel):
@@ -261,3 +266,7 @@ class SceneDescription(BaseModel):
     sky: SceneSky | None = None
     # Distance sensors at the initial pose.
     rays: list[SceneRay] = []
+    # Floor plates, digital displays and eyes; empty in scenes exported before they existed.
+    plates: list[ScenePlate] = []
+    displays: list[SceneDisplay] = []
+    eyes: list[SceneEyes] = []
