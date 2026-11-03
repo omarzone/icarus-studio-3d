@@ -56,6 +56,9 @@ class ContextUsage(_Model):
     window: int = Field(gt=0)
     # Whether the window comes from the model settings; otherwise it is the engine's conservative default.
     window_known: bool
+    # Where the window comes from: set by the person in AI models, learned from a request the service refused as
+    # too long, or assumed by the engine because the connection does not say.
+    window_source: Literal["assumed", "set", "learned"] = "assumed"
     # Everything sent on the first step: the sum of the categories.
     used: int = Field(ge=0)
     # Kept free for the answer and its reasoning; a prompt never grows into it.

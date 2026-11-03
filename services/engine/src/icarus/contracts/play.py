@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from icarus.contracts.scene import Quaternion, SceneDescription, SceneRay, SceneSignals, Vector3
 
@@ -34,11 +34,39 @@ class PushCommand(_Model):
     speed: float = Field(gt=0, le=20)
 
 
+Placement = Literal["place", "drop", "throw"]
+HexColor = Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")]
+
+
 class AddObjectCommand(_Model):
     tool: Literal["add_object"]
     # A library piece id.
     piece: str
+    # The point clicked on a surface, in metres.
     position: Place
+    # Resting on the point, dropped from `height` above it, or thrown from there at the agent with `speed`.
+    placement: Placement = "place"
+    height: float = Field(default=2.0, ge=0.1, le=20)
+    # Launch speed of a throw in m/s; the engine aims the arc so it reaches the agent.
+    speed: float = Field(default=5.0, gt=0, le=30)
+    # Multiplies every dimension of the piece.
+    scale: float = Field(default=1.0, ge=0.2, le=5)
+    # At most one of mass in kg or density in kg/m³; density is multiplied by the shape's volume.
+    mass: float | None = Field(default=None, ge=0.01, le=10_000)
+    density: float | None = Field(default=None, ge=10, le=20_000)
+    friction: float | None = Field(default=None, ge=0, le=2)
+    bounciness: float | None = Field(default=None, ge=0, le=1)
+    color: HexColor | None = None
+    # Rain: this many copies, one every `interval` simulated seconds, scattered within `spread` metres of the point.
+    count: int = Field(default=1, ge=1, le=30)
+    interval: float = Field(default=0.5, ge=0.05, le=10)
+    spread: float = Field(default=0.0, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def _one_weight(self) -> "AddObjectCommand":
+        if self.mass is not None and self.density is not None:
+            raise ValueError("Set the mass or the density, not both")
+        return self
 
 
 class LightCommand(_Model):
@@ -140,6 +168,22 @@ class PlayToolInfo(_Model):
     label: str
 
 
+class PlayPiece(_Model):
+    """A library piece Add object can bring into the live world, with the values the picker starts from."""
+
+    id: str
+    label: str
+    category: str
+    shape: str
+    # Full width, depth and height in metres.
+    size: Vector3
+    # None for a piece fixed in place, which can be placed but not dropped or thrown.
+    mass: float | None
+    friction: float
+    bounciness: float
+    color: str
+
+
 class PlaySessionInfo(_Model):
     project_id: str
     revision_number: int
@@ -150,6 +194,7 @@ class PlaySessionInfo(_Model):
     step: int | None = None
     tools: list[PlayToolInfo]
     scene: SceneDescription
+    pieces: list[PlayPiece] = []
 
 
 class PlayBrainOption(_Model):
@@ -189,9 +234,16 @@ class PlayErrorMessage(_Model):
     message: str
 
 
+class PlayProgressMessage(_Model):
+    """What the engine is doing before the session is ready: compiling the world, loading the brain, starting."""
+
+    type: Literal["progress"]
+    stage: Literal["world", "brain", "starting"]
+
+
 # What the engine sends over the Play WebSocket.
 PlayMessage = Annotated[
-    PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage,
+    PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage,
     Field(discriminator="type"),
 ]
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,6 +10,10 @@ from icarus.contracts.specs import TaskFamily
 
 Capability = Literal["reasoning", "vision", "image", "pose"]
 Autonomy = Literal["ask", "autopilot"]
+# A model's context window as the person may set it: from small local models to million-token ones.
+MIN_CONTEXT_TOKENS = 4_000
+MAX_CONTEXT_TOKENS = 10_000_000
+ContextTokens = Annotated[int, Field(ge=MIN_CONTEXT_TOKENS, le=MAX_CONTEXT_TOKENS)]
 
 
 class _Model(BaseModel):
@@ -24,6 +28,8 @@ class ModelConnection(_Model):
     connected: bool
     # Why it is not connected, in words, when it is not.
     detail: str | None = None
+    # The context window the person set for this model, in tokens; none means the engine assumes one.
+    context_tokens: int | None = None
 
 
 class ModelSettings(_Model):
@@ -37,6 +43,8 @@ class ModelSettingsPatch(_Model):
     endpoint: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, max_length=500)
     models: dict[Capability, str] | None = None
+    # A context window per capability in tokens; null clears it back to the assumed one.
+    context_tokens: dict[Capability, ContextTokens | None] | None = None
 
 
 class ProposalChange(_Model):
