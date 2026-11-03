@@ -26,7 +26,7 @@ from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
 from icarus.sim.play_agents import AgentBrain, AgentsPlay
 from icarus.sim.policy import UNTRAINED_BRAIN, CheckpointPolicy, Policy, RandomPolicy, untrained_after
-from icarus.training.play_brains import BrainUnavailable, brain_options, chosen_checkpoint
+from icarus.training.play_brains import BrainUnavailable, brain_options, chosen_checkpoint, default_checkpoint
 from icarus.training.run_store import RunStore
 from icarus.training.warm_start import warm_start_problem
 
@@ -72,13 +72,18 @@ class _World:
 
 
 def _brain(runs: RunStore, world: _World, agent: str | None = None) -> _Brain:
-    """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions;
+    """The best trained brain of this revision, else the newest one that still fits the body, else random actions;
     with several agents, `world` is one agent's world and only that agent's runs count."""
     project, revision = world.project, world.revision
     trained = runs.trained_checkpoint(project.id, revision, project, agent)
+    earlier = trained is None and agent is None
+    if earlier:
+        trained = default_checkpoint(runs, project, revision)
     if trained is not None:
         status, path = trained
         label = f"Trained brain: {status.name} at {status.best_step:,} steps"
+        if earlier:
+            label = f"{label}, from revision {status.revision_number}"
         try:
             policy = CheckpointPolicy.load(path, label, world.senses)
             return _Brain(policy, status.run_id, status.best_step)
@@ -221,7 +226,7 @@ async def _run(websocket: WebSocket, session: PlaySession | AgentsPlay, receiver
             await _send(websocket, PlayEventMessage(type="event", event=event))
         for reply in await asyncio.to_thread(session.due):
             await _send(websocket, reply)
-        await _send(websocket, PlayFrameMessage(type="frame", frame=session.frame()))
+        await _send(websocket, PlayFrameMessage(type="frame", frame=await asyncio.to_thread(session.frame)))
         await asyncio.sleep(max(0.0, FRAME_PERIOD - (loop.time() - now)))
 
 

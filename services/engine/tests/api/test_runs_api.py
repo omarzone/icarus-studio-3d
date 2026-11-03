@@ -224,7 +224,7 @@ def test_play_keeps_the_trained_brain_after_a_change_that_only_alters_the_look(t
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
-@pytest.mark.parametrize("change", ["still training", "newer revision", "unreadable checkpoint", "never trained"])
+@pytest.mark.parametrize("change", ["still training", "unreadable checkpoint", "never trained"])
 def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, change):
     from stable_baselines3 import PPO
 
@@ -241,9 +241,6 @@ def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, 
         PPO("MlpPolicy", ProjectEnv(folder.project()), seed=0, device="cpu").save(folder.checkpoint_path(best))
     state = "running" if change == "still training" else "done"
     folder.write_status(folder.status().model_copy(update={"state": state, "best_step": best}))
-    if change == "newer revision":
-        heavier = edit("car", "physics_body", "mass", {"type": "number", "value": 3})
-        assert client.post(f"/projects/{project_id}/operations", json=heavier).status_code == 200
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
         brain = opened(socket)["session"]["brain"]
     if change == "never trained":
