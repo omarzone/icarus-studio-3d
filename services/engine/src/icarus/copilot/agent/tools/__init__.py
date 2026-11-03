@@ -5,6 +5,7 @@ from icarus.copilot.agent.tools.building import EDIT_GROUP, EDIT_MATCHING, PATTE
 from icarus.copilot.agent.tools.coaching import COACH
 from icarus.copilot.agent.tools.finding import FIND_OBJECTS
 from icarus.copilot.agent.tools.inspect import INSPECT_OBJECT, READ_RUN
+from icarus.copilot.agent.tools.layout import LAYOUT
 from icarus.copilot.agent.tools.library import LIBRARY
 from icarus.copilot.agent.tools.look import LOOK
 from icarus.copilot.agent.tools.proposing import APPLY, PROPOSE
@@ -20,6 +21,7 @@ REGISTRY: dict[str, Tool[Any]] = {
         FIND_OBJECTS,
         LOOK,
         TRY,
+        LAYOUT,
         PATTERN,
         EDIT_GROUP,
         EDIT_MATCHING,

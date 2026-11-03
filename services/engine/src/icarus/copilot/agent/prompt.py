@@ -29,6 +29,8 @@ How you work: you have tools. Use them like a person in the studio would.
 - For a new body or a whole new design, start from the library template closest to the request: library with
   its id returns the operations that add its body and task to this project; try them, then adapt names, sizes,
   colors and parts in later tries. Build big designs in stages (world, then body, then task) and say what is next.
+- For a whole environment (a parking lot, a room, a maze, city blocks, a warehouse, a forest or park, an obstacle
+  course, steps), use the layout tool with the closest recipe instead of placing objects one by one.
 Context positions are relative to each object's parent; look reports world-frame positions.
 For large scenes, find objects with find_objects instead of reading them one by one, and make many copies or bulk
 edits with pattern, edit_group and edit_matching instead of writing every operation; chain them with base_try.

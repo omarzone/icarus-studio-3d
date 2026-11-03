@@ -161,6 +161,12 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
 
 def run_try(scope: TurnScope, operations: list[EditOperation], look_spec: LookSpec | None) -> Observation:
     """Validate, compile and check operations on a copy of the project, keeping the result as a new try."""
+    result, summary = tried(scope, operations)
+    return observed(scope, result, summary, look_spec)
+
+
+def tried(scope: TurnScope, operations: list[EditOperation]) -> tuple[dict, str]:
+    """Runs a try of the operations and stores it on the turn: the result the model reads and the step line."""
     try_id = scope.next_try_id()
     project, count, language = scope.state.project, len(operations), scope.language
     changes = step_said("changes_one" if count == 1 else "changes_many", language, count=count)
@@ -173,7 +179,7 @@ def run_try(scope: TurnScope, operations: list[EditOperation], look_spec: LookSp
             "passed": False,
             "checks": [{"check": "operations", "ok": False, "detail": str(error)}],
         }
-        return Observation(compact(result), ok=False, summary=step_said("tried_invalid", language, changes=changes))
+        return result, step_said("tried_invalid", language, changes=changes)
     report, compiled = design_report(candidate)
     checks = [
         {"check": check.label, "ok": check.status != "fail", "detail": check.detail if check.status == "fail" else None}
@@ -215,11 +221,16 @@ def run_try(scope: TurnScope, operations: list[EditOperation], look_spec: LookSp
     )
     if warnings:
         summary += step_said("warnings_one" if len(warnings) == 1 else "warnings_many", language, count=len(warnings))
-    observation = Observation(compact(result), ok=not problems, summary=summary)
-    if problems or look_spec is None:
+    return result, summary
+
+
+def observed(scope: TurnScope, result: dict, summary: str, spec: LookSpec | None) -> Observation:
+    """A try's result as the model reads it, with the candidate rendered when it passed and a camera was asked."""
+    observation = Observation(compact(result), ok=bool(result["passed"]), summary=summary)
+    if not result["passed"] or spec is None:
         return observation
     seen = look(
-        scope, LookArgs(target=look_spec.target, view=look_spec.view, distance_m=look_spec.distance_m, on_try=try_id)
+        scope, LookArgs(target=spec.target, view=spec.view, distance_m=spec.distance_m, on_try=result["try_id"])
     )
     return Observation(
         f"{observation.text}\n{seen.text}", image=seen.image, image_label=seen.image_label, summary=summary
