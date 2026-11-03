@@ -23,6 +23,7 @@ import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomShape } from "./geom-shape.ts";
 import { partFinish } from "./part-finish.ts";
 import { floorDepth } from "./scene-materials.ts";
+import { skinnedObject } from "./skin-models.ts";
 import { grainImage, grainMetres } from "./surface-grain.ts";
 import type { Grain, MaterialLook } from "./visual-styles/finishes.ts";
 import { plainLook, styledLook } from "./visual-styles/part-look.ts";
@@ -142,12 +143,14 @@ function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Me
 }
 
 // The Three object a geom is drawn with, placed at its pose: its styled pieces when it has a style that fits, else
-// its plain primitive in the material its surface gives. Parts never decide physics; this only draws them.
+// its plain primitive in the material its surface gives; a skin's model fitted inside it once loaded (ADR 008).
+// Parts never decide physics; this only draws them.
 export function geomObject(geom: SceneGeom): Object3D {
   const pieces = parts(geom);
-  const object = pieces
+  const drawn = pieces
     ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, styledLook(piece.finish, geom), geom)))
     : mesh(primitive(geom), plainLook(geom), geom);
+  const object = geom.skin ? skinnedObject(geom, geom.skin, drawn) : drawn;
   object.position.set(...toThreePosition(geom.position));
   object.quaternion.set(...toThreeQuaternion(geom.quaternion));
   object.name = geom.name;

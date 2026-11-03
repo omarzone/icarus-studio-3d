@@ -1,6 +1,7 @@
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
+import { skinApi } from "../engine-client/skin-api.ts";
 import { createBodyFixture } from "./body.fixture.ts";
 import { createEngineBodyPort } from "./body-engine.ts";
 import type { CheckFact, ProgressStep } from "./progress-step.ts";
@@ -16,6 +17,8 @@ export type RigCheck = {
 export type BoneWeights = { bones: readonly { id: string; name: string; coverage: number; problem?: string }[] };
 
 export type ImportKind = { id: string; label: string };
+// A model file the person picked, read as base64.
+export type ModelFile = { name: string; data: string };
 export type ImportPreview = {
   kinds: readonly ImportKind[];
   kind: string;
@@ -46,7 +49,7 @@ export type BodyPort = {
   autoFixWeights: (body: string) => Promise<BoneWeights>;
   getImport: (body: string) => Promise<ImportPreview>;
   setImportKind: (input: { body: string; kind: string }) => Promise<ImportPreview>;
-  importStatic: (body: string) => Promise<void>;
+  importStatic: (input: { body: string; kind: string; file: ModelFile | null }) => Promise<void>;
   importAndRig: (body: string) => Promise<void>;
   getAutoRig: (body: string) => Promise<AutoRigProgress>;
   cancelAutoRig: (body: string) => Promise<void>;
@@ -54,7 +57,7 @@ export type BodyPort = {
 
 export const bodyPort = definePort<BodyPort>({
   app: {
-    ...createEngineBodyPort(engineApi),
+    ...createEngineBodyPort(engineApi, skinApi),
     applyPose: pending({ key: "body.applyPose", summary: "Trying a test pose", sprint: 9, ids: ["SCR-BODY"] }),
     fixProblems: pending({
       key: "body.fixProblems",
@@ -68,19 +71,6 @@ export const bodyPort = definePort<BodyPort>({
       summary: "Fixing skin weights automatically",
       sprint: 9,
       ids: ["SCR-BODY"],
-    }),
-    getImport: pending({ key: "body.import", summary: "Reading a model to import", sprint: 9, ids: ["MOD-IMPORT"] }),
-    setImportKind: pending({
-      key: "body.setImportKind",
-      summary: "Choosing what kind of file to import",
-      sprint: 9,
-      ids: ["MOD-IMPORT"],
-    }),
-    importStatic: pending({
-      key: "body.importStatic",
-      summary: "Importing a model as a static mesh",
-      sprint: 9,
-      ids: ["MOD-IMPORT"],
     }),
     importAndRig: pending({
       key: "body.importAndRig",

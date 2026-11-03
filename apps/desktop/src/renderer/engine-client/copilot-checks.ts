@@ -21,7 +21,7 @@ import { has, isListOf, isRecord, isSceneDescription } from "./response-checks.t
 const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"];
 const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
 const STEP_STATES: readonly string[] = ["done", "running", "todo"];
-const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view"];
+const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view", "model"];
 const ACTION_KINDS: readonly string[] = [
   "navigate",
   "train",

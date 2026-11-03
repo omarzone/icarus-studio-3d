@@ -153,11 +153,11 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-PUBLISH | Guideline agreement gating Publish | pending | planned | `publish.guidelines` |
 | MOD-PUBLISH | Publish sends for review | pending | planned | `publish.send` |
 | MOD-PUBLISHED | "Sent for review" confirmation | pending | planned | `publish.review` |
-| MOD-IMPORT | Kind switch: model, environment, robot | pending | planned | Importers (Sprint 9) |
-| MOD-IMPORT | Choosing or dropping the file | missing | planned | A file picker or drop zone through the main process; the dialog has no control to choose a file |
+| MOD-IMPORT | Kind switch: model, environment, robot | partial | planned | Model and environment import a glTF or GLB as a skin over a collider (ADR 008); robots wait for URDF and MJCF import (Sprint 9) |
+| MOD-IMPORT | Choosing or dropping the file | partial | planned | *Choose file* picks a .glb or .gltf in the renderer; FBX, OBJ and USD say they are not supported yet; no drop zone |
 | MOD-IMPORT | 3D preview with triangles, height, detected kind | pending | planned | Model reading and shape detection; preview box is empty even in the prototype |
 | MOD-IMPORT | Steps auto-rig will run | pending | planned | Auto-rig pipeline |
-| MOD-IMPORT | Import as static mesh, Import and auto-rig | pending | planned | `body.importStatic`, `body.importAndRig` |
+| MOD-IMPORT | Import as static mesh, Import and auto-rig | partial | planned | *Import as static mesh* adds an object with a fitted collider wearing the model; `body.importAndRig` is pending |
 | MOD-IMPORT | Opening Import with no project open | pending | not in spec | Decide whether import from the launcher creates a project first |
 | SCR-SETTINGS | Side navigation | works | built | Nothing |
 | SCR-SETTINGS-MODELS | One row per capability with status | works | built | Nothing |

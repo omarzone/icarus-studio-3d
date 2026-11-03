@@ -30,7 +30,7 @@ describe("files added to the chat", () => {
 
   it("refuse other types, files over the limit and more than ten files, saying why", () => {
     const zip = checkAttachment({ name: "a.zip", type: "application/zip", size: 10 }, 0);
-    expect(zip).toEqual({ ok: false, reason: "a.zip is not an image, video or text document" });
+    expect(zip).toEqual({ ok: false, reason: "a.zip is not an image, video, text document or .glb model" });
     const svg = checkAttachment({ name: "logo.svg", type: "image/svg+xml", size: 10 }, 0);
     expect(svg.ok).toBe(false);
     const big = checkAttachment({ name: "clip.mp4", type: "video/mp4", size: MAX_ATTACHMENT_BYTES + 1 }, 0);
@@ -39,6 +39,20 @@ describe("files added to the chat", () => {
     expect(checkAttachment({ name: "a.png", type: "image/png", size: 10 }, 10)).toEqual({
       ok: false,
       reason: "A message can carry at most 10 files",
+    });
+  });
+
+  it("take glTF and GLB models by extension and say FBX and USD are not supported yet", () => {
+    expect(checkAttachment({ name: "van.glb", type: "", size: 10 }, 0)).toEqual({
+      ok: true,
+      kind: "model",
+      mediaType: "model/gltf-binary",
+      readsText: false,
+    });
+    expect(checkAttachment({ name: "van.gltf", type: "", size: 10 }, 0)).toMatchObject({ kind: "model" });
+    expect(checkAttachment({ name: "van.FBX", type: "", size: 10 }, 0)).toEqual({
+      ok: false,
+      reason: "van.FBX: .fbx models are not supported yet; export it as .glb",
     });
   });
 

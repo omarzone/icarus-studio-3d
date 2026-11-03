@@ -11,6 +11,7 @@ import type {
   ProjectSummary,
   Revision,
   SceneDescription,
+  SkinImported,
   ValidationErrorBody,
 } from "@icarus/contracts";
 
@@ -110,7 +111,32 @@ function isGeom(value: unknown): boolean {
     isOptionalText(value.surface) &&
     isTriple(value.size, 3) &&
     isTriple(value.position, 3) &&
-    isTriple(value.quaternion, 4)
+    isTriple(value.quaternion, 4) &&
+    isOptionalSkin(value.skin)
+  );
+}
+
+// A model drawn over the part; scenes from before skins send none.
+function isOptionalSkin(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (has(value, "project", "string") &&
+      has(value, "asset", "string") &&
+      has(value, "fill", "number") &&
+      isRecord(value) &&
+      isTriple(value.offset, 3) &&
+      isTriple(value.rotation, 3))
+  );
+}
+
+export function isSkinImported(value: unknown): value is SkinImported {
+  return (
+    isRecord(value) &&
+    has(value, "object", "string") &&
+    has(value, "revision", "number") &&
+    has(value.skin, "id", "string") &&
+    has(value.skin, "name", "string")
   );
 }
 

@@ -45,10 +45,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `body.autoRig` | Auto-rig progress | `MOD-AUTO-RIG` |
 | `body.cancelAutoRig` | Cancelling the auto-rig | `MOD-AUTO-RIG` |
 | `body.fixProblems` | Fixing the problems in the body | `STA-BODY-CHECK-FAILED` |
-| `body.import` | Reading a model to import | `MOD-IMPORT` |
 | `body.importAndRig` | Importing and auto-rigging a model | `MOD-IMPORT` |
-| `body.importStatic` | Importing a model as a static mesh | `MOD-IMPORT` |
-| `body.setImportKind` | Choosing what kind of file to import | `MOD-IMPORT` |
 | `body.weights` | Skin weights per bone | `SCR-BODY` |
 
 ## Sprint 10

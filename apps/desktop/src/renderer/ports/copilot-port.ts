@@ -45,7 +45,7 @@ export type Proposal = {
   status: ProposalStatus;
 };
 
-export type AttachmentKind = "image" | "video" | "document" | "view";
+export type AttachmentKind = "image" | "video" | "document" | "view" | "model";
 
 // A file sent with a message, or a render of the scene the app took for the copilot ("view").
 export type ChatAttachment = {
