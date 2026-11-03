@@ -74,7 +74,8 @@ function LiveState({ live, onReconnect }: { live: LiveCopies; onReconnect: () =>
 function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) {
   const { scene, copies } = live;
   // The grid's meshes only change with the scene or the number of copies; each snapshot only moves them.
-  const grid = useMemo(() => copyGrid(scene, copies.length), [scene, copies.length]);
+  const [borders, setBorders] = useCopyBorders();
+  const grid = useMemo(() => copyGrid(scene, copies.length, borders), [scene, copies.length, borders]);
   const poses = useMemo(() => grid.place(copies), [grid, copies]);
   // The camera's Follow mode tracks this copy's agent; grid geom names start with "<copy>:".
   const [picked, setPicked] = useState(0);
@@ -127,10 +128,45 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
           </span>
         )}
         {copies.length > 1 ? <CopyPicker followed={followed} count={copies.length} onPick={setPicked} /> : null}
+        {copies.length > 1 ? (
+          <Act
+            cta="Copy borders"
+            aria-pressed={borders}
+            title="Draw see-through walls between the copies; they are only drawn, the copies never share a world"
+            onClick={() => setBorders(!borders)}
+            className={`pointer-events-auto rounded-full px-3 py-1 text-meta ${
+              borders ? "bg-selected text-on-selected" : "bg-overlay hover:bg-control-raised"
+            } active:opacity-80`}
+          >
+            Copy borders
+          </Act>
+        ) : null}
         {live.note ? <span className="max-w-80 rounded-card-sm bg-overlay px-3 py-2 text-ui">{live.note}</span> : null}
       </div>
     </>
   );
+}
+
+const BORDERS_KEY = "icarus.live.copyBorders";
+
+// Whether the live view draws borders between copies, remembered on this computer; on unless turned off.
+function useCopyBorders(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return window.localStorage.getItem(BORDERS_KEY) !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const set = (next: boolean) => {
+    setOn(next);
+    try {
+      window.localStorage.setItem(BORDERS_KEY, next ? "on" : "off");
+    } catch {
+      // Remembering is a convenience; the toggle still works for this session.
+    }
+  };
+  return [on, set];
 }
 
 const STEP_CLASS =
