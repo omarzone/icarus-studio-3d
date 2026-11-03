@@ -100,14 +100,8 @@ export function isLibraryCatalog(value: unknown): value is LibraryCatalog {
 
 // A vault body brings the whole body it adds, so its body and objects are checked too.
 function isVaultBody(value: unknown): boolean {
-  return (
-    has(value, "id", "string") &&
-    has(value, "family", "string") &&
-    has(value, "rewards", "array") &&
-    isRecord(value) &&
-    has(value.body, "id", "string") &&
-    has(value.body, "objects", "array")
-  );
+  const body = isRecord(value) ? value.body : null;
+  return has(value, "family", "string") && has(value, "rewards", "array") && has(body, "objects", "array");
 }
 
 export function isTriple(value: unknown, length: number): boolean {
