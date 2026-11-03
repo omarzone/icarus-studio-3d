@@ -1,6 +1,7 @@
 """Library bodies as agents: a ready-made body placed in its own lane, with a spawn point, a goal and its task."""
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from icarus.contracts.objects import ObjectSpec
@@ -29,7 +30,7 @@ class LibraryBody:
     rewards: list[str]
 
 
-def _vault_key(body_id: str, templates: dict[str, object]) -> str:
+def _vault_key(body_id: str, templates: Mapping[str, object]) -> str:
     # A vault body sharing an id with a template body (humanoid) is listed with a suffix, as the library tool does.
     return body_id if body_id not in templates else f"{body_id}_body"
 
