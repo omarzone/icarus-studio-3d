@@ -56,7 +56,8 @@ def build_object(scope: TurnScope, args: BuildObjectArgs) -> Observation:
 BUILD_OBJECT = Tool(
     name="build_object",
     description=(
-        "Build any object or body from parts (box, sphere, capsule, cylinder) with sizes, relative transforms and a "
+        "Build any object or body from parts (box, sphere, capsule, cylinder, wedge for ramps and roofs rising toward "
+        "-y, corner_wedge peaking over +x -y) with sizes, relative transforms and a "
         "look per part (color, style, finish such as glass, roughness, metalness, emissive for lights). scenery "
         "becomes a group of static world objects; body becomes a body that moves and can learn, with hinge or "
         "slide joints and motors on its moving parts (wheels, doors, limbs). collides false makes look-only detail. "
