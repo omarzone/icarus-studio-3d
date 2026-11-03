@@ -1,6 +1,7 @@
 import type { AttachmentUpload, Conversation as EngineConversation, SendMessage } from "@icarus/contracts";
 import { type AttachmentApi, attachmentApi } from "../engine-client/attachment-api.ts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
+import { contextRequest, contextUsageView } from "./context-usage-views.ts";
 import { withCopilot, withCopilotSend } from "./copilot-connection.ts";
 import type { CopilotPort } from "./copilot-port.ts";
 import {
@@ -16,7 +17,14 @@ import {
 
 type CopilotApi = Pick<
   EngineApi,
-  "conversation" | "sendMessage" | "setAutonomy" | "applyProposal" | "discardProposal" | "proposalScene" | "scene"
+  | "conversation"
+  | "sendMessage"
+  | "setAutonomy"
+  | "applyProposal"
+  | "discardProposal"
+  | "proposalScene"
+  | "scene"
+  | "contextUsage"
 >;
 
 type SendIds = NonNullable<SendMessage["attachments"]>;
@@ -70,6 +78,7 @@ export function createEngineCopilot(api: CopilotApi = engineApi, files: Attachme
       return attachmentView(info, links);
     },
     readAttachmentText: (id) => files.attachmentText(id),
+    getContextUsage: async (input) => contextUsageView(await api.contextUsage(input.key, contextRequest(input))),
     getPreview: async (key) => {
       const open = openProposal(await withCopilot(api.conversation(key)));
       if (!open) {

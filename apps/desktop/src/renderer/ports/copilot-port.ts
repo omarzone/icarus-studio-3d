@@ -207,6 +207,50 @@ export type MessageInput = {
   views?: readonly string[];
 };
 
+// What fills the copilot's context window on the next turn, in the order the engine sends it.
+export type ContextPart =
+  | "system"
+  | "tools"
+  | "skills"
+  | "memory"
+  | "project"
+  | "summary"
+  | "history"
+  | "message"
+  | "attachments";
+
+export type ContextCategoryView = {
+  part: ContextPart;
+  tokens: number;
+  // Its pieces (each tool, skill, note or file), adding up to its tokens.
+  items: readonly { label: string; tokens: number }[];
+};
+
+// How full the context window is for the next message, as the engine counts it before sending.
+export type ContextUsageView = {
+  // The model the next message goes to; null when no model is connected.
+  model: string | null;
+  window: number;
+  // False when the model's window is not set and the engine assumes a conservative one.
+  windowKnown: boolean;
+  used: number;
+  // Kept for the answer and its reasoning.
+  reserve: number;
+  free: number;
+  categories: readonly ContextCategoryView[];
+  compaction: { historyTokens: number; foldAt: number; folding: boolean; foldsNextTurn: boolean; pruneAt: number };
+};
+
+export type ContextInput = {
+  key: string;
+  // Files waiting in the composer, uploaded and not sent yet.
+  attachments?: readonly string[];
+  // Renders of the scene the app takes when the message goes.
+  sceneViews?: number;
+  workspace?: string;
+  selection?: string | null;
+};
+
 // The key is the project id in the app and a sample conversation in the prototype.
 export type CopilotPort = {
   getConversation: (key: string) => Promise<Conversation>;
@@ -219,6 +263,7 @@ export type CopilotPort = {
   readAttachmentText: (id: string) => Promise<string>;
   // The proposal waiting for an answer, or null when there is none.
   getPreview: (key: string) => Promise<ProposalPreview | null>;
+  getContextUsage: (input: ContextInput) => Promise<ContextUsageView>;
 };
 
 export const copilotPort = definePort<CopilotPort>({

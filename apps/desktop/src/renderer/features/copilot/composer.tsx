@@ -1,5 +1,5 @@
 import { ArrowUp, ChevronDown, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { AutonomyMode, ChatAttachment } from "../../ports/copilot-port.ts";
 import { Spinner } from "../../ui/spinner.tsx";
@@ -21,6 +21,8 @@ type Props = {
   // Resolves true once the copilot has the message; false gives the text back.
   onSend: (text: string, attachments?: readonly ChatAttachment[]) => Promise<boolean>;
   onAutonomy: (mode: AutonomyMode) => void;
+  // The context gauge, beside the send button.
+  meter?: ReactNode;
 };
 
 function sendBlocker(attachments: Attachments | undefined): string | null {
@@ -33,8 +35,8 @@ function sendBlocker(attachments: Attachments | undefined): string | null {
   return null;
 }
 
-// Composer: workspace-specific placeholder, + to attach, autonomy mode and the round send button, which turns
-// into a spinner while a message is on its way.
+// Composer: workspace-specific placeholder, + to attach, autonomy mode, the context gauge and the round send
+// button, which turns into a spinner while a message is on its way.
 export function Composer({
   placeholder,
   autonomy,
@@ -43,6 +45,7 @@ export function Composer({
   attachments,
   onSend,
   onAutonomy,
+  meter,
 }: Props) {
   const [text, setText] = useState("");
   const field = useRef<HTMLInputElement>(null);
@@ -92,13 +95,6 @@ export function Composer({
             send();
           }
         }}
-        onPaste={(event) => {
-          const files = [...event.clipboardData.files];
-          if (attachments && files.length > 0) {
-            event.preventDefault();
-            attachments.add(files);
-          }
-        }}
         className="h-4 bg-transparent text-body leading-4 outline-none placeholder:text-fg-tertiary"
       />
       <div className="flex items-center gap-2 text-ui text-fg-secondary">
@@ -135,12 +131,14 @@ export function Composer({
           </span>
           <ChevronDown size={12} strokeWidth={1.75} aria-hidden className="shrink-0" />
         </Act>
+        <span className="ml-auto" />
+        {meter}
         {sending ? (
           <span
             role="status"
             aria-label="The copilot is working"
             title="The copilot is working"
-            className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-control-raised text-fg"
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-control-raised text-fg"
           >
             <Spinner className="size-3.5" />
           </span>
@@ -151,7 +149,7 @@ export function Composer({
             title={blocker ?? undefined}
             disabled={blocker !== null}
             onClick={send}
-            className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90 active:opacity-80 disabled:opacity-35"
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90 active:opacity-80 disabled:opacity-35"
           >
             <ArrowUp size={14} strokeWidth={1.75} aria-hidden />
           </Act>

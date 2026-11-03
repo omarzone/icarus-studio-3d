@@ -2,6 +2,8 @@ import type {
   BuildIdea,
   BuildStatus,
   CheckpointInfo,
+  ContextRequest,
+  ContextUsage,
   Conversation,
   EditOperation,
   IdeaSet,
@@ -21,6 +23,7 @@ import type {
   TrainingSettings,
   TrainingSettingsPatch,
 } from "@icarus/contracts";
+import { isContextUsage } from "./context-usage-checks.ts";
 import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
 import { request } from "./request.ts";
 import {
@@ -85,6 +88,9 @@ export const engineApi = {
   conversation: (id: string): Promise<Conversation> => request(`${at(id)}/conversation`, {}, isConversation),
   sendMessage: (id: string, body: SendMessage): Promise<Conversation> =>
     request(`${at(id)}/conversation/messages`, post(body), isConversation),
+  // What the next message would send to the model, measured piece by piece; nothing is sent.
+  contextUsage: (id: string, body: ContextRequest): Promise<ContextUsage> =>
+    request(`${at(id)}/conversation/context`, post(body), isContextUsage),
   setAutonomy: (id: string, body: SetAutonomy): Promise<Conversation> =>
     request(`${at(id)}/conversation/autonomy`, post(body), isConversation),
   applyProposal: (id: string): Promise<Conversation> => request(`${proposal(id)}/apply`, post(), isConversation),

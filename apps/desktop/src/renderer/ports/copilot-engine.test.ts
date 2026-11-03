@@ -1,5 +1,7 @@
 import type {
   AttachmentUpload,
+  ContextRequest,
+  ContextUsage,
   Conversation,
   CopilotProposal,
   SceneDescription,
@@ -43,6 +45,21 @@ const geom = (name: string, x = 0): SceneGeom => ({
 
 const scene = (geoms: SceneGeom[]): SceneDescription => ({ revision: 2, bodies: [], lights: [], geoms });
 
+const usage: ContextUsage = {
+  capability: "reasoning",
+  model: null,
+  window: 64_000,
+  window_known: false,
+  used: 30_000,
+  reserve: 9_600,
+  free: 24_400,
+  categories: [
+    { part: "tools", tokens: 22_000, items: [{ label: "try", tokens: 22_000 }] },
+    { part: "history", tokens: 8_000 },
+  ],
+  compaction: { history_tokens: 7_900, fold_at: 19_040, folding: false, folds_next_turn: false, prune_at: 38_080 },
+};
+
 function engine(current: Conversation = conversation()) {
   const sent: { id: string; body: SendMessage }[] = [];
   const api = {
@@ -56,6 +73,7 @@ function engine(current: Conversation = conversation()) {
     discardProposal: vi.fn(async () => current),
     proposalScene: vi.fn(async () => scene([geom("floor"), geom("lamp")])),
     scene: vi.fn(async () => scene([geom("floor")])),
+    contextUsage: vi.fn(async (_id: string, _body: ContextRequest) => usage),
   };
   return { copilot: createEngineCopilot(api), api, sent };
 }
@@ -136,6 +154,24 @@ describe("copilot on the engine", () => {
     const { copilot, api } = engine();
     api.sendMessage.mockRejectedValueOnce(new EngineError("conflict", "The copilot is still answering"));
     await expect(copilot.sendMessage({ key: "park", text: "and now?" })).rejects.toBeInstanceOf(CopilotBusy);
+  });
+
+  it("counts the next message's context with the files waiting in the composer and the renders to come", async () => {
+    const { copilot, api } = engine();
+    const view = await copilot.getContextUsage({ key: "park", attachments: ["a1"], sceneViews: 2, workspace: "World" });
+    expect(api.contextUsage).toHaveBeenCalledWith("park", { scene_views: 2, attachments: ["a1"], workspace: "World" });
+    expect(view.model).toBeNull();
+    expect(view.categories.map((category) => [category.part, category.items.length])).toEqual([
+      ["tools", 1],
+      ["history", 0],
+    ]);
+    expect(view.compaction).toEqual({
+      historyTokens: 7_900,
+      foldAt: 19_040,
+      folding: false,
+      foldsNextTurn: false,
+      pruneAt: 38_080,
+    });
   });
 
   it("tells the views when no model is connected", async () => {

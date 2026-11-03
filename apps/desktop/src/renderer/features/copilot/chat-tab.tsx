@@ -1,6 +1,6 @@
 // TAB-CHAT
 import { Paperclip } from "lucide-react";
-import { type DragEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useLiveSteps } from "../../app/runtime/live-turn.ts";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
@@ -9,12 +9,14 @@ import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
 import { AgentStepsList } from "./agent-steps-list.tsx";
 import { AnswerActionsBar } from "./answer-actions-bar.tsx";
 import { answerOptions, type OptionsState } from "./answer-options.ts";
+import { carriesFiles, pastedFiles, transferFiles } from "./attachment-intake.ts";
 import type { ReadFile } from "./attachment-reading.ts";
 import { BuildProgressCard } from "./build-progress-card.tsx";
 import { ChatActions } from "./chat-actions.tsx";
 import { ChosenOption, CopilotBubble, ThinkingBubble, UserBubble } from "./chat-messages.tsx";
 import { CoachFindings } from "./coach-findings.tsx";
 import { Composer } from "./composer.tsx";
+import { ContextMeter } from "./context-meter.tsx";
 import { FilmStrip } from "./film-strip.tsx";
 import { MessageAttachments, SceneViewsStrip } from "./message-attachments.tsx";
 import { PlanCard } from "./plan-card.tsx";
@@ -23,6 +25,7 @@ import { LiveRunCard, MilestoneDivider, RunProgressCard } from "./run-progress-c
 import { SuggestionChips, type SuggestionRoutes } from "./suggestion-chips.tsx";
 import { visibleSuggestions } from "./suggestion-visibility.ts";
 import { useComposerAttachments } from "./use-composer-attachments.ts";
+import { type ContextLoader, useContextUsage } from "./use-context-usage.ts";
 import { useStickToBottom } from "./use-stick-to-bottom.ts";
 import { WelcomeCard } from "./welcome-card.tsx";
 
@@ -50,9 +53,9 @@ export type ChatTabProps = {
   // Applies a proposal, then opens the start training dialog; only the app offers it.
   onApplyAndTrain?: (id: string) => void;
   onAutonomy: (mode: AutonomyMode) => void;
+  // Counts what the next message sends to the model, for the composer's context gauge.
+  context?: ContextLoader;
 };
-
-const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
 // The conversation sticks to the bottom under a fade, then suggestion chips and the composer. Files dropped
 // anywhere on the chat, pasted or picked wait in the composer until the message goes.
@@ -61,6 +64,10 @@ export function ChatTab(props: ChatTabProps) {
   const attachments = useComposerAttachments(props.onUpload);
   const list = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  const meter = useContextUsage(
+    props.context,
+    attachments.ready.map((file) => file.id),
+  );
   useStickToBottom(list, `${conversation.messages.length}:${sending?.text ?? ""}`, Boolean(sending));
   // The prototype shows every suggestion of the sample, as the design does.
   const app = useRuntimeMode() === "app";
@@ -72,14 +79,21 @@ export function ChatTab(props: ChatTabProps) {
     <section
       aria-label="Copilot chat"
       className="relative flex h-full min-w-0 flex-col"
+      onPaste={(event) => {
+        const files = pastedFiles(event.clipboardData);
+        if (files) {
+          event.preventDefault();
+          attachments.add(files);
+        }
+      }}
       onDragEnter={(event) => {
-        if (hasFiles(event)) {
+        if (carriesFiles([...event.dataTransfer.types])) {
           event.preventDefault();
           setDragging(true);
         }
       }}
       onDragOver={(event) => {
-        if (hasFiles(event)) {
+        if (carriesFiles([...event.dataTransfer.types])) {
           event.preventDefault();
           event.dataTransfer.dropEffect = "copy";
         }
@@ -90,10 +104,10 @@ export function ChatTab(props: ChatTabProps) {
         }
       }}
       onDrop={(event) => {
-        if (hasFiles(event)) {
+        if (carriesFiles([...event.dataTransfer.types])) {
           event.preventDefault();
           setDragging(false);
-          attachments.add([...event.dataTransfer.files]);
+          attachments.add(transferFiles(event.dataTransfer));
         }
       }}
     >
@@ -137,13 +151,16 @@ export function ChatTab(props: ChatTabProps) {
         attachments={attachments}
         onSend={props.onSend}
         onAutonomy={props.onAutonomy}
+        meter={meter ? <ContextMeter state={meter.state} onOpen={meter.refresh} /> : null}
       />
       {dragging ? (
         <div className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-card border-[1.5px] border-dashed border-line-dashed bg-overlay">
           <span className="flex flex-col items-center gap-2 text-center text-body text-fg-secondary">
             <Paperclip size={22} strokeWidth={1.75} aria-hidden className="text-fg-tertiary" />
-            Drop images, videos or documents to attach them
-            <span className="text-meta text-fg-tertiary">Up to 15 MB each</span>
+            Drop files to attach them to your message
+            <span className="text-meta text-fg-tertiary">
+              Images, videos, documents or .glb models, up to 15 MB each
+            </span>
           </span>
         </div>
       ) : null}

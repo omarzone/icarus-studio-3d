@@ -142,10 +142,11 @@ Right column, always present in workspaces. Folder: `features/copilot/`. Used in
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-CHAT` | Chat | `chat-tab.tsx` | The conversation: user bubbles (white, right), copilot bubbles (grey, left) with check lists, inline actions and proposal cards. Suggestion chips above the composer. Composer with attach (+), autonomy mode (*Ask before changes* / Autopilot) and send. | Type, send, click chips (they send that message), click inline actions (Apply, Discard, Train the spin…). |
+| `TAB-CHAT` | Chat | `chat-tab.tsx` | The conversation: user bubbles (white, right), copilot bubbles (grey, left) with check lists, inline actions and proposal cards. Suggestion chips above the composer. Composer with attach (+), autonomy mode (*Ask before changes* / Autopilot), the context gauge (→ `POP-CHAT-CONTEXT`) and send. | Type, send, click chips (they send that message), click inline actions (Apply, Discard, Train the spin…). Paste a picture or files, or drop files anywhere on the chat (it shows a dashed drop target while dragging): they wait in the composer as removable previews, checked like the attach button; refused files say why. Plain text pastes as text. |
 | `TAB-HISTORY` | History | `history-tab.tsx` | Every revision of the project, by the user or the copilot, with what changed. Opens as `MOD-HISTORY`. | Restore any revision (creates a new one). |
 
 - Copilot proposals never change the project until applied; they are previewed in blue in the viewport (`STA-WORLD-PROPOSAL`).
+- `POP-CHAT-CONTEXT` Context usage (`context-popover.tsx`): opens above the composer's context gauge, a small ring that fills as the next message's context fills the model's window (amber once a turn would start shortening its own results, red once it reaches the room kept for the answer). Shows used and total tokens with the percent, the model and its window (marked as assumed when the connection does not say), a stacked bar and a legend of everything the next message sends: system prompt, tool definitions, skills, memory notes, project and run facts, conversation summary, conversation, the message and its attachments (scene renders included), then the room reserved for the answer and the free room. Parts with pieces expand to list each tool, skill, note or file with its tokens. A line says when older messages fold into the summary. Re-counted after every answer, when files are added or removed and when opened; loading, error (*Try again*) and no-model (*Open AI models* → `SCR-SETTINGS-MODELS`) states. Escape or a click outside closes it.
 
 ### `PNL-IDEAS` Ideas
 
@@ -2237,6 +2238,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | `MOD-START-TRAINING` | Start training | Modal dialog | `StartTraining` |
 | `MOD-STOP-RUN` | Stop run | Modal dialog | `StopRun` |
 | `POP-ADD-COMPONENT` | Components and Add component | Popover or menu | `Components` |
+| `POP-CHAT-CONTEXT` | Context usage | Popover or menu | — |
 | `POP-EXPLORER-OBJECT` | Object menu | Popover or menu | — |
 | `POP-NOTIFICATIONS` | Notifications | Popover or menu | `Notifications` |
 | `POP-PROJECT-MENU` | Project menu | Popover or menu | `ProjectMenu` |
