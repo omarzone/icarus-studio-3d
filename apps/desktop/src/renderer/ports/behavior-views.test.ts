@@ -72,7 +72,8 @@ describe("behavior tests on the Results views", () => {
         { id: "c", name: "C", short: "C", state: "not-run" },
       ],
     });
-    expect(summary).toMatchObject({ kind: "match", value: "1 of 2", nextTest: "Next: C" });
+    expect(summary).toMatchObject({ kind: "match", value: "1 of 2" });
+    expect(summary.kind === "match" && summary.detail).toContain("Not run yet: C.");
   });
 
   it("puts both sides' paths on one scale, keeping the shape and flipping ground y to point up", () => {

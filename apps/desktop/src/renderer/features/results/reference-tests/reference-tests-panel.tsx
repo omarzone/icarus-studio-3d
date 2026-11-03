@@ -75,7 +75,7 @@ export function ReferenceTestsPanel({ project, className = "flex-none" }: { proj
         <>
           {canRun ? (
             <Act
-              cta="Run test"
+              cta="Run the selected test"
               aria-label="Run the selected test"
               title="Run the selected test on the compared checkpoints"
               disabled={run.isPending}

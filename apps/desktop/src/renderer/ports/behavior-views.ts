@@ -106,12 +106,13 @@ export function referenceSummary(tests: ReferenceTests): ResultSummary {
   }
   const passed = ran.filter((test) => test.state === "pass").length;
   const next = tests.tests.find((test) => test.state === "not-run");
+  const judged = tests.judged ? ` ${tests.judged}.` : "";
+  const after = next ? ` Not run yet: ${next.name}.` : "";
   return {
     kind: "match",
     title: "Behavior tests",
     value: `${passed} of ${ran.length}`,
-    detail: `${passed} of ${ran.length} tests that ran passed${tests.judged ? ` · ${tests.judged}` : ""}.`,
-    nextTest: next ? `Next: ${next.name}` : "Every test has run",
+    detail: `${passed} of ${ran.length} tests that ran passed.${judged}${after}`,
   };
 }
 

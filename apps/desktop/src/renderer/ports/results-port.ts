@@ -25,8 +25,8 @@ export type ScoreBar = { label: string; value: string; ratio: number; tone: Tone
 export type ResultSummary =
   | { kind: "best"; title: string; detail: string }
   | { kind: "scores"; title: string; scores: readonly ScoreBar[]; note: string }
-  // Reference brains: how many behaviors match recordings, and the next test to run.
-  | { kind: "match"; title: string; value: string; detail: string; nextTest: string }
+  // Reference brains: how many behaviors match recordings, and the next test to run when it leads somewhere.
+  | { kind: "match"; title: string; value: string; detail: string; nextTest?: string }
   // Nothing to judge yet (no checkpoint evaluated).
   | { kind: "empty"; title: string; detail: string };
 
