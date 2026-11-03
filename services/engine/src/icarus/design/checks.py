@@ -8,11 +8,12 @@ import numpy as np
 from icarus.contracts.design import DesignCheck, DesignReport
 from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
+from icarus.design.reachable import reachable
 from icarus.projects.document import all_objects
 from icarus.projects.validation import validate_project
 
 Status = Literal["pass", "fail", "skip"]
-CheckId = Literal["structure", "compiles", "settles", "actuators", "sensors"]
+CheckId = Literal["structure", "compiles", "reachable", "settles", "actuators", "sensors"]
 Outcome = tuple[Status, str]
 
 SETTLE_SECONDS = 1.5
@@ -25,6 +26,7 @@ MIN_JOINT_MOVE = 1e-3
 LABELS: dict[CheckId, str] = {
     "structure": "Structure",
     "compiles": "Compiles",
+    "reachable": "Goal and start are clear",
     "settles": "Settles at rest",
     "actuators": "Motors move their joints",
     "sensors": "Sensors read finite values",
@@ -129,6 +131,13 @@ def design_report(project: Project) -> tuple[DesignReport, CompiledModel | None]
         add("compiles", "fail", error.reason)
         return finish(None)
     add("compiles", "pass", f"{compiled.model.nbody - 1} parts, {compiled.model.njnt} joints")
+    try:
+        status, detail = reachable(project, compiled)
+    except (mujoco.FatalError, ValueError) as error:
+        status, detail = "fail", f"The physics engine stopped: {str(error).strip().splitlines()[0]}"
+    add("reachable", status, detail)
+    if status == "fail":
+        return finish(compiled)
     names = {obj.id: obj.name for obj in all_objects(project)}
     for check, run in PHYSICS:
         try:

@@ -73,6 +73,7 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "warnings_many": {"en": ", {count} warnings", "es": ", {count} avisos"},
     "check_structure": {"en": "Structure", "es": "de estructura"},
     "check_compiles": {"en": "Compiles", "es": "de compilación"},
+    "check_reachable": {"en": "Goal and start are clear", "es": "de meta y salida libres"},
     "check_settles": {"en": "Settles at rest", "es": "de reposo"},
     "check_actuators": {"en": "Motors move their joints", "es": "de motores"},
     "check_sensors": {"en": "Sensors read finite values", "es": "de sensores"},

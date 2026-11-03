@@ -64,6 +64,7 @@ def test_an_invalid_structure_skips_every_physics_check():
     assert statuses(report) == {
         "structure": "fail",
         "compiles": "skip",
+        "reachable": "skip",
         "settles": "skip",
         "actuators": "skip",
         "sensors": "skip",
