@@ -63,14 +63,23 @@ GROUND_SIZE_HINT = (
     "Width, depth and thickness of the floor slab; its top stays at the object's height and bodies that drive or "
     "walk past an edge fall off"
 )
-SPAWN_MODES = ["auto", "fixed", "area", "random_point", "cycle_points"]
+SPAWN_MODES = ["auto", "fixed", "area", "anywhere", "random_point", "cycle_points"]
+SPAWN_MODE_LABELS = {"anywhere": "Anywhere free on the map"}
 SPAWN_MODE_HINT = (
     "Where each try starts. auto: navigation bodies start a little beside and behind where they stand, turned up to "
     "35°, others exactly where they stand. fixed: exactly here. area: anywhere in Area around here, turned within "
-    "Heading range. random_point or cycle_points: at one of the world's spawn points, picked at random or in turn, "
-    "each with its own Area and Heading range. Training copies vary by their seed; evaluations repeat the same starts"
+    "Heading range; an Area left at 0 × 0 starts anywhere free on the map. anywhere: a free place anywhere on the "
+    "floor (the layout's drawn floor, else the ground slab), clear of every obstacle by the body's width, at least "
+    "Away from goal beyond the goal zone and with a way to it, facing any direction unless Heading range limits the "
+    "turn from this spawn point's heading. random_point or cycle_points: at one of the world's spawn points, picked "
+    "at random or in turn, each with its own Area and Heading range. Training copies vary by their seed; "
+    "evaluations repeat the same starts"
 )
-SPAWN_AREA_HINT = "Width and depth of the rectangle around the spawn point a try may start in, along its heading"
+SPAWN_AREA_HINT = (
+    "Width and depth of the rectangle around the spawn point a try may start in, along its heading; 0 × 0 with Start "
+    "area uses the whole free map"
+)
+GOAL_DISTANCE_HINT = "Start anywhere: how far beyond the goal zone's edge a try starts at least"
 RANDOM_HEADING_HINT = "Not with Start auto: each try may face any direction, whatever Heading range says"
 SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 CLOCK_HINT = (
@@ -247,10 +256,19 @@ _KINDS = [
         "spawn",
         "World",
         [
-            choice("mode", "Start", SPAWN_MODES, "auto", hint=SPAWN_MODE_HINT),
+            choice("mode", "Start", SPAWN_MODES, "auto", hint=SPAWN_MODE_HINT, labels=SPAWN_MODE_LABELS),
             vector("area", "Area", "m", 0, 200, (0, 0, 0), hint=SPAWN_AREA_HINT),
-            number("heading_range", "Heading range", "°", 0, 180, 0, hint="Each try turns the body up to this far"),
+            number(
+                "heading_range",
+                "Heading range",
+                "°",
+                0,
+                180,
+                0,
+                hint="Each try turns the body up to this far; with Start anywhere 0 leaves the heading free",
+            ),
             switch("random_heading", "Random heading", False, hint=RANDOM_HEADING_HINT),
+            number("goal_distance", "Away from goal", "m", 0, 50, 3, hint=GOAL_DISTANCE_HINT),
         ],
         unique=True,
     ),

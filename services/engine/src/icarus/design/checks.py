@@ -8,6 +8,7 @@ import numpy as np
 from icarus.contracts.design import DesignCheck, DesignReport
 from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
+from icarus.design.free_map import spawn_room
 from icarus.design.reachable import reachable
 from icarus.design.vehicle import BRAKE_SUFFIX
 from icarus.projects.document import all_objects
@@ -138,6 +139,10 @@ def design_report(project: Project) -> tuple[DesignReport, CompiledModel | None]
         status, detail = reachable(project, compiled)
     except (mujoco.FatalError, ValueError) as error:
         status, detail = "fail", f"The physics engine stopped: {str(error).strip().splitlines()[0]}"
+    if status != "fail":
+        room = spawn_room(project, compiled)
+        if room is not None and room[0] == "fail":
+            status, detail = room
     add("reachable", status, detail)
     if status == "fail":
         return finish(compiled)

@@ -71,7 +71,7 @@ def _carried(project: Project) -> str | None:
     return target.value if isinstance(target, AssetValue) and target.value else None
 
 
-def _collides(compiled: CompiledModel, geom: int) -> bool:
+def collides(compiled: CompiledModel, geom: int) -> bool:
     model = compiled.model
     solid = bool(model.geom_contype[geom] or model.geom_conaffinity[geom])
     return solid and not is_ground(compiled, geom) and not is_floor_patch(model, geom)
@@ -91,7 +91,7 @@ def _obstacles(project: Project, compiled: CompiledModel, data: mujoco.MjData, g
     boxes: dict[str, list[Extent]] = {}
     for geom in range(model.ngeom):
         owner = model.body(int(model.geom_bodyid[geom])).name
-        if owner in objects and owner not in skip and _collides(compiled, geom):
+        if owner in objects and owner not in skip and collides(compiled, geom):
             boxes.setdefault(owner, []).append(geom_extent(model, data, geom))
     found: list[_Obstacle] = []
     for object_id, parts in boxes.items():
@@ -144,14 +144,14 @@ def _survey(center: np.ndarray, obstacles: list[_Obstacle], margin: float, goal_
     return _Survey(float(np.mean(shares)), example)
 
 
-def _body_geoms(project: Project, model: mujoco.MjModel) -> list[int]:
+def body_geoms(project: Project, model: mujoco.MjModel) -> list[int]:
     names = {obj.id for body in project.bodies for obj in body.objects}
     return [geom for geom in range(model.ngeom) if model.body(int(model.geom_bodyid[geom])).name in names]
 
 
 def _half_width(project: Project, compiled: CompiledModel, data: mujoco.MjData, radius: float) -> float:
     """How close to an obstacle the middle of the body can come: half its narrower side, at most the goal radius."""
-    geoms = _body_geoms(project, compiled.model)
+    geoms = body_geoms(project, compiled.model)
     if not geoms:
         return radius
     parts = [geom_extent(compiled.model, data, geom) for geom in geoms]
@@ -159,7 +159,7 @@ def _half_width(project: Project, compiled: CompiledModel, data: mujoco.MjData, 
     return min(float(min(size[0], size[1])) / 2, radius)
 
 
-def _goal_object(project: Project) -> ObjectSpec | None:
+def goal_object(project: Project) -> ObjectSpec | None:
     """The goal zone's object, in the world or in a body; only a world object's Randomize moves it per copy."""
     return next((obj for obj in all_objects(project) if view(obj, "goal_zone")), None)
 
@@ -173,7 +173,7 @@ def _advice(center: np.ndarray, obstacles: list[_Obstacle], margin: float, sprea
 
 
 def _goal_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjData) -> Outcome:
-    goal = _goal_object(project)
+    goal = goal_object(project)
     if goal is None:
         return (
             ("pass", "The body starts clear of every obstacle") if project.bodies else ("skip", "No goal and no body")
@@ -213,7 +213,7 @@ def _goal_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjData
 def _start_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjData) -> str | None:
     """The obstacle the body starts inside, by name, or None."""
     model = compiled.model
-    body = set(_body_geoms(project, model))
+    body = set(body_geoms(project, model))
     names = {obj.id: obj.name for obj in project.world.objects}
     for contact in data.contact[: data.ncon]:
         pair = (int(contact.geom1), int(contact.geom2))
@@ -221,7 +221,7 @@ def _start_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjDat
             continue
         other = pair[1] if pair[0] in body else pair[0]
         owner = model.body(int(model.geom_bodyid[other])).name
-        if owner in names and _collides(compiled, other):
+        if owner in names and collides(compiled, other):
             return names[owner]
     return None
 
@@ -241,7 +241,7 @@ def reachable(project: Project, compiled: CompiledModel) -> Outcome:
 
 def _too_big_for_goal(project: Project, compiled: CompiledModel) -> str | None:
     """Why a goal that must hold the whole body never can, or None when it can."""
-    goal = _goal_object(project)
+    goal = goal_object(project)
     zone = view(goal, "goal_zone") if goal else None
     if goal is None or zone is None or not zone.switch("fully_inside") or not project.bodies:
         return None

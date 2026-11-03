@@ -219,7 +219,7 @@ def build_world(project: Project) -> LiveWorld:
         cell_size=_cell_size(project),
         target_height=_target_height(project),
         vehicle=vehicle,
-        spawn=spawn_plan(project, model),
+        spawn=spawn_plan(project, compiled),
     )
     agent_bodies = frozenset(index for index in range(model.nbody) if model.body(index).name in body_objects)
     world.plates = plates_of(project, model, agent, agent_bodies)

@@ -29,9 +29,12 @@ as a vehicle first (drive-a-vehicle); the `parking_car` template is a ready exam
    the spot, never for waiting), `gentle_arrival` = 1–3 (pays the speed shed inside), `collision_penalty` = -5 and
    `time_penalty` = -0.01. Keep the per-step terms small next to the bonus (reward-design).
 6. **Vary the starts.** With `spawn_point.mode` auto every start is shifted up to ±1.5 m and turned up to ±35°
-   from where the car stands. For a brain that parks from anywhere in the aisle, set `spawn_point.mode` area,
-   `spawn_point.area` to the free aisle around the spawn (for example 8 by 3, along the spawn's heading) and
-   `spawn_point.heading_range` = 30–60; keep the area clear of parked cars and curbs, and the spawn on the ground.
+   from where the car stands. Master that first, then for a brain that parks from anywhere on the lot set
+   `spawn_point.mode` anywhere in a new stage with a warm start: every try starts at a free place anywhere in the
+   lanes, clear of parked cars and curbs by the car's width, at least `spawn_point.goal_distance` (default 3 m)
+   beyond the bay and with a way to it, facing any direction (`spawn_point.heading_range` between 1 and 179
+   keeps the turn near the spawn's heading). Mode area with a sized `spawn_point.area` (for example 8 by 3 along
+   the spawn's heading) still limits starts to one stretch of aisle; an area left at 0 × 0 behaves like anywhere.
    To start from several entries, add more `spawn_point` objects and set the first one's mode to random_point
    or cycle_points; each spot keeps its own area and heading range. Training copies vary by their seed and
    evaluations repeat the same starts, so checkpoints stay comparable.
