@@ -20,6 +20,8 @@ from icarus.contracts.operations import (
     SetTaskFamily,
 )
 from icarus.contracts.project import BrainSpec, Project, TaskSpec, WorldSpec
+from icarus.contracts.properties import ListValue, PropertyValue, SliderValue
+from icarus.library.materials import MATERIALS
 from icarus.projects.document import find_object
 
 
@@ -78,6 +80,24 @@ def _brain(brain: BrainSpec, change: SetBrain) -> BrainSpec:
     return BrainSpec.model_validate({**brain.model_dump(), **fields})
 
 
+def _pick_material(obj: ObjectSpec, value: PropertyValue) -> None:
+    """A palette material brings its grip along: the object's surface and the friction of its collider and surface."""
+    preset = MATERIALS.get(value.value) if isinstance(value, ListValue) else None
+    if preset is None:
+        return
+    for component in obj.components:
+        match component.kind:
+            case "material":
+                component.properties["surface"] = ListValue(type="list", value=preset.surface)
+            case "collider":
+                component.properties["friction"] = SliderValue(type="slider", value=preset.friction)
+            case "surface":
+                component.properties["kind"] = ListValue(type="list", value=preset.surface)
+                component.properties["friction"] = SliderValue(type="slider", value=preset.friction)
+            case _:
+                pass
+
+
 def _apply(project: Project, operation: EditOperation) -> None:
     match operation:
         case CreateObject(target=target, object=obj):
@@ -118,6 +138,8 @@ def _apply(project: Project, operation: EditOperation) -> None:
             if component is None:
                 raise _fail(_component_path(object_id, component_id), f"{obj.name} has no {component_id!r}")
             component.properties[prop] = value.model_copy(deep=True)
+            if component.kind == "material" and prop == "preset":
+                _pick_material(obj, value)
         case AddBody(body=body):
             body = body.model_copy(deep=True)
             if any(item.id == body.id for item in project.bodies):

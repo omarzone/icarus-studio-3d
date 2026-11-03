@@ -73,6 +73,10 @@ def shape_volume(shape: str, size: Vector3) -> float:
             return math.pi * radius**2 * z
         case "capsule":
             return math.pi * radius**2 * max(z - x, 0.0) + 4 / 3 * math.pi * radius**3
+        case "wedge":
+            return x * y * z / 2
+        case "corner_wedge":
+            return x * y * z / 3
         case _:
             return x * y * z
 

@@ -3,13 +3,14 @@ from typing import Literal
 import mujoco
 import numpy as np
 
-from icarus.contracts.scene import SceneBody, SceneDescription, SceneGeom, SceneLight, SceneZone
+from icarus.contracts.scene import GeomShape, SceneBody, SceneDescription, SceneGeom, SceneLight, SceneZone
 from icarus.design.compiler import CompiledModel
 from icarus.design.decor import scene_displays, scene_eyes, scene_plates
 from icarus.design.plates import is_plate_name
 from icarus.design.ray_readings import ray_readings
 
 Shape = Literal["plane", "box", "sphere", "capsule", "cylinder"]
+_MESH = int(mujoco.mjtGeom.mjGEOM_MESH)
 
 _SHAPES: dict[int, Shape] = {
     int(mujoco.mjtGeom.mjGEOM_PLANE): "plane",
@@ -89,6 +90,27 @@ def _light(model: mujoco.MjModel, data: mujoco.MjData, index: int) -> SceneLight
     )
 
 
+Placed = tuple[GeomShape, tuple[float, float, float], tuple[float, float, float], tuple[float, float, float, float]]
+
+
+def _placed(compiled: CompiledModel, data: mujoco.MjData, index: int) -> Placed | None:
+    """Shape, full size and world pose a geom is drawn with; None for geoms the scene does not draw."""
+    model = compiled.model
+    if int(model.geom_type[index]) == _MESH:
+        built = compiled.meshes.get(model.geom(index).name)
+        if built is None:
+            return None
+        # MuJoCo moves a mesh geom's frame to its center of mass; the part is placed at its body, as authored.
+        body = int(model.geom_bodyid[index])
+        return built[0], built[1], _vector(data.xpos[body]), _quat(data.xquat[body])
+    shape = _SHAPES.get(int(model.geom_type[index]))
+    if shape is None:
+        return None
+    quaternion = np.zeros(4)
+    mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
+    return shape, _extents(shape, model.geom_size[index]), _vector(data.geom_xpos[index]), _quat(quaternion)
+
+
 def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjData | None = None) -> SceneDescription:
     """Bodies, geoms and lights in the world frame: at the initial pose, or as `live` data already holds them."""
     model = compiled.model
@@ -106,22 +128,21 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
     ]
     geoms: list[SceneGeom] = []
     for index in range(model.ngeom):
-        shape = _SHAPES.get(int(model.geom_type[index]))
-        # Plates are drawn from `plates`, by role and pressed state.
-        if shape is None or is_plate_name(model.geom(index).name):
-            continue
-        quaternion = np.zeros(4)
-        mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
         name = model.geom(index).name
+        placed = _placed(compiled, data, index)
+        # Plates are drawn from `plates`, by role and pressed state.
+        if placed is None or is_plate_name(name):
+            continue
+        shape, size, position, quaternion = placed
         look = compiled.looks.get(name)
         geoms.append(
             SceneGeom(
                 name=name,
                 body=model.body(int(model.geom_bodyid[index])).name,
                 shape=shape,
-                size=_extents(shape, model.geom_size[index]),
-                position=_vector(data.geom_xpos[index]),
-                quaternion=_quat(quaternion),
+                size=size,
+                position=position,
+                quaternion=quaternion,
                 color=_hex(model.geom_rgba[index]),
                 style=look.style if look else None,
                 surface=look.surface if look else None,
@@ -136,6 +157,9 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
                 light_role=look.light_role if look else None,
                 bevel=look.bevel if look and shape == "box" else 0,
                 ground=name in compiled.grounds,
+                material=look.material if look else None,
+                decal=look.decal if look else None,
+                decal_cell=look.decal_cell if look else 1,
             )
         )
     lights = [_light(model, data, index) for index in range(model.nlight)]

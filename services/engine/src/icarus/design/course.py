@@ -34,6 +34,10 @@ def geom_extent(model: mujoco.MjModel, data: mujoco.MjData, geom: int) -> Extent
     """The world-frame box around one geom at the current pose."""
     rotation = data.geom_xmat[geom].reshape(3, 3)
     half = np.abs(rotation) @ model.geom_size[geom]
+    if int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_MESH):
+        center = data.geom_xpos[geom] + rotation @ model.geom_aabb[geom][:3]
+        half = np.abs(rotation) @ model.geom_aabb[geom][3:]
+        return Extent(center - half, center + half)
     if int(model.geom_type[geom]) in (int(mujoco.mjtGeom.mjGEOM_SPHERE),):
         half = np.full(3, model.geom_size[geom][0])
     elif int(model.geom_type[geom]) in (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_CAPSULE)):

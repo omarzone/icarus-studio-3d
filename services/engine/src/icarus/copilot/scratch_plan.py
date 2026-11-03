@@ -20,15 +20,15 @@ from icarus.contracts.properties import (
     SliderValue,
     VectorValue,
 )
-from icarus.contracts.scene import GeomStyle
+from icarus.contracts.scene import GeomStyle, GeomSurface
 from icarus.contracts.specs import BodySpec, RewardTermSpec
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.library.layout_params import LayoutRecipe
 from icarus.library.layouts import LayoutParams, expand_layout, ground_cover
 from icarus.library.templates import Part, Raw, ground_part, solid
 
-Shape = Literal["box", "sphere", "capsule", "cylinder"]
-Surface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
+Shape = Literal["box", "sphere", "capsule", "cylinder", "wedge", "corner_wedge"]
+Surface = GeomSurface
 PropRole = Literal["wall", "ramp", "platform", "shelf", "obstacle", "bump", "marking", "decoration", "movable"]
 Vector3 = tuple[float, float, float]
 Color = str

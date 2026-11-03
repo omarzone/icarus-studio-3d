@@ -30,6 +30,7 @@ EXPECTED = {
     "move-a-joint",
     "build-a-scene",
     "build-an-environment",
+    "build-with-parts",
     "clone-from-a-reference",
     "drive-a-vehicle",
     "park-a-vehicle",
