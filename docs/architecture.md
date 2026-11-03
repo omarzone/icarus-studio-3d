@@ -253,7 +253,7 @@ Play steps the physics live with the current brain and streams `PlayFrame`s to t
 
 ### Comparison with real behavior
 
-A `BehaviorTest` replays a scripted situation and measures the simulated body against a `ReferenceRecording` (walking paths, reaction times, gait). Results report each behavior as recorded value, simulated value and whether it is within the recorded range; tests without data are reported as not run.
+A `BehaviorTest` (`contracts/behavior.py`) is a fixed scenario a checkpoint is judged on: start seeds that place the body the same way for every brain, and world objects moved along the ground. Each project has the built-in *Standard starts* plus the tests added by the person or the copilot (`behavior_test` tool), kept in `runs/behavior-tests/<project>.json`. `training/behavior_tests.py` runs a checkpoint on a test with the same deterministic evaluation as the worker, in the API process, and keeps a `BehaviorTestResult` (pass or fail, numbers, the root's ground path per episode) under the run folder; `training/behavior_match.py` compares two checkpoints on the same test row by row and by how far apart their paths ran. A test whose definition changed since a result was stored is reported as not run. Comparing against a `ReferenceRecording` of real behavior is not built yet.
 
 ### Training and the Training Timeline
 
@@ -283,6 +283,8 @@ runs/<run_id>/
 ├── rollouts/<step>.json
 ├── frames/<step>/       # rendered episode frames and episodes.json (how each episode ended)
 ├── diagnosis/<n>.json
+├── tests/<step>/<test>.json  # BehaviorTestResult of a checkpoint on a behavior test
+├── exports/step-<step>-e<n>.png  # a recorded episode as an animated PNG, rendered once
 ├── live.json            # the copies' newest poses and recorded frames for the live view
 └── worker.log
 ```
@@ -380,13 +382,18 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `GET` | `/runs/{id}/metrics` · `/checkpoints` · `/rollouts/{step}` · `/scene` | Run data: curves, checkpoints, replays, the run's frozen scene |
 | `POST` · `GET` | `/runs/{id}/diagnosis` · `/runs/{id}/diagnoses` | Ask the coach for a diagnosis · every diagnosis of the run |
 | `GET` | `/runs/{id}/checkpoints/{step}/failures` | Failure groups of a checkpoint with their frames |
+| `GET` | `/runs/{id}/checkpoints/{step}/episodes` · `/runs/{id}/episode-activations` | Every evaluation episode with pass or fail · each hidden neuron's activity over the recorded episode |
+| `POST` | `/runs/{id}/checkpoints/{step}/recording` | The recorded episode as an animated PNG, rendered from the kept MuJoCo states |
+| `GET` · `POST` · `DELETE` | `/projects/{id}/behavior-tests` · `/projects/{id}/behavior-tests/{test}` | Behavior tests of a project · add one · remove one |
+| `POST` · `GET` | `/runs/{id}/checkpoints/{step}/behavior-tests/{test}` · `/runs/{id}/behavior-tests` | Judge a checkpoint on a test · every stored result of the run |
+| `GET` | `/behavior-tests/compare` | Two checkpoints on the same test, row by row and by path gap |
 | `POST` · `GET` · `DELETE` | `/projects/{id}/autopilot` | Start · status · stop the autopilot loop |
 | `GET` · `PUT` | `/settings/training` | Training settings |
 | `GET` · `PUT` · `POST` | `/settings/models` · `/settings/models/test` | Model connections per capability · test a connection |
 | `GET` | `/events` | Engine events stream (router built, not yet mounted) |
 | `GET` · `DELETE` | `/tasks` · `/tasks/{id}` | Background tasks · cancel one (router built, not yet mounted) |
 
-Planned: `POST /motion/clips`, `POST /runs/{id}/behavior-tests`, `POST /projects/{id}/export`, `POST /bundles/pack` · `/bundles/unpack`.
+Planned: `POST /motion/clips`, `POST /projects/{id}/export`, `POST /bundles/pack` · `/bundles/unpack`.
 
 ## Desktop studio
 

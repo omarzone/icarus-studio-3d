@@ -283,7 +283,7 @@ Left column, top, in `STA-RESULTS-FAILURES`. Folder: `features/results/failures/
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
 | `TAB-FAILURES` | Failures | `failures-tab.tsx` | Failure groups found by the copilot, each with a thumbnail and how many test runs it covers. | Select a group to replay it. |
-| `TAB-ALL-TEST-RUNS` | All test runs | `all-test-runs-tab.tsx` | Every evaluation episode with pass or fail. | Replay any episode. |
+| `TAB-ALL-TEST-RUNS` | All test runs | `all-test-runs-tab.tsx` | Every evaluation episode with pass or fail. | Replay any episode (in the app each row says how the episode ended; only the first episode of a checkpoint is recorded, and it plays in `SCR-TIMELAPSE`). |
 
 
 ### `PNL-MOTION-COMPARE` Motion compare
@@ -368,8 +368,8 @@ Left column in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-test
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-BEHAVIOR-TESTS` | Behavior tests | `behavior-tests-tab.tsx` | Tests against recorded real behavior, with pass, warning or *not run*. | Select a test; `+` adds one. |
-| `TAB-RECORDINGS` | Recordings | `recordings-tab.tsx` | Reference recordings imported for comparison. | Import, remove. |
+| `TAB-BEHAVIOR-TESTS` | Behavior tests | `behavior-tests-tab.tsx` | Tests against recorded real behavior, with pass, warning or *not run*. In the app a behavior test is a fixed scenario (the same starts, objects moved) judged on the compared checkpoints by the engine. | Select a test; `+` adds one; ▶ runs the selected test. |
+| `TAB-RECORDINGS` | Recordings | `recordings-tab.tsx` | Reference recordings imported for comparison. In the app: the recorded evaluation episode of every checkpoint. | Import, remove (in the app: play one in `SCR-TIMELAPSE`, export it as an animated picture). |
 
 
 ### `PNL-REFERENCE-VIEW` Reference view
@@ -378,7 +378,7 @@ Center panel in `STA-RESULTS-REFERENCE`. One tab per behavior test. Folder: `fea
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-REFERENCE-TEST` | ‹test name› | `reference-test-tab.tsx` | Recorded behavior and the simulated one side by side, for example walking paths in an arena. | Play, switch test. |
+| `TAB-REFERENCE-TEST` | ‹test name› | `reference-test-tab.tsx` | Recorded behavior and the simulated one side by side, for example walking paths in an arena (in the app: the paths of both checkpoints from the test's starts, on one scale). | Play, switch test. |
 
 
 ### `PNL-REFERENCE-MATCH` Behavior match
@@ -387,8 +387,8 @@ Center, bottom, in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-BEHAVIOR-MATCH` | Behavior match | `behavior-match-tab.tsx` | Table: behavior, recorded value, simulated value, *close* or *off*. | Sort, open a test. |
-| `TAB-NEURONS` | Neurons | `neurons-tab.tsx` | Which neurons drive each behavior. | Select neurons. |
+| `TAB-BEHAVIOR-MATCH` | Behavior match | `behavior-match-tab.tsx` | Table: behavior, recorded value, simulated value, *close* or *off* (in the app: both checkpoints' measured values on the selected test and how alike their paths are). | Sort, open a test. |
+| `TAB-NEURONS` | Neurons | `neurons-tab.tsx` | Which neurons drive each behavior (in the app: each layer's most active neurons over the checkpoint's recorded episode). | Select neurons. |
 
 
 ## Use cases
@@ -1755,6 +1755,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Presentation mode: show how it learned, full screen, with real metrics.
 - **Content:**
   - Full-screen replay, title with checkpoint and score, checkpoint strip, play bar, Export video, Exit presentation.
+  - In the app the replay plays each checkpoint's recorded episode in the run's scene, going on to the next checkpoint when one ends; Export video saves the playing checkpoint's episode as an animated picture.
 - **Header:** none, full-screen presentation
 - **Overlay:** no tabbed panels
 - **Overlay:** no tabbed panels
