@@ -7,6 +7,7 @@ from gymnasium import spaces
 
 from icarus.contracts.project import Project
 from icarus.contracts.training import CopyPoses
+from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
     LiveWorld,
     apply_action,
@@ -17,9 +18,10 @@ from icarus.sim.model_state import (
     reward_state,
 )
 from icarus.sim.poses import geom_poses, live_rays, moving_geoms, pose_rows
-from icarus.sim.rewards import RewardState, compose, delivered, parked
+from icarus.sim.rewards import RewardState, compose
 from icarus.sim.signals import scene_signals
 from icarus.sim.start_pose import place_start
+from icarus.sim.success import task_done
 from icarus.sim.variation import WorldVariation
 
 EPISODE_SECONDS = 30.0
@@ -87,6 +89,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._state = reward_state(self.world)
         self._episode += 1
         self._start_episode()
+        self.world.tally.start_try(goal_distance(self._state))
         return observation(self.world), {}
 
     def step(self, action: np.ndarray):
@@ -99,9 +102,10 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         for term, part in parts.items():
             self._episode_terms[term] += part
         self._collided = self._collided or after.colliding
-        # A task that brings an object to the goal succeeds when the object rests there, wherever the agent is.
-        done = delivered(after) if self.world.carried is not None else parked(after)
-        reached = self.world.family == "navigation" and done
+        self.world.tally.episode_return += float(reward)
+        reached = task_done(self.world, after)
+        if reached:
+            self.world.tally.successes += 1
         terminated = after.fallen or reached
         truncated = float(self.world.data.time) >= EPISODE_SECONDS - 1e-9
         info: dict[str, Any] = {"reward_parts": parts}

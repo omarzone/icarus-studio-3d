@@ -31,6 +31,7 @@ from icarus.contracts.project import Project
 from icarus.copilot.language import Language, say
 from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
+from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
     apply_action,
     build_world,
@@ -52,9 +53,11 @@ from icarus.sim.play_tools import (
     shuffle_props,
 )
 from icarus.sim.policy import Policy
-from icarus.sim.rewards import compose, inside_goal
+from icarus.sim.rewards import RewardState, compose, inside_goal
+from icarus.sim.sensor_info import reading_number
 from icarus.sim.signals import scene_signals
 from icarus.sim.start_pose import place_start
+from icarus.sim.success import task_done
 
 PlayReply = PlayEventMessage | PlayErrorMessage | PlayReady
 EventKind = Literal["user", "agent", "world"]
@@ -79,21 +82,6 @@ def _amount(value: float) -> str:
     return f"{value:.0f}" if abs(value) >= 10 else f"{value:.2g}"
 
 
-def _reading(kind: str, raw: np.ndarray) -> float:
-    """One number per sense for Play: forward speed, turn rate, target distance and spot heading in degrees."""
-    match kind:
-        case "ray" | "touch" | "speed":
-            return float(raw[0])
-        case "yaw":
-            return float(raw[2])
-        case "target":
-            return float(np.hypot(raw[0], raw[1]))
-        case "heading":
-            return float(np.degrees(np.arctan2(raw[1], raw[0])))
-        case _:
-            return float(np.linalg.norm(raw))
-
-
 def _vector(values) -> tuple[float, float, float]:
     return (float(values[0]), float(values[1]), float(values[2]))
 
@@ -101,7 +89,15 @@ def _vector(values) -> tuple[float, float, float]:
 class PlaySession:
     """One live world stepped in real time with a brain. It works on its own copy and never changes the project."""
 
-    def __init__(self, project: Project, revision: int, brain: Policy, seed: int, language: Language = "en") -> None:
+    def __init__(
+        self,
+        project: Project,
+        revision: int,
+        brain: Policy,
+        seed: int,
+        language: Language = "en",
+        brain_steps: int | None = None,
+    ) -> None:
         self.revision = revision
         self.language: Language = language
         self.brain = brain
@@ -114,6 +110,7 @@ class PlaySession:
         self._base_diffuse = self.world.model.light_diffuse.copy()
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
+        self.world.tally.training_steps = brain_steps
         self._restart()
 
     def _restart(self) -> None:
@@ -127,11 +124,13 @@ class PlaySession:
         self.episode_return = 0.0
         self._debt = 0.0
         self._observe()
+        self.world.tally.start_try(goal_distance(self._state))
         self._act()
 
     def _observe(self) -> None:
         self._state = reward_state(self.world)
         self._touching = touching(self.world)
+        self._plates_on = [state.active for state in self.world.plate_states]
 
     def _act(self) -> None:
         if self.world.actuators:
@@ -166,6 +165,7 @@ class PlaySession:
         before, after = self._state, reward_state(self.world)
         self.reward = compose(self._terms, self._weights, before, after)[0] if self.world.agent is not None else 0.0
         self.episode_return += self.reward
+        self.world.tally.episode_return = self.episode_return
         events: list[PlayEvent] = []
         agent = self._name(self.world.agent_object)
         now = touching(self.world)
@@ -179,8 +179,22 @@ class PlaySession:
             )
         if after.fallen and not before.fallen:
             events.append(self._event(self._text("play_fell", agent=agent), "agent"))
+        events += self._plate_events(before, after, agent)
         self._state, self._touching = after, now
+        self._plates_on = [state.active for state in self.world.plate_states]
         self._act()
+        return events
+
+    def _plate_events(self, before: RewardState, after: RewardState, agent: str) -> list[PlayEvent]:
+        """Plates that lit up at this step, and the goal completed when the plates are the goal."""
+        events: list[PlayEvent] = []
+        for plate, state, was in zip(self.world.plates, self.world.plate_states, self._plates_on, strict=False):
+            if state.active and not was:
+                events.append(self._event(self._text("play_plate_on", plate=self._name(plate.object)), "world"))
+        if task_done(self.world, after) and not task_done(self.world, before):
+            self.world.tally.successes += 1
+            if self.world.plate_goal:
+                events.append(self._event(self._text("play_plates_done", agent=agent), "agent"))
         return events
 
     def apply(self, command: PlayCommand) -> list[PlayReply]:
@@ -215,6 +229,7 @@ class PlaySession:
                 return [self._say(self._text("play_pushed", name=self._name(command.object), impulse=magnitude))]
             case AddObjectCommand():
                 self.world, name = add_piece(world, command.piece, command.position)
+                self.world.tally = world.tally
                 self.world.model.light_diffuse[:] = world.model.light_diffuse
                 self._observe()
                 return [self._ready(), self._say(self._text("play_added", name=name))]
@@ -268,7 +283,7 @@ class PlaySession:
     def _senses(self) -> list[PlayReading]:
         readings: list[PlayReading] = []
         for sensor in self.world.sensors:
-            value = _reading(sensor.kind, sensor_value(self.world, sensor))
+            value = reading_number(sensor.kind, sensor_value(self.world, sensor))
             readings.append(
                 PlayReading(
                     id=sensor.id, label=sensor.label, value=value, min=sensor.low, max=sensor.high, unit=sensor.unit
