@@ -1,11 +1,11 @@
 import pytest
 
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
-from icarus.contracts.copilot import SendMessage
+from icarus.contracts.copilot import ModelSettingsPatch, SendMessage
 from icarus.copilot.agent.budget import AgentLimits
 from icarus.copilot.agent.context_usage import apportion
 from icarus.copilot.agent.tokens import IMAGE_TOKENS, estimate
-from icarus.copilot.agent.turn import new_message
+from icarus.copilot.agent.turn import new_message, turn_window
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.builtin_hooks import default_registry
 from icarus.copilot.chat import Harness
@@ -112,6 +112,21 @@ def test_a_prompt_past_the_window_leaves_no_free_room(tmp_path, store, settings,
     copilot = make_copilot(tmp_path, store, settings, views, AgentLimits(context_tokens=10_000))
     usage = copilot.context_usage(project_id, ContextRequest())
     assert usage.used > usage.window - usage.reserve and usage.free == 0
+    assert_adds_up(usage)
+
+
+def test_a_window_set_in_ai_models_sizes_the_meter_the_budget_and_compaction(
+    tmp_path, store, settings, views, project_id
+):
+    copilot = make_copilot(tmp_path, store, settings, views)
+    assumed = copilot.context_usage(project_id, ContextRequest())
+    assert (assumed.window, assumed.window_source) == (AgentLimits().context_tokens, "assumed")
+    settings.update(ModelSettingsPatch(context_tokens={"reasoning": 1_000_000}))
+    usage = copilot.context_usage(project_id, ContextRequest())
+    assert (usage.window, usage.window_known, usage.window_source) == (1_000_000, True, "set")
+    assert turn_window(settings, "reasoning", AgentLimits()) == 1_000_000
+    assert usage.compaction.fold_at > assumed.compaction.fold_at
+    assert usage.free > assumed.free
     assert_adds_up(usage)
 
 

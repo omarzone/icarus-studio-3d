@@ -31,6 +31,7 @@ from icarus.contracts.project import Project
 from icarus.copilot.language import Language, say
 from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
+from icarus.library.pieces import PIECES
 from icarus.sim.model_state import (
     apply_action,
     build_world,
@@ -42,11 +43,21 @@ from icarus.sim.model_state import (
     sensor_value,
     touching,
 )
+from icarus.sim.play_drops import (
+    PendingDrop,
+    check_drop,
+    piece_object,
+    play_pieces,
+    rain,
+    spawn_point,
+    throw_velocity,
+)
 from icarus.sim.play_tools import (
     ToolRejected,
     add_piece,
     apply_impulse,
     body_id,
+    free_joint,
     movable_props,
     move_body,
     shuffle_props,
@@ -104,7 +115,11 @@ class PlaySession:
         self.revision = revision
         self.language: Language = language
         self.brain = brain
-        self.world = build_world(project.model_copy(deep=True))
+        # The world as designed; Reset returns to it, dropping whatever Add object brought in.
+        self._project = project.model_copy(deep=True)
+        self.world = build_world(self._project.model_copy(deep=True))
+        self._added = 0
+        self._rain: list[tuple[AddObjectCommand, PendingDrop]] = []
         self.speed = 1.0
         self.paused = False
         self._project_id = project.id
@@ -209,10 +224,17 @@ class PlaySession:
                 magnitude = _amount(float(np.linalg.norm(impulse)))
                 return [self._say(self._text("play_pushed", name=self._name(command.object), impulse=magnitude))]
             case AddObjectCommand():
-                self.world, name = add_piece(world, command.piece, command.position)
-                self.world.model.light_diffuse[:] = world.model.light_diffuse
-                self._observe()
-                return [self._ready(), self._say(self._text("play_added", name=name))]
+                check_drop(command)
+                drops = rain(command, float(world.data.time), self._rng)
+                name = self._drop(command, drops[0])
+                self._rain += [(command, drop) for drop in drops[1:]]
+                if command.count > 1:
+                    text = self._text("play_rain", count=command.count, name=name)
+                elif command.placement == "throw":
+                    text = self._text("play_threw", name=name, speed=f"{command.speed:g}")
+                else:
+                    text = self._text("play_dropped" if command.placement == "drop" else "play_added", name=name)
+                return [self._ready(), self._say(text)]
             case LightCommand():
                 world.model.light_diffuse[:] = self._base_diffuse * command.intensity
                 return [self._ready(), self._say(self._text("play_light", percent=f"{command.intensity * 100:.0f}"))]
@@ -230,8 +252,11 @@ class PlaySession:
                 self.paused = command.paused
                 return [self._say(self._text("play_paused" if command.paused else "play_resumed"))]
             case ResetCommand():
+                rebuilt = self._added > 0
+                self._clear_added()
                 self._restart()
-                return [self._say(self._text("play_reset"), "world")]
+                said = self._say(self._text("play_reset"), "world")
+                return [self._ready(), said] if rebuilt else [said]
             case ShuffleCommand():
                 count = shuffle_props(world, self._rng, SHUFFLE_REACH)
                 self._observe()
@@ -242,6 +267,53 @@ class PlaySession:
                     raise ToolRejected(f"{self._name(command.object)} has no touch sensor to poke")
                 apply_impulse(world, body, np.array([0.0, 0.0, -POKE]))
                 return [self._say(self._text("play_poked", name=self._name(command.object)))]
+
+    def _drop(self, command: AddObjectCommand, drop: PendingDrop) -> str:
+        """Add one copy to the running world; a throw leaves already flying at the agent."""
+        old = self.world
+        spec = piece_object(old.project, command, drop.position)
+        launch = None
+        if command.placement == "throw":
+            if old.agent is None:
+                raise ToolRejected("There is no agent to throw at")
+            launch = throw_velocity(np.array(spawn_point(spec)), old.data.xpos[old.agent].copy(), command.speed)
+        self.world = add_piece(old, spec)
+        self.world.model.light_diffuse[:] = old.model.light_diffuse
+        self._added += 1
+        joint = free_joint(self.world, body_id(self.world, spec.id))
+        if launch is not None and joint is not None:
+            dof = int(self.world.model.jnt_dofadr[joint])
+            self.world.data.qvel[dof : dof + 3] = launch
+            mujoco.mj_forward(self.world.model, self.world.data)
+        self._observe()
+        return PIECES[command.piece].label if command.count > 1 else spec.name
+
+    def due(self) -> list[PlayReply]:
+        """Drop the copies of a rain whose time has come; a copy that cannot be added ends the rain."""
+        now = float(self.world.data.time)
+        ready = [entry for entry in self._rain if entry[1].due <= now]
+        if not ready:
+            return []
+        self._rain = [entry for entry in self._rain if entry[1].due > now]
+        try:
+            for command, drop in ready:
+                self._drop(command, drop)
+        except ToolRejected as rejected:
+            self._rain = []
+            return [self._ready(), PlayErrorMessage(type="error", message=str(rejected))]
+        return [self._ready()]
+
+    def _clear_added(self) -> None:
+        """Back to the designed world, keeping the light and wind the person set."""
+        self._rain = []
+        if self._added == 0:
+            return
+        old = self.world
+        self.world = build_world(self._project.model_copy(deep=True))
+        self.world.model.light_diffuse[:] = old.model.light_diffuse
+        self.world.model.opt.wind[:] = old.model.opt.wind
+        self.world.model.opt.density = old.model.opt.density
+        self._added = 0
 
     def tools(self) -> list[PlayToolInfo]:
         tools = [PlayToolInfo(id=id, label=label) for id, label in _CORE_TOOLS]
@@ -258,6 +330,7 @@ class PlaySession:
             brain=self.brain.label,
             tools=self.tools(),
             scene=scene_description(self.world.compiled, self.revision),
+            pieces=list(play_pieces()),
         )
 
     def _senses(self) -> list[PlayReading]:

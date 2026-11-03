@@ -26,8 +26,16 @@ def test_a_play_session_streams_frames_takes_commands_and_survives_bad_ones(tmp_
     project_id = client.post("/projects", json={"name": "Parking", "template": "parking_car"}).json()["project"]["id"]
     stored = files_of(tmp_path)
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        stages = [socket.receive_json()["message"] for _ in range(3)]
+        # The app shows what Play waits for before the first frame: compiling, then the brain, then starting.
+        assert [(stage["type"], stage["stage"]) for stage in stages] == [
+            ("progress", "world"),
+            ("progress", "brain"),
+            ("progress", "starting"),
+        ]
         ready = socket.receive_json()["message"]
         assert ready["type"] == "ready"
+        assert "ball" in [piece["id"] for piece in ready["session"]["pieces"]]
         assert ready["session"]["project_id"] == project_id
         assert ready["session"]["revision_number"] == 1
         assert "push" in [tool["id"] for tool in ready["session"]["tools"]]
@@ -58,7 +66,7 @@ def test_play_speaks_the_language_of_the_persons_latest_message(tmp_path):
             CopilotMessage(id="m1", role="user", text="hola, quiero ver cómo se mueve", created_at=datetime.now(UTC))
         )
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        socket.receive_json()
+        next_of(socket, "ready")
         socket.send_json({"command": {"tool": "add_object", "piece": "box", "position": [4, 0, 0]}})
         assert next_of(socket, "event")["event"]["text"] == "Agregaste Box"
 
@@ -66,10 +74,26 @@ def test_play_speaks_the_language_of_the_persons_latest_message(tmp_path):
 def test_an_unknown_project_sends_an_error_and_closes_with_4404(tmp_path):
     client = TestClient(create_app(tmp_path))
     with client.websocket_connect("/projects/0123456789ab/play") as socket:
-        assert socket.receive_json()["message"]["type"] == "error"
+        assert next_of(socket, "error", limit=4)["message"]
         with pytest.raises(WebSocketDisconnect) as closed:
             socket.receive_json()
     assert closed.value.code == 4404
+
+
+def test_a_rain_drops_its_copies_over_time_in_the_running_session(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    project_id = client.post("/projects", json={"name": "P", "template": "parking_car"}).json()["project"]["id"]
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        next_of(socket, "ready")
+        rain = {"tool": "add_object", "piece": "ball", "position": [4, 0, 0], "placement": "drop", "count": 3}
+        socket.send_json({"command": rain | {"interval": 0.05, "spread": 1}})
+        ready = next_of(socket, "ready")
+        assert [geom["name"] for geom in ready["session"]["scene"]["geoms"]].count("ball") == 1
+        assert next_of(socket, "event")["event"]["text"] == "You started dropping 3 × Ball"
+        names: set[str] = set()
+        while not {"ball_2", "ball_3"} <= names:
+            names = {geom["name"] for geom in next_of(socket, "ready")["session"]["scene"]["geoms"]}
+        assert "ball" in names
 
 
 def test_an_unexpected_failure_in_one_command_is_reported_and_the_session_goes_on(tmp_path, monkeypatch):

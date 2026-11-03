@@ -2,6 +2,7 @@ import os
 import stat
 
 import pytest
+from pydantic import ValidationError
 
 from icarus.contracts.copilot import ModelSettingsPatch
 from icarus.copilot.settings import ModelSettingsStore
@@ -82,3 +83,30 @@ def test_the_environment_key_only_goes_to_the_environment_endpoint(tmp_path, mon
 def test_the_settings_file_is_readable_only_by_its_owner(tmp_path):
     ModelSettingsStore(tmp_path).update(patch(endpoint="https://models.example/v1", api_key=KEY))
     assert stat.S_IMODE((tmp_path / "models.json").stat().st_mode) == 0o600
+
+
+def test_a_set_context_window_is_kept_shown_and_cleared_without_touching_the_rest(tmp_path):
+    store = ModelSettingsStore(tmp_path)
+    store.update(patch(endpoint="https://models.example/v1", api_key=KEY, models={"reasoning": "big-model"}))
+    assert store.context_tokens("reasoning") is None and store.context_source("reasoning") == "assumed"
+    settings = store.update(patch(context_tokens={"reasoning": 1_000_000}))
+    connections = {item.capability: item for item in settings.connections}
+    assert connections["reasoning"].context_tokens == 1_000_000 and connections["vision"].context_tokens is None
+    reopened = ModelSettingsStore(tmp_path)
+    assert reopened.context_tokens("reasoning") == 1_000_000 and reopened.context_source("reasoning") == "set"
+    assert reopened.connection("reasoning") == store.connection("reasoning")
+    reopened.update(patch(context_tokens={"reasoning": None}))
+    assert reopened.context_tokens("reasoning") is None and reopened.context_source("reasoning") == "assumed"
+
+
+def test_a_refused_request_below_the_set_window_wins_and_says_it_was_learned(tmp_path):
+    store = ModelSettingsStore(tmp_path)
+    store.update(patch(context_tokens={"reasoning": 1_000_000}))
+    store.learn_context("reasoning", 200_000)
+    assert store.context_tokens("reasoning") == 200_000 and store.context_source("reasoning") == "learned"
+
+
+@pytest.mark.parametrize("tokens", [0, 3_999, 10_000_001, -5])
+def test_a_context_window_out_of_range_is_refused(tokens):
+    with pytest.raises(ValidationError):
+        patch(context_tokens={"reasoning": tokens})
