@@ -93,7 +93,7 @@ def test_unknown_runs_and_projects_answer_404(tmp_path):
 def test_a_project_that_cannot_train_or_a_bad_request_is_rejected(tmp_path):
     client = TestClient(make_app(tmp_path))
     empty = client.post(f"/projects/{new_project(client, 'empty_world')}/runs", json=START)
-    assert empty.status_code == 422 and "navigation and locomotion" in empty.json()["message"]
+    assert empty.status_code == 422 and "can be trained" in empty.json()["message"]
     bad = client.post(f"/projects/{new_project(client)}/runs", json={"total_steps": 10, "copies": 0})
     assert bad.status_code == 422 and set(bad.json()["details"]) == {"body.total_steps", "body.copies"}
 
