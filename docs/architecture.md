@@ -117,7 +117,7 @@ icarus-studio-3d/
 │   │   │   ├── tasks.py      # background tasks registry
 │   │   │   ├── motion/       # planned: pose extraction, retargeting, animation export
 │   │   │   ├── hardware/     # body needs, hardware checks, URDF/MJCF/ONNX export, runtime package
-│   │   │   └── bundles/      # planned: pack and unpack shareable bundles
+│   │   │   └── bundles/      # unpack community bundles into remixed projects; packing is planned
 │   │   └── tests/
 │   └── community/            # online service: accounts, creations, moderation, sharing (FastAPI, Alembic)
 ├── assets/
@@ -168,6 +168,7 @@ icarus-studio-3d/
 | `BehaviorTest`, `ReferenceRecording` | Recorded real behavior and how a simulated run is measured against it |
 | `MotionClip` | Reference motion retargeted to a body, with source and frame timing |
 | `BundleManifest` | Contents, versions, lineage and checksums of a shareable bundle |
+| `UnpackBundle`, `RemixOrigin` | A community bundle to make a project of, and the creation and version a remixed project came from |
 
 `pnpm gen:contracts` exports JSON Schema from these models and generates `packages/contracts/src/generated.ts`. `pnpm check` fails if the generated file is stale. Generated files are never edited by hand.
 
@@ -354,6 +355,14 @@ See [`plans/sprint-07-coach.md`](./plans/sprint-07-coach.md).
 
 `bundles/` packs worlds, bodies, brains, motion clips or whole projects into a versioned archive with a `BundleManifest`, lineage (the bundle it was derived from) and checksums. Import validates every part against the library and contract versions. Bundles never contain executable code.
 
+Today a bundle is a whole project in the JSON envelope the desktop publishes (see "Community service"), and `bundles/unpack.py` turns one into a new local project (`POST /bundles/unpack`):
+
+- **Data only.** Unknown envelope fields, deep nesting, oversized files, values that are not JSON data and strings that carry scripts or embedded programs are refused, as the community refuses them; the project document must parse as a `Project` with no unknown fields.
+- **Known versions.** `format` must be `icarus.bundle` version 1, `kind` must be `project`, `contract_version` must be `project-<schema_version>` of a schema this engine reads, and `library_version` may not be newer than the engine's library. A project that wears an imported model is refused, since bundles carry no model files yet.
+- **Tested before it is shown.** The project store gives the document a new id and keeps it only when it is valid against the library, compiles and passes the design tests, like any revision; otherwise the answer lists the issues.
+- **Lineage.** The creation it came from (`RemixOrigin`: creation id, version, title) is kept in `lineage.json` beside the revision log, shown as `ProjectState.remix_of` and copied by duplicates. Publishing the project names that creation in the bundle's `lineage.remix_of`, which is where the community records the remix, counts it and notifies the original's author.
+- **Flow.** The desktop downloads the latest version through the community bridge, sends it to the engine with the creation it came from, then opens the new project in the World workspace. The copilot does not remix: it works inside one open project, and a remix makes a new one.
+
 ### HTTP API
 
 Routes that exist today (`services/engine/src/icarus/api/`):
@@ -399,8 +408,9 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `GET` | `/projects/{id}/build/targets` | What the revision can be built into, with real facts |
 | `POST` | `/projects/{id}/export/plan` · `/projects/{id}/export` | Files and sizes of an export · write it as a zip to a chosen path |
 | `POST` | `/projects/{id}/hardware/check` | The body against a hardware kit, pass, warn or fail per joint and sensor |
+| `POST` | `/bundles/unpack` | A community bundle becomes a new project remixed from its creation, once it is data in a known version and passes its tests |
 
-Planned: `POST /motion/clips`, `POST /bundles/pack` · `/bundles/unpack`.
+Planned: `POST /motion/clips`, `POST /bundles/pack`.
 
 ## Desktop studio
 
@@ -436,7 +446,7 @@ Icarus ships as one installable application per platform (Windows, macOS, Linux)
 
 - **Stack.** FastAPI, Pydantic v2 with `extra="forbid"`, pydantic-settings, SQLAlchemy 2 and Alembic; SQLite and a local folder in development, Postgres on a server through `DATABASE_URL`. Bundles, thumbnails and photos go through a small `FileStore` (`LocalFileStore` now, an object store later). It runs locally with `pnpm community:dev` (port 8790) and on a VPS with its `Dockerfile` and `docker-compose.yml`.
 - **What it keeps.** Creations (a published project bundle, a thumbnail and page text) with numbered versions and remix lineage, categories, search and sorting (featured, recent, most voted), votes, reports, a moderation queue with keep, remove and ban decisions and appeals (moderator role from `MODERATOR_EMAILS`), profiles with photos, follows, notifications (votes, remixes, follows, invites, moderation results), each project's community page with its visibility (public, unlisted, invited, private) and invites with roles (viewer, editor), privacy settings, blocks, a data export and account deletion. The API is versioned under `/v1`.
-- **Bundles carry data, never code.** A bundle is the engine's project document in a JSON envelope (`format: "icarus.bundle"`, `format_version`, `kind: "project"`, `contract_version`, `library_version`, `lineage`). The service refuses unknown fields and kinds, strings that carry scripts or embedded programs, blobs, deep nesting and oversized files, and stores the canonical JSON with its SHA-256; pictures must be PNG, JPEG or WebP by their bytes. Remixing into a local project waits for the engine to import bundles.
+- **Bundles carry data, never code.** A bundle is the engine's project document in a JSON envelope (`format: "icarus.bundle"`, `format_version`, `kind: "project"`, `contract_version`, `library_version`, `lineage`). The service refuses unknown fields and kinds, strings that carry scripts or embedded programs, blobs, deep nesting and oversized files, and stores the canonical JSON with its SHA-256; pictures must be PNG, JPEG or WebP by their bytes. Remixing downloads a creation's bundle and lets the engine make a local project of it ("Bundles"); publishing that project sends its lineage, and the service checks the original allows remixes.
 - **Sign-in with Supabase Auth; no passwords in Icarus.** The desktop main process runs `@supabase/supabase-js` with PKCE: Google and GitHub open in the system browser, email sends a one-time link, and both return to a loopback callback on `http://127.0.0.1:8791/auth/callback` that exchanges the code. The session is stored encrypted with Electron `safeStorage` (the OS keychain) in the app's user data, or only in memory where no keychain exists. The service verifies each token's signature with the project's JWKS (or the legacy JWT secret), audience, issuer and expiry, and keys accounts by `sub`.
 - **Development sign-in.** With `DEV_AUTH=true` (what `pnpm community:dev` sets) the service signs one-hour tokens itself at `POST /v1/dev/token`; with `ENV=production` it refuses to start in that mode. The desktop uses it whenever no Supabase project is configured, signing in as `dev@icarus.localhost`.
 - **One setting chooses the server.** `community.json` in the settings folder holds `community_url` (default `http://127.0.0.1:8790`), `supabase_url` and `supabase_anon_key`, edited in Settings › Profile › Community server. Changing the server or the Supabase project signs out.
