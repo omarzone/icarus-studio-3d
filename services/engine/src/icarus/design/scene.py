@@ -131,6 +131,8 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
                 emissive=look.emissive if look else 0,
                 skin=look.skin if look else None,
                 light_role=look.light_role if look else None,
+                bevel=look.bevel if look and shape == "box" else 0,
+                ground=name in compiled.grounds,
             )
         )
     lights = [_light(model, data, index) for index in range(model.nlight)]

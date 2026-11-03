@@ -3,6 +3,9 @@ from icarus.library.parts import Part, Raw, fixture, solid
 
 Size = tuple[float, float, float]
 
+# A block's look: a tile per metre on every face and edges rounded inside its collider, which stays a sharp cube.
+BLOCK_LOOK: dict[str, Raw] = {"finish": "blocks", "bevel": 0.04}
+
 
 def _height(shape: str, size: Size) -> float:
     return size[0] if shape == "sphere" else size[2]
@@ -121,6 +124,23 @@ _PIECES = [
         _fixed(
             "stairs", "Stairs", "box", (2.4, 1.2, 0.3), "#b8b5ae", "stairs", "concrete", z=0.65, rotation=(0, -30, 0)
         ),
+    ),
+    _piece(
+        "block",
+        "Block",
+        "box",
+        "basics",
+        "A fixed 1 m cube drawn as a tile block with rounded edges; repeat it with a grid or a line to build floors, "
+        "platforms, steps and walls from blocks.",
+        _fixed("block", "Block", "box", (1, 1, 1), "#9aa0a8", "plain", "concrete", look=BLOCK_LOOK),
+    ),
+    _piece(
+        "sphere",
+        "Sphere",
+        "goal",
+        "basics",
+        "A fixed round boulder 1 m across to steer around or climb against.",
+        _fixed("sphere", "Sphere", "sphere", (1, 1, 1), "#a8a29e", "plain", "concrete"),
     ),
     _piece(
         "bridge_plank",

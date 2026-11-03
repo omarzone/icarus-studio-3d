@@ -48,6 +48,7 @@ LOOKS: dict[str, Look] = {
     "bench": Look("Bench", ("bench",), "box", "#7a5a3c", "plain", "wood", True),
     "ramp": Look("Ramp", ("ramp",), "box", "#6b7280", "plain", "concrete", True),
     "step": Look("Step", ("step", "stairs"), "box", "#8a8f98", "plain", "concrete", True),
+    "block": Look("Block", ("block",), "box", "#9aa0a8", "plain", "concrete", True),
 }
 
 

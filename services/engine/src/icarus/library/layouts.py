@@ -11,10 +11,12 @@ from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.operations import CreateObject, EditOperation, SetProperty
 from icarus.contracts.project import Project
 from icarus.contracts.properties import ChoiceValue, NumberValue, PropertyValue, VectorValue
+from icarus.library.layout_blocks import block_terrain
 from icarus.library.layout_courses import forest, maze, obstacle_course, terrain_steps
 from icarus.library.layout_interiors import room, warehouse
 from icarus.library.layout_params import (
     AnyLayout,
+    BlockTerrain,
     CityBlock,
     Forest,
     LayoutParams,
@@ -25,11 +27,15 @@ from icarus.library.layout_params import (
     TerrainSteps,
     Warehouse,
 )
-from icarus.library.layout_site import LayoutError, Point, Site
+from icarus.library.layout_site import LayoutError, Point, Rect, Site
 from icarus.library.layout_streets import city_block, parking_lot
 from icarus.library.parts import Part
 
-__all__ = ["RECIPES", "Layout", "LayoutError", "LayoutParams", "expand_layout", "recipe_parameters"]
+# Ground kept around a layout's farthest element, in metres.
+GROUND_MARGIN = 5.0
+GROUND_MAX = 1000.0
+
+__all__ = ["RECIPES", "Layout", "LayoutError", "LayoutParams", "expand_layout", "ground_cover", "recipe_parameters"]
 
 
 @dataclass(frozen=True)
@@ -114,6 +120,15 @@ RECIPES: dict[str, Recipe] = {
             "Steps up to a platform and back down, or separate platforms with gaps, with rails along the sides.",
             TerrainSteps,
             terrain_steps,
+        ),
+        Recipe(
+            "block_terrain",
+            "Block terrain",
+            "blocks",
+            "Columns of cube blocks with uneven heights, neighbours at most one layer apart, to cross from the start "
+            "in the west to the goal in the east.",
+            BlockTerrain,
+            block_terrain,
         ),
     )
 }
@@ -230,6 +245,36 @@ def _markers(project: Project | None, site: Site, origin: Point, params: AnyLayo
     return operations
 
 
+def _ground_cover(project: Project | None, site: Site, origin: Point) -> list[EditOperation]:
+    found = _marker(project, "ground")
+    return ground_cover(found[0], site, origin) if found else []
+
+
+def ground_cover(obj: ObjectSpec, site: Site, origin: Point) -> list[EditOperation]:
+    """Grow a world ground slab around its center until it holds the whole layout up, so nothing laid out stands
+    past its edge; an endless ground plane, or a ground inside a group, is left as it is."""
+    component = next((item for item in obj.components if item.kind == "ground"), None)
+    if component is None or obj.parent is not None:
+        return []
+    size = component.properties.get("size")
+    width, depth, thickness = size.value if isinstance(size, VectorValue) else (100.0, 100.0, 1.0)
+    transform = next((item for item in obj.components if item.kind == "transform"), None)
+    position = transform.properties.get("position") if transform else None
+    cx, cy = position.value[:2] if isinstance(position, VectorValue) else (0.0, 0.0)
+    rects = [*site.covered, Rect.around(site.start, 0, 0), *([Rect.around(site.goal, 0, 0)] if site.goal else [])]
+    margin = GROUND_MARGIN
+    reach_x = max(max(abs(origin[0] + r.x0 - cx), abs(origin[0] + r.x1 - cx)) for r in rects) + margin
+    reach_y = max(max(abs(origin[1] + r.y0 - cy), abs(origin[1] + r.y1 - cy)) for r in rects) + margin
+    grown = (
+        round(min(max(width, 2 * reach_x), GROUND_MAX), 2),
+        round(min(max(depth, 2 * reach_y), GROUND_MAX), 2),
+        thickness,
+    )
+    if grown[:2] == (width, depth):
+        return []
+    return [_set(obj.id, component.id, "size", VectorValue(type="vector", value=grown))]
+
+
 def _spot(obj: str, ids: dict[str, str], site: Site) -> list[EditOperation]:
     """A bay's goal as a rectangle the bay's size, turned to the bay; its success rules stay as the goal had them."""
     if site.goal_spot is None:
@@ -264,4 +309,5 @@ def expand_layout(params: AnyLayout, project: Project | None, start_at: Point | 
     objects = [root, *site.objects[1:]]
     operations: list[EditOperation] = [CreateObject(op="create_object", target="world", object=obj) for obj in objects]
     operations += _markers(project, site, where, params)
+    operations += _ground_cover(project, site, where)
     return Layout(operations, site, where, len(cells) * plan.cell)

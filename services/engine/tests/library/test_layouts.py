@@ -74,8 +74,8 @@ def _footprints_cover_every_solid_geom(layout, project) -> None:
     model, data = compiled.model, mujoco.MjData(compiled.model)
     mujoco.mj_forward(model, data)
     prefix = layout.site.prefix
-    # Steps and humps are climbed rather than walked around, so the path check leaves them out on purpose.
-    climbed = (f"{prefix}_step_", f"{prefix}_ramp_")
+    # Steps, humps and blocks are climbed rather than walked around, so the path check leaves them out on purpose.
+    climbed = (f"{prefix}_step_", f"{prefix}_ramp_", f"{prefix}_block_")
     solid = {
         obj.id
         for obj in project.world.objects
@@ -183,6 +183,41 @@ def test_the_layout_start_lands_under_the_body_and_moves_the_spawn_and_goal(tmp_
     assert layout.summary()["start"] == pytest.approx(list(car_position.value[:2]))
     again = expand_layout(PARAMS.validate_python({"recipe": "parking_lot"}), candidate)
     assert again.site.prefix == "lot2"
+
+
+@pytest.mark.parametrize("seed", [0, 5])
+def test_a_block_terrain_is_cube_blocks_whose_neighbours_differ_by_at_most_one_layer(seed):
+    params = {"blocks_x": 6, "blocks_y": 4, "layer_height": 0.1, "max_layers": 4}
+    layout, project = _laid_out("block_terrain", seed=seed, **params)
+    blocks = [obj for obj in project.world.objects if obj.name.startswith("Block ") and "-" in obj.name]
+    assert len(blocks) == 24
+    layers: dict[tuple[int, int], int] = {}
+    for obj in blocks:
+        column, row = (int(part) for part in obj.name.removeprefix("Block ").split("-"))
+        mesh = next(item for item in obj.components if item.kind == "mesh")
+        material = next(item for item in obj.components if item.kind == "material")
+        size = mesh.properties["size"]
+        assert isinstance(size, VectorValue) and size.value[:2] == (1.0, 1.0)
+        assert material.properties["finish"].model_dump()["value"] == "blocks"
+        layers[(column, row)] = round(size.value[2] / 0.1)
+    assert set(layers.values()) <= set(range(1, 5))
+    for (column, row), count in layers.items():
+        for near in ((column + 1, row), (column, row + 1)):
+            assert abs(layers.get(near, count) - count) <= 1
+
+
+def test_a_layout_grows_the_ground_slab_to_hold_everything_it_lays_out():
+    layout, project = _laid_out("city_block", blocks_x=3, blocks_y=3)
+    ground = next(obj for obj in project.world.objects if obj.id == "ground")
+    size = next(item for item in ground.components if item.kind == "ground").properties["size"]
+    assert isinstance(size, VectorValue)
+    width, depth, thickness = size.value
+    assert thickness == 1.0 and width > 100 and depth > 100
+    for rect in layout.site.covered:
+        assert abs(layout.origin[0] + rect.x0) < width / 2 and abs(layout.origin[0] + rect.x1) < width / 2
+        assert abs(layout.origin[1] + rect.y0) < depth / 2 and abs(layout.origin[1] + rect.y1) < depth / 2
+    small, _ = _laid_out("room")
+    assert not [op for op in small.operations if getattr(op, "property", None) == "size"]
 
 
 def test_a_library_piece_with_the_element_id_brings_its_look_and_keeps_the_layout_size(monkeypatch):

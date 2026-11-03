@@ -54,7 +54,7 @@ def _settles(compiled: CompiledModel, names: dict[str, str]) -> Outcome:
     lowest = int(data.xpos[:, 2].argmin())
     if data.xpos[lowest, 2] < LOWEST_Z:
         body = names.get(model.body(lowest).name, "A part")
-        return "fail", f"{body} fell through the ground"
+        return "fail", f"{body} fell off the ground or through it; move it over the ground or widen the ground"
     return "pass", f"Everything is still after {SETTLE_SECONDS:g} s"
 
 

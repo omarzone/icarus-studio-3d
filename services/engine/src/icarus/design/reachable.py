@@ -11,7 +11,7 @@ import numpy as np
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue
-from icarus.design.compiler import CompiledModel, is_floor_patch
+from icarus.design.compiler import CompiledModel, is_floor_patch, is_ground
 from icarus.design.components import view
 from icarus.design.course import Extent, geom_extent
 from icarus.design.scene import object_extents
@@ -71,9 +71,10 @@ def _carried(project: Project) -> str | None:
     return target.value if isinstance(target, AssetValue) and target.value else None
 
 
-def _collides(model: mujoco.MjModel, geom: int) -> bool:
+def _collides(compiled: CompiledModel, geom: int) -> bool:
+    model = compiled.model
     solid = bool(model.geom_contype[geom] or model.geom_conaffinity[geom])
-    return solid and int(model.geom_type[geom]) != int(mujoco.mjtGeom.mjGEOM_PLANE) and not is_floor_patch(model, geom)
+    return solid and not is_ground(compiled, geom) and not is_floor_patch(model, geom)
 
 
 def _is_floor(box: Extent) -> bool:
@@ -90,7 +91,7 @@ def _obstacles(project: Project, compiled: CompiledModel, data: mujoco.MjData, g
     boxes: dict[str, list[Extent]] = {}
     for geom in range(model.ngeom):
         owner = model.body(int(model.geom_bodyid[geom])).name
-        if owner in objects and owner not in skip and _collides(model, geom):
+        if owner in objects and owner not in skip and _collides(compiled, geom):
             boxes.setdefault(owner, []).append(geom_extent(model, data, geom))
     found: list[_Obstacle] = []
     for object_id, parts in boxes.items():
@@ -220,7 +221,7 @@ def _start_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjDat
             continue
         other = pair[1] if pair[0] in body else pair[0]
         owner = model.body(int(model.geom_bodyid[other])).name
-        if owner in names and _collides(model, other):
+        if owner in names and _collides(compiled, other):
             return names[owner]
     return None
 

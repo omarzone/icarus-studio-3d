@@ -137,6 +137,8 @@ class Site:
     goal_spot: tuple[float, float, float] | None = None
     objects: list[ObjectSpec] = field(default_factory=list)
     footprints: list[Rect] = field(default_factory=list)
+    # The footprint of everything laid out, solid or not, which the ground must hold up.
+    covered: list[Rect] = field(default_factory=list)
     notes: dict[str, Any] = field(default_factory=dict)
     _centers: dict[str, Point] = field(default_factory=dict)
     _counts: dict[str, int] = field(default_factory=dict)
@@ -192,8 +194,10 @@ class Site:
                 surface=surface,
             )
         )
+        rect = Rect.around(center, size[0], size[1], yaw)
+        self.covered.append(rect)
         if look.solid if blocks is None else blocks:
-            self.footprints.append(Rect.around(center, size[0], size[1], yaw))
+            self.footprints.append(rect)
         return object_id
 
     def bounds(self, margin: float = 3.0) -> Rect:

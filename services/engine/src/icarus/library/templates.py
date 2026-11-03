@@ -7,7 +7,7 @@ from icarus.library.parts import Part, Raw, hinge, motor, solid
 from icarus.library.rewards import REWARD_TERMS
 from icarus.library.vehicle_templates import lot_markings, motorcycle, parking_car
 
-__all__ = ["TEMPLATES", "Part", "Raw", "UnknownTemplate", "solid", "template_operations"]
+__all__ = ["TEMPLATES", "Part", "Raw", "UnknownTemplate", "ground_part", "solid", "template_operations"]
 
 
 class UnknownTemplate(KeyError):
@@ -18,20 +18,25 @@ SHELL = "#f1f1f1"
 JOINT = "#8b9098"
 
 
+def ground_part() -> Part:
+    """The floor every template starts on: a slab whose size the inspector and the copilot can change."""
+    return Part(
+        "ground",
+        "Ground",
+        None,
+        {
+            "transform": {},
+            "ground": {},
+            "material": {"color": "#3a3f47", "surface": "asphalt"},
+            "physics_body": {"mode": "static"},
+            "surface": {"kind": "asphalt"},
+        },
+    )
+
+
 def _world(sky: str) -> list[Part]:
     return [
-        Part(
-            "ground",
-            "Ground",
-            None,
-            {
-                "transform": {},
-                "mesh": {"shape": "plane", "size": (100, 100, 0.1)},
-                "material": {"color": "#3a3f47", "surface": "asphalt"},
-                "physics_body": {"mode": "static"},
-                "surface": {"kind": "asphalt"},
-            },
-        ),
+        ground_part(),
         Part("sun", "Sun", None, {"transform": {"position": (0, 0, 10)}, "light": {"kind": "sun"}}),
         Part("spawn", "Spawn point", None, {"transform": {}, "spawn_point": {}}),
         Part("sky", "Sky", None, {"sky": {"preset": sky}}),
