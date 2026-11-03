@@ -96,3 +96,33 @@ __all__ = [
     "TaskSpec",
     "WorldSpec",
 ]
+
+
+ProjectWorkKind = Literal["training", "autopilot", "task"]
+
+
+class ProjectWork(BaseModel):
+    """Something of a project still running in the engine: a training run, the autopilot or a background task."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ProjectWorkKind
+    id: str
+    title: str = Field(max_length=200)
+    progress: float | None = Field(default=None, ge=0, le=1)
+
+
+class ProjectActivity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str
+    running: list[ProjectWork]
+
+
+class ProjectClosed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str
+    stopped: list[ProjectWork]
+    # Asked to stop but not ended before closing stopped waiting; it ends on its own.
+    still_running: list[ProjectWork]
