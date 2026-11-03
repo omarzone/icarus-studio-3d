@@ -9,8 +9,8 @@ import { fromThreePosition, fromThreeQuaternion, toThreePosition, toThreeQuatern
 import { GeomShape } from "./geom-geometry.tsx";
 import { geomGeometry, geomObject } from "./geom-object.ts";
 import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
-import { helperGridShown } from "./helper-grid.ts";
 import { useSnapBypass } from "./held-key.ts";
+import { helperGridShown } from "./helper-grid.ts";
 import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import type { PosePlayer } from "./motion-player.ts";
