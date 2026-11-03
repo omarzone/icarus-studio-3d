@@ -62,7 +62,8 @@ class CopilotProposal(_Model):
     applied_revision: int | None = None
 
 
-AttachmentKind = Literal["image", "video", "document", "view"]
+# "model" is a glTF or GLB file the person adds; it is also stored as a skin of the project (ADR 008).
+AttachmentKind = Literal["image", "video", "document", "view", "model"]
 
 # Base64 payloads stay under ~15 MB of file per upload.
 MAX_ATTACHMENT_CHARS = 20_000_000

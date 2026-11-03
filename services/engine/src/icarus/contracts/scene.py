@@ -77,6 +77,21 @@ class SceneBody(BaseModel):
     quaternion: Quaternion
 
 
+class SceneSkin(BaseModel):
+    """A 3D model drawn over a part, fitted inside its collider (ADR 008); physics and training never read it."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    # The project that stores the model and the model's id there.
+    project: str
+    asset: str
+    # How much of the collider's box the model fills, 0.1 to 1, after a uniform scale that fits it inside.
+    fill: float = 1
+    # Shift in metres and turn in degrees (X, then Y, then Z) in the part's frame; the model never leaves the collider.
+    offset: Vector3 = (0, 0, 0)
+    rotation: Vector3 = (0, 0, 0)
+
+
 class SceneGeom(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -102,6 +117,8 @@ class SceneGeom(BaseModel):
     metalness: float = 0.5
     # Glow in the part's color, 0 to 3: lit windows and lamp heads of a style, or the whole part without one.
     emissive: float = 0
+    # A 3D model drawn instead of the primitive or style; None draws those.
+    skin: SceneSkin | None = None
 
 
 class SceneLight(BaseModel):

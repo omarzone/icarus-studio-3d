@@ -42,3 +42,12 @@ def test_unknown_finishes_and_categories_are_rejected():
 
 def test_pieces_sent_before_categories_land_in_basics():
     assert PieceInfo.model_validate(_piece()).category == "basics"
+
+
+def test_a_geom_with_a_skin_round_trips_and_older_geoms_have_none():
+    skin = {"project": "0123456789ab", "asset": "sk0123456789abcdef", "fill": 0.9, "rotation": (0.0, 0.0, 90.0)}
+    geom = SceneGeom.model_validate({**GEOM, "skin": skin})
+    assert SceneGeom.model_validate_json(geom.model_dump_json()) == geom
+    assert SceneGeom.model_validate(GEOM).skin is None
+    with pytest.raises(ValidationError):
+        SceneGeom.model_validate({**GEOM, "skin": {**skin, "url": "https://example.com/car.glb"}})

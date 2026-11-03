@@ -24,6 +24,7 @@ from icarus.contracts.operations import OperationBatch
 from icarus.contracts.play import PlayBrainOption, PlayCommandEnvelope, PlayMessageEnvelope
 from icarus.contracts.project import CreateProject, DuplicateProject, Project, ProjectState, ProjectSummary, Revision
 from icarus.contracts.scene import SceneDescription
+from icarus.contracts.skins import SkinImport, SkinImported, SkinInfo
 from icarus.contracts.storage import ChangeDataFolder, DataFolderCheck, DataFolderChoice, DataFolderMove, StorageInfo
 from icarus.contracts.training import (
     CheckpointInfo,
@@ -86,6 +87,9 @@ MODELS: tuple[type[BaseModel], ...] = (
     DataFolderChoice,
     DataFolderCheck,
     ChangeDataFolder,
+    SkinInfo,
+    SkinImport,
+    SkinImported,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

@@ -210,7 +210,7 @@ export interface ApiError {
  */
 export interface AttachmentInfo {
   id: string;
-  kind: "image" | "video" | "document" | "view";
+  kind: "image" | "video" | "document" | "view" | "model";
   media_type: string;
   name: string;
   size: number;
@@ -240,7 +240,7 @@ export interface AttachmentUpload {
     | [string, string, string, string, string, string, string, string, string, string]
     | [string, string, string, string, string, string, string, string, string, string, string]
     | [string, string, string, string, string, string, string, string, string, string, string, string];
-  kind: "image" | "video" | "document" | "view";
+  kind: "image" | "video" | "document" | "view" | "model";
   media_type: string;
   name: string;
   text?: string | null;
@@ -1086,6 +1086,7 @@ export interface SceneGeom {
    * @maxItems 3
    */
   size: [number, number, number];
+  skin?: SceneSkin | null;
   style?:
     | (
         | "plain"
@@ -1128,6 +1129,27 @@ export interface SceneGeom {
     | null;
   surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
   transparency?: number;
+}
+/**
+ * A 3D model drawn over a part, fitted inside its collider (ADR 008); physics and training never read it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneSkin".
+ */
+export interface SceneSkin {
+  asset: string;
+  fill?: number;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  offset?: [number, number, number];
+  project: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  rotation?: [number, number, number];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2323,6 +2345,53 @@ export interface SendMessage {
  */
 export interface SetAutonomy {
   autonomy: "ask" | "autopilot";
+}
+/**
+ * A model file the person picked: stored as a skin and placed in the world as a collider that wears it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SkinImport".
+ */
+export interface SkinImport {
+  collider?: "box" | "capsule";
+  data: string;
+  density?: number;
+  length?: number | null;
+  mode?: "dynamic" | "static";
+  name: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position?: [number, number, number];
+  target?: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SkinImported".
+ */
+export interface SkinImported {
+  object: string;
+  revision: number;
+  skin: SkinInfo;
+}
+/**
+ * A glTF or GLB model stored in a project to draw over a collider (ADR 008).
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SkinInfo".
+ */
+export interface SkinInfo {
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  bounds: [number, number, number];
+  format: "glb" | "gltf";
+  id: string;
+  name: string;
+  size: number;
+  triangles: number;
 }
 /**
  * What the desktop or the copilot asks for when it starts training the current revision.
