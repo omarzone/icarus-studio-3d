@@ -71,6 +71,8 @@ class RewardState:
     plates_on: int = 0
     plates_reached: int = 0
     plates_needed: int = 0
+    # How closely the limbs copy the tracked motion at this moment, 0 to 1, in an imitation task.
+    motion_match: float = 0.0
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -233,6 +235,10 @@ def plates_pressed(before: RewardState, after: RewardState) -> float:
     return float(max(after.plates_reached - before.plates_reached, 0))
 
 
+def track_motion(before: RewardState, after: RewardState) -> float:
+    return after.motion_match
+
+
 # Each term returns an unweighted amount; the sign of a penalty comes from its (negative) weight.
 TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "reach_goal": reach_goal,
@@ -257,6 +263,7 @@ TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "reach_plates": reach_plates,
     "on_plate": on_plate,
     "plates_pressed": plates_pressed,
+    "track_motion": track_motion,
 }
 
 

@@ -39,9 +39,11 @@ def _labels(world: LiveWorld) -> list[tuple[str, str | None]]:
             labels += [(name, None) for name in carried]
         if world.legged:
             labels += speeds
-    if world.family == "locomotion":
+    if world.family in ("locomotion", "imitation"):
         labels += [(f"{_owner(world, position)} angle", None) for position, _ in world.joint_addresses]
         labels += speeds
+    if world.family == "imitation":
+        labels.append(("Moment of the clip", None))
     return labels
 
 

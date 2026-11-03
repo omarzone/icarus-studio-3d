@@ -12,6 +12,7 @@ from icarus.design.components import view
 from icarus.projects.document import all_objects
 from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
+from icarus.sim.motion_tracking import MotionTracker
 from icarus.sim.plates import Plate, PlateMode, PlateState, measure_plates, plate_mode, plates_of
 from icarus.sim.rewards import RewardState
 from icarus.sim.sensor_info import GOAL_DISTANCE_SCALE, SensorInfo, sensor_infos
@@ -100,6 +101,12 @@ class LiveWorld:
     plate_mode: PlateMode = "all"
     plate_goal: bool = False
     tally: Tally = field(default_factory=Tally)
+    # The motion an imitation task copies, and where in the clip this try started, in seconds.
+    motion: MotionTracker | None = None
+    motion_start: float = 0.0
+
+    def motion_time(self) -> float:
+        return self.motion_start + float(self.data.time)
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -220,6 +227,7 @@ def build_world(project: Project) -> LiveWorld:
         target_height=_target_height(project),
         vehicle=vehicle,
         spawn=spawn_plan(project, compiled),
+        motion=MotionTracker(project.task.motion, model) if project.task.motion else None,
     )
     agent_bodies = frozenset(index for index in range(model.nbody) if model.body(index).name in body_objects)
     world.plates = plates_of(project, model, agent, agent_bodies)
@@ -348,10 +356,13 @@ def observation(world: LiveWorld) -> np.ndarray:
         parts += _navigation_state(world)
         if world.legged:
             parts.append(np.array([world.data.qvel[address] for _, address in world.joint_addresses], dtype=float))
-    if world.family == "locomotion":
+    if world.family in ("locomotion", "imitation"):
         data = world.data
         parts.append(np.array([data.qpos[address] for address, _ in world.joint_addresses], dtype=float))
         parts.append(np.array([data.qvel[address] for _, address in world.joint_addresses], dtype=float))
+    if world.family == "imitation":
+        # Where in the clip it is, so the brain knows which moment to copy.
+        parts.append(np.array([world.motion.phase(world.motion_time()) if world.motion else 0.0]))
     return np.concatenate(parts).astype(np.float32) if parts else np.zeros(0, dtype=np.float32)
 
 
@@ -409,7 +420,7 @@ def reward_state(world: LiveWorld) -> RewardState:
         world.agent is not None and world.floor is not None and float(position[2]) < world.floor - FALL_BELOW_GROUND
     )
     match world.family:
-        case "locomotion":
+        case "locomotion" | "imitation":
             fallen = dropped or off_ground
         case "navigation":
             fallen = up < (VEHICLE_TIPPED if world.vehicle else 0) or (world.legged and dropped) or off_ground
@@ -442,6 +453,7 @@ def reward_state(world: LiveWorld) -> RewardState:
         landed_air=landings(world.lifted_at, down, float(data.time)),
         at_limits=at_limits(data, world.limited_joints),
         target_height=world.target_height or world.start_height,
+        motion_match=world.motion.match(data, world.motion_time())[0] if world.motion else 0.0,
         **_goal_fields(world),
         **_plate_fields(world),
     )
