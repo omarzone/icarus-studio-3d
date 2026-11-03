@@ -19,7 +19,7 @@ from icarus.copilot.scratch_plan import (
     world_operations,
 )
 from icarus.design.checks import design_report
-from icarus.design.compiler import CompileError, compile_project
+from icarus.design.compiler import CompileError, compile_project, is_ground
 from icarus.library.templates import template_operations
 from icarus.projects.operations import OperationError, apply_operations, empty_project
 from icarus.sim.env import ProjectEnv
@@ -88,7 +88,7 @@ def placement_problem(project: Project, body_id: str) -> str | None:
     mujoco.mj_forward(model, data)
     names = {obj.id: obj.name for obj in body.objects}
     mine = [index for index in range(model.ngeom) if model.body(int(model.geom_bodyid[index])).name in names]
-    planes = {index for index in range(model.ngeom) if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE)}
+    planes = {index for index in range(model.ngeom) if is_ground(compiled, index)}
     if not mine:
         return f"{body.name} has no solid parts"
     lowest = min(_bottom(model, data, index) for index in mine)

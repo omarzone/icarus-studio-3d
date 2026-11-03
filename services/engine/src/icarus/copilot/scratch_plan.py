@@ -24,8 +24,8 @@ from icarus.contracts.scene import GeomStyle
 from icarus.contracts.specs import BodySpec, RewardTermSpec
 from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.library.layout_params import LayoutRecipe
-from icarus.library.layouts import LayoutParams, expand_layout
-from icarus.library.templates import Part, Raw, solid
+from icarus.library.layouts import LayoutParams, expand_layout, ground_cover
+from icarus.library.templates import Part, Raw, ground_part, solid
 
 Shape = Literal["box", "sphere", "capsule", "cylinder"]
 Surface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
@@ -221,7 +221,8 @@ def world_operations(world: PlanWorld, start: tuple[float, float]) -> list[EditO
     ]
     if world.layout:
         recipe = {"recipe": world.layout.recipe, "seed": world.layout.seed, "spawn": False, "goal": world.goal is None}
-        operations += expand_layout(_LAYOUT.validate_python(recipe), None, start).operations
+        layout = expand_layout(_LAYOUT.validate_python(recipe), None, start)
+        operations += layout.operations + ground_cover(ground_part().spec(), layout.site, layout.origin)
     operations += [_create("world", _prop(prop)) for prop in world.props]
     for area in world.areas:
         zone: dict[str, Raw] = {"size": (area.size[0], area.size[1], AREA_HEIGHT)}

@@ -107,7 +107,7 @@ def _body_boxes(scene: SceneDescription) -> dict[str, list[_Box]]:
     """Boxes of each MJCF body's solid geoms in the world frame, at the compiled initial state."""
     boxes: dict[str, list[_Box]] = {}
     for geom in scene.geoms:
-        if geom.shape != "plane":
+        if geom.shape != "plane" and not geom.ground:
             boxes.setdefault(geom.body, []).append(_Box(geom.position, geom.size))
     return boxes
 

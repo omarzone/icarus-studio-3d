@@ -113,7 +113,7 @@ def library(scope: TurnScope, args: LibraryArgs) -> Observation:
         {"id": entry_id, "type": entry["type"], "label": entry["label"]}
         for entry_id, entry in entries.items()
         if any(word in f"{entry_id} {entry['label']} {entry['type']}".lower() for word in words)
-    ][:MATCHES]
+    ][: max(MATCHES, len(RECIPES)) if "layout" in words else MATCHES]
     summary = step_said("library_search", scope.language, query=(args.query or "")[:40], count=len(found))
     return Observation(compact(found) if found else "Nothing in the library matches.", summary=summary)
 

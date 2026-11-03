@@ -19,6 +19,7 @@ from icarus.copilot.agent.tools.proposing import ProposeArgs, propose
 from icarus.copilot.agent.tools.trying import TryArgs, try_change
 from icarus.copilot.building.frames import rotation_degrees, rotation_matrix
 from icarus.library.parts import Part
+from icarus.library.pieces import PIECES
 from icarus.projects.operations import apply_operations
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunStore
@@ -117,6 +118,22 @@ def test_a_grid_expands_into_copies_with_unique_ids_at_each_cell_and_passes_a_tr
     spots = {_transform(candidate, item)["position"] for item in expanded["created"]}
     wanted = {(5 + c * 2, r * 1.5, 1) for r in range(3) for c in range(4)} - {(5, 0, 1)}
     assert spots == {tuple(map(float, spot)) for spot in wanted}
+
+
+def test_a_block_piece_gridded_in_layers_builds_a_wall_of_unit_cubes_that_passes_a_try(scope):
+    block = PIECES["block"].object.model_copy(update={"id": "block", "name": "Block"})
+    scope.state = scope.services.projects.apply(
+        scope.project_id,
+        OperationBatch(operations=[CreateObject(op="create_object", target="world", object=block)], summary="block"),
+    )
+    spec = {"kind": "grid", "source": "block", "rows": 1, "columns": 4, "spacing": [1, 1], "layers": 3}
+    observation = pattern(scope, PatternArgs.model_validate({"pattern": spec}))
+    tried = _tried(scope, observation)
+    assert tried["passed"], observation.text
+    candidate = _candidate(scope, tried["try_id"])
+    created = json.loads(observation.text.splitlines()[0].removeprefix("Expanded: "))["created"]
+    spots = {_transform(candidate, item)["position"] for item in created}
+    assert spots == {(3.0 + c, 0.0, 0.5 + k) for c in range(4) for k in range(3)} - {(3.0, 0.0, 0.5)}
 
 
 def test_duplicating_a_group_copies_its_subtree_with_children_reparented_to_the_new_root(scope):

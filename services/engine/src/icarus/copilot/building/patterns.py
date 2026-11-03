@@ -67,6 +67,8 @@ class Grid(_Pattern):
     rows: int = Field(ge=1, le=50, description="Along y.")
     columns: int = Field(ge=1, le=50, description="Along x.")
     spacing: Point2 = Field(description="Metres between columns (x) and rows (y); the source is the first cell.")
+    layers: int = Field(default=1, ge=1, le=20, description="Stacked along z, for walls and thick floors of blocks.")
+    layer_height: float = Field(default=1.0, gt=0, le=50, description="Metres between layers.")
 
 
 class Circle(_Pattern):
@@ -213,11 +215,13 @@ def _placements(spec: PatternSpec, where: Placement) -> list[Copy]:
             return [
                 Copy(Placement(rounded(position + k * step), where.rotation, where.scale)) for k in range(1, count + 1)
             ]
-        case Grid(rows=rows, columns=columns, spacing=(dx, dy)):
-            cells = [(r, c) for r in range(rows) for c in range(columns) if (r, c) != (0, 0)]
+        case Grid(rows=rows, columns=columns, spacing=(dx, dy), layers=layers, layer_height=dz):
+            cells = [
+                (r, c, k) for k in range(layers) for r in range(rows) for c in range(columns) if (r, c, k) != (0, 0, 0)
+            ]
             return [
-                Copy(Placement(rounded(position + (c * dx, r * dy, 0.0)), where.rotation, where.scale))
-                for r, c in cells
+                Copy(Placement(rounded(position + (c * dx, r * dy, k * dz)), where.rotation, where.scale))
+                for r, c, k in cells
             ]
         case Circle():
             copies: list[Copy] = []
