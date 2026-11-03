@@ -133,4 +133,19 @@ describe("scene checks", () => {
     expect(isSceneDescription({ ...scene, sky })).toBe(true);
     expect(isSceneDescription({ ...scene, sky: { ...sky, top: undefined } })).toBe(false);
   });
+
+  it("checks plates, displays and eyes in scenes and the plate states and display values of frames", async () => {
+    const { isOptionalSignals, isSceneDescription } = await import("./response-checks.ts");
+    const scene = { revision: 1, bodies: [], lights: [], geoms: [] };
+    const placed = { position: [0, 0, 0], quaternion: [1, 0, 0, 0] };
+    const plate = { name: "pad:plate", object: "pad", role: "target", size: [1, 1, 0.02], ...placed };
+    const anchor = { object: "torso", geom: "torso", ...placed };
+    expect(isSceneDescription({ ...scene, plates: [plate], displays: [{ source: "step", anchor }] })).toBe(true);
+    expect(isSceneDescription({ ...scene, eyes: [{ size: 0.1, anchor: { object: "torso" } }] })).toBe(false);
+    expect(
+      isOptionalSignals({ plates: [{ object: "pad", pressed: true, occupied: true, active: true, reached: false }] }),
+    ).toBe(true);
+    expect(isOptionalSignals({ displays: [{ object: "clock", value: null }] })).toBe(true);
+    expect(isOptionalSignals({ displays: [{ object: "clock", value: "12" }] })).toBe(false);
+  });
 });

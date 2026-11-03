@@ -4,6 +4,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from icarus.contracts.training import LiveViewMode
+from icarus.sim.displays import stamp_training_steps, training_step_displays
 from icarus.training.copy_envs import CopyProcesses
 from icarus.training.live_motion import LiveMotion, frame_rate
 from icarus.training.progress import EpisodeTally, RunProgress
@@ -29,6 +30,7 @@ class TrainingCallback(BaseCallback):
         self._total = progress.config.total_steps
         self._marks = [step for step in progress.config.checkpoint_steps if step > 0]
         self._tally = EpisodeTally()
+        self._step_displays = training_step_displays(progress.project)
         self._last_snapshot = 0.0
         self._last_stop_check = 0.0
         self._last_end = time.monotonic()
@@ -56,6 +58,9 @@ class TrainingCallback(BaseCallback):
             if self._stop_requested():
                 return False
         if self._motion is not None:
+            for info in infos:
+                if (frame := info.get("live_frame")) is not None and len(frame) > 4:
+                    stamp_training_steps(frame[4], self._step_displays, self.num_timesteps)
             self._capture(self._motion.record(infos, dones, now))
         while self._marks and self.num_timesteps >= self._marks[0]:
             mark = self._marks.pop(0)
@@ -85,7 +90,10 @@ class TrainingCallback(BaseCallback):
 
     def _snapshot(self, now: float) -> None:
         if self._motion is None:
-            self.progress.snapshot(self.num_timesteps, self.geoms, self.training_env.env_method("poses"))
+            copies = self.training_env.env_method("poses")
+            for poses in copies:
+                stamp_training_steps(poses.signals, self._step_displays, self.num_timesteps)
+            self.progress.snapshot(self.num_timesteps, self.geoms, copies)
             return
         copies = self._motion.newest()
         if copies is not None:

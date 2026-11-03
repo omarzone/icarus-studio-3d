@@ -11,7 +11,9 @@ from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
+from icarus.design.decor import WorldDecor, world_decor
 from icarus.design.looks import GeomLook, geom_looks
+from icarus.design.plates import add_plate, is_plate_name
 from icarus.design.sensors import add_actuator, add_sensors, goal_object, ray_labels, sensor_scales
 from icarus.design.sky import add_sky, world_sky
 from icarus.design.sun_path import SunPath, world_sun
@@ -50,6 +52,8 @@ class CompiledModel:
     sensor_scales: dict[str, float] = field(default_factory=dict)
     # Object ids whose geom is a ground slab (a ground component).
     grounds: frozenset[str] = frozenset()
+    # Floor plates, displays and eyes as the project sets them; their poses come from the model.
+    decor: WorldDecor = field(default_factory=WorldDecor)
 
 
 def _fmt(values) -> str:
@@ -232,7 +236,8 @@ def _add_zone_patch(body: ET.Element, obj: ObjectSpec) -> None:
 
 
 def is_floor_patch(model: mujoco.MjModel, geom: int) -> bool:
-    return model.geom(geom).name.endswith(PATCH_SUFFIX)
+    name = model.geom(geom).name
+    return name.endswith(PATCH_SUFFIX) or is_plate_name(name)
 
 
 def is_ground(compiled: "CompiledModel", geom: int) -> bool:
@@ -267,6 +272,7 @@ def _add_body(
     _add_light(body, obj, root, sun)
     _add_markers(body, obj)
     _add_zone_patch(body, obj)
+    add_plate(body, obj, _is_dynamic(obj))
     add_sensors(body, root, obj, goal)
     for child in children.get(obj.id, []):
         _add_body(body, child, children, root, sun, goal)
@@ -326,6 +332,7 @@ def compile_project(project: Project) -> CompiledModel:
         vehicles=vehicle_layouts(project),
         sensor_scales=sensor_scales(project),
         grounds=frozenset(obj.id for obj in project.world.objects if view(obj, "ground")),
+        decor=world_decor(project),
     )
 
 

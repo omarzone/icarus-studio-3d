@@ -130,7 +130,9 @@ class _EpisodeRun:
         world, info, touched = self.env.world, self.info, self.touched
         time = float(world.data.time)
         fell = bool(self.terminated and not info["is_success"])
-        if info["is_success"] and world.goal is not None:
+        if info["is_success"] and world.plate_goal:
+            outcome = f"Reached the plates at {time:.1f} s"
+        elif info["is_success"] and world.goal is not None:
             outcome = f"Reached the {_lower_first(world.object_names[world.goal.object])} at {time:.1f} s"
         elif self.terminated:
             outcome = f"Fell over at {time:.1f} s"
@@ -166,6 +168,13 @@ class _EpisodeRun:
         )
 
 
+def _checkpoint_env(project: Project, step: int) -> ProjectEnv:
+    """An evaluation copy whose displays show the checkpoint's training steps."""
+    env = ProjectEnv(project, randomize=False)
+    env.world.tally.training_steps = step
+    return env
+
+
 def _actions(policy: Policy, observations: list[np.ndarray]) -> list[np.ndarray]:
     if isinstance(policy, BatchPolicy):
         return list(policy.act_many(np.stack(observations)))
@@ -179,7 +188,7 @@ def evaluate(project: Project, policy: Policy, episodes: int, step: int) -> Eval
     The episodes advance together: one brain call answers all of them, and MuJoCo steps them on several threads.
     """
     runs = [
-        _EpisodeRun(ProjectEnv(project, randomize=False), EVALUATION_SEED + k, k, k == 0, k < PICTURED_EPISODES)
+        _EpisodeRun(_checkpoint_env(project, step), EVALUATION_SEED + k, k, k == 0, k < PICTURED_EPISODES)
         for k in range(episodes)
     ]
     with ThreadPoolExecutor(max_workers=min(EVALUATION_THREADS, episodes)) as pool:
@@ -195,7 +204,9 @@ def evaluate(project: Project, policy: Policy, episodes: int, step: int) -> Eval
     return Evaluation(
         episode_return=float(np.mean([result.episode_return for result in results])),
         episode_length=float(np.mean([result.length for result in results])),
-        success_rate=float(np.mean([result.success for result in results])) if env.world.goal else None,
+        success_rate=float(np.mean([result.success for result in results]))
+        if env.world.goal or env.world.plate_goal
+        else None,
         failure_rate=float(np.mean([result.failed for result in results])),
         reward_terms=terms,
         rollout=Rollout(

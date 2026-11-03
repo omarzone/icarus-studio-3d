@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import mujoco
+import numpy as np
 
 from icarus.design.compiler import CompiledModel
 from icarus.design.sensors import HEADING_SUFFIX, TARGET_SUFFIX, YAW_SUFFIX
@@ -102,3 +103,18 @@ def sensor_infos(compiled: CompiledModel, names: dict[str, str], agent_mass: flo
         label, low, high, unit = info
         sensors.append(SensorInfo(name, label, kind, address, dim, low, high, unit, scales.get(name, 1.0), owner))
     return sensors
+
+
+def reading_number(kind: str, raw: np.ndarray) -> float:
+    """One number per sense for Play: forward speed, turn rate, target distance and spot heading in degrees."""
+    match kind:
+        case "ray" | "touch" | "speed":
+            return float(raw[0])
+        case "yaw":
+            return float(raw[2])
+        case "target":
+            return float(np.hypot(raw[0], raw[1]))
+        case "heading":
+            return float(np.degrees(np.arctan2(raw[1], raw[0])))
+        case _:
+            return float(np.linalg.norm(raw))

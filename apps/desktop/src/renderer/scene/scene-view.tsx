@@ -19,6 +19,7 @@ import { groundColor } from "./scene-lighting.ts";
 import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
 import { type CopySignals, signalFeed } from "./scene-signals.ts";
 import { skyLook } from "./scene-sky.ts";
+import { WorldDecor } from "./world-decor.tsx";
 import { Sky, Suns } from "./world-lighting.tsx";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
@@ -335,6 +336,7 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
           layer={props.labels}
         />
       ) : null}
+      <WorldDecor description={description} feed={feed} copies={copies} track={playing ? track : null} />
       <ZoneMarkers
         zones={description.zones ?? []}
         colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal, spot: colors.spot }}

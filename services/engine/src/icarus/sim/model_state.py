@@ -12,9 +12,11 @@ from icarus.design.components import view
 from icarus.projects.document import all_objects
 from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
+from icarus.sim.plates import Plate, PlateMode, PlateState, measure_plates, plate_mode, plates_of
 from icarus.sim.rewards import RewardState
 from icarus.sim.sensor_info import GOAL_DISTANCE_SCALE, SensorInfo, sensor_infos
 from icarus.sim.spawn_plan import SpawnPlan, spawn_plan
+from icarus.sim.tally import Tally
 from icarus.sim.vehicle import VehicleDrive, drive_vehicle, vehicle_drive
 
 CONTROL_PERIOD = 0.05
@@ -91,6 +93,13 @@ class LiveWorld:
     # How tries start, and the next spawn point a cycling start uses (None until the first draw).
     spawn: SpawnPlan | None = None
     spawn_next: int | None = None
+    # Floor plates, which this try has reached, their states at the last step and how they complete the goal.
+    plates: list[Plate] = field(default_factory=list)
+    plate_reached: list[bool] = field(default_factory=list)
+    plate_states: list[PlateState] = field(default_factory=list)
+    plate_mode: PlateMode = "all"
+    plate_goal: bool = False
+    tally: Tally = field(default_factory=Tally)
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -212,6 +221,9 @@ def build_world(project: Project) -> LiveWorld:
         vehicle=vehicle,
         spawn=spawn_plan(project, model),
     )
+    agent_bodies = frozenset(index for index in range(model.nbody) if model.body(index).name in body_objects)
+    world.plates = plates_of(project, model, agent, agent_bodies)
+    world.plate_mode, world.plate_goal = plate_mode(project)
     reset_world(world)
     world.floor = _floor(model, data, frozenset(index for index in range(model.ngeom) if is_ground(compiled, index)))
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
@@ -239,6 +251,8 @@ def reset_world(world: LiveWorld) -> None:
     mujoco.mj_forward(world.model, world.data)
     world.visited.clear()
     world.lifted_at = [None] * len(world.feet)
+    world.plate_reached = [False] * len(world.plates)
+    world.plate_states = []
     if world.vehicle is not None:
         world.vehicle.reset()
 
@@ -429,7 +443,18 @@ def reward_state(world: LiveWorld) -> RewardState:
         at_limits=at_limits(data, world.limited_joints),
         target_height=world.target_height or world.start_height,
         **_goal_fields(world),
+        **_plate_fields(world),
     )
+
+
+def _plate_fields(world: LiveWorld) -> dict:
+    if not world.plates:
+        return {}
+    reading = measure_plates(
+        world.model, world.data, world.plates, world.plate_reached, world.plate_mode, world.plate_goal
+    )
+    world.plate_states = reading.states
+    return {"plates_on": reading.on, "plates_reached": reading.reached, "plates_needed": reading.needed}
 
 
 def _goal_fields(world: LiveWorld) -> dict:

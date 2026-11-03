@@ -104,7 +104,9 @@ def _load_brain(runs: RunStore, world: _World, choice: _Choice | None) -> _Brain
 
 
 def _start(world: _World, brain: _Brain, language: Language) -> tuple[PlaySession, PlaySessionInfo]:
-    session = PlaySession(world.project, world.revision, brain.policy, world.project.brain.seed, language)
+    session = PlaySession(
+        world.project, world.revision, brain.policy, world.project.brain.seed, language, brain.step or 0
+    )
     return session, session.info().model_copy(update={"run_id": brain.run_id, "step": brain.step})
 
 

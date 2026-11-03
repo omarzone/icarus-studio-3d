@@ -1,4 +1,4 @@
-import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
+import type { SceneAnchor, SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { isGround } from "./ground-geom.ts";
 import type { MotionPlayer, PosePlayer } from "./motion-player.ts";
 import type { Pose, Poses } from "./pose-track.ts";
@@ -65,14 +65,48 @@ function placeGeoms(geoms: readonly SceneGeom[], index: number, offset: readonly
   return geoms.map((geom) => ({ ...geom, name: `${index}:${geom.name}`, position: shifted(geom.position, offset) }));
 }
 
+function placeAnchor(anchor: SceneAnchor, index: number, offset: readonly number[]): SceneAnchor {
+  return {
+    ...anchor,
+    object: `${index}:${anchor.object}`,
+    geom: anchor.geom ? `${index}:${anchor.geom}` : null,
+    position: shifted(anchor.position, offset),
+  };
+}
+
+// A copy's plates, displays and eyes named like its geoms, "<copy>:<name>", and shifted to its place.
+function placeDecor(scene: SceneDescription, index: number, offset: readonly number[]): Decor {
+  return {
+    plates: (scene.plates ?? []).map((plate) => ({
+      ...plate,
+      name: `${index}:${plate.name}`,
+      object: `${index}:${plate.object}`,
+      position: shifted(plate.position, offset),
+    })),
+    displays: (scene.displays ?? []).map((item) => ({ ...item, anchor: placeAnchor(item.anchor, index, offset) })),
+    eyes: (scene.eyes ?? []).map((item) => ({ ...item, anchor: placeAnchor(item.anchor, index, offset) })),
+  };
+}
+
+type Decor = Required<Pick<SceneDescription, "plates" | "displays" | "eyes">>;
+
+function mergeDecor(parts: readonly Decor[]): Decor {
+  return {
+    plates: parts.flatMap((part) => part.plates),
+    displays: parts.flatMap((part) => part.displays),
+    eyes: parts.flatMap((part) => part.eyes),
+  };
+}
+
 // Floors are left out when there are several copies, the grid is the ground.
 export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
   const geoms = count > 1 ? solid(scene.geoms) : scene.geoms;
   const [width, depth] = footprint(solid(scene.geoms));
   const { offsets, extent } = gridOffsets(count, [width + MARGIN, depth + MARGIN]);
   const placed = offsets.flatMap((offset, index) => placeGeoms(geoms, index, offset));
+  const decor = mergeDecor(offsets.map((offset, index) => placeDecor(scene, index, offset)));
   return {
-    description: { ...scene, geoms: placed },
+    description: { ...scene, geoms: placed, ...decor },
     extent,
     place: (copies) => {
       const poses = new Map<string, Pose>();
@@ -125,6 +159,7 @@ export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, 
       sky: first?.sky ?? null,
       geoms,
       zones,
+      ...mergeDecor(scenes.map((scene, index) => placeDecor(scene, index, offsets[index] ?? [0, 0]))),
     },
     extent,
   };

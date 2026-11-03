@@ -201,6 +201,8 @@ TEXTS: dict[str, dict[Language, str]] = {
     "play_touched": {"en": "{agent} touched {other}", "es": "{agent} tocó {other}"},
     "play_reached": {"en": "{agent} reached the {goal}", "es": "{agent} llegó a {goal}"},
     "play_fell": {"en": "{agent} fell over", "es": "{agent} se cayó"},
+    "play_plate_on": {"en": "{plate} pressed", "es": "{plate} presionada"},
+    "play_plates_done": {"en": "{agent} reached the plates", "es": "{agent} llegó a las placas"},
     "play_moved": {"en": "You moved {name}", "es": "Moviste {name}"},
     "play_pushed": {"en": "You pushed {name} with {impulse} N·s", "es": "Empujaste {name} con {impulse} N·s"},
     "play_added": {"en": "You added {name}", "es": "Agregaste {name}"},

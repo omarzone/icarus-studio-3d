@@ -67,6 +67,10 @@ class RewardState:
     # 1 when the heading matches the spot's entry rule, -1 when it faces the wrong way.
     goal_alignment: float = 0.0
     stop_speed: float = STOP_SPEED
+    # Goal plates whose trigger holds, goal plates reached this try and how many complete the goal (0: not a goal).
+    plates_on: int = 0
+    plates_reached: int = 0
+    plates_needed: int = 0
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -212,6 +216,23 @@ def joint_limits(before: RewardState, after: RewardState) -> float:
     return after.at_limits
 
 
+def plates_done(state: RewardState) -> bool:
+    """The plates are the goal and enough of them are reached."""
+    return state.plates_needed > 0 and state.plates_reached >= state.plates_needed
+
+
+def reach_plates(before: RewardState, after: RewardState) -> float:
+    return float(plates_done(after) and not plates_done(before))
+
+
+def on_plate(before: RewardState, after: RewardState) -> float:
+    return float(after.plates_on > 0)
+
+
+def plates_pressed(before: RewardState, after: RewardState) -> float:
+    return float(max(after.plates_reached - before.plates_reached, 0))
+
+
 # Each term returns an unweighted amount; the sign of a penalty comes from its (negative) weight.
 TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "reach_goal": reach_goal,
@@ -233,6 +254,9 @@ TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "feet_air_time": feet_air_time,
     "heading_and_drift": heading_and_drift,
     "joint_limits": joint_limits,
+    "reach_plates": reach_plates,
+    "on_plate": on_plate,
+    "plates_pressed": plates_pressed,
 }
 
 

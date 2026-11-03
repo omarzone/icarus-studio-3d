@@ -90,7 +90,16 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
 
 def _walker() -> list[Part]:
     torso = solid(
-        "torso", "Torso", None, (0, 0, 1.0), "box", (0.3, 0.3, 0.4), 10, SHELL, extra={"balance": {}}, style="shell"
+        "torso",
+        "Torso",
+        None,
+        (0, 0, 1.0),
+        "box",
+        (0.3, 0.3, 0.4),
+        10,
+        SHELL,
+        extra={"balance": {}, "eyes": {"size": 0.07, "spacing": 0.13, "height": 0.08, "look": "movement"}},
+        style="shell",
     )
     return [torso, *_leg("left", 0.12, "torso", -0.35), *_leg("right", -0.12, "torso", -0.35)]
 
@@ -130,7 +139,11 @@ def _humanoid() -> list[Part]:
             (0.22, 0.22, 0.22),
             4,
             SHELL,
-            extra={"joint": hinge((0, 1, 0), (-30, 30), (0, 0, -0.1)), "motor": motor("position", 20)},
+            extra={
+                "joint": hinge((0, 1, 0), (-30, 30), (0, 0, -0.1)),
+                "motor": motor("position", 20),
+                "eyes": {"size": 0.05, "spacing": 0.08, "height": 0.02, "look": "movement"},
+            },
             style="shell",
         ),
     ]

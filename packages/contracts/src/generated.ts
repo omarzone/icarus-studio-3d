@@ -1033,8 +1033,20 @@ export interface SceneRay {
  * via the `definition` "SceneSignals".
  */
 export interface SceneSignals {
+  displays?: DisplayReading[];
   goal?: GoalSignal | null;
   lights?: LightSignal | null;
+  plates?: PlateSignal[];
+}
+/**
+ * A display's value at a frame; None when the engine has nothing to show (no goal, no sensor, no training).
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "DisplayReading".
+ */
+export interface DisplayReading {
+  object: string;
+  value: number | null;
 }
 /**
  * Which of the goal zone's success rules hold right now, as the engine measured them.
@@ -1058,6 +1070,19 @@ export interface LightSignal {
   brake: boolean;
   head: boolean;
   reverse: boolean;
+}
+/**
+ * One plate's state at a frame, measured on MuJoCo's contacts and positions.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlateSignal".
+ */
+export interface PlateSignal {
+  active: boolean;
+  object: string;
+  occupied: boolean;
+  pressed: boolean;
+  reached: boolean;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1134,8 +1159,11 @@ export interface DesignIdea {
  */
 export interface SceneDescription {
   bodies: SceneBody[];
+  displays?: SceneDisplay[];
+  eyes?: SceneEyes[];
   geoms: SceneGeom[];
   lights: SceneLight[];
+  plates?: ScenePlate[];
   rays?: SceneRay[];
   revision: number;
   sky?: SceneSky | null;
@@ -1158,6 +1186,85 @@ export interface SceneBody {
    * @maxItems 4
    */
   quaternion: [number, number, number, number];
+}
+/**
+ * A look-only digital panel on a part that shows a value the engine reports per frame (or a fixed text).
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneDisplay".
+ */
+export interface SceneDisplay {
+  anchor: SceneAnchor;
+  billboard?: boolean;
+  color?: string;
+  decimals?: number;
+  format: "integer" | "decimal" | "time" | "text";
+  full_scale?: number;
+  heading?: number;
+  label?: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  offset?: [number, number, number];
+  source:
+    | "episode_time"
+    | "step"
+    | "try"
+    | "training_steps"
+    | "successes"
+    | "reward"
+    | "goal_distance"
+    | "goal_progress"
+    | "sensor"
+    | "plates"
+    | "fixed";
+  style?: "panel" | "bar";
+  text?: string;
+  width?: number;
+}
+/**
+ * The part a display or the eyes sit on: its geom when it has one (they move with it), at its start pose.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneAnchor".
+ */
+export interface SceneAnchor {
+  geom: string | null;
+  object: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size?: [number, number, number];
+}
+/**
+ * Two cartoon eyes on a part; drawn and blinked by the viewport only, never read by physics or training.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneEyes".
+ */
+export interface SceneEyes {
+  anchor: SceneAnchor;
+  blink_interval?: number;
+  blink_jitter?: number;
+  color?: string;
+  facing?: number;
+  height?: number;
+  look?: "ahead" | "movement" | "goal";
+  size: number;
+  spacing: number;
+  white?: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1291,6 +1398,36 @@ export interface SceneLight {
    */
   position: [number, number, number];
   shadows?: boolean;
+}
+/**
+ * A thin static plate on the floor; the physics sees it as a floor patch, the viewport draws it by role.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ScenePlate".
+ */
+export interface ScenePlate {
+  color: string;
+  name: string;
+  object: string;
+  order?: number;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  position: [number, number, number];
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  quaternion: [number, number, number, number];
+  role: "pressure" | "target" | "start" | "custom";
+  shape: "box" | "cylinder";
+  sink?: number;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
 }
 /**
  * How the world's sky and air look; the physics never depends on it.

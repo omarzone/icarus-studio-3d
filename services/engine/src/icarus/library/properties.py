@@ -21,7 +21,7 @@ Vector3 = tuple[float, float, float]
 def number(
     id: str,
     label: str,
-    unit: str,
+    unit: str | None,
     lo: float,
     hi: float,
     default: float,
@@ -129,9 +129,9 @@ def vector(
     )
 
 
-def count(id: str, label: str, lo: int, hi: int, default: int) -> PropertySchema:
+def count(id: str, label: str, lo: int, hi: int, default: int, *, hint: str | None = None) -> PropertySchema:
     return PropertySchema(
-        id=id, label=label, type="count", min=lo, max=hi, default=CountValue(type="count", value=default)
+        id=id, label=label, type="count", min=lo, max=hi, default=CountValue(type="count", value=default), hint=hint
     )
 
 
