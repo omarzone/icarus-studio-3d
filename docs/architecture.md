@@ -407,7 +407,7 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `POST` · `GET` | `/runs/{id}/checkpoints/{step}/behavior-tests/{test}` · `/runs/{id}/behavior-tests` | Judge a checkpoint on a test · every stored result of the run |
 | `GET` | `/behavior-tests/compare` | Two checkpoints on the same test, row by row and by path gap |
 | `POST` · `GET` · `DELETE` | `/projects/{id}/autopilot` | Start · status · stop the autopilot loop |
-| `GET` · `POST` | `/projects/{id}/activity` · `/projects/{id}/close` | What the project still runs (training runs, autopilot, background tasks) · stop all of it, keeping each run's best brain, and wait up to 20 s for it to end |
+| `GET` · `POST` | `/projects/{id}/activity` · `/projects/{id}/close` | What the project still runs (training runs, autopilot, background tasks) · stop all of it, keeping each run's best brain, and wait for it to end (a run that ignores its stop is killed after 60 s) |
 | `GET` · `PUT` | `/settings/training` | Training settings |
 | `GET` · `PUT` · `POST` | `/settings/models` · `/settings/models/test` | Model connections per capability · test a connection |
 | `GET` | `/events` | Engine events stream (router built, not yet mounted) |

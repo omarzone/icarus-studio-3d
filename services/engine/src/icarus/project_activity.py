@@ -7,9 +7,10 @@ from icarus.contracts.project import ProjectClosed, ProjectWork
 from icarus.copilot.autopilot import Autopilot
 from icarus.tasks import TaskRegistry
 from icarus.training.run_store import TERMINAL_STATES, RunStore
-from icarus.training.supervisor import Supervisor
+from icarus.training.supervisor import STOP_TIMEOUT, Supervisor
 
-CLOSE_WAIT_SECONDS = 20.0
+# A run that ignores its stop is killed after STOP_TIMEOUT, so closing waits a little longer than that.
+CLOSE_WAIT_SECONDS = STOP_TIMEOUT + 10
 POLL_SECONDS = 0.1
 
 
