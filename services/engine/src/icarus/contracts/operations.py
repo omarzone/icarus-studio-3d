@@ -2,6 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.contracts.motion import MotionReference
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.properties import PropertyValue
 from icarus.contracts.specs import (
@@ -103,6 +104,15 @@ class RemoveRewardTerm(_Operation):
     agent: str | None = None
 
 
+class SetMotionReference(_Operation):
+    """Sets or clears (None) the motion an imitation task tracks."""
+
+    op: Literal["set_motion_reference"]
+    reference: MotionReference | None
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
+
+
 class PpoPatch(BaseModel):
     """PPO knobs to change; the ones left out keep their value."""
 
@@ -192,6 +202,7 @@ EditOperation = Annotated[
     | SetTaskFamily
     | SetRewardTerm
     | RemoveRewardTerm
+    | SetMotionReference
     | SetBrain
     | SetEpisode
     | AddAgent

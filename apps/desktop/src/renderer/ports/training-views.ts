@@ -12,7 +12,7 @@ import type {
 
 // Pure mappings from the engine's training documents onto the Train view types.
 
-type TaskFamily = "none" | "navigation" | "locomotion";
+type TaskFamily = "none" | "navigation" | "locomotion" | "imitation";
 
 const FINAL: readonly RunStatus["state"][] = ["done", "stopped", "failed"];
 
@@ -99,7 +99,7 @@ type PlanInput = {
 
 // Mirrors the engine's RECOMMENDED_STEPS: the budget a task family needs before its results say much.
 export function recommendedSteps(family: TaskFamily): number {
-  return family === "locomotion" ? 2_000_000 : 1_000_000;
+  return family === "locomotion" || family === "imitation" ? 2_000_000 : 1_000_000;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(value)));
@@ -121,7 +121,10 @@ export function startPlan({ runs, family, settings, choice, brain }: PlanInput):
   const seconds = (steps / STEPS_PER_SECOND_ON_16) * Math.max(1, 16 / copies);
   const time = duration(seconds);
   // Walking bodies have not been measured yet, so their estimate says it is rough.
-  const estimate = time === "under a minute" ? time : `${family === "locomotion" ? "roughly" : "about"} ${time}`;
+  const estimate =
+    time === "under a minute"
+      ? time
+      : `${family === "locomotion" || family === "imitation" ? "roughly" : "about"} ${time}`;
   return {
     run: `run ${runs + 1}`,
     intro: [

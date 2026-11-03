@@ -233,6 +233,18 @@ _TERMS = [
         "Reward of 1 each time another goal plate is reached in this try (in order when reach_plates asks for "
         "order), so a body is paid for each plate on the way to all of them.",
     ),
+    _term(
+        "track_motion",
+        "Copy the motion",
+        "imitation",
+        0,
+        10,
+        1,
+        "Reward each step for how closely the body's limbs point the way the tracked person's limbs point at that "
+        "moment of the clip, seen from the video's side: 1 when every tracked limb matches, falling toward 0 as "
+        "they turn away (exp of minus the squared angle error over 0.6 rad, averaged over the limbs the video "
+        "shows). The clip and the part each limb maps onto live in the task's motion.",
+    ),
 ]
 
 REWARD_TERMS: dict[str, RewardTermInfo] = {term.term: term for term in _TERMS}
@@ -249,13 +261,13 @@ TERM_SETTINGS: dict[str, list[PropertySchema]] = {
 
 # Posture and effort do not depend on where the body goes, so a legged body racing to a goal keeps them.
 _ALSO_FOR: dict[str, frozenset[TaskFamily]] = {
-    "stay_upright": frozenset({"navigation"}),
-    "fall_penalty": frozenset({"navigation"}),
-    "energy_cost": frozenset({"navigation"}),
-    "body_height": frozenset({"navigation"}),
-    "smooth_actions": frozenset({"navigation"}),
+    "stay_upright": frozenset({"navigation", "imitation"}),
+    "fall_penalty": frozenset({"navigation", "imitation"}),
+    "energy_cost": frozenset({"navigation", "imitation"}),
+    "body_height": frozenset({"navigation", "imitation"}),
+    "smooth_actions": frozenset({"navigation", "imitation"}),
     "feet_air_time": frozenset({"navigation"}),
-    "joint_limits": frozenset({"navigation"}),
+    "joint_limits": frozenset({"navigation", "imitation"}),
     # Plates are places to step on, so a walker racing across them learns them as well as a rover.
     "reach_plates": frozenset({"navigation", "locomotion"}),
     "on_plate": frozenset({"navigation", "locomotion"}),
@@ -267,6 +279,7 @@ _ALSO_FOR: dict[str, frozenset[TaskFamily]] = {
 CORE_TERMS: dict[TaskFamily, tuple[str, ...]] = {
     "navigation": ("progress_to_goal", "reach_goal"),
     "locomotion": ("forward_progress",),
+    "imitation": ("track_motion",),
     "none": (),
 }
 

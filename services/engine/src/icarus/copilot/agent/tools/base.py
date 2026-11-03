@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from icarus.copilot.agent.tools.coaching import Coaching
     from icarus.copilot.client import ModelClient
     from icarus.copilot.hooks import HookRegistry
+    from icarus.motion.clip_store import ClipStore
+    from icarus.projects.skins import SkinStore
 
 type StepKind = Literal["inspect", "look", "try", "propose", "train", "library", "export"]
 type Effect = Literal["read", "write"]
@@ -74,6 +76,9 @@ class ToolServices:
     views: ViewRenderer
     # The coach and the autopilot for the chat's coach tool; none until attached.
     coaching: "Coaching | None" = None
+    # Where models and reference clips are kept, for the rigging and motion tools; none until attached.
+    skins: "SkinStore | None" = None
+    clips: "ClipStore | None" = None
 
 
 @dataclass

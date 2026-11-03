@@ -30,8 +30,8 @@ EPISODE_SECONDS = 30.0
 
 def trainable_world(project: Project) -> LiveWorld:
     """The project's world when it can be trained; otherwise a ValueError that says why."""
-    if project.task.family not in ("navigation", "locomotion"):
-        raise ValueError("Only navigation and locomotion projects can be trained")
+    if project.task.family not in ("navigation", "locomotion", "imitation"):
+        raise ValueError("Only navigation, locomotion and imitation projects can be trained")
     world = build_world(project)
     if world.agent is None or not world.actuators:
         raise ValueError("The project needs a body with at least one motor")
@@ -39,7 +39,7 @@ def trainable_world(project: Project) -> LiveWorld:
 
 
 class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
-    """One copy of a navigation or locomotion project as a Gymnasium environment, stepped at the control rate."""
+    """One copy of a project as a Gymnasium environment, stepped at the control rate."""
 
     metadata = {"render_modes": []}
 
@@ -92,11 +92,27 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
             self.variation.restore()
             reset_world(self.world)
             place_start(self.world, self.np_random)
+        self.world.motion_start = self._motion_start() if self.randomize else 0.0
         self._state = reward_state(self.world)
         self._episode += 1
         self._start_episode()
         self.world.tally.start_try(goal_distance(self._state))
         return observation(self.world), {}
+
+    def _motion_start(self) -> float:
+        """Where in the clip a training try starts: half from the beginning, half at a random moment, inside the
+        focus when the task practices one moment more; evaluations always start at the beginning."""
+        motion = self.world.motion
+        if motion is None or self.np_random.random() < 0.5:
+            return 0.0
+        focus = motion.reference.focus
+        low, high = focus if focus else (0.0, max(0.0, 1.0 - 1.0 / motion.duration))
+        return float(self.np_random.uniform(low, max(low, high))) * motion.duration
+
+    def _out_of_time(self) -> bool:
+        if self.world.motion is not None:
+            return self.world.motion_time() >= self.world.motion.duration - 1e-9
+        return float(self.world.data.time) >= self._seconds - 1e-9
 
     def step(self, action: np.ndarray):
         apply_action(self.world, action)
@@ -115,7 +131,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._reached = self._reached or reached
         self._fell = self._fell or after.fallen
         terminated = (self._end_on_fall and after.fallen) or (self._end_on_success and reached)
-        truncated = float(self.world.data.time) >= self._seconds - 1e-9
+        truncated = self._out_of_time()
         info: dict[str, Any] = {"reward_parts": parts}
         if terminated or truncated:
             info["is_success"] = self._reached

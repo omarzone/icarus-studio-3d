@@ -4,13 +4,18 @@ import { usePort } from "../../app/runtime/port.tsx";
 import { motionPort } from "../../ports/motion-port.ts";
 import { ProgressBar } from "../../ui/progress-steps.tsx";
 
+const POLL_MS = 2000;
 const pillClass =
   "inline-flex h-7.5 items-center rounded-full bg-fill-ghost px-3.5 text-ui hover:bg-control-raised active:opacity-80";
 
 // Floating status while the copy trains: progress, time left, match before and now, and the hard moment.
 export function TrainingStatusCard({ clip }: { clip: string }) {
   const port = usePort(motionPort);
-  const query = useQuery({ queryKey: ["motion", clip, "training"], queryFn: () => port.getTrainingStatus(clip) });
+  const query = useQuery({
+    queryKey: ["motion", clip, "training"],
+    queryFn: () => port.getTrainingStatus(clip),
+    refetchInterval: POLL_MS,
+  });
   const status = query.data;
   if (!status) {
     return null;

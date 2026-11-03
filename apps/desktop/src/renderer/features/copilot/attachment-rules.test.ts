@@ -30,7 +30,7 @@ describe("files added to the chat", () => {
 
   it("refuse other types, files over the limit and more than ten files, saying why", () => {
     const zip = checkAttachment({ name: "a.zip", type: "application/zip", size: 10 }, 0);
-    expect(zip).toEqual({ ok: false, reason: "a.zip is not an image, video, text document or .glb model" });
+    expect(zip).toEqual({ ok: false, reason: "a.zip is not an image, video, text document or 3D model" });
     const svg = checkAttachment({ name: "logo.svg", type: "image/svg+xml", size: 10 }, 0);
     expect(svg.ok).toBe(false);
     const big = checkAttachment({ name: "clip.mp4", type: "video/mp4", size: MAX_ATTACHMENT_BYTES + 1 }, 0);
@@ -50,6 +50,12 @@ describe("files added to the chat", () => {
       readsText: false,
     });
     expect(checkAttachment({ name: "van.gltf", type: "", size: 10 }, 0)).toMatchObject({ kind: "model" });
+    // OBJ and STL meshes become GLB in the engine, so the copilot can rig or wear them.
+    expect(checkAttachment({ name: "person.obj", type: "", size: 10 }, 0)).toMatchObject({
+      kind: "model",
+      mediaType: "model/obj",
+    });
+    expect(checkAttachment({ name: "part.stl", type: "", size: 10 }, 0)).toMatchObject({ mediaType: "model/stl" });
     expect(checkAttachment({ name: "van.FBX", type: "", size: 10 }, 0)).toEqual({
       ok: false,
       reason: "van.FBX: .fbx models are not supported yet; export it as .glb",

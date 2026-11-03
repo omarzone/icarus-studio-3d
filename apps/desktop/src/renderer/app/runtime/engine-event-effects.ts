@@ -13,6 +13,8 @@ const PROJECT_DOCUMENT = (project: string): QueryPrefix[] => [
   ["revisions"],
   ["scene-thumbnail"],
   ["copilot-preview"],
+  ["body", project],
+  ["motion", project],
 ];
 
 export function eventInvalidations(event: EngineEvent, project: string): QueryPrefix[] {
@@ -30,6 +32,8 @@ export function eventInvalidations(event: EngineEvent, project: string): QueryPr
         ["tasks", project],
         ["training", project],
         ["results", project],
+        ["body", project],
+        ["motion", project],
       ];
     case "diagnosis_created":
       return [["results", project]];

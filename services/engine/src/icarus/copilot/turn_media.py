@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from icarus.contracts.copilot import AttachmentInfo, SendMessage
 from icarus.copilot.attachments import Attachment, AttachmentStore
 from icarus.copilot.client import UserContent
+from icarus.projects.mesh_files import as_glb
 from icarus.projects.skin_files import SkinRejected, read_skin
 from icarus.projects.skins import skin_id
 
@@ -49,8 +50,9 @@ class TurnMedia:
         self.lines.append(f"Document {name}{cut}:\n```\n{shown}\n```")
 
     def _model(self, attachment: Attachment) -> None:
-        name, data = attachment.info.name, attachment.content()
+        name = attachment.info.name
         try:
+            data = as_glb(name, attachment.content())[1]
             x, y, z = read_skin(data).bounds
         except SkinRejected as error:
             self.lines.append(f"3D model {name}: it cannot be drawn as a skin ({error})")
@@ -59,7 +61,8 @@ class TurnMedia:
             f"3D model {name}: stored with the project as skin {skin_id(data)}, "
             f"{x:.3g} × {y:.3g} × {z:.3g} in its own units. To draw it over an object, add a skin component "
             "whose asset is that id; it is fitted inside the object's collider, which alone decides the physics, "
-            "so size the mesh to match the model."
+            "so size the mesh to match the model. To make it the project's body with joints and motors, call auto_rig "
+            f"with attachment {attachment.info.id}."
         )
 
     def add(self, attachment: Attachment) -> None:

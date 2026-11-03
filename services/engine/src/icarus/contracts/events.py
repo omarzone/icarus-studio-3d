@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from icarus.contracts.copilot import AgentStep
 from icarus.contracts.training import RunEvent
 
-TaskKind = Literal["training_run", "autopilot", "diagnosis", "ideas", "build", "agent_turn"]
+TaskKind = Literal[
+    "training_run", "autopilot", "diagnosis", "ideas", "build", "agent_turn", "auto_rig", "pose_tracking"
+]
 TaskState = Literal["running", "done", "stopped", "failed"]
 HookPoint = Literal[
     "turn_start",

@@ -1,0 +1,114 @@
+{
+ "replies": [
+  {
+   "content": {
+    "people": [
+     {
+      "keypoints": [
+       {
+        "name": "head",
+        "x": 0.5,
+        "y": 0.1,
+        "score": 0.9
+       },
+       {
+        "name": "neck",
+        "x": 0.5,
+        "y": 0.2,
+        "score": 0.9
+       },
+       {
+        "name": "left_shoulder",
+        "x": 0.5,
+        "y": 0.22,
+        "score": 0.9
+       },
+       {
+        "name": "right_shoulder",
+        "x": 0.5,
+        "y": 0.22,
+        "score": 0.9
+       },
+       {
+        "name": "left_elbow",
+        "x": 0.5,
+        "y": 0.35,
+        "score": 0.9
+       },
+       {
+        "name": "right_elbow",
+        "x": 0.5,
+        "y": 0.35,
+        "score": 0.9
+       },
+       {
+        "name": "left_wrist",
+        "x": 0.5,
+        "y": 0.47,
+        "score": 0.9
+       },
+       {
+        "name": "right_wrist",
+        "x": 0.5,
+        "y": 0.47,
+        "score": 0.9
+       },
+       {
+        "name": "left_hip",
+        "x": 0.5,
+        "y": 0.5,
+        "score": 0.9
+       },
+       {
+        "name": "right_hip",
+        "x": 0.5,
+        "y": 0.5,
+        "score": 0.9
+       },
+       {
+        "name": "left_knee",
+        "x": 0.52,
+        "y": 0.7,
+        "score": 0.9
+       },
+       {
+        "name": "right_knee",
+        "x": 0.52,
+        "y": 0.7,
+        "score": 0.9
+       },
+       {
+        "name": "left_ankle",
+        "x": 0.5,
+        "y": 0.9,
+        "score": 0.9
+       },
+       {
+        "name": "right_ankle",
+        "x": 0.5,
+        "y": 0.9,
+        "score": 0.9
+       }
+      ]
+     },
+     {
+      "keypoints": [
+       {
+        "name": "head",
+        "x": 0.9,
+        "y": 0.4,
+        "score": 0.9
+       },
+       {
+        "name": "neck",
+        "x": 0.9,
+        "y": 0.45,
+        "score": 0.9
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

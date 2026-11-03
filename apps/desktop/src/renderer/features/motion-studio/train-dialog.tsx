@@ -33,6 +33,8 @@ function TrainCopy({ clip }: { clip: string }) {
   const key = ["motion", clip, "plan"] as const;
   const query = useQuery({ queryKey: key, queryFn: () => port.getTrainingPlan(clip) });
   const setFocus = useEngineAction(port.setTrainingFocus);
+  // The steps and copies as typed; the plan's own until the person changes them.
+  const [typed, setTyped] = useState<{ steps?: string; copies?: string }>({});
   return (
     <Dialog
       title={query.data?.title ?? "Train the copy"}
@@ -45,7 +47,13 @@ function TrainCopy({ clip }: { clip: string }) {
           <ActionButton
             cta="Start training"
             to="STA-MOTION-TRAINING"
-            run={() => port.startTraining(clip)}
+            run={() =>
+              port.startTraining({
+                clip,
+                steps: typed.steps ?? query.data?.steps ?? "",
+                copies: typed.copies ?? query.data?.copies ?? "",
+              })
+            }
             className={dialogButtonClass("primary")}
           >
             <Play size={10} fill="currentColor" aria-hidden />
@@ -58,6 +66,7 @@ function TrainCopy({ clip }: { clip: string }) {
         {(plan) => (
           <PlanBody
             plan={plan}
+            onTyped={(field, value) => setTyped((current) => ({ ...current, [field]: value }))}
             onFocus={(focus) =>
               setFocus.mutate(
                 { clip, focus },
@@ -71,7 +80,13 @@ function TrainCopy({ clip }: { clip: string }) {
   );
 }
 
-function PlanBody({ plan, onFocus }: { plan: MotionTrainingPlan; onFocus: (focus: string) => void }) {
+type PlanProps = {
+  plan: MotionTrainingPlan;
+  onFocus: (focus: string) => void;
+  onTyped: (field: "steps" | "copies", value: string) => void;
+};
+
+function PlanBody({ plan, onFocus, onTyped }: PlanProps) {
   const [steps, setSteps] = useState(plan.steps);
   const [copies, setCopies] = useState(plan.copies);
   return (
@@ -82,13 +97,19 @@ function PlanBody({ plan, onFocus }: { plan: MotionTrainingPlan; onFocus: (focus
           label="Practice steps"
           mono
           value={steps}
-          onChange={(event) => setSteps(event.currentTarget.value)}
+          onChange={(event) => {
+            setSteps(event.currentTarget.value);
+            onTyped("steps", event.currentTarget.value);
+          }}
         />
         <TextField
           label="Parallel copies"
           mono
           value={copies}
-          onChange={(event) => setCopies(event.currentTarget.value)}
+          onChange={(event) => {
+            setCopies(event.currentTarget.value);
+            onTyped("copies", event.currentTarget.value);
+          }}
         />
       </div>
       <div role="radiogroup" aria-label="What to practice" className="flex flex-col gap-4">

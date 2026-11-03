@@ -5,7 +5,16 @@ import { isRunEventEnvelope } from "./training-checks.ts";
 
 // Structural checks of the engine's event stream and task list: the fields the app reads, not the whole schema.
 
-const TASK_KINDS: readonly string[] = ["training_run", "autopilot", "diagnosis", "ideas", "build", "agent_turn"];
+const TASK_KINDS: readonly string[] = [
+  "training_run",
+  "autopilot",
+  "diagnosis",
+  "ideas",
+  "build",
+  "agent_turn",
+  "auto_rig",
+  "pose_tracking",
+];
 const TASK_STATES: readonly string[] = ["running", "done", "stopped", "failed"];
 const FINAL_STATES: readonly string[] = ["done", "stopped", "failed"];
 

@@ -15,10 +15,10 @@ const IMAGES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const VIDEOS = ["video/mp4", "video/webm", "video/quicktime"];
 const TEXT_DOCUMENTS = ["text/plain", "text/markdown", "text/csv", "application/json"];
 const PDF = "application/pdf";
-// 3D models the copilot can put on an object as its skin (ADR 008).
-const MODELS = ["model/gltf-binary", "model/gltf+json"];
+// 3D models the copilot can put on an object as its skin (ADR 008) or auto-rig into a body; OBJ and STL become GLB.
+const MODELS = ["model/gltf-binary", "model/gltf+json", "model/obj", "model/stl"];
 // Model formats that need a converter the studio does not ship yet.
-const UNCONVERTED = ["fbx", "obj", "usd", "usdz", "usda", "blend"];
+const UNCONVERTED = ["fbx", "usd", "usdz", "usda", "blend"];
 
 const BY_EXTENSION: Readonly<Record<string, string>> = {
   png: "image/png",
@@ -37,10 +37,24 @@ const BY_EXTENSION: Readonly<Record<string, string>> = {
   pdf: PDF,
   glb: "model/gltf-binary",
   gltf: "model/gltf+json",
+  obj: "model/obj",
+  stl: "model/stl",
 };
 
 // The file picker's filter; drops and pastes go through the same check.
-export const ACCEPTED_FILES = [...IMAGES, ...VIDEOS, ".txt", ".md", ".csv", ".json", ".pdf", ".glb", ".gltf"].join(",");
+export const ACCEPTED_FILES = [
+  ...IMAGES,
+  ...VIDEOS,
+  ".txt",
+  ".md",
+  ".csv",
+  ".json",
+  ".pdf",
+  ".glb",
+  ".gltf",
+  ".obj",
+  ".stl",
+].join(",");
 
 function mediaTypeOf({ name, type }: FileFacts): string {
   const extension = name.split(".").at(-1)?.toLowerCase() ?? "";
@@ -68,7 +82,7 @@ export function checkAttachment(file: FileFacts, alreadyAttached: number): Attac
     return { ok: false, reason: `${file.name}: .${extension} models are not supported yet; export it as .glb` };
   }
   if (kind === null) {
-    return { ok: false, reason: `${file.name} is not an image, video, text document or .glb model` };
+    return { ok: false, reason: `${file.name} is not an image, video, text document or 3D model` };
   }
   if (file.size > MAX_ATTACHMENT_BYTES) {
     return {

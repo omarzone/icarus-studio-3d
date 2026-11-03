@@ -174,6 +174,12 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "verb_pattern": {"en": "make copies", "es": "hacer copias"},
     "verb_edit_group": {"en": "edit the group", "es": "editar el grupo"},
     "verb_edit_matching": {"en": "edit matching objects", "es": "editar los objetos que coinciden"},
+    "verb_auto_rig": {"en": "rig the model", "es": "riggear el modelo"},
+    "verb_fix_body": {"en": "fix the body", "es": "arreglar el cuerpo"},
+    "verb_imitate_clip": {"en": "copy the clip", "es": "copiar el clip"},
+    "rig_refused": {"en": "Could not rig the model: {reason}", "es": "No pude riggear el modelo: {reason}"},
+    "body_fine": {"en": "Checked the body: nothing to fix", "es": "Revisé el cuerpo: nada que arreglar"},
+    "imitate_refused": {"en": "Could not copy the clip: {reason}", "es": "No pude copiar el clip: {reason}"},
 }
 
 

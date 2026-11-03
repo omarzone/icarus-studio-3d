@@ -56,7 +56,7 @@ def test_a_project_that_cannot_train_fails_with_a_plain_reason(tmp_path):
 
     final = folder.status()
     assert final.state == "failed" and final.failure is not None and final.finished_at is not None
-    assert "navigation and locomotion" in final.failure.reason
+    assert "can be trained" in final.failure.reason
     assert final.failure.details
     assert folder.log()[-1].level == "error"
 

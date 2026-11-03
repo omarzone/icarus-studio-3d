@@ -10,41 +10,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 |---|---|---|
 | `scene.acceptProposedValue` | Accepting a value the copilot proposed | `REF-PROPERTY-TYPES` |
 
-## Sprint 9
-
-| Action | What it does | Used in |
-|---|---|---|
-| `body.applyPose` | Trying a test pose | `SCR-BODY` |
-| `body.autoFixWeights` | Fixing skin weights automatically | `SCR-BODY` |
-| `body.autoRig` | Auto-rig progress | `MOD-AUTO-RIG` |
-| `body.cancelAutoRig` | Cancelling the auto-rig | `MOD-AUTO-RIG` |
-| `body.fixProblems` | Fixing the problems in the body | `STA-BODY-CHECK-FAILED` |
-| `body.importAndRig` | Importing and auto-rigging a model | `MOD-IMPORT` |
-| `body.weights` | Skin weights per bone | `SCR-BODY` |
-
-## Sprint 10
-
-| Action | What it does | Used in |
-|---|---|---|
-| `motion.clip` | The clip frames and match curve | `SCR-MOTION`, `STA-MOTION-TRAINING` |
-| `motion.compare` | The reference and the physics copy side by side | `SCR-MOTION`, `STA-MOTION-TRAINING` |
-| `motion.download` | Downloading the animation | `MOD-EXPORT-ANIMATION` |
-| `motion.export` | The animation export settings | `MOD-EXPORT-ANIMATION` |
-| `motion.partMatch` | Match per body part | `SCR-MOTION` |
-| `motion.selectFrame` | Moving to a frame | `SCR-MOTION`, `STA-MOTION-TRAINING` |
-| `motion.setExportFormat` | Choosing the animation format | `MOD-EXPORT-ANIMATION` |
-| `motion.setSpeed` | Changing the playback speed | `SCR-MOTION`, `STA-MOTION-TRAINING` |
-| `motion.setTrainingFocus` | Choosing what the copy practices | `MOD-MOTION-TRAIN` |
-| `motion.setVideoChoice` | Choosing who to copy and onto what | `MOD-MOTION-VIDEO` |
-| `motion.startTraining` | Training the copy | `MOD-MOTION-TRAIN` |
-| `motion.toggleExportOption` | Changing an export option | `MOD-EXPORT-ANIMATION` |
-| `motion.track` | Tracking the motion in the video | `MOD-MOTION-VIDEO` |
-| `motion.tracking` | Pose tracking progress | `MOD-MOTION-TRACKING` |
-| `motion.trainingPlan` | The training plan for the copy | `MOD-MOTION-TRAIN` |
-| `motion.trainingStatus` | How the copy is training | `STA-MOTION-TRAINING` |
-| `motion.trainWeakest` | Training the weakest moment | `SCR-MOTION` |
-| `motion.videoSource` | Reading the reference video | `MOD-MOTION-VIDEO` |
-
 ## Sprint 13
 
 | Action | What it does | Used in |

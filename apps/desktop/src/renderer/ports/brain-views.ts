@@ -17,12 +17,14 @@ type RewardTermInfo = LibraryCatalog["reward_terms"][number];
 const CORE_TERMS: Readonly<Record<Family, readonly string[]>> = {
   navigation: ["progress_to_goal", "reach_goal"],
   locomotion: ["forward_progress"],
+  imitation: ["track_motion"],
   none: [],
 };
 
 const SUCCESS: Readonly<Record<Family, string>> = {
   navigation: "Reach the goal zone and stay there",
   locomotion: "Move forward without falling",
+  imitation: "Copy the reference clip without falling",
   none: "No task chosen yet",
 };
 
@@ -34,6 +36,13 @@ function goalOf(task: Project["task"]): Learning["goal"] {
   }
   if (task.end_on_fall ?? true) {
     endsWhen.push("It falls");
+  }
+  if (task.family === "imitation") {
+    return {
+      success: SUCCESS.imitation,
+      timeLimit: "The clip's length per episode",
+      endsWhen: [...endsWhen, "The clip ends"],
+    };
   }
   endsWhen.push("Time runs out");
   return { success: SUCCESS[task.family], timeLimit: `${task.episode_seconds ?? 30} s per episode`, endsWhen };

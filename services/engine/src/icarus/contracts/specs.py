@@ -2,10 +2,11 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.contracts.motion import MotionReference
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.properties import PropertyValue
 
-TaskFamily = Literal["none", "navigation", "locomotion"]
+TaskFamily = Literal["none", "navigation", "locomotion", "imitation"]
 
 
 class WorldSpec(BaseModel):
@@ -45,6 +46,8 @@ class TaskSpec(BaseModel):
     # A try also ends early when the body falls, and when it reaches the goal or succeeds.
     end_on_fall: bool = True
     end_on_success: bool = True
+    # The motion an imitation task tracks; None for every other family.
+    motion: MotionReference | None = None
 
 
 # Learning methods the worker really trains with.
