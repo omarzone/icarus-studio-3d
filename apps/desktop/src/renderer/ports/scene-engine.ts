@@ -1,24 +1,17 @@
-import type { EditOperation, LibraryCatalog, Project, PropertySchema } from "@icarus/contracts";
+import type { EditOperation, LibraryCatalog, Project } from "@icarus/contracts";
 import type { CopiesApi, EngineApi } from "../engine-client/engine-api.ts";
 import { brainInspection, brainSettingOperation, brainSettingReset } from "./brain-settings-views.ts";
 import { trainingVariations, variationOperations } from "./copy-variations.ts";
 import { guideProgress } from "./guide-progress.ts";
 import { type Quat, stretchedScale, turnedRotation, type Vec3, worldToParent } from "./object-transform.ts";
 import { insertPartOperation, isPlaneFloor, partKind, sizedScale, slabOperations } from "./part-insert.ts";
+import { propertyReference } from "./property-reference.ts";
 import type { ProposalApi } from "./proposal-accept.ts";
 import { acceptProposedValue } from "./proposal-accept.ts";
 import { openProposal } from "./proposed-values.ts";
 import { duplicateOperations, reparentOperations } from "./scene-objects.ts";
-import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
-import {
-  componentGroups,
-  findObject,
-  inspection,
-  nextComponentId,
-  sceneTree,
-  toContractValue,
-  toViewValue,
-} from "./scene-views.ts";
+import type { ScenePort, TrainingCopies } from "./scene-port.ts";
+import { componentGroups, findObject, inspection, nextComponentId, sceneTree, toContractValue } from "./scene-views.ts";
 
 export { nextComponentId } from "./scene-views.ts";
 
@@ -29,31 +22,6 @@ const LAYOUTS = ["Grid"];
 
 function trainingCopies(project: Project): TrainingCopies {
   return { copies: project.brain.copies, layout: "Grid", layouts: LAYOUTS, variations: trainingVariations(project) };
-}
-
-function reference(catalog: LibraryCatalog): PropertyReference {
-  const seen = new Map<PropertyType, PropertySchema>();
-  for (const schema of catalog.components.flatMap((kind) => kind.properties)) {
-    if (!seen.has(schema.type)) {
-      seen.set(schema.type, schema);
-    }
-  }
-  const sample = (schema: PropertySchema) => ({
-    id: schema.id,
-    label: schema.label,
-    state: "default" as const,
-    ...toViewValue(schema, schema.default),
-  });
-  const first = [...seen.values()][0];
-  return {
-    types: [...seen].map(([type, schema]) => ({
-      type,
-      label: type.charAt(0).toUpperCase() + type.slice(1),
-      use: schema.hint ?? `${schema.label} uses this control`,
-      sample: sample(schema),
-    })),
-    states: first ? [{ state: "default", label: "Default", use: "The library value", sample: sample(first) }] : [],
-  };
 }
 
 function settingLabel(catalog: LibraryCatalog, id: string): string {
@@ -315,6 +283,6 @@ export function createEngineScenePort(api: SceneApi): ScenePort {
         into ? `Moved ${obj.name} into ${into}` : `Moved ${obj.name} to the top level`,
       );
     },
-    getPropertyReference: async () => reference(await library()),
+    getPropertyReference: async () => propertyReference(await library()),
   };
 }
