@@ -19,10 +19,12 @@ from icarus.api import (
     ideas,
     library,
     model_settings,
+    motion,
     notes,
     play,
     project_runs,
     projects,
+    rig,
     runs,
     skins,
     storage,
@@ -55,6 +57,9 @@ from icarus.copilot.subagents import Subagents
 from icarus.event_log import EventLog
 from icarus.events import EventBus
 from icarus.library.templates import UnknownTemplate
+from icarus.motion.clip_store import ClipStore
+from icarus.motion.service import MotionService, MotionServices
+from icarus.projects.auto_rig import AutoRigBoard
 from icarus.projects.operations import OperationError
 from icarus.projects.skins import SkinRejected, SkinStore, UnknownSkin
 from icarus.projects.store import (
@@ -275,6 +280,18 @@ def create_app(
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.attachments = AttachmentStore(projects_folder)
     app.state.skins = SkinStore(projects_folder)
+    app.state.auto_rigs = AutoRigBoard()
+    app.state.motion = MotionService(
+        MotionServices(
+            app.state.store,
+            app.state.runs,
+            app.state.supervisor,
+            app.state.training_settings,
+            app.state.model_settings,
+            app.state.tasks,
+            ClipStore(projects_folder),
+        )
+    )
     views = ViewRenderer()
     conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
@@ -298,6 +315,7 @@ def create_app(
         conversations.folder,
     )
     app.state.copilot.attach_coaching(Coaching(app.state.coach, app.state.autopilot))
+    app.state.copilot.attach_stores(app.state.skins, app.state.motion.services.clips)
     app.state.coach.attach_publisher(publish)
     hub = Subagents(app.state.tasks, app.state.copilot.subagent_loop, frozenset(worker_tools()))
     app.state.subagents = hub
@@ -342,6 +360,8 @@ def create_app(
     app.include_router(copilot.router)
     app.include_router(attachments.router)
     app.include_router(skins.router)
+    app.include_router(rig.router)
+    app.include_router(motion.router)
     app.include_router(coach.router)
     app.include_router(ideas.router)
     app.include_router(model_settings.router)
@@ -353,6 +373,7 @@ def create_app(
     app.include_router(storage.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
+    motion.add_motion_errors(app)
     for error in (
         UnknownProject,
         UnknownRevision,
