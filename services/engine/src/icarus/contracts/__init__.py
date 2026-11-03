@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from icarus.contracts.brain_network import BrainActivations, BrainNetwork
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
+from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
     AttachmentInfo,
     AttachmentUpload,
@@ -67,6 +68,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     Conversation,
     SendMessage,
     SetAutonomy,
+    ContextRequest,
+    ContextUsage,
     IdeaRequest,
     IdeaSet,
     BuildIdea,

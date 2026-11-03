@@ -541,6 +541,76 @@ export interface PropertyOption {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ContextCategory".
+ */
+export interface ContextCategory {
+  items?: ContextItem[];
+  part: "system" | "tools" | "skills" | "memory" | "project" | "summary" | "history" | "message" | "attachments";
+  tokens: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ContextItem".
+ */
+export interface ContextItem {
+  label: string;
+  tokens: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ContextCompaction".
+ */
+export interface ContextCompaction {
+  fold_at: number;
+  folding: boolean;
+  folds_next_turn: boolean;
+  history_tokens: number;
+  prune_at: number;
+}
+/**
+ * The message being written: like a sent message, but the text may still be empty.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ContextRequest".
+ */
+export interface ContextRequest {
+  /**
+   * @maxItems 10
+   */
+  attachments?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string];
+  scene_views?: number;
+  selection?: string | null;
+  text?: string;
+  workspace?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ContextUsage".
+ */
+export interface ContextUsage {
+  capability: "reasoning" | "vision" | "image" | "pose";
+  categories: ContextCategory[];
+  compaction: ContextCompaction;
+  free: number;
+  model: string | null;
+  reserve: number;
+  used: number;
+  window: number;
+  window_known: boolean;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "Conversation".
  */
 export interface Conversation {
