@@ -1,4 +1,4 @@
-import type { PlayCommand, PlayFrame, PlaySessionInfo } from "@icarus/contracts";
+import type { PlayCommand, PlayFrame, PlaySessionInfo, SceneSignals } from "@icarus/contracts";
 import { type PlayBrainsApi, playBrainsApi } from "../engine-client/play-brains-api.ts";
 import { type OpenPlay, openPlay, type PlayConnection } from "../engine-client/play-socket.ts";
 import {
@@ -26,6 +26,33 @@ import {
 
 const MAX_EVENTS = 50;
 
+// The panels (readings, decisions, events, status) follow the session at most this often; the 3D poses go every paint.
+const PANEL_INTERVAL_MS = 100;
+
+// How long a publish waits for a paint before going anyway: hidden windows pause animation frames.
+const PAINT_FALLBACK_MS = 100;
+
+// When publishes run: `nextPaint` runs one before the next paint, however many messages arrived since the last.
+export type PlayPacing = { nextPaint: (publish: () => void) => void; now: () => number };
+
+// A function, not a constant: play-port.ts creates the port while this module is still loading.
+function browserPacing(): PlayPacing {
+  return {
+    nextPaint: (publish) => {
+      let done = false;
+      const once = () => {
+        if (!done) {
+          done = true;
+          publish();
+        }
+      };
+      requestAnimationFrame(once);
+      setTimeout(once, PAINT_FALLBACK_MS);
+    },
+    now: () => performance.now(),
+  };
+}
+
 type Waiter = { resolve: (session: PlaySession) => void; reject: (error: Error) => void };
 
 type Channel = {
@@ -35,6 +62,12 @@ type Channel = {
   info: PlaySessionInfo | null;
   frame: PlayFrame | null;
   live: PlayLive | null;
+  // The session the listener last got, rebuilt when the panels are due; the live world is rebuilt every publish.
+  session: PlaySession | null;
+  sessionAt: number;
+  panelsStale: boolean;
+  liveStale: boolean;
+  scheduled: boolean;
   events: PlayEvent[];
   selected: PlayToolId | null;
   controls: PlayControls;
@@ -49,6 +82,11 @@ const fresh = (waiters: Waiter[] = []): Channel => ({
   info: null,
   frame: null,
   live: null,
+  session: null,
+  sessionAt: 0,
+  panelsStale: false,
+  liveStale: false,
+  scheduled: false,
   events: [],
   selected: null,
   controls: { speed: 1, light: 1, wind: false },
@@ -66,18 +104,27 @@ function sessionOf(channel: Channel): PlaySession | null {
   return playSession({ info, frame, events: channel.events, selectedTool });
 }
 
-function liveOf(info: PlaySessionInfo | null, frame: PlayFrame | null): PlayLive {
+// The previous signals when the engine measured the same again, so the scene keeps what it built from them.
+function steadySignals(previous: SceneSignals | null | undefined, next: SceneSignals | null): SceneSignals | null {
+  return previous !== undefined && JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+}
+
+function liveOf(info: PlaySessionInfo | null, frame: PlayFrame | null, previous: PlayLive | null): PlayLive {
   return {
     scene: info?.scene ?? null,
     poses: new Map(frame?.geoms.map((geom) => [geom.name, { position: geom.position, quaternion: geom.quaternion }])),
     rays: frame?.rays ?? [],
-    signals: frame?.signals ?? null,
+    signals: steadySignals(previous?.signals, frame?.signals ?? null),
     paused: frame?.paused ?? false,
     speed: frame?.speed ?? 1,
   };
 }
 
-export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsApi = playBrainsApi): PlayPort {
+export function createEnginePlayPort(
+  open: OpenPlay = openPlay,
+  api: PlayBrainsApi = playBrainsApi,
+  pacing: PlayPacing = browserPacing(),
+): PlayPort {
   const channels = new Map<string, Channel>();
   const channelOf = (project: string): Channel => {
     const existing = channels.get(project);
@@ -88,15 +135,44 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
     channels.set(project, created);
     return created;
   };
+  // Throttled panels catch up on a later frame: the engine sends one every 1/30 s, paused or not.
   const publish = (channel: Channel) => {
-    const session = sessionOf(channel);
-    if (!session || !channel.live) {
+    if (channel.token === null) {
+      return;
+    }
+    const now = pacing.now();
+    if (channel.panelsStale && (channel.session === null || now - channel.sessionAt >= PANEL_INTERVAL_MS)) {
+      channel.session = sessionOf(channel);
+      channel.sessionAt = now;
+      channel.panelsStale = channel.session === null;
+    }
+    if (channel.liveStale) {
+      channel.live = liveOf(channel.info, channel.frame, channel.live);
+      channel.liveStale = false;
+    }
+    const { session, live } = channel;
+    if (!session || !live) {
       return;
     }
     for (const waiter of channel.waiters.splice(0)) {
       waiter.resolve(session);
     }
-    channel.listener?.onUpdate(session, channel.live);
+    channel.listener?.onUpdate(session, live);
+  };
+  const schedule = (channel: Channel) => {
+    if (channel.scheduled) {
+      return;
+    }
+    channel.scheduled = true;
+    pacing.nextPaint(() => {
+      channel.scheduled = false;
+      publish(channel);
+    });
+  };
+  // What changed reaches the panels on the next publish, without waiting for their interval.
+  const refreshPanels = (channel: Channel) => {
+    channel.session = null;
+    channel.panelsStale = true;
   };
   const running = (project: string): { channel: Channel; connection: PlayConnection; session: PlaySession } => {
     const channel = channelOf(project);
@@ -129,6 +205,7 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
       const { channel } = running(project);
       if (!actsAtOnce(tool)) {
         channel.selected = tool;
+        refreshPanels(channel);
       }
       return running(project).session;
     },
@@ -143,6 +220,9 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
     connect: (project, listener, brain) => {
       const previous = channels.get(project);
       previous?.connection?.close();
+      if (previous) {
+        previous.token = null;
+      }
       const channel = fresh(previous?.waiters);
       channels.set(project, channel);
       const token = {};
@@ -155,16 +235,18 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
           onReady: (info) => {
             if (current()) {
               channel.info = info;
-              channel.live = liveOf(info, channel.frame);
-              publish(channel);
+              channel.liveStale = true;
+              refreshPanels(channel);
+              schedule(channel);
             }
           },
           onFrame: (frame) => {
             if (current()) {
               channel.frame = frame;
               channel.controls = { ...channel.controls, speed: frame.speed };
-              channel.live = liveOf(channel.info, frame);
-              publish(channel);
+              channel.liveStale = true;
+              channel.panelsStale = true;
+              schedule(channel);
             }
           },
           onEvent: (event) => {
@@ -173,7 +255,8 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
                 0,
                 MAX_EVENTS,
               );
-              publish(channel);
+              channel.panelsStale = true;
+              schedule(channel);
             }
           },
           onError: (message) => {

@@ -2,7 +2,7 @@ import type { PlayCommand, PlayPiece as PlayPieceInfo } from "@icarus/contracts"
 import { describe, expect, it, vi } from "vitest";
 import type { PlayHandlers, PlayOptions } from "../engine-client/play-socket.ts";
 import { isPlayFrame, isPlayMessageEnvelope } from "../engine-client/response-checks.ts";
-import { createEnginePlayPort } from "./play-engine.ts";
+import { createEnginePlayPort, type PlayPacing } from "./play-engine.ts";
 import type { PlayDrop, PlayLive, PlaySession, PlayStage } from "./play-port.ts";
 import { decisionBars, dropCommand, eventTime, playCommand, playSession, playTools, senseBars } from "./play-views.ts";
 import play from "./testdata/play-frame.json";
@@ -186,8 +186,25 @@ describe("play commands", () => {
   });
 });
 
+// Paints only when the test says so, at the time the test sets.
+function manualPacing() {
+  let pending: (() => void)[] = [];
+  let time = 0;
+  const pacing: PlayPacing = { nextPaint: (publish) => pending.push(publish), now: () => time };
+  const paint = (advance = 0) => {
+    time += advance;
+    const due = pending;
+    pending = [];
+    for (const publish of due) {
+      publish();
+    }
+  };
+  return { pacing, paint };
+}
+
 describe("engine play port", () => {
   function setup() {
+    const { pacing, paint } = manualPacing();
     const sent: PlayCommand[] = [];
     let handlers: PlayHandlers | undefined;
     const close = vi.fn();
@@ -195,7 +212,7 @@ describe("engine play port", () => {
       handlers = given;
       return { send: (command: PlayCommand) => sent.push(command), close };
     });
-    const port = createEnginePlayPort(open);
+    const port = createEnginePlayPort(open, undefined, pacing);
     const updates: [PlaySession, PlayLive][] = [];
     const closed: string[] = [];
     const stages: PlayStage[] = [];
@@ -211,7 +228,7 @@ describe("engine play port", () => {
       }
       return handlers;
     };
-    return { port, sent, engine, updates, closed, close, disconnect, stages };
+    return { port, sent, engine, updates, closed, close, disconnect, stages, paint };
   }
 
   it("passes on what the engine is doing while the session opens, and nothing after leaving", () => {
@@ -225,7 +242,7 @@ describe("engine play port", () => {
   });
 
   it("lists the pieces Add object can bring, from the session the engine sent", async () => {
-    const { port, engine } = setup();
+    const { port, engine, paint } = setup();
     const piece: PlayPieceInfo = {
       id: "ball",
       label: "Ball",
@@ -239,6 +256,7 @@ describe("engine play port", () => {
     };
     engine().onReady({ ...info, pieces: [piece] });
     engine().onFrame(frame);
+    paint();
     const session = await port.getSession("p");
     expect(session.pieces).toEqual([
       { id: "ball", label: "Ball", category: "basics", mass: 0.5, friction: 0.8, bounciness: 0, color: "#d9534f" },
@@ -246,11 +264,13 @@ describe("engine play port", () => {
   });
 
   it("streams a session and the live poses once the engine is ready and framing", async () => {
-    const { port, engine, updates } = setup();
+    const { port, engine, updates, paint } = setup();
     const first = port.getSession("p");
     engine().onReady(info);
+    paint();
     expect(updates).toHaveLength(0);
     engine().onFrame(frame);
+    paint();
     await expect(first).resolves.toMatchObject({ status: { title: "Playing" }, selectedTool: "move" });
     const [session, live] = updates.at(-1) ?? [];
     expect(session?.tools).toHaveLength(7);
@@ -261,30 +281,34 @@ describe("engine play port", () => {
   });
 
   it("draws the new scene a later ready brings (after Add object or Light)", () => {
-    const { engine, updates } = setup();
+    const { engine, updates, paint } = setup();
     engine().onReady(info);
     engine().onFrame(frame);
+    paint();
     const scene = { ...info.scene, revision: 9 };
     engine().onReady({ ...info, scene });
+    paint();
     expect(updates.at(-1)?.[1].scene).toBe(scene);
   });
 
   it("keeps the newest 50 events first", () => {
-    const { engine, updates } = setup();
+    const { engine, updates, paint } = setup();
     engine().onReady(info);
     engine().onFrame(frame);
     for (let index = 0; index < 55; index++) {
       engine().onEvent({ ...event, time: index, text: `Event ${index}` });
     }
+    paint();
     const events = updates.at(-1)?.[0].events ?? [];
     expect(events).toHaveLength(50);
     expect(events[0]).toEqual({ time: "0:54", text: "Event 54" });
   });
 
   it("sends tool actions and speed changes as commands", async () => {
-    const { port, engine, sent } = setup();
+    const { port, engine, sent, paint } = setup();
     engine().onReady(info);
     engine().onFrame(frame);
+    paint();
     await port.send({ project: "p", action: { tool: "slow" } });
     await expect(port.setSpeed({ project: "p", speed: "2×" })).resolves.toMatchObject({ speed: "2×" });
     expect(sent).toEqual([
@@ -294,9 +318,10 @@ describe("engine play port", () => {
   });
 
   it("selects tools used by clicking, and leaves instant tools unselected", async () => {
-    const { port, engine } = setup();
+    const { port, engine, paint } = setup();
     engine().onReady(info);
     engine().onFrame(frame);
+    paint();
     await expect(port.selectTool({ project: "p", tool: "push" })).resolves.toMatchObject({ selectedTool: "push" });
     await expect(port.selectTool({ project: "p", tool: "reset" })).resolves.toMatchObject({ selectedTool: "push" });
   });
@@ -310,12 +335,55 @@ describe("engine play port", () => {
     await expect(port.getSession("p")).rejects.toThrow("No project with that id");
   });
 
-  it("closes the socket on leave and ignores what arrives after", async () => {
-    const { port, engine, updates, close, disconnect } = setup();
+  it("publishes once per paint with the newest poses, and the panels at most every 100 ms", () => {
+    const { engine, updates, paint } = setup();
     engine().onReady(info);
+    engine().onFrame(frame);
+    engine().onEvent(event);
+    engine().onFrame({ ...frame, time: frame.time + 0.03 });
+    paint();
+    expect(updates).toHaveLength(1);
+    const [first] = updates[0] ?? [];
+    expect(first?.events).toHaveLength(1);
+    const moved = (x: number) => ({
+      ...frame,
+      geoms: frame.geoms.map((geom) => ({ ...geom, position: [x, 0, 0] satisfies [number, number, number] })),
+    });
+    engine().onFrame(moved(1));
+    paint(33);
+    engine().onFrame(moved(2));
+    paint(33);
+    expect(updates).toHaveLength(3);
+    expect(updates[1]?.[0]).toBe(first);
+    expect(updates[2]?.[0]).toBe(first);
+    expect(updates[2]?.[1].poses.get("car")?.position).toEqual([2, 0, 0]);
+    engine().onEvent({ ...event, text: "Later" });
+    engine().onFrame(moved(3));
+    paint(40);
+    const [later] = updates.at(-1) ?? [];
+    expect(later).not.toBe(first);
+    expect(later?.events[0]?.text).toBe("Later");
+  });
+
+  it("shows a newly selected tool on the next publish, without waiting for the panels' interval", async () => {
+    const { port, engine, updates, paint } = setup();
+    engine().onReady(info);
+    engine().onFrame(frame);
+    paint();
+    await port.selectTool({ project: "p", tool: "push" });
+    engine().onFrame(frame);
+    paint(10);
+    expect(updates.at(-1)?.[0].selectedTool).toBe("push");
+  });
+
+  it("closes the socket on leave and ignores what arrives after", async () => {
+    const { port, engine, updates, close, disconnect, paint } = setup();
+    engine().onReady(info);
+    engine().onFrame(frame);
     disconnect();
     expect(close).toHaveBeenCalled();
     engine().onFrame(frame);
+    paint();
     expect(updates).toHaveLength(0);
     await expect(port.send({ project: "p", action: { tool: "reset" } })).rejects.toThrow("Play is not running");
   });
@@ -355,10 +423,12 @@ describe("play brains", () => {
       onClosed: () => undefined,
       onError: () => undefined,
     };
-    createEnginePlayPort(open).connect("p", listener, { runId: "run-1", step: 25000 });
+    const { pacing, paint } = manualPacing();
+    createEnginePlayPort(open, undefined, pacing).connect("p", listener, { runId: "run-1", step: 25000 });
     expect(open.mock.calls[0]?.[2]).toEqual({ brain: { runId: "run-1", step: 25000 } });
     handlers?.onReady({ ...info, brain: "Trained brain: Run 1 at 25,000 steps", run_id: "run-1", step: 25000 });
     handlers?.onFrame(frame);
+    paint();
     expect(updates.at(-1)?.decisions?.playing).toEqual({ runId: "run-1", step: 25000 });
   });
 });
