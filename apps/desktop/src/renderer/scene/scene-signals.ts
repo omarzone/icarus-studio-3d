@@ -1,4 +1,4 @@
-import type { LightRole, SceneSignals } from "@icarus/contracts";
+import type { LightRole, PlateSignal, SceneSignals } from "@icarus/contracts";
 
 // The goal and light states the engine measured, one per training copy (a single world is copy 0). The view only
 // shows them; it never decides whether a goal is met or a light is on.
@@ -42,4 +42,19 @@ export function lampOn(role: LightRole, signals: SceneSignals | null | undefined
 
 export function goalMet(signals: SceneSignals | null | undefined): boolean {
   return signals?.goal?.met ?? false;
+}
+
+// The name an item has in the engine's signals: copies side by side prefix theirs with "<copy>:", and object ids
+// never hold a colon.
+export function ownName(name: string): string {
+  return name.replace(/^\d+:/, "");
+}
+
+export function plateSignal(signals: SceneSignals | null | undefined, object: string): PlateSignal | undefined {
+  return signals?.plates?.find((plate) => plate.object === object);
+}
+
+// The value the engine reported for a display at this frame; null when it has none.
+export function displayValue(signals: SceneSignals | null | undefined, object: string): number | null {
+  return signals?.displays?.find((reading) => reading.object === object)?.value ?? null;
 }

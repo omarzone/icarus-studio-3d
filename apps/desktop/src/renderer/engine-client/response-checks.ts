@@ -171,7 +171,35 @@ export const isOptionalSignals = (value: unknown): boolean =>
   value === null ||
   (isRecord(value) &&
     (value.goal === undefined || value.goal === null || isFlags(value.goal, ["inside", "aligned", "stopped", "met"])) &&
-    (value.lights === undefined || value.lights === null || isFlags(value.lights, ["brake", "reverse", "head"])));
+    (value.lights === undefined || value.lights === null || isFlags(value.lights, ["brake", "reverse", "head"])) &&
+    isOptionalList(
+      value.plates,
+      (plate) => has(plate, "object", "string") && isFlags(plate, ["pressed", "occupied", "active", "reached"]),
+    ) &&
+    isOptionalList(
+      value.displays,
+      (reading) => has(reading, "object", "string") && (reading.value === null || typeof reading.value === "number"),
+    ));
+
+// Lists older engines leave out.
+function isOptionalList(value: unknown, item: (entry: Record_) => boolean): boolean {
+  return value === undefined || (Array.isArray(value) && value.every((entry) => isRecord(entry) && item(entry)));
+}
+
+const isPlaced = (value: Record_): boolean => isTriple(value.position, 3) && isTriple(value.quaternion, 4);
+
+const isAnchored = (value: Record_): boolean =>
+  isRecord(value.anchor) && has(value.anchor, "object", "string") && isPlaced(value.anchor);
+
+// Floor plates, displays and eyes; scenes from before them send none.
+const isOptionalDecor = (value: Record_): boolean =>
+  isOptionalList(
+    value.plates,
+    (plate) =>
+      has(plate, "name", "string") && has(plate, "role", "string") && isTriple(plate.size, 3) && isPlaced(plate),
+  ) &&
+  isOptionalList(value.displays, (display) => has(display, "source", "string") && isAnchored(display)) &&
+  isOptionalList(value.eyes, (eyes) => has(eyes, "size", "number") && isAnchored(eyes));
 
 const ZONE_KINDS: readonly unknown[] = ["spawn_point", "goal_zone", "zone"];
 const ZONE_SHAPES: readonly unknown[] = ["sphere", "box"];
@@ -209,7 +237,8 @@ export function isSceneDescription(value: unknown): value is SceneDescription {
     value.geoms.every(isGeom) &&
     (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone))) &&
     isSky(value.sky) &&
-    isOptionalRays(value.rays)
+    isOptionalRays(value.rays) &&
+    isOptionalDecor(value)
   );
 }
 
