@@ -115,7 +115,7 @@ export function createCommunityFixture(): CommunityPort {
       details = new Map(details).set(voted.id, voted);
       return voted;
     },
-    remix: async () => undefined,
+    remix: async (id) => ({ projectId: `remix-${id}`, name: find(id).name }),
     report: async () => undefined,
     getPicture: async () => null,
   };

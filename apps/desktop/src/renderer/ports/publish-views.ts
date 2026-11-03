@@ -102,6 +102,7 @@ export function reviewView(page: Api.Page): PublishReview {
 }
 
 // The shareable bundle: the project document with the versions it was made with; data only, never code.
+// A remixed project names the creation it came from, so the community records the remix and credits its author.
 export function projectBundle(state: ProjectState, libraryVersion: string): Record<string, unknown> {
   return {
     format: BUNDLE_FORMAT,
@@ -110,7 +111,7 @@ export function projectBundle(state: ProjectState, libraryVersion: string): Reco
     contract_version: `project-${state.project.schema_version}`,
     library_version: libraryVersion.slice(0, 32) || "unknown",
     created_with: "Icarus Studio 3D",
-    lineage: { remix_of: null },
+    lineage: { remix_of: state.remix_of?.creation_id ?? null },
     project: state.project,
   };
 }

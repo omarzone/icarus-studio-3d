@@ -3767,8 +3767,20 @@ export interface ProjectState {
   can_redo: boolean;
   can_undo: boolean;
   project: Project;
+  remix_of?: RemixOrigin | null;
   report: DesignReport;
   revision: Revision;
+}
+/**
+ * The community creation a project was remixed from; publishing the project names it as the original.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RemixOrigin".
+ */
+export interface RemixOrigin {
+  creation_id: string;
+  title: string;
+  version: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -4071,6 +4083,19 @@ export interface TrainingSettingsPatch {
  */
 export interface TweakIdea {
   words: string;
+}
+/**
+ * A community bundle to turn into a new local project, with the creation it was downloaded from.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "UnpackBundle".
+ */
+export interface UnpackBundle {
+  bundle: {
+    [k: string]: unknown;
+  };
+  name?: string | null;
+  source: RemixOrigin;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

@@ -5,8 +5,8 @@ import { creationDetailView, creationSummaryView } from "./community-views.ts";
 
 type CatalogApi = Pick<CommunityApi, "categories" | "creations" | "creation" | "vote" | "report" | "picture">;
 
-// Browsing, voting and reporting creations on the community service. Remixing needs the engine to import a
-// bundle, which it cannot do yet, so the port keeps that action pending.
+// Browsing, voting and reporting creations on the community service; remixing also needs the engine
+// (`community-remix.ts`).
 export function createCommunityCatalog(api: CatalogApi = communityApi): Omit<CommunityPort, "remix"> {
   const categoryId = async (name: string | null): Promise<string | undefined> => {
     if (name === null) {

@@ -39,7 +39,6 @@ function CreationPage({ creation }: { creation: CreationDetail }) {
   const client = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
   const vote = useEngineAction(community.vote);
-  const remix = useEngineAction(community.remix);
   const follow = useEngineAction(account.follow);
   const picture = useCommunityPicture(creation.picture);
   return (
@@ -82,7 +81,6 @@ function CreationPage({ creation }: { creation: CreationDetail }) {
           })
         }
         onFollow={() => follow.mutate(creation.author.handle)}
-        onRemix={() => remix.mutate(creation.id)}
       />
     </div>
   );

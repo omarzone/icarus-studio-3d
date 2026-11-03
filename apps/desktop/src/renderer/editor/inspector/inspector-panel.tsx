@@ -80,7 +80,9 @@ function InspectorBody({ scene, addComponentTo, panelRoutes }: BodyProps) {
           panelRoutes={panelRoutes}
           onChange={(target, value) => set.mutate({ scene, ...target, value }, { onSuccess: cache.inspection })}
           onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
-          onAccept={(target) => accept.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
+          onAccept={(target) =>
+            accept.mutate({ scene, ...target }, { onSuccess: (next) => cache.accepted("inspection", next) })
+          }
           onRemove={(section) => remove.mutate({ scene, section }, { onSuccess: cache.inspection })}
           onMakeSlab={() => slab.mutate(scene, { onSuccess: cache.inspection })}
         />
@@ -104,7 +106,9 @@ function BrainBody({ scene, panelRoutes }: Pick<InspectorPanelProps, "scene" | "
           panelRoutes={panelRoutes}
           onChange={(target, value) => set.mutate({ scene, ...target, value }, { onSuccess: cache.brainSettings })}
           onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.brainSettings })}
-          onAccept={(target) => accept.mutate({ scene, ...target }, { onSuccess: cache.brainSettings })}
+          onAccept={(target) =>
+            accept.mutate({ scene, ...target }, { onSuccess: (next) => cache.accepted("brain-settings", next) })
+          }
         />
       )}
     </QueryView>

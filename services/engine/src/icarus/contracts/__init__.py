@@ -25,6 +25,7 @@ from icarus.contracts.build import (
     HardwareCheck,
     HardwareCheckRequest,
 )
+from icarus.contracts.bundles import UnpackBundle
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
@@ -174,6 +175,7 @@ MODELS: tuple[type[BaseModel], ...] = (
     MotionTrain,
     MotionExportRequest,
     MotionExportFile,
+    UnpackBundle,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

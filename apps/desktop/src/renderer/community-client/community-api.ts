@@ -46,6 +46,8 @@ export const communityApi = {
   creations: (input: { sort: string; category?: string; q?: string; limit?: number }) =>
     communityRequest("GET", `/v1/creations${query(input)}`, isCreationPage),
   creation: (id: string) => communityRequest("GET", `/v1/creations/${segment(id)}`, isCreationDetail),
+  // The latest version's bundle as JSON; the engine checks it before anything is made from it.
+  bundle: (id: string) => communityRequest("GET", `/v1/creations/${segment(id)}/bundle`, isAnyJson),
   vote: (id: string, on: boolean) =>
     communityRequest(on ? "PUT" : "DELETE", `/v1/creations/${segment(id)}/vote`, isCreationDetail),
   report: (id: string, body: { reason: string; details: string; block_author: boolean }) =>
