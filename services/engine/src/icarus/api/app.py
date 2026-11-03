@@ -14,6 +14,7 @@ from icarus.api import (
     behavior,
     brain,
     build,
+    bundles,
     coach,
     copilot,
     events,
@@ -30,6 +31,7 @@ from icarus.api import (
     storage,
     tasks,
 )
+from icarus.bundles.unpack import BundleRejected
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.contracts.events import EngineEvent, RevisionCreatedEvent
@@ -184,7 +186,7 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(404, ApiError(code="not_found", message="There is no such attachment"))
         case UnknownSkin():
             return _error(404, ApiError(code="not_found", message="There is no such model"))
-        case AttachmentRejected() | SkinRejected():
+        case AttachmentRejected() | SkinRejected() | BundleRejected():
             return _error(422, ApiError(code="invalid", message=str(exc)))
         case UnknownBuild():
             return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
@@ -371,6 +373,7 @@ def create_app(
     app.include_router(notes.router)
     app.include_router(project_runs.router)
     app.include_router(storage.router)
+    app.include_router(bundles.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     for error in (
@@ -407,6 +410,7 @@ def create_app(
         TestRefused,
         NotComparable,
         RecordingMissing,
+        BundleRejected,
     ):
         app.add_exception_handler(error, _domain_error)
     return app
