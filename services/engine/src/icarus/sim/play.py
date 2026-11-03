@@ -130,7 +130,7 @@ class PlaySession:
     def _observe(self) -> None:
         self._state = reward_state(self.world)
         self._touching = touching(self.world)
-        self._plates_on = [state.active for state in self.world.plate_states]
+        self._plates_reached = list(self.world.plate_reached)
 
     def _act(self) -> None:
         if self.world.actuators:
@@ -181,15 +181,16 @@ class PlaySession:
             events.append(self._event(self._text("play_fell", agent=agent), "agent"))
         events += self._plate_events(before, after, agent)
         self._state, self._touching = after, now
-        self._plates_on = [state.active for state in self.world.plate_states]
+        self._plates_reached = list(self.world.plate_reached)
         self._act()
         return events
 
     def _plate_events(self, before: RewardState, after: RewardState, agent: str) -> list[PlayEvent]:
-        """Plates that lit up at this step, and the goal completed when the plates are the goal."""
+        """Plates reached for the first time in this try, and the goal completed when the plates are the goal; a plate
+        that flickers under a stumbling body is told once."""
         events: list[PlayEvent] = []
-        for plate, state, was in zip(self.world.plates, self.world.plate_states, self._plates_on, strict=False):
-            if state.active and not was:
+        for plate, now, was in zip(self.world.plates, self.world.plate_reached, self._plates_reached, strict=False):
+            if now and not was:
                 events.append(self._event(self._text("play_plate_on", plate=self._name(plate.object)), "world"))
         if task_done(self.world, after) and not task_done(self.world, before):
             self.world.tally.successes += 1
