@@ -62,10 +62,12 @@ _TERMS = [
         "navigation",
         0,
         5,
-        0.2,
-        "Reward each step for facing the goal zone's heading the way its Entry rule asks (1 lined up, -1 the wrong "
-        "way round; either way counts both ends), scaled from nothing 5 m away to the full amount at the goal. "
-        "Teaches a vehicle to arrive straight in a rectangular parking spot instead of across it.",
+        2.0,
+        "Reward for getting lined up with the goal zone's heading the way its Entry rule asks while getting closer "
+        "(lined up counts 1, the wrong way round -1, scaled from nothing 5 m away to full at the goal); it pays the "
+        "gain each step, so waiting lined up outside the spot earns nothing. Teaches a vehicle to arrive straight in "
+        "a rectangular parking spot instead of across it.",
+        version=2,
     ),
     _term(
         "gentle_arrival",
@@ -73,9 +75,11 @@ _TERMS = [
         "navigation",
         0,
         5,
-        0.2,
-        "Reward each step inside the goal zone for moving slowly: 1 at rest, falling to 0 at 1 m/s. Teaches a vehicle "
-        "to brake and settle in the spot instead of rolling through it.",
+        2.0,
+        "Reward for braking inside the goal zone: it pays the speed shed below 1 m/s (1 for coming to rest from "
+        "1 m/s), never for staying, so lingering earns nothing. Teaches a vehicle to brake and settle in the spot "
+        "instead of rolling through it.",
+        version=2,
     ),
     _term(
         "collision_penalty",

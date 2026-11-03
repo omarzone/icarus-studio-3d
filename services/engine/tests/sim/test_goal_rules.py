@@ -110,19 +110,25 @@ def test_measured_rules_decide_parking_over_the_radius():
     assert parked(state(goal_inside=True, goal_aligned=True, speed=0.4, stop_speed=0.5))
 
 
-def test_spot_alignment_pays_for_lining_up_more_the_closer_the_car_is():
-    assert spot_alignment(state(), state(goal_alignment=1.0)) == pytest.approx(1.0)
-    assert spot_alignment(state(), state(goal_alignment=1.0, position=(2.5, 0.0, 0.5))) == pytest.approx(0.5)
-    assert spot_alignment(state(), state(goal_alignment=-1.0, position=(2.5, 0.0, 0.5))) == pytest.approx(-0.5)
+def test_spot_alignment_pays_for_getting_lined_up_and_closer_not_for_waiting():
+    near_aligned = state(goal_alignment=1.0, position=(2.5, 0.0, 0.5))
+    # Waiting lined up next to the spot earns nothing, so a car cannot collect it outside instead of parking.
+    assert spot_alignment(near_aligned, near_aligned) == 0
+    # Lining up and getting closer pays the gain; turning away or backing off costs it back.
+    assert spot_alignment(state(position=(2.5, 0.0, 0.5)), near_aligned) == pytest.approx(0.5)
+    assert spot_alignment(near_aligned, state(goal_alignment=1.0)) == pytest.approx(0.5)
+    assert spot_alignment(state(goal_alignment=1.0), near_aligned) == pytest.approx(-0.5)
     assert spot_alignment(state(), state(goal_alignment=1.0, position=(6.0, 0.0, 0.5))) == 0
-    assert spot_alignment(state(), state(goal=None, goal_alignment=1.0)) == 0
+    assert spot_alignment(state(goal=None), state(goal=None, goal_alignment=1.0)) == 0
 
 
-def test_gentle_arrival_pays_only_inside_and_more_the_slower_the_car_moves():
-    assert gentle_arrival(state(), state(speed=0.0)) == pytest.approx(1.0)
-    assert gentle_arrival(state(), state(speed=0.5)) == pytest.approx(0.5)
-    assert gentle_arrival(state(), state(speed=2.0)) == 0
-    assert gentle_arrival(state(), state(goal_inside=False)) == 0
+def test_gentle_arrival_pays_for_slowing_down_inside_not_for_lingering():
+    assert gentle_arrival(state(speed=0.5), state(speed=0.0)) == pytest.approx(0.5)
+    assert gentle_arrival(state(speed=2.0), state(speed=0.5)) == pytest.approx(0.5)
+    # Sitting still inside earns nothing more, so lingering never beats meeting the parking rule.
+    assert gentle_arrival(state(speed=0.0), state(speed=0.0)) == 0
+    assert gentle_arrival(state(speed=0.0), state(speed=0.5)) == 0
+    assert gentle_arrival(state(speed=0.5), state(speed=0.0, goal_inside=False)) == 0
 
 
 def test_the_alignment_score_follows_the_entry_rule():

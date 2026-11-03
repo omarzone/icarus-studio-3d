@@ -19,9 +19,9 @@ AIR_TIME_MIN = 0.1
 AIR_TIME_MAX = 0.5
 # feet_air_time pays only while the body moves this fast on the ground, in m/s, so stamping in place earns nothing.
 AIR_TIME_SPEED = 0.1
-# spot_alignment pays nothing this far from the goal, in metres, rising to its full amount at the goal.
+# spot_alignment counts nothing this far from the goal, in metres, rising to its full amount at the goal.
 ALIGN_REACH = 5.0
-# gentle_arrival pays nothing inside the goal at this speed or faster, in m/s.
+# gentle_arrival counts the speed shed inside the goal below this, in m/s.
 ARRIVAL_SPEED = 1.0
 
 
@@ -136,14 +136,23 @@ def heading_alignment(before: RewardState, after: RewardState) -> float:
     return (after.forward[0] * to_goal[0] + after.forward[1] * to_goal[1]) / norm
 
 
-def spot_alignment(before: RewardState, after: RewardState) -> float:
-    if after.goal is None:
+def _lined_up(state: RewardState) -> float:
+    if state.goal is None:
         return 0.0
-    return after.goal_alignment * max(0.0, 1.0 - _goal_distance(after) / ALIGN_REACH)
+    return state.goal_alignment * max(0.0, 1.0 - _goal_distance(state) / ALIGN_REACH)
+
+
+def spot_alignment(before: RewardState, after: RewardState) -> float:
+    # Pays the gain in being lined up close to the spot, so waiting outside lined up earns nothing and never beats
+    # parking, which ends the episode.
+    return _lined_up(after) - _lined_up(before)
 
 
 def gentle_arrival(before: RewardState, after: RewardState) -> float:
-    return max(0.0, 1.0 - after.speed / ARRIVAL_SPEED) if inside_goal(after) else 0.0
+    # Pays the speed shed inside the goal (up to ARRIVAL_SPEED), never for staying, so lingering earns nothing.
+    if not inside_goal(after):
+        return 0.0
+    return max(0.0, min(before.speed, ARRIVAL_SPEED) - min(after.speed, ARRIVAL_SPEED)) / ARRIVAL_SPEED
 
 
 def collision_penalty(before: RewardState, after: RewardState) -> float:

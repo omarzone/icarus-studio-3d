@@ -25,8 +25,8 @@ as a vehicle first (drive-a-vehicle); the `parking_car` template is a ready exam
 4. **Senses all around.** A `distance_ray` with `distance_ray.spread` = 360 and `distance_ray.count` = 16 sees the
    cars beside and behind; `speed` tells it how fast it rolls; `target` gives the spot's distance, bearing and
    which way it faces.
-5. **Rewards.** `reach_goal` = 10, `progress_to_goal` = 1, `spot_alignment` = 0.1–0.3 (pays for lining up, only
-   near the spot), `gentle_arrival` = 0.1–0.3 (pays for slowing down inside), `collision_penalty` = -5 and
+5. **Rewards.** `reach_goal` = 10, `progress_to_goal` = 1, `spot_alignment` = 1–3 (pays the gain in lining up near
+   the spot, never for waiting), `gentle_arrival` = 1–3 (pays the speed shed inside), `collision_penalty` = -5 and
    `time_penalty` = -0.01. Keep the per-step terms small next to the bonus (reward-design).
 6. **Teach reversing.** Train nose in first. Then, in a new stage, turn on `spawn_point.random_heading` so some
    starts face away from the bay (every start is already shifted up to ±1.5 m and turned up to ±35°; this turns
