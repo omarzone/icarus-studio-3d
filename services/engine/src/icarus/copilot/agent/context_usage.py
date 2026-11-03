@@ -219,6 +219,7 @@ def measure_context(sources: MeterSources, conversation: Conversation, request: 
         model=_model(sources.settings, capability),
         window=window,
         window_known=sources.settings.context_tokens(capability) is not None,
+        window_source=sources.settings.context_source(capability),
         used=used,
         reserve=window - top,
         free=max(0, top - used),

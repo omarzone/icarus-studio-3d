@@ -219,7 +219,8 @@ function isConnection(value: unknown): value is ModelConnection {
     isOptional(value, "model", "string") &&
     has(value, "required", "boolean") &&
     has(value, "connected", "boolean") &&
-    isOptional(value, "detail", "string")
+    isOptional(value, "detail", "string") &&
+    isOptional(value, "context_tokens", "number")
   );
 }
 

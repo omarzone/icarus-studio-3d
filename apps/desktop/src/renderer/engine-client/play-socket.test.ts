@@ -45,6 +45,7 @@ function handlers() {
     onEvent: vi.fn<PlayHandlers["onEvent"]>(),
     onError: vi.fn<PlayHandlers["onError"]>(),
     onClosed: vi.fn<PlayHandlers["onClosed"]>(),
+    onProgress: vi.fn<NonNullable<PlayHandlers["onProgress"]>>(),
   };
 }
 
@@ -86,6 +87,15 @@ describe("openPlay", () => {
     );
     expect(calls.onEvent).toHaveBeenCalledWith(expect.objectContaining({ text: "You pushed Car with 10 N·s" }));
     expect(calls.onError).not.toHaveBeenCalled();
+  });
+
+  it("routes the opening progress and refuses a stage it does not know", async () => {
+    const { calls, socket } = await connected();
+    for (const stage of ["world", "brain", "starting", "dreaming"]) {
+      socket.receive(JSON.stringify({ message: { type: "progress", stage } }));
+    }
+    expect(calls.onProgress.mock.calls).toEqual([["world"], ["brain"], ["starting"]]);
+    expect(calls.onError).toHaveBeenCalledTimes(1);
   });
 
   it("reports an engine error message without closing", async () => {

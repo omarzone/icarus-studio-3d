@@ -1,5 +1,14 @@
+import type { ContextUsage } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { compactionNote, contextRequest, contextSegments, contextTone, usedPercent } from "./context-usage-views.ts";
+import {
+  compactionNote,
+  contextRequest,
+  contextSegments,
+  contextTone,
+  contextUsageView,
+  usedPercent,
+  windowNote,
+} from "./context-usage-views.ts";
 import type { ContextUsageView } from "./copilot-port.ts";
 
 const usage = (used: number, change: Partial<ContextUsageView["compaction"]> = {}): ContextUsageView => ({
@@ -22,6 +31,35 @@ const usage = (used: number, change: Partial<ContextUsageView["compaction"]> = {
     pruneAt: 38_080,
     ...change,
   },
+});
+
+describe("context window note", () => {
+  it("says whether the window was set in AI models, learned from a refusal or assumed", () => {
+    expect(windowNote({ ...usage(1_000), window: 1_000_000, windowSource: "set" })).toBe(
+      "1M token window, set in AI models",
+    );
+    expect(windowNote({ ...usage(1_000), windowSource: "learned" })).toContain("refused a longer request");
+    expect(windowNote({ ...usage(1_000), windowKnown: false, windowSource: "assumed" })).toContain(
+      "64k token window assumed",
+    );
+  });
+
+  it("maps the engine's source, and reads an older engine's known flag as set", () => {
+    const engine: ContextUsage = {
+      capability: "reasoning",
+      model: "reasoner",
+      window: 1_000_000,
+      window_known: true,
+      used: 0,
+      reserve: 150_000,
+      free: 850_000,
+      categories: [],
+      compaction: { history_tokens: 0, fold_at: 1, folding: false, folds_next_turn: false, prune_at: 1 },
+    };
+    expect(contextUsageView({ ...engine, window_source: "set" }).windowSource).toBe("set");
+    expect(contextUsageView(engine).windowSource).toBe("set");
+    expect(contextUsageView({ ...engine, window_known: false }).windowSource).toBe("assumed");
+  });
 });
 
 describe("context gauge", () => {

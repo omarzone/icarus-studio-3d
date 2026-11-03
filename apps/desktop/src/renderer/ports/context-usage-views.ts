@@ -46,6 +46,7 @@ export function contextUsageView(usage: ContextUsage): ContextUsageView {
     model: usage.model,
     window: usage.window,
     windowKnown: usage.window_known,
+    windowSource: usage.window_source ?? (usage.window_known ? "set" : "assumed"),
     used: usage.used,
     reserve: usage.reserve,
     free: usage.free,
@@ -81,6 +82,19 @@ export function usedPercent(view: ContextUsageView): number {
 export const tokens = (count: number) => compactNumber(Math.max(0, Math.round(count)));
 
 // When the conversation next folds into the rolling summary, in words.
+// Where the window comes from, so the person knows whether to set it in AI models.
+export function windowNote(view: ContextUsageView): string {
+  const size = `${tokens(view.window)} token window`;
+  switch (view.windowSource ?? (view.windowKnown ? "set" : "assumed")) {
+    case "set":
+      return `${size}, set in AI models`;
+    case "learned":
+      return `${size}; the service refused a longer request`;
+    case "assumed":
+      return `${size} assumed; the connection does not say. Set it in AI models`;
+  }
+}
+
 export function compactionNote(view: ContextUsageView): string {
   const { compaction } = view;
   if (compaction.foldsNextTurn) {

@@ -2,10 +2,7 @@ import mujoco
 import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
-from icarus.contracts.project import Project
-from icarus.contracts.properties import VectorValue
 from icarus.contracts.scene import Vector3
-from icarus.library.pieces import PIECES
 from icarus.sim.model_state import LiveWorld, build_world
 
 _QPOS_SIZE = {
@@ -90,27 +87,7 @@ def shuffle_props(world: LiveWorld, rng: np.random.Generator, reach: float) -> i
     return len(props)
 
 
-def _piece_object(project: Project, piece_id: str, position: Vector3) -> ObjectSpec:
-    piece = PIECES.get(piece_id)
-    if piece is None:
-        raise ToolRejected(f"There is no library piece {piece_id!r}")
-    taken = {obj.id for obj in project.world.objects} | {obj.id for body in project.bodies for obj in body.objects}
-    number = 1
-    object_id, name = piece.object.id, piece.object.name
-    while object_id in taken:
-        number += 1
-        object_id, name = f"{piece.object.id}_{number}", f"{piece.object.name} {number}"
-    spec = piece.object.model_copy(deep=True, update={"id": object_id, "name": name})
-    transform = next(component for component in spec.components if component.kind == "transform")
-    resting = transform.properties.get("position")
-    lift = resting.value[2] if isinstance(resting, VectorValue) else 0.0
-    # The position is the point the piece stands on; the piece's own height keeps it on that surface.
-    placed = (position[0], position[1], position[2] + lift)
-    transform.properties["position"] = VectorValue(type="vector", value=placed)
-    return spec
-
-
-def _copy_state(old: LiveWorld, new: LiveWorld) -> None:
+def copy_state(old: LiveWorld, new: LiveWorld) -> None:
     """Carry joint positions, velocities, controls and time over by name."""
     for joint in range(old.model.njnt):
         index = int(mujoco.mj_name2id(new.model, mujoco.mjtObj.mjOBJ_JOINT, old.model.joint(joint).name))
@@ -128,12 +105,11 @@ def _copy_state(old: LiveWorld, new: LiveWorld) -> None:
     new.start_height = old.start_height
 
 
-def add_piece(world: LiveWorld, piece_id: str, position: Vector3) -> tuple[LiveWorld, str]:
-    """A rebuilt world with the piece added and every existing body where it was."""
-    spec = _piece_object(world.project, piece_id, position)
+def add_piece(world: LiveWorld, spec: ObjectSpec) -> LiveWorld:
+    """A rebuilt world with the object added and every existing body where it was."""
     project = world.project.model_copy(deep=True)
     project.world.objects.append(spec)
     rebuilt = build_world(project)
-    _copy_state(world, rebuilt)
+    copy_state(world, rebuilt)
     mujoco.mj_forward(rebuilt.model, rebuilt.data)
-    return rebuilt, spec.name
+    return rebuilt

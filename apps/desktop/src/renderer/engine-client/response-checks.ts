@@ -5,6 +5,7 @@ import type {
   PlayFrame,
   PlayMessage,
   PlayMessageEnvelope,
+  PlayPiece,
   PlayReading,
   PlaySessionInfo,
   ProjectState,
@@ -241,7 +242,20 @@ export function isPlaySessionInfo(value: unknown): value is PlaySessionInfo {
     isListOf(value.tools, (tool): tool is { id: string; label: string } => {
       return has(tool, "id", "string") && has(tool, "label", "string");
     }) &&
-    isSceneDescription(value.scene)
+    isSceneDescription(value.scene) &&
+    (value.pieces === undefined || isListOf(value.pieces, isPlayPiece))
+  );
+}
+
+function isPlayPiece(value: unknown): value is PlayPiece {
+  return (
+    has(value, "id", "string") &&
+    has(value, "label", "string") &&
+    has(value, "friction", "number") &&
+    has(value, "bounciness", "number") &&
+    has(value, "color", "string") &&
+    isRecord(value) &&
+    (value.mass === null || typeof value.mass === "number")
   );
 }
 
@@ -281,6 +295,8 @@ function isPlayMessage(value: unknown): value is PlayMessage {
       return isPlayEvent(value.event);
     case "error":
       return has(value, "message", "string");
+    case "progress":
+      return value.stage === "world" || value.stage === "brain" || value.stage === "starting";
     default:
       return false;
   }

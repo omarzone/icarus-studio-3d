@@ -12,12 +12,13 @@ from icarus.contracts.play import (
     PlayEventMessage,
     PlayFrameMessage,
     PlayMessageEnvelope,
+    PlayProgressMessage,
     PlayReady,
     PlaySessionInfo,
 )
 from icarus.contracts.project import Project
 from icarus.copilot.language import Language
-from icarus.design.compiler import CompileError, compile_project
+from icarus.design.compiler import CompileError
 from icarus.projects.store import ProjectStore, UnknownProject
 from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
@@ -36,7 +37,7 @@ UNPLAYABLE = 4422
 Inbound = PlayCommand | PlayErrorMessage
 
 
-async def _send(websocket: WebSocket, message: PlayReply | PlayFrameMessage) -> None:
+async def _send(websocket: WebSocket, message: PlayReply | PlayFrameMessage | PlayProgressMessage) -> None:
     await websocket.send_text(PlayMessageEnvelope(message=message).model_dump_json())
 
 
@@ -57,39 +58,66 @@ class _Brain:
     step: int | None = None
 
 
-def _brain(runs: RunStore, project: Project, revision: int) -> _Brain:
+@dataclass(frozen=True)
+class _World:
+    project: Project
+    revision: int
+    # What the brain reads and drives: observation length and motor count of the compiled world.
+    senses: int
+    motors: int
+
+
+def _brain(runs: RunStore, world: _World) -> _Brain:
     """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions."""
+    project, revision = world.project, world.revision
     trained = runs.trained_checkpoint(project.id, revision, project)
     if trained is not None:
         status, path = trained
         label = f"Trained brain: {status.name} at {status.best_step:,} steps"
         try:
-            policy = CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+            policy = CheckpointPolicy.load(path, label, world.senses)
             return _Brain(policy, status.run_id, status.best_step)
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
     ended = runs.latest_ended(project.id, revision, project)
     label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
-    return _Brain(RandomPolicy(compile_project(project).model.nu, project.brain.seed, label))
+    return _Brain(RandomPolicy(world.motors, project.brain.seed, label))
 
 
-def _chosen_brain(runs: RunStore, project: Project, choice: _Choice) -> _Brain:
-    path, label = chosen_checkpoint(runs, project, choice.run_id, choice.step)
+def _chosen_brain(runs: RunStore, world: _World, choice: _Choice) -> _Brain:
+    path, label = chosen_checkpoint(runs, world.project, choice.run_id, choice.step)
     try:
-        policy = CheckpointPolicy.load(path, label, observation(build_world(project)).shape[0])
+        policy = CheckpointPolicy.load(path, label, world.senses)
     except Exception as error:  # noqa: BLE001 - a checkpoint that will not load is reported, not played
         raise BrainUnavailable(f"That brain could not be loaded: {error}") from error
     return _Brain(policy, choice.run_id, choice.step)
 
 
-def _open_session(
-    store: ProjectStore, runs: RunStore, project_id: str, language: Language, choice: _Choice | None
-) -> tuple[PlaySession, PlaySessionInfo]:
+def _load_world(store: ProjectStore, project_id: str) -> _World:
     state = store.state(project_id)
-    project, revision = state.project, state.revision.number
-    brain = _brain(runs, project, revision) if choice is None else _chosen_brain(runs, project, choice)
-    session = PlaySession(project, revision, brain.policy, project.brain.seed, language)
+    built = build_world(state.project)
+    return _World(state.project, state.revision.number, observation(built).shape[0], built.model.nu)
+
+
+def _load_brain(runs: RunStore, world: _World, choice: _Choice | None) -> _Brain:
+    return _brain(runs, world) if choice is None else _chosen_brain(runs, world, choice)
+
+
+def _start(world: _World, brain: _Brain, language: Language) -> tuple[PlaySession, PlaySessionInfo]:
+    session = PlaySession(world.project, world.revision, brain.policy, world.project.brain.seed, language)
     return session, session.info().model_copy(update={"run_id": brain.run_id, "step": brain.step})
+
+
+async def _open_session(websocket: WebSocket, project_id: str) -> tuple[PlaySession, PlaySessionInfo]:
+    """Compile the world, load the brain and start, telling the app which of the three it is waiting for."""
+    state = websocket.app.state
+    language = await asyncio.to_thread(state.copilot.language, project_id)
+    await _send(websocket, PlayProgressMessage(type="progress", stage="world"))
+    world = await asyncio.to_thread(_load_world, state.store, project_id)
+    await _send(websocket, PlayProgressMessage(type="progress", stage="brain"))
+    brain = await asyncio.to_thread(_load_brain, state.runs, world, _choice(websocket))
+    await _send(websocket, PlayProgressMessage(type="progress", stage="starting"))
+    return await asyncio.to_thread(_start, world, brain, language)
 
 
 def _choice(websocket: WebSocket) -> _Choice | None:
@@ -144,6 +172,8 @@ async def _run(websocket: WebSocket, session: PlaySession, receiver: asyncio.Tas
         last = now
         for event in events:
             await _send(websocket, PlayEventMessage(type="event", event=event))
+        for reply in await asyncio.to_thread(session.due):
+            await _send(websocket, reply)
         await _send(websocket, PlayFrameMessage(type="frame", frame=session.frame()))
         await asyncio.sleep(max(0.0, FRAME_PERIOD - (loop.time() - now)))
 
@@ -152,11 +182,7 @@ async def _run(websocket: WebSocket, session: PlaySession, receiver: asyncio.Tas
 async def play(websocket: WebSocket, project_id: str) -> None:
     await websocket.accept()
     try:
-        state = websocket.app.state
-        language = await asyncio.to_thread(state.copilot.language, project_id)
-        session, info = await asyncio.to_thread(
-            _open_session, state.store, state.runs, project_id, language, _choice(websocket)
-        )
+        session, info = await _open_session(websocket, project_id)
     except UnknownProject:
         await _send(websocket, _error(f"There is no project {project_id!r}"))
         await websocket.close(code=UNKNOWN_PROJECT)

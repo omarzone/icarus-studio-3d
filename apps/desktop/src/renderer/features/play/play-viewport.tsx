@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
-import { PLACED_PIECES, type PlacedPiece, type PlayAction, type PlaySession, playPort } from "../../ports/play-port.ts";
+import { type PlayAction, type PlayDrop, type PlaySession, playPort } from "../../ports/play-port.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
 import { buttonClass } from "../../ui/button-styles.ts";
-import { ErrorState, LoadingState } from "../../ui/states.tsx";
+import { ErrorState } from "../../ui/states.tsx";
+import { AddObjectOptions } from "./add-object-options.tsx";
+import { freshDrop, pieceOf, placingHint } from "./drop-choice.ts";
+import { PlayLoading } from "./play-loading.tsx";
 import { PlayToolBar } from "./play-tool-bar.tsx";
 import { instantAction, nextSpeed, pickAction } from "./play-tools.ts";
-import { usePlayCache, usePlayLive, usePlaySession } from "./use-play-session.ts";
+import { usePlayCache, usePlayLive, usePlayProgress, usePlaySession } from "./use-play-session.ts";
 
 const PLAIN_VIEWS = [
   { id: "play", label: "Play" },
@@ -27,10 +30,14 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
   const select = useEngineAction(port.selectTool);
   const speed = useEngineAction(port.setSpeed);
   const act = useEngineAction(port.send);
+  const progress = usePlayProgress(project);
   const [held, setHeld] = useState<string | null>(null);
-  // The piece Add object places once one is picked; until then the session's own hint and piece.
-  const [piece, setPiece] = useState<PlacedPiece | null>(null);
+  // What Add object brings, for this Play session only.
+  const [chosen, setChosen] = useState<PlayDrop | null>(null);
   const data = session.data;
+  const pieces = data?.pieces ?? [];
+  const drop = chosen ?? freshDrop(pieces.some((piece) => piece.id === "box") ? "box" : pieces[0]?.id);
+  const adding = data?.selectedTool === "add-object" && pieces.length > 0;
   const send = (action: PlayAction) => act.mutate({ project, action });
   const pause = data?.paused === undefined ? [] : [data.paused ? "Resume" : "Pause"];
   return (
@@ -57,7 +64,7 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
           if (!data) {
             return;
           }
-          const result = pickAction(data.selectedTool, pick, held, live.data ?? null, piece?.id);
+          const result = pickAction(data.selectedTool, pick, held, live.data ?? null, drop);
           setHeld(result.held);
           if (result.action) {
             send(result.action);
@@ -84,12 +91,11 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
             placing={
               held
                 ? `Click where to put ${held}`
-                : piece && data.placing
-                  ? `Click to place: ${piece.label}`
+                : adding
+                  ? placingHint(drop, pieceOf(drop, pieces)?.label ?? drop.piece)
                   : data.placing
             }
-            piece={data.selectedTool === "add-object" && !held ? (piece ?? PLACED_PIECES[0]) : null}
-            onPiece={setPiece}
+            options={adding ? <AddObjectOptions drop={drop} pieces={pieces} onChange={setChosen} /> : null}
             onSelect={(tool) => {
               setHeld(null);
               select.mutate({ project, tool }, { onSuccess: cache });
@@ -100,9 +106,7 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
             }}
           />
         ) : session.isPending ? (
-          <div className="absolute inset-0">
-            <LoadingState label="Connecting to the live world" />
-          </div>
+          <PlayLoading stage={progress} />
         ) : null
       }
     />
@@ -112,21 +116,17 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
 type OverlayProps = {
   session: PlaySession;
   placing?: string;
-  // The piece Add object places, while that tool is picked.
-  piece: PlacedPiece | null;
-  onPiece: (piece: PlacedPiece) => void;
+  options: ReactNode;
   onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"];
 };
 
-function PlayOverlays({ session, placing, piece, onPiece, onSelect }: OverlayProps) {
+function PlayOverlays({ session, placing, options, onSelect }: OverlayProps) {
   return (
     <>
       <PlayToolBar tools={session.tools} selected={session.selectedTool} onSelect={onSelect} />
+      {options}
       {placing ? (
-        <div className="absolute top-1/2 left-[61%] flex flex-col gap-1.5 rounded-button bg-overlay px-2.5 py-1.5 text-ui">
-          <span>{placing}</span>
-          {piece ? <PieceChoice piece={piece} onPiece={onPiece} /> : null}
-        </div>
+        <div className="absolute top-1/2 left-[61%] rounded-button bg-overlay px-2.5 py-1.5 text-ui">{placing}</div>
       ) : null}
       <div
         role="status"
@@ -136,24 +136,5 @@ function PlayOverlays({ session, placing, piece, onPiece, onSelect }: OverlayPro
         <span className="text-ui text-fg-secondary">{session.status.detail}</span>
       </div>
     </>
-  );
-}
-
-// Which library piece Add object places: boxes and spheres, movable or fixed.
-function PieceChoice({ piece, onPiece }: { piece: PlacedPiece; onPiece: (piece: PlacedPiece) => void }) {
-  return (
-    <fieldset className="flex gap-1" aria-label="Piece to place">
-      {PLACED_PIECES.map((item) => (
-        <Act
-          key={item.id}
-          cta={item.label}
-          aria-pressed={item.id === piece.id}
-          onClick={() => onPiece(item)}
-          className={buttonClass(item.id === piece.id ? "secondary" : "ghost", "h-6 px-2")}
-        >
-          {item.label}
-        </Act>
-      ))}
-    </fieldset>
   );
 }

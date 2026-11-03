@@ -181,6 +181,11 @@ export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsA
               listener.onError(message);
             }
           },
+          onProgress: (stage) => {
+            if (current()) {
+              listener.onProgress?.(stage);
+            }
+          },
           onClosed: (reason) => {
             if (!current()) {
               return;

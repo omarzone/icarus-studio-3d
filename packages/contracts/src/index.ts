@@ -10,6 +10,7 @@ import type {
 
 export type {
   AddComponent,
+  AddObjectCommand,
   AgentStep,
   ApiError,
   AssetValue,
@@ -84,6 +85,8 @@ export type {
   PlayFrame,
   PlayGeomPose,
   PlayMessageEnvelope,
+  PlayPiece,
+  PlayProgressMessage,
   PlayReading,
   PlaySessionInfo,
   PlayStatus,

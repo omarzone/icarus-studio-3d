@@ -15,6 +15,7 @@ from icarus.api.app import create_app
 from icarus.contracts.training import LogLine, MetricPoint, Rollout, StartRun, TrainingSnapshot
 from icarus.training.run_store import RunFolder
 from icarus.training.supervisor import Supervisor
+from tests.api.test_play_api import opened
 
 FAKE_WORKER = Path(__file__).parents[1] / "training" / "fake_worker.py"
 START = {"total_steps": 10_000, "copies": 1}
@@ -167,7 +168,7 @@ def test_play_drives_the_body_with_the_best_checkpoint_of_the_current_revision(t
     folder.write_status(folder.status().model_copy(update={"state": state, "best_step": 25_000}))
 
     with client.websocket_connect(f"/projects/{folder.project().id}/play") as socket:
-        ready = socket.receive_json()["message"]
+        ready = opened(socket)
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
@@ -214,7 +215,7 @@ def test_play_keeps_the_trained_brain_after_a_change_that_only_alters_the_look(t
         assert client.post(f"/projects/{project_id}/operations", json=batch).status_code == 200, batch
 
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        ready = socket.receive_json()["message"]
+        ready = opened(socket)
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
@@ -239,7 +240,7 @@ def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, 
         heavier = edit("car", "physics_body", "mass", {"type": "number", "value": 3})
         assert client.post(f"/projects/{project_id}/operations", json=heavier).status_code == 200
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        brain = socket.receive_json()["message"]["session"]["brain"]
+        brain = opened(socket)["session"]["brain"]
     if change == "never trained":
         assert brain == "Untrained brain: Run 1 did not beat random actions yet"
     else:

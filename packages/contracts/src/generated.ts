@@ -174,12 +174,24 @@ export interface AddComponent {
  * via the `definition` "AddObjectCommand".
  */
 export interface AddObjectCommand {
+  bounciness?: number | null;
+  color?: string | null;
+  count?: number;
+  density?: number | null;
+  friction?: number | null;
+  height?: number;
+  interval?: number;
+  mass?: number | null;
   piece: string;
+  placement?: "place" | "drop" | "throw";
   /**
    * @minItems 3
    * @maxItems 3
    */
   position: [number, number, number];
+  scale?: number;
+  speed?: number;
+  spread?: number;
   tool: "add_object";
 }
 /**
@@ -608,6 +620,7 @@ export interface ContextUsage {
   used: number;
   window: number;
   window_known: boolean;
+  window_source?: "assumed" | "set" | "learned";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1972,6 +1985,7 @@ export interface LightCommand {
 export interface ModelConnection {
   capability: "reasoning" | "vision" | "image" | "pose";
   connected: boolean;
+  context_tokens?: number | null;
   detail?: string | null;
   model: string | null;
   required: boolean;
@@ -1991,6 +2005,9 @@ export interface ModelSettings {
  */
 export interface ModelSettingsPatch {
   api_key?: string | null;
+  context_tokens?: {
+    [k: string]: number | null;
+  } | null;
   endpoint?: string | null;
   models?: {
     [k: string]: string;
@@ -2249,7 +2266,7 @@ export interface PlayFrameMessage {
  * via the `definition` "PlayMessageEnvelope".
  */
 export interface PlayMessageEnvelope {
-  message: PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage;
+  message: PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2265,6 +2282,7 @@ export interface PlayReady {
  */
 export interface PlaySessionInfo {
   brain: string;
+  pieces?: PlayPiece[];
   project_id: string;
   revision_number: number;
   run_id?: string | null;
@@ -2273,12 +2291,43 @@ export interface PlaySessionInfo {
   tools: PlayToolInfo[];
 }
 /**
+ * A library piece Add object can bring into the live world, with the values the picker starts from.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayPiece".
+ */
+export interface PlayPiece {
+  bounciness: number;
+  category: string;
+  color: string;
+  friction: number;
+  id: string;
+  label: string;
+  mass: number | null;
+  shape: string;
+  /**
+   * @minItems 3
+   * @maxItems 3
+   */
+  size: [number, number, number];
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "PlayToolInfo".
  */
 export interface PlayToolInfo {
   id: string;
   label: string;
+}
+/**
+ * What the engine is doing before the session is ready: compiling the world, loading the brain, starting.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayProgressMessage".
+ */
+export interface PlayProgressMessage {
+  stage: "world" | "brain" | "starting";
+  type: "progress";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

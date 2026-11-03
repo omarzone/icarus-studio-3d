@@ -52,7 +52,42 @@ export type PlaySession = {
   // Connectome brains show their live neuron activity (read from the brain port).
   activity?: boolean;
   events: readonly PlayEvent[];
+  // Library pieces Add object can bring in, with the values its options start from; only a live session lists them.
+  pieces?: readonly PlayPiece[];
 };
+
+// A library piece for Add object; `mass` is null for a piece fixed in place, which can only be placed.
+export type PlayPiece = {
+  id: string;
+  label: string;
+  category: string;
+  mass: number | null;
+  friction: number;
+  bounciness: number;
+  color: string;
+};
+
+// Resting on the clicked point, dropped from a height above it, or thrown from there at the agent.
+export type DropPlacement = "place" | "drop" | "throw";
+
+// What Add object brings and how; a null value keeps the piece's own. `count` above 1 drops copies over time.
+export type PlayDrop = {
+  piece: string;
+  placement: DropPlacement;
+  scale: number;
+  weight: { kind: "mass" | "density"; value: number } | null;
+  friction: number | null;
+  bounciness: number | null;
+  color: string | null;
+  height: number;
+  speed: number;
+  count: number;
+  interval: number;
+  spread: number;
+};
+
+// What the engine is doing before a session's first frame.
+export type PlayStage = "world" | "brain" | "starting";
 
 type Vec3 = [number, number, number];
 
@@ -74,7 +109,7 @@ export type PlayLive = {
 export type PlayAction =
   | { tool: "move"; object: string; to: Vec3 }
   | { tool: "push"; object: string; direction: Vec3 }
-  | { tool: "add-object"; piece: string; at: Vec3 }
+  | { tool: "add-object"; drop: PlayDrop; at: Vec3 }
   | { tool: "touch"; object: string }
   | { tool: "light" }
   | { tool: "wind" }
@@ -96,6 +131,8 @@ export type PlayListener = {
   onClosed: (reason: string) => void;
   // The engine refused a command; the session goes on.
   onError: (message: string) => void;
+  // A session is opening: compiling the world, loading the brain or starting.
+  onProgress?: (stage: PlayStage) => void;
 };
 
 export type PlayPort = {

@@ -2,7 +2,7 @@ import os
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import get_args
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -110,7 +110,12 @@ class ModelSettingsStore:
         else:
             detail = "Not tested yet"
         return ModelConnection(
-            capability=capability, model=model, required=capability in REQUIRED, connected=connected, detail=detail
+            capability=capability,
+            model=model,
+            required=capability in REQUIRED,
+            connected=connected,
+            detail=detail,
+            context_tokens=stored.context_tokens.get(capability),
         )
 
     def settings(self) -> ModelSettings:
@@ -138,6 +143,11 @@ class ModelSettingsStore:
                     stored.models[capability] = model.strip()
                 else:
                     stored.models.pop(capability, None)
+            for capability, tokens in (patch.context_tokens or {}).items():
+                if tokens is None:
+                    stored.context_tokens.pop(capability, None)
+                else:
+                    stored.context_tokens[capability] = tokens
             self._failures = {}
             self._learned_window = {}
             self._no_tools = set()
@@ -149,6 +159,13 @@ class ModelSettingsStore:
         known = [self._stored().context_tokens.get(capability), self._learned_window.get(capability)]
         windows = [window for window in known if window]
         return min(windows) if windows else None
+
+    def context_source(self, capability: Capability) -> Literal["assumed", "set", "learned"]:
+        """Where the window `context_tokens` gives comes from: the person's setting, a refused request, or neither."""
+        saved, learned = self._stored().context_tokens.get(capability), self._learned_window.get(capability)
+        if learned is not None and (saved is None or learned < saved):
+            return "learned"
+        return "set" if saved is not None else "assumed"
 
     def learn_context(self, capability: Capability, tokens: int) -> None:
         with self._lock:

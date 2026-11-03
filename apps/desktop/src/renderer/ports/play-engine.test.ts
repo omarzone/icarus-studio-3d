@@ -1,11 +1,26 @@
-import type { PlayCommand } from "@icarus/contracts";
+import type { PlayCommand, PlayPiece as PlayPieceInfo } from "@icarus/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { PlayHandlers, PlayOptions } from "../engine-client/play-socket.ts";
 import { isPlayFrame, isPlayMessageEnvelope } from "../engine-client/response-checks.ts";
 import { createEnginePlayPort } from "./play-engine.ts";
-import type { PlayLive, PlaySession } from "./play-port.ts";
-import { decisionBars, eventTime, playCommand, playSession, playTools, senseBars } from "./play-views.ts";
+import type { PlayDrop, PlayLive, PlaySession, PlayStage } from "./play-port.ts";
+import { decisionBars, dropCommand, eventTime, playCommand, playSession, playTools, senseBars } from "./play-views.ts";
 import play from "./testdata/play-frame.json";
+
+const DROP: PlayDrop = {
+  piece: "box",
+  placement: "drop",
+  scale: 1,
+  weight: null,
+  friction: null,
+  bounciness: null,
+  color: null,
+  height: 2,
+  speed: 6,
+  count: 1,
+  interval: 0.5,
+  spread: 1,
+};
 
 const { info, frame, event } = (() => {
   const messages = [play.ready, play.frame, play.event].map((envelope) => {
@@ -71,7 +86,7 @@ describe("play mappers", () => {
     expect(session).toMatchObject({
       views: ["Game view"],
       selectedTool: "add-object",
-      placing: "Click to place: Box",
+      pieces: [],
       speed: "1×",
       paused: false,
       status: { title: "Playing", detail: "12.0 m to the parking spot" },
@@ -83,7 +98,6 @@ describe("play mappers", () => {
     expect(session.decisions?.bars).toHaveLength(4);
     expect(playSession({ info, frame: { ...frame, speed: 0.25 }, events, selectedTool: "push" })).toMatchObject({
       speed: "0.25×",
-      placing: undefined,
     });
   });
 });
@@ -102,8 +116,8 @@ describe("play commands", () => {
         { tool: "push", object: "box_2", direction: [0, 1, 0], speed: 1.5 },
       ],
       [
-        { tool: "add-object", piece: "box", at: [3, 0, 0] },
-        { tool: "add_object", piece: "box", position: [3, 0, 0] },
+        { tool: "add-object", drop: { ...DROP, placement: "place" }, at: [3, 0, 0] },
+        { tool: "add_object", piece: "box", position: [3, 0, 0], placement: "place", scale: 1 },
       ],
       [
         { tool: "touch", object: "foot" },
@@ -122,6 +136,46 @@ describe("play commands", () => {
     for (const [action, command] of cases) {
       expect(playCommand(action, controls)).toEqual(command);
     }
+  });
+
+  it("sends only the drop choices that apply: height and speed by placement, the set weight, copies over one", () => {
+    expect(dropCommand(DROP, [1, 2, 0])).toEqual({
+      tool: "add_object",
+      piece: "box",
+      position: [1, 2, 0],
+      placement: "drop",
+      scale: 1,
+      height: 2,
+    });
+    const thrown: PlayDrop = {
+      ...DROP,
+      piece: "ball",
+      placement: "throw",
+      speed: 9,
+      weight: { kind: "density", value: 800 },
+      friction: 0.3,
+      bounciness: 0.7,
+      color: "#ff0000",
+      count: 5,
+      interval: 0.2,
+      spread: 1.5,
+    };
+    expect(dropCommand(thrown, [0, 0, 0])).toEqual({
+      tool: "add_object",
+      piece: "ball",
+      position: [0, 0, 0],
+      placement: "throw",
+      scale: 1,
+      height: 2,
+      speed: 9,
+      density: 800,
+      friction: 0.3,
+      bounciness: 0.7,
+      color: "#ff0000",
+      count: 5,
+      interval: 0.2,
+      spread: 1.5,
+    });
   });
 
   it("toggles back what Slow and Wind turned on, and cycles the light", () => {
@@ -144,10 +198,12 @@ describe("engine play port", () => {
     const port = createEnginePlayPort(open);
     const updates: [PlaySession, PlayLive][] = [];
     const closed: string[] = [];
+    const stages: PlayStage[] = [];
     const disconnect = port.connect("p", {
       onUpdate: (session, live) => updates.push([session, live]),
       onClosed: (reason) => closed.push(reason),
       onError: () => undefined,
+      onProgress: (stage) => stages.push(stage),
     });
     const engine = () => {
       if (!handlers) {
@@ -155,8 +211,39 @@ describe("engine play port", () => {
       }
       return handlers;
     };
-    return { port, sent, engine, updates, closed, close, disconnect };
+    return { port, sent, engine, updates, closed, close, disconnect, stages };
   }
+
+  it("passes on what the engine is doing while the session opens, and nothing after leaving", () => {
+    const { engine, stages, disconnect } = setup();
+    engine().onProgress?.("world");
+    engine().onProgress?.("brain");
+    expect(stages).toEqual(["world", "brain"]);
+    disconnect();
+    engine().onProgress?.("starting");
+    expect(stages).toEqual(["world", "brain"]);
+  });
+
+  it("lists the pieces Add object can bring, from the session the engine sent", async () => {
+    const { port, engine } = setup();
+    const piece: PlayPieceInfo = {
+      id: "ball",
+      label: "Ball",
+      category: "basics",
+      shape: "sphere",
+      size: [0.3, 0.3, 0.3],
+      mass: 0.5,
+      friction: 0.8,
+      bounciness: 0,
+      color: "#d9534f",
+    };
+    engine().onReady({ ...info, pieces: [piece] });
+    engine().onFrame(frame);
+    const session = await port.getSession("p");
+    expect(session.pieces).toEqual([
+      { id: "ball", label: "Ball", category: "basics", mass: 0.5, friction: 0.8, bounciness: 0, color: "#d9534f" },
+    ]);
+  });
 
   it("streams a session and the live poses once the engine is ready and framing", async () => {
     const { port, engine, updates } = setup();

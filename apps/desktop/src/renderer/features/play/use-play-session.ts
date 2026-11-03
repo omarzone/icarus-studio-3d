@@ -2,13 +2,21 @@ import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNotices } from "../../app/runtime/notices.ts";
 import { usePort } from "../../app/runtime/port.tsx";
-import { type PlayBrainPick, type PlayLive, type PlaySession, playPort } from "../../ports/play-port.ts";
+import {
+  type PlayBrainPick,
+  type PlayLive,
+  type PlaySession,
+  type PlayStage,
+  playPort,
+} from "../../ports/play-port.ts";
 
 export const playKey = (project: string) => ["play", project] as const;
 
 const playLiveKey = (project: string) => ["play", project, "live"] as const;
 
 const playBrainsKey = (project: string) => ["play", project, "brains"] as const;
+
+const playProgressKey = (project: string) => ["play", project, "progress"] as const;
 
 // Every trained brain of the project Play could use.
 export function usePlayBrains(project: string) {
@@ -48,6 +56,11 @@ export function usePlayLive(project: string) {
   return useQuery<PlayLive>({ queryKey: playLiveKey(project), queryFn: skipToken });
 }
 
+// What the engine is doing while a session opens, as it reported it; nothing until its first report.
+export function usePlayProgress(project: string) {
+  return useQuery<PlayStage>({ queryKey: playProgressKey(project), queryFn: skipToken }).data;
+}
+
 // Writes what a Play action returned into the cache so every Play panel shows it at once.
 export function usePlayCache(project: string) {
   const client = useQueryClient();
@@ -79,6 +92,7 @@ export function usePlayConnection(
         },
         onClosed: setClosed,
         onError: (message) => notify({ title: "That did not work", detail: message }),
+        onProgress: (stage) => client.setQueryData(playProgressKey(project), stage),
       },
       chosen,
     );

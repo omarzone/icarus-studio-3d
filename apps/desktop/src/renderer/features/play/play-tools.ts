@@ -1,4 +1,4 @@
-import { PLACED_PIECE, type PlayAction, type PlayLive, type PlayToolId } from "../../ports/play-port.ts";
+import type { PlayAction, PlayDrop, PlayLive, PlayToolId } from "../../ports/play-port.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
 
 const SPEEDS: readonly string[] = ["0.25×", "0.5×", "1×", "2×", "4×"];
@@ -38,13 +38,14 @@ function heightOf(object: string, live: PlayLive | null): number {
 
 export type PickResult = { action: PlayAction | null; held: string | null };
 
-// What a click in the Play view does with the selected tool. Move takes two clicks: the object, then where it goes.
+// What a click in the Play view does with the selected tool. Move takes two clicks: the object, then where it goes;
+// Add object brings the chosen `drop` at the clicked point.
 export function pickAction(
   tool: PlayToolId,
   pick: ScenePick,
   held: string | null,
   live: PlayLive | null,
-  piece: string = PLACED_PIECE.id,
+  drop: PlayDrop,
 ): PickResult {
   const [x, y, z] = pick.point;
   switch (tool) {
@@ -60,7 +61,7 @@ export function pickAction(
         ? { action: { tool, object: held, to: [x, y, Math.max(z, heightOf(held, live))] }, held: null }
         : { action: null, held: null };
     case "add-object":
-      return { action: { tool, piece, at: [x, y, z] }, held: null };
+      return { action: { tool, drop, at: [x, y, z] }, held: null };
     case "light":
     case "wind":
     case "slow":

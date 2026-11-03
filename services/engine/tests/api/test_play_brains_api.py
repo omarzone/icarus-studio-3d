@@ -9,6 +9,7 @@ from icarus.contracts.training import MetricPoint
 from icarus.library.components import default_component
 from icarus.sim.env import ProjectEnv
 from icarus.training.run_store import RunFolder
+from tests.api.test_play_api import opened
 from tests.api.test_runs_api import edit, make_app, stored_run
 
 
@@ -72,9 +73,9 @@ def test_play_opens_with_a_chosen_brain_from_an_earlier_revision_that_still_fits
     assert client.post(f"/projects/{project_id}/operations", json=heavier).status_code == 200
 
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        default = socket.receive_json()["message"]["session"]
+        default = opened(socket)["session"]
     with client.websocket_connect(f"/projects/{project_id}/play?run={folder.run_id}&step=25000") as socket:
-        chosen = socket.receive_json()["message"]["session"]
+        chosen = opened(socket)["session"]
 
     assert (default["brain"], default["run_id"]) == ("Untrained brain: random actions", None)
     assert (chosen["brain"], chosen["run_id"], chosen["step"]) == (
@@ -100,7 +101,7 @@ def test_a_chosen_brain_that_cannot_play_is_refused_with_the_reason(tmp_path, pr
         run_id = "run-20200101T000000Z-0000"
 
     with client.websocket_connect(f"/projects/{project_id}/play?run={run_id}&step={step}") as socket:
-        message = socket.receive_json()["message"]
+        message = opened(socket)
         with pytest.raises(WebSocketDisconnect) as closed:
             socket.receive_json()
     assert message["type"] == "error"
