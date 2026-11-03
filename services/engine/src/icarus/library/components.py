@@ -1,7 +1,7 @@
 from icarus.contracts.library import ComponentGroupName, ComponentKindSpec
 from icarus.contracts.objects import ComponentSpec
 from icarus.contracts.properties import PropertySchema
-from icarus.contracts.scene import GEOM_STYLES, GEOM_SURFACES
+from icarus.contracts.scene import GEOM_FINISHES, GEOM_STYLES, GEOM_SURFACES
 from icarus.library.properties import (
     choice,
     color,
@@ -29,8 +29,16 @@ SURFACE_HINT = (
 STYLE_HINT = (
     "How the part is drawn inside its shape: car_body (box: shell, cabin, windows, lights), wheel (cylinder: tire and "
     "rim), shell and joint (robot body and limbs), crate, wall, curb, post, cone, lamp_post, tree, ball, marking "
-    "(paint on the ground, usually a static part without a collider)"
+    "(paint on the ground, usually a static part without a collider), stairs, step, slab, pillar, planks, speed_bump, "
+    "wheel_stop, barrier, fence, sign, building, house, garage, table, bench, shelf, bush, rock, barrel, crate_stack, "
+    "puddle, parked_car (box: a car with its wheels)"
 )
+FINISH_HINT = (
+    "Pattern on the faces, drawing only: brick, concrete, asphalt (with lane lines), wood planks, tiles, "
+    "painted_metal, glass, grass, fabric, rubber; plain keeps the style's own look"
+)
+ADJUST_HINT = "Drawing only: 0.5 keeps the finish's own, lower for less, higher for more"
+EMISSIVE_HINT = "Drawing only: glow in the part's color; lights a style's windows and lamp heads, else the whole part"
 RAY_NAME_HINT = "How the brain and the senses name these rays, such as Front or Left; empty uses the part's name"
 RAY_HEADING_HINT = (
     "Where the rays point around the part: 0 is straight ahead, above zero turns them left and below zero right; "
@@ -89,6 +97,10 @@ _KINDS = [
             slider("transparency", "Transparency", 0, 1, 0.05, 0, hint="Drawing only: sensors still see it"),
             slider("reflectance", "Reflectance", 0, 1, 0.05, 0, hint="Mirrors the sky; drawing only"),
             switch("cast_shadow", "Cast shadow", True),
+            listing("finish", "Finish", GEOM_FINISHES, "plain", hint=FINISH_HINT),
+            slider("roughness", "Roughness", 0, 1, 0.05, 0.5, hint=ADJUST_HINT),
+            slider("metalness", "Metalness", 0, 1, 0.05, 0.5, hint=ADJUST_HINT),
+            slider("emissive", "Glow", 0, 3, 0.1, 0, hint=EMISSIVE_HINT),
         ],
         unique=True,
     ),

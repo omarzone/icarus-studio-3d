@@ -185,7 +185,7 @@ icarus-studio-3d/
 - **Joints:** hinge, slide, ball and fixed, with axis and limit ranges.
 - **Actuators:** position and torque motors with force, speed and gear ranges; hardware components map to these with real limits.
 - **Sensors:** joint state, IMU, contact, rangefinder rays, target direction and distance, simple depth camera.
-- **Surfaces and objects:** ground materials (friction, restitution), ramps, steps, obstacles, movable objects, goal zones, parking spots.
+- **Surfaces and objects:** ground materials (friction, restitution), ramps, steps, obstacles, movable objects, goal zones, parking spots. Ready-made pieces (`library/pieces.py`) come in categories (basics, street, buildings, furniture, nature, props); each is one collider with mass or fixed, a surface for friction and a style drawn inside it, and look-only finish, roughness, metalness and glow that never change what a brain learned.
 - **Reward terms:** tested, documented terms such as forward progress, reach target, stay upright, alignment, grasp, place, energy cost, collision penalty and motion tracking, each with weight ranges.
 - **Brain templates:** network sizes, observation normalization and training budgets known to train for each task family.
 - **Connectomes:** published wiring maps of real nervous systems with their neuron model and the body they belong to, plus the sensory and motor mapping onto that body.

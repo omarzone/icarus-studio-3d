@@ -125,6 +125,10 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
                 transparency=look.transparency if look else 0,
                 reflectance=look.reflectance if look else 0,
                 cast_shadow=look.cast_shadow if look else True,
+                finish=look.finish if look else None,
+                roughness=look.roughness if look else 0.5,
+                metalness=look.metalness if look else 0.5,
+                emissive=look.emissive if look else 0,
             )
         )
     lights = [_light(model, data, index) for index in range(model.nlight)]
