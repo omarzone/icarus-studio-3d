@@ -122,7 +122,7 @@ Strip above the viewport. Icon + label buttons in groups. The selected tool is w
 - **Brain**: Senses (rays overlay), Network (→ `STA-BRAIN-NETWORK`). Connectome brains: Neurons, Connections, Regions · Senses map, Motor map.
 - **Train**: Train, Pause (→ `MOD-STOP-RUN`), Stop · Timelapse · Autopilot (→ `MOD-AUTOPILOT`).
 - **Motion**: Video (→ `MOD-MOTION-VIDEO`), Detect pose (→ `MOD-MOTION-TRACKING`), Retarget · Trim · Export (→ `MOD-EXPORT-ANIMATION`).
-- **Play** (floating bar): core tools *Move, Push, Add object, Light, Wind, Slow, Reset* for every project, plus tools derived from the body's senses (*Shadow* for vision, *Scent* for smell, *Shuffle* for randomized worlds).
+- **Play** (floating bar): core tools *Move, Push, Add object, Light, Wind, Slow, Reset* for every project, plus tools derived from the body's senses (*Shadow* for vision, *Scent* for smell, *Shuffle* for randomized worlds). Picking *Add object* in a live session opens its options over the view: the library piece, Place, Drop or Throw (height, throw speed), size, weight in kg or kg/m³, friction, bounciness, color and copies (every so many seconds, spread around the click); a fixed piece can only be placed. While a session opens the view shows its steps as the engine reports them: preparing the world, loading the brain, starting.
 
 ### `PNL-LIBRARY` Library
 
@@ -2067,7 +2067,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `SCR-PROFILE`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Connect AI models per capability.
 - **Content:**
-  - Reasoning, Vision, Images, Pose with model and status; endpoint and key stored on this computer; Test connection, Save.
+  - Reasoning, Vision, Images, Pose with model, status and an optional context window in tokens (empty means assumed; 4,000 to 10,000,000, and Save waits while one is out of range); endpoint and key stored on this computer; Test connection, Save.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels
