@@ -34,7 +34,8 @@ _TERMS = [
         0,
         100,
         10,
-        "A bonus once the agent comes to rest inside the goal zone.",
+        "A bonus once the agent comes to rest inside the goal zone, by the zone's rules: wholly inside, aligned "
+        "and below its stop speed when the zone asks for them.",
         version=2,
     ),
     _term(
@@ -54,6 +55,27 @@ _TERMS = [
         5,
         0.2,
         "Reward for pointing toward the goal or the parking direction.",
+    ),
+    _term(
+        "spot_alignment",
+        "Line up with the spot",
+        "navigation",
+        0,
+        5,
+        0.2,
+        "Reward each step for facing the goal zone's heading the way its Entry rule asks (1 lined up, -1 the wrong "
+        "way round; either way counts both ends), scaled from nothing 5 m away to the full amount at the goal. "
+        "Teaches a vehicle to arrive straight in a rectangular parking spot instead of across it.",
+    ),
+    _term(
+        "gentle_arrival",
+        "Arrive gently",
+        "navigation",
+        0,
+        5,
+        0.2,
+        "Reward each step inside the goal zone for moving slowly: 1 at rest, falling to 0 at 1 m/s. Teaches a vehicle "
+        "to brake and settle in the spot instead of rolling through it.",
     ),
     _term(
         "collision_penalty",

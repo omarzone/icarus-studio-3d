@@ -4,7 +4,7 @@ import pytest
 
 from icarus.contracts.project import Project, ProjectState, Revision
 from icarus.design.checks import design_report
-from tests.sim.conftest import project_from
+from tests.sim.conftest import project_from, raw_parking
 
 
 def state_of(template: str, project_id: str = "0123456789ab", revision: int = 1) -> ProjectState:
@@ -41,4 +41,4 @@ def parking_state() -> ProjectState:
 
 @pytest.fixture
 def parking() -> Project:
-    return project_from("parking_car")
+    return raw_parking()

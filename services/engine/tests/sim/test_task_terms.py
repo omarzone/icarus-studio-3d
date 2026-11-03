@@ -8,7 +8,7 @@ from gymnasium.utils.env_checker import check_env
 from icarus.sim.env import ProjectEnv
 from icarus.sim.model_state import observation
 from icarus.sim.rewards import OBJECT_REST_BONUS
-from tests.sim.conftest import project_from, pusher, with_term
+from tests.sim.conftest import project_from, pusher, raw_parking, with_term
 
 
 def idle(env: ProjectEnv) -> np.ndarray:
@@ -24,7 +24,7 @@ def free_address(env: ProjectEnv, object_id: str) -> int:
 def test_a_car_pushing_a_crate_passes_check_env_and_observes_where_the_crate_is():
     env = ProjectEnv(pusher())
     check_env(env, skip_render_check=True)
-    plain = ProjectEnv(project_from("parking_car"))
+    plain = ProjectEnv(raw_parking())
     assert observation(env.world).shape[0] == observation(plain.world).shape[0] + 4
     env.reset(seed=0)
     _, _, _, _, info = env.step(idle(env))

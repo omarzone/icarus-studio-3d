@@ -9,6 +9,8 @@ export type SceneColors = {
   proposal: string;
   goal: string;
   spawn: string;
+  // A rectangular spot whose rules do not hold yet.
+  spot: string;
 };
 
 // Three.js reads #rrggbb only; tokens with an alpha channel (#rrggbbaa) keep their color and drop the alpha.
@@ -26,6 +28,7 @@ export function sceneColors(): SceneColors {
     proposal: token("--ic-proposal", "lightblue"),
     goal: token("--ic-ok", "green"),
     spawn: token("--ic-fg-secondary", "white"),
+    spot: token("--ic-danger-graphic", "red"),
   };
 }
 
@@ -34,6 +37,8 @@ export const PROPOSAL_OPACITY = 0.45;
 
 // Task zones painted on the ground (tokens: scene.zone is color.ok or fg.secondary at 0.3).
 export const ZONE_OPACITY = 0.3;
+// A spot's outline is paint on the ground, solid enough to read from above (tokens: scene.spot is 0.9).
+export const SPOT_OPACITY = 0.9;
 
 export const AMBIENT_INTENSITY = 0.5;
 

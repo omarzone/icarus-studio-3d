@@ -66,6 +66,10 @@ GeomFinish = Literal[
 ]
 GEOM_FINISHES: list[str] = list(get_args(GeomFinish))
 
+# Which vehicle light a part is; the engine says per frame which ones are on (SceneSignals.lights).
+LightRole = Literal["brake", "reverse", "head"]
+LIGHT_ROLES: list[str] = list(get_args(LightRole))
+
 
 class SceneBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -119,6 +123,8 @@ class SceneGeom(BaseModel):
     emissive: float = 0
     # A 3D model drawn instead of the primitive or style; None draws those.
     skin: SceneSkin | None = None
+    # The vehicle light this part is: it glows while the engine reports that light on.
+    light_role: LightRole | None = None
 
 
 class SceneLight(BaseModel):
@@ -147,6 +153,42 @@ class SceneZone(BaseModel):
     size: Vector3
     position: Vector3
     quaternion: Quaternion
+
+
+class GoalSignal(BaseModel):
+    """Which of the goal zone's success rules hold right now, as the engine measured them."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # The agent is inside: wholly when the zone asks for it, otherwise its center.
+    inside: bool
+    # Its heading matches the spot's within the zone's tolerance and entry rule (always true without one).
+    aligned: bool
+    # Slower than the zone's stop speed.
+    stopped: bool
+    # Every rule holds: the try succeeds.
+    met: bool
+
+
+class LightSignal(BaseModel):
+    """Which vehicle lights are on, from the vehicle's commands and motion."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    brake: bool
+    reverse: bool
+    head: bool
+
+
+class SceneSignals(BaseModel):
+    """Task and vehicle states the viewport shows on top of the poses; computed by the engine, never guessed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # None when the world has no goal zone or no agent.
+    goal: GoalSignal | None = None
+    # None when the body is not a vehicle.
+    lights: LightSignal | None = None
 
 
 class SceneSky(BaseModel):

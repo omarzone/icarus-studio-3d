@@ -19,6 +19,10 @@ AIR_TIME_MIN = 0.1
 AIR_TIME_MAX = 0.5
 # feet_air_time pays only while the body moves this fast on the ground, in m/s, so stamping in place earns nothing.
 AIR_TIME_SPEED = 0.1
+# spot_alignment pays nothing this far from the goal, in metres, rising to its full amount at the goal.
+ALIGN_REACH = 5.0
+# gentle_arrival pays nothing inside the goal at this speed or faster, in m/s.
+ARRIVAL_SPEED = 1.0
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,13 @@ class RewardState:
     at_limits: float = 0.0
     # The root height body_height aims for, in metres.
     target_height: float = 0.0
+    # Whether the goal zone's rules hold, measured by the simulation; None measures the agent's center against the
+    # goal radius, as every goal did before rectangles and footprints.
+    goal_inside: bool | None = None
+    goal_aligned: bool = True
+    # 1 when the heading matches the spot's entry rule, -1 when it faces the wrong way.
+    goal_alignment: float = 0.0
+    stop_speed: float = STOP_SPEED
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -65,11 +76,18 @@ def _goal_distance(state: RewardState) -> float:
 
 
 def inside_goal(state: RewardState) -> bool:
-    return state.goal is not None and _goal_distance(state) <= state.goal_radius
+    if state.goal is None:
+        return False
+    return state.goal_inside if state.goal_inside is not None else _goal_distance(state) <= state.goal_radius
+
+
+def stopped(state: RewardState) -> bool:
+    return state.speed <= state.stop_speed
 
 
 def parked(state: RewardState) -> bool:
-    return inside_goal(state) and state.speed <= STOP_SPEED
+    """Every rule of the goal zone holds: inside, aligned and stopped."""
+    return inside_goal(state) and state.goal_aligned and stopped(state)
 
 
 def reach_goal(before: RewardState, after: RewardState) -> float:
@@ -116,6 +134,16 @@ def heading_alignment(before: RewardState, after: RewardState) -> float:
     if norm < 1e-9:
         return 0.0
     return (after.forward[0] * to_goal[0] + after.forward[1] * to_goal[1]) / norm
+
+
+def spot_alignment(before: RewardState, after: RewardState) -> float:
+    if after.goal is None:
+        return 0.0
+    return after.goal_alignment * max(0.0, 1.0 - _goal_distance(after) / ALIGN_REACH)
+
+
+def gentle_arrival(before: RewardState, after: RewardState) -> float:
+    return max(0.0, 1.0 - after.speed / ARRIVAL_SPEED) if inside_goal(after) else 0.0
 
 
 def collision_penalty(before: RewardState, after: RewardState) -> float:
@@ -177,6 +205,8 @@ TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "reach_goal": reach_goal,
     "progress_to_goal": progress_to_goal,
     "heading_alignment": heading_alignment,
+    "spot_alignment": spot_alignment,
+    "gentle_arrival": gentle_arrival,
     "collision_penalty": collision_penalty,
     "time_penalty": time_penalty,
     "forward_progress": forward_progress,

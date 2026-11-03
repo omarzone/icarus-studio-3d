@@ -278,7 +278,7 @@ def lean_context(
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
-SENSOR_KINDS = ("distance_ray", "balance", "touch")
+SENSOR_KINDS = ("distance_ray", "balance", "touch", "speed", "target")
 
 
 def _choices(kind: str, prop: str) -> list[str]:
@@ -288,7 +288,12 @@ def _choices(kind: str, prop: str) -> list[str]:
 
 def _abilities(body: BodySpec) -> dict[str, Any]:
     kinds = [component.kind for obj in body.objects for component in obj.components]
-    return {"motors": kinds.count("motor"), "sensors": sorted({kind for kind in kinds if kind in SENSOR_KINDS})}
+    return {
+        "motors": kinds.count("motor"),
+        # A vehicle drives its wheels itself: the brain commands throttle, brake and steering.
+        "vehicle": "vehicle" in kinds,
+        "sensors": sorted({kind for kind in kinds if kind in SENSOR_KINDS}),
+    }
 
 
 def design_rules() -> dict[str, str]:
@@ -301,8 +306,9 @@ def design_rules() -> dict[str, str]:
         ),
         "movement": (
             f"Bodies move only through motors ({', '.join(_choices('motor', 'kind'))}) that drive their joints "
-            f"({', '.join(joints)}). The library has no thruster, propeller, wing or buoyancy: nothing can fly, "
-            "hover or swim, and a body without motors cannot learn to move."
+            f"({', '.join(joints)}), or as a vehicle: a vehicle component on the root drives its wheels with "
+            "throttle, brake and steering. The library has no thruster, propeller, wing or buoyancy: nothing can fly, "
+            "hover or swim, and a body without motors or a vehicle cannot learn to move."
         ),
     }
 

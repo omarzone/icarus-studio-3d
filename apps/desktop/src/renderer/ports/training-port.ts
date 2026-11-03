@@ -1,4 +1,4 @@
-import type { SceneDescription, SceneRay } from "@icarus/contracts";
+import type { SceneDescription, SceneRay, SceneSignals } from "@icarus/contracts";
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { MotionPlayer } from "../scene/motion-player.ts";
@@ -121,6 +121,8 @@ export type LiveCopies =
       copies: readonly CopyPoses[];
       // Each copy's distance sensors, in the order of `copies`.
       rays: readonly (readonly SceneRay[])[];
+      // Each copy's goal and light states, in the order of `copies`.
+      signals?: readonly (SceneSignals | null)[];
       // Plays the copies' recorded motion; absent when the run streams one pose per snapshot.
       player?: MotionPlayer;
       progress?: LiveProgress;
@@ -153,7 +155,8 @@ export type TrainingListener = {
 
 export type CheckpointMark = { step: number; label: string; result: string; best: boolean; replayable: boolean };
 
-export type ReplayFrame = { time: number; poses: CopyPoses };
+// `signals`: whether the goal's rules held and which vehicle lights were on at this frame.
+export type ReplayFrame = { time: number; poses: CopyPoses; signals?: SceneSignals | null };
 
 // A checkpoint's recorded episode, replayed exactly as MuJoCo computed it.
 export type Replay = {

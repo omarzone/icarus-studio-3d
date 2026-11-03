@@ -71,6 +71,7 @@ function liveOf(info: PlaySessionInfo | null, frame: PlayFrame | null): PlayLive
     scene: info?.scene ?? null,
     poses: new Map(frame?.geoms.map((geom) => [geom.name, { position: geom.position, quaternion: geom.quaternion }])),
     rays: frame?.rays ?? [],
+    signals: frame?.signals ?? null,
     paused: frame?.paused ?? false,
     speed: frame?.speed ?? 1,
   };

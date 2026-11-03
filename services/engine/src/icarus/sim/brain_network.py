@@ -25,7 +25,9 @@ def _labels(world: LiveWorld) -> list[tuple[str, str | None]]:
     """Labels in the order sim.model_state.observation concatenates its values."""
     labels: list[tuple[str, str | None]] = []
     for sensor in world.sensors:
-        names = [sensor.label] if sensor.dim == 1 else [f"{sensor.label} {_AXES[i % 3]}" for i in range(sensor.dim)]
+        names = list(sensor.parts) or (
+            [sensor.label] if sensor.dim == 1 else [f"{sensor.label} {_AXES[i % 3]}" for i in range(sensor.dim)]
+        )
         labels += [(name, sensor.id) for name in names]
     speeds = [(f"{_owner(world, position)} speed", None) for position, _ in world.joint_addresses]
     if world.family == "navigation":

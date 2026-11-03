@@ -15,6 +15,7 @@ from icarus.library.properties import (
     text,
     vector,
 )
+from icarus.library.vehicle_kinds import VEHICLE_KINDS
 
 # Furthest a randomized object may move per axis on each try, in metres.
 POSITION_RANGE_MAX = 50.0
@@ -42,7 +43,15 @@ EMISSIVE_HINT = "Drawing only: glow in the part's color; lights a style's window
 RAY_NAME_HINT = "How the brain and the senses name these rays, such as Front or Left; empty uses the part's name"
 RAY_HEADING_HINT = (
     "Where the rays point around the part: 0 is straight ahead, above zero turns them left and below zero right; "
-    "several rays fan 30° to each side of it"
+    "several rays fan out across Spread, centered on it"
+)
+RAY_SPREAD_HINT = "Angle the rays fan across; 360 lays them evenly all the way around, behind included"
+GOAL_SHAPE_HINT = (
+    "Circle uses Radius; Rectangle uses Length along the spot's heading (the object's rotation around Z) and Width"
+)
+ENTRY_HINT = (
+    "Which way the body must face once inside when Aligned within is under 180°: either way, nose in (facing the "
+    "spot's heading) or back in (facing the opposite way)"
 )
 SKIN_HINT = (
     "Id of a glTF or GLB model stored with the project (from an import or a model attached in the chat); "
@@ -203,6 +212,7 @@ _KINDS = [
             number("range", "Range", "m", 0.05, 50, 5),
             count("count", "Rays", 1, 32, 5),
             number("tilt", "Tilt", "°", -60, 30, 0, hint="Below zero the rays look down, to see low obstacles"),
+            number("spread", "Spread", "°", 0, 360, 60, hint=RAY_SPREAD_HINT),
         ],
         unique=False,
     ),
@@ -218,7 +228,23 @@ _KINDS = [
     _kind(
         "spawn_point", "Spawn point", "spawn", "World", [switch("random_heading", "Random heading", False)], unique=True
     ),
-    _kind("goal_zone", "Goal zone", "goal", "World", [number("radius", "Radius", "m", 0.1, 20, 1)], unique=True),
+    _kind(
+        "goal_zone",
+        "Goal zone",
+        "goal",
+        "World",
+        [
+            number("radius", "Radius", "m", 0.1, 20, 1),
+            choice("shape", "Shape", ["circle", "rectangle"], "circle", hint=GOAL_SHAPE_HINT),
+            number("length", "Length", "m", 0.2, 50, 5),
+            number("width", "Width", "m", 0.2, 50, 2.6),
+            switch("fully_inside", "Fully inside", False, hint="On: the whole body must be inside, not its center"),
+            number("align_within", "Aligned within", "°", 1, 180, 180, hint="180 leaves the heading free"),
+            choice("entry", "Entry", ["either", "nose_in", "back_in"], "either", hint=ENTRY_HINT),
+            number("stop_speed", "Stopped below", "m/s", 0.01, 5, 0.2, hint="The try succeeds only below this speed"),
+        ],
+        unique=True,
+    ),
     _kind(
         "zone",
         "Zone",
@@ -307,7 +333,7 @@ _KINDS = [
     ),
 ]
 
-COMPONENTS: dict[str, ComponentKindSpec] = {kind.kind: kind for kind in _KINDS}
+COMPONENTS: dict[str, ComponentKindSpec] = {kind.kind: kind for kind in [*_KINDS, *VEHICLE_KINDS]}
 
 
 def component_kind(kind: str) -> ComponentKindSpec:

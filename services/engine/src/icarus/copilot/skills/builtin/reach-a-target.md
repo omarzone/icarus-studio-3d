@@ -3,17 +3,17 @@ name: reach-a-target
 title: Teach any body to reach a target and stop there
 when: A body on wheels or legs must get to a place and stop in it, such as a goal, a spot, a target zone, parking or docking. Not for moving another object there.
 tools: [library, inspect_object, try, look, propose, train, read_run]
-version: 2
+version: 3
 ---
 Reaching a target is the navigation task: the body is paid for getting closer to a `goal_zone` and succeeds when it
 comes to rest inside it (inside the radius and slower than 0.2 m/s). Distance to the goal is measured on the
 ground, not in height. An episode lasts 30 s at 20 control steps per second, so 600 steps. Parking a car is one
 example; a rover docking at a station or a legged robot walking to a mark are the same task.
 
-1. **Pick the body.** For wheels, the `parking_car` template is one ready example: front wheels steered by
-   position motors, rear wheels driven by torque motors whose `joint.damping` = 80 caps the speed and brakes the
-   car when the drive is off. Any wheeled body needs that drag on its driven wheels: without it the body cannot
-   stop, and stopping is what success pays for. A two-wheeled rover steers by driving its wheels at different
+1. **Pick the body.** For wheels or tracks, make the body a `vehicle` with throttle, brake and steering
+   (drive-a-vehicle); the `parking_car` template is a ready example, and a spot to park in lined up or backing in
+   follows park-a-vehicle. A body on raw wheel motors needs drag on its driven wheels (`joint.damping` = 80) to
+   stop, since stopping is what success pays for. A two-wheeled rover steers by driving its wheels at different
    speeds and rests on a caster: a sphere with a `joint` ball, limits -180 to 180 and no motor. For legs, start
    from `walker_robot` or `humanoid`, switch the task to navigation, keep `stay_upright`, `fall_penalty` and
    `energy_cost`, and drop `forward_progress`, all in the same try. A legged body that falls ends the episode.

@@ -69,6 +69,8 @@ def parking_lot(params: ParkingLot, prefix: str) -> Site:
             center = ((bay + 0.5) * width, (y0 + y1) / 2)
             if number == goal_bay:
                 site.goal, site.goal_radius, site.goal_name = center, min(1.2, width / 2 - 0.1), f"Goal bay {number}"
+                # A row opening upward is entered driving down the page, and the other way round.
+                site.goal_spot = (depth, width, -90.0 if rows[row][2] == 1 else 90.0)
             if number in kept or rng.random() >= params.occupancy:
                 continue
             occupied.append(number)

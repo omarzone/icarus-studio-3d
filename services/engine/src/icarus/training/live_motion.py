@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from icarus.contracts.scene import SceneRay
+from icarus.contracts.scene import SceneRay, SceneSignals
 from icarus.contracts.training import CopyPoses, LiveViewMode, MotionSegment
 from icarus.sim.model_state import CONTROL_PERIOD
 from icarus.sim.poses import copy_poses
@@ -36,6 +36,7 @@ class _Frame:
     time: float
     rows: Rows
     rays: list[SceneRay]
+    signals: SceneSignals | None = None
 
 
 @dataclass
@@ -76,8 +77,8 @@ class LiveMotion:
             captured = info.get("live_frame")
             copy.steps_since += 1
             if captured is not None:
-                episode, time, rows, rays = captured
-                self._keep(copy, _Frame(episode, time, rows, rays), now)
+                episode, time, rows, rays, *signals = captured
+                self._keep(copy, _Frame(episode, time, rows, rays, signals[0] if signals else None), now)
             if done and copy.shown is not None:
                 copy.ended = True
             wanted.append(self._wants(copy, now))
@@ -134,7 +135,7 @@ class LiveMotion:
         frames = [copy.newest for copy in self._copies]
         if any(frame is None for frame in frames):
             return None
-        return [copy_poses(frame.rows, frame.rays) for frame in frames if frame is not None]
+        return [copy_poses(frame.rows, frame.rays, frame.signals) for frame in frames if frame is not None]
 
 
 def _segments(frames: list[_Frame]) -> list[MotionSegment]:
@@ -143,5 +144,5 @@ def _segments(frames: list[_Frame]) -> list[MotionSegment]:
         if not segments or segments[-1].episode != frame.episode:
             segments.append(MotionSegment(episode=frame.episode, times=[], frames=[]))
         segments[-1].times.append(frame.time)
-        segments[-1].frames.append(copy_poses(frame.rows, frame.rays))
+        segments[-1].frames.append(copy_poses(frame.rows, frame.rays, frame.signals))
     return segments

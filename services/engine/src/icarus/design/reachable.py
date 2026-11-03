@@ -14,6 +14,7 @@ from icarus.contracts.properties import AssetValue
 from icarus.design.compiler import CompiledModel, is_floor_patch
 from icarus.design.components import view
 from icarus.design.course import Extent, geom_extent
+from icarus.design.scene import object_extents
 from icarus.projects.document import all_objects
 
 Outcome = tuple[Literal["pass", "fail", "skip"], str]
@@ -179,6 +180,8 @@ def _goal_outcome(project: Project, compiled: CompiledModel, data: mujoco.MjData
     model = compiled.model
     site = int(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, f"{goal.id}:goal_zone"))
     center, radius = data.site_xpos[site][:2].copy(), float(model.site_size[site, 0])
+    if int(model.site_type[site]) == int(mujoco.mjtGeom.mjGEOM_BOX):
+        radius = min(radius, float(model.site_size[site, 1]))
     obstacles = _obstacles(project, compiled, data, goal.id, float(data.site_xpos[site][2]))
     margin = _half_width(project, compiled, data, radius)
     found = _survey(center, obstacles, margin, 1.0, True)
@@ -229,4 +232,32 @@ def reachable(project: Project, compiled: CompiledModel) -> Outcome:
     blocker = _start_outcome(project, compiled, data)
     if blocker is not None:
         return "fail", f"The body starts inside {blocker}: move the body or {blocker} so they do not overlap"
+    too_big = _too_big_for_goal(project, compiled)
+    if too_big is not None:
+        return "fail", too_big
     return _goal_outcome(project, compiled, data)
+
+
+def _too_big_for_goal(project: Project, compiled: CompiledModel) -> str | None:
+    """Why a goal that must hold the whole body never can, or None when it can."""
+    goal = _goal_object(project)
+    zone = view(goal, "goal_zone") if goal else None
+    if goal is None or zone is None or not zone.switch("fully_inside") or not project.bodies:
+        return None
+    extents = object_extents(compiled, [obj.id for obj in project.bodies[0].objects])
+    if extents is None:
+        return None
+    long, wide = sorted(extents[:2], reverse=True)
+    if zone.text("shape") == "rectangle":
+        room = sorted((zone.number("length"), zone.number("width")), reverse=True)
+        if long <= room[0] and wide <= room[1]:
+            return None
+        size = f"{room[0]:g} × {room[1]:g} m"
+    else:
+        if np.hypot(long, wide) <= 2 * zone.number("radius"):
+            return None
+        size = f"{2 * zone.number('radius'):g} m across"
+    return (
+        f"The body is {long:.2f} × {wide:.2f} m and must end wholly inside {goal.name}, which is only {size}: "
+        "make the goal bigger or turn Fully inside off"
+    )

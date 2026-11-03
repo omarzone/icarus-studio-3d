@@ -1,7 +1,7 @@
 import mujoco
 import numpy as np
 
-from icarus.contracts.scene import SceneRay
+from icarus.contracts.scene import SceneRay, SceneSignals
 from icarus.contracts.training import CopyPoses
 from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
@@ -43,9 +43,10 @@ def pose_rows(world: LiveWorld, geoms: list[int]) -> list[list[float]]:
     return np.round(rows, POSE_DIGITS).tolist()
 
 
-def copy_poses(rows: list[list[float]], rays: list[SceneRay]) -> CopyPoses:
+def copy_poses(rows: list[list[float]], rays: list[SceneRay], signals: SceneSignals | None = None) -> CopyPoses:
     return CopyPoses(
         positions=[(row[0], row[1], row[2]) for row in rows],
         quaternions=[(row[3], row[4], row[5], row[6]) for row in rows],
         rays=rays,
+        signals=signals,
     )

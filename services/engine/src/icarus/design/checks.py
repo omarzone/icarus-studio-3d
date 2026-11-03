@@ -9,6 +9,7 @@ from icarus.contracts.design import DesignCheck, DesignReport
 from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
 from icarus.design.reachable import reachable
+from icarus.design.vehicle import BRAKE_SUFFIX
 from icarus.projects.document import all_objects
 from icarus.projects.validation import validate_project
 
@@ -72,6 +73,8 @@ def _actuators(compiled: CompiledModel, names: dict[str, str]) -> Outcome:
     baseline = _drive(model, np.zeros(model.nu))
     stuck: list[str] = []
     for index in range(model.nu):
+        if model.actuator(index).name.endswith(BRAKE_SUFFIX):
+            continue
         low, high = model.actuator_ctrlrange[index]
         controls = np.zeros(model.nu)
         controls[index] = low + DRIVE_POINT * (high - low)

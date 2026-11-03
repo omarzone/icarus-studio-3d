@@ -47,10 +47,11 @@ def test_the_scene_shows_where_the_car_starts_and_where_it_must_park(car_scene):
     goal_position = (
         next(c for c in goal_object.components if c.kind == "transform").properties["position"].model_dump()["value"]
     )
-    radius = next(c for c in goal_object.components if c.kind == "goal_zone").properties["radius"].model_dump()["value"]
-    assert goal.shape == "sphere"
+    spot = next(c for c in goal_object.components if c.kind == "goal_zone").properties
+    assert goal.shape == "box"
     assert goal.position == pytest.approx(goal_position)
-    assert goal.size == pytest.approx((2 * radius, 2 * radius, 2 * radius))
+    length, width = spot["length"].model_dump()["value"], spot["width"].model_dump()["value"]
+    assert goal.size[:2] == pytest.approx((length, width))
     assert all(geom.name != goal.name for geom in car_scene.geoms)
 
 

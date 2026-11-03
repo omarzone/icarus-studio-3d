@@ -36,6 +36,9 @@ const styled = new Map<string, StylePart[] | null>();
 const materials = new Map<string, Material>();
 const grains = new Map<Grain, DataTexture>();
 
+// How brightly a lit vehicle lamp glows.
+const LAMP_GLOW = 2.5;
+
 const sizeKey = (geom: SceneGeom) => `${geom.shape}:${geom.size.map((value) => value.toFixed(4)).join(",")}`;
 
 function primitive(geom: SceneGeom): BufferGeometry {
@@ -142,6 +145,26 @@ function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Me
   return created;
 }
 
+// A vehicle light glows on its own, so it gets materials no other part shares; `lampGlow` switches them.
+function ownLampMaterials(drawn: Object3D, geom: SceneGeom) {
+  drawn.traverse((child) => {
+    if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) {
+      child.material = child.material.clone();
+      child.material.emissive = new Color(geom.color);
+      child.userData.lamp = true;
+    }
+  });
+}
+
+// Lights a vehicle lamp's meshes in their own color while the engine reports that light on.
+export function lampGlow(object: Object3D, on: boolean) {
+  object.traverse((child) => {
+    if (child.userData.lamp && child instanceof Mesh && child.material instanceof MeshStandardMaterial) {
+      child.material.emissiveIntensity = on ? LAMP_GLOW : 0;
+    }
+  });
+}
+
 // The Three object a geom is drawn with, placed at its pose: its styled pieces when it has a style that fits, else
 // its plain primitive in the material its surface gives; a skin's model fitted inside it once loaded (ADR 008).
 // Parts never decide physics; this only draws them.
@@ -151,6 +174,9 @@ export function geomObject(geom: SceneGeom): Object3D {
     ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, styledLook(piece.finish, geom), geom)))
     : mesh(primitive(geom), plainLook(geom), geom);
   const object = geom.skin ? skinnedObject(geom, geom.skin, drawn) : drawn;
+  if (geom.light_role) {
+    ownLampMaterials(drawn, geom);
+  }
   object.position.set(...toThreePosition(geom.position));
   object.quaternion.set(...toThreeQuaternion(geom.quaternion));
   object.name = geom.name;

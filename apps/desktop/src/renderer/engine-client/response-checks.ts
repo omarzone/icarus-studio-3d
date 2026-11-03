@@ -100,6 +100,9 @@ export function isTriple(value: unknown, length: number): boolean {
   return Array.isArray(value) && value.length === length && value.every((item) => typeof item === "number");
 }
 
+// Which vehicle light a part is; scenes from before vehicle lights send none.
+const LIGHT_ROLES: readonly unknown[] = [undefined, null, "brake", "reverse", "head"];
+
 function isGeom(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -112,7 +115,8 @@ function isGeom(value: unknown): boolean {
     isTriple(value.size, 3) &&
     isTriple(value.position, 3) &&
     isTriple(value.quaternion, 4) &&
-    isOptionalSkin(value.skin)
+    isOptionalSkin(value.skin) &&
+    LIGHT_ROLES.includes(value.light_role)
   );
 }
 
@@ -157,6 +161,17 @@ function isRay(value: unknown): boolean {
 // Distance sensors drawn in a view; older engines send none.
 export const isOptionalRays = (value: unknown): boolean =>
   value === undefined || (Array.isArray(value) && value.every(isRay));
+
+const isFlags = (value: unknown, flags: readonly string[]): boolean =>
+  isRecord(value) && flags.every((flag) => typeof value[flag] === "boolean");
+
+// Goal and vehicle light states of a frame; older engines send none.
+export const isOptionalSignals = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  (isRecord(value) &&
+    (value.goal === undefined || value.goal === null || isFlags(value.goal, ["inside", "aligned", "stopped", "met"])) &&
+    (value.lights === undefined || value.lights === null || isFlags(value.lights, ["brake", "reverse", "head"])));
 
 const ZONE_KINDS: readonly unknown[] = ["spawn_point", "goal_zone", "zone"];
 const ZONE_SHAPES: readonly unknown[] = ["sphere", "box"];
@@ -244,7 +259,8 @@ export function isPlayFrame(value: unknown): value is PlayFrame {
     value.geoms.every(isPose) &&
     isListOf(value.senses, isReading) &&
     isListOf(value.actions, isReading) &&
-    isOptionalRays(value.rays)
+    isOptionalRays(value.rays) &&
+    isOptionalSignals(value.signals)
   );
 }
 

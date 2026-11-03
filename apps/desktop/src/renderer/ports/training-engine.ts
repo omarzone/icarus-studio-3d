@@ -4,7 +4,14 @@ import { type OpenRunEvents, openRunEvents, type RunEventsConnection } from "../
 import { createMotionPlayer, type MotionPlayer } from "../scene/motion-player.ts";
 import { compactNumber } from "../ui/compact-number.ts";
 import { liveProgress } from "./live-progress.ts";
-import { checkpointMarks, replayFrames, snapshotCopies, snapshotMotion, snapshotRays } from "./replay-views.ts";
+import {
+  checkpointMarks,
+  replayFrames,
+  snapshotCopies,
+  snapshotMotion,
+  snapshotRays,
+  snapshotSignals,
+} from "./replay-views.ts";
 import { liveMetrics } from "./training-metrics.ts";
 import type { LiveCopies, RunList, TrainingPort } from "./training-port.ts";
 import {
@@ -279,6 +286,7 @@ export function createEngineTrainingPort(
                     step: `${compactNumber(snapshot.step)} steps`,
                     copies: snapshotCopies(snapshot),
                     rays: snapshotRays(snapshot),
+                    signals: snapshotSignals(snapshot),
                     player: played,
                     progress: progress(),
                   }),

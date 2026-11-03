@@ -17,6 +17,7 @@ import type { Poses, PoseTrack } from "./pose-track.ts";
 import { RayOverlay } from "./ray-overlay.tsx";
 import { groundColor } from "./scene-lighting.ts";
 import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
+import { type CopySignals, signalFeed } from "./scene-signals.ts";
 import { skyLook } from "./scene-sky.ts";
 import { Sky, Suns } from "./world-lighting.tsx";
 import { ZoneMarkers } from "./zone-markers.tsx";
@@ -47,6 +48,10 @@ type PlayProps = {
   // Recorded motion to play instead of easing between `poses` (and `rays`) as they arrive.
   player?: PosePlayer;
   onPick: (pick: ScenePick) => void;
+  // Goal and vehicle light states per copy (one for a single world) when no `player` brings its own; `copies`
+  // worlds stand side by side and name their geoms and zones "<copy>:<name>".
+  signals?: CopySignals;
+  copies?: number;
 };
 
 // Width in metres the camera starts out framing (every copy of a training run); the default frames one world.
@@ -264,6 +269,11 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
   const scale = Math.max(1, framing / CAMERA_FRAMES);
   const track = useRef<PoseTrack | null>(null);
   const look = useMemo(() => skyLook(description.sky, scale), [description.sky, scale]);
+  const playing = props.mode === "play";
+  const signals = props.mode === "play" ? props.signals : undefined;
+  const player = props.mode === "play" ? props.player : undefined;
+  const feed = useMemo(() => (playing ? signalFeed(signals, player) : undefined), [playing, signals, player]);
+  const copies = (props.mode === "play" ? props.copies : undefined) ?? 1;
   // One object per scale, so a re-render never puts the camera back where it started.
   const start = useMemo(
     () => ({
@@ -310,6 +320,8 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
           player={props.player}
           track={track}
           onPick={props.onPick}
+          feed={feed}
+          copies={copies}
         />
       ) : (
         <EditGeoms {...props} />
@@ -325,7 +337,9 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
       ) : null}
       <ZoneMarkers
         zones={description.zones ?? []}
-        colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal }}
+        colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal, spot: colors.spot }}
+        feed={feed}
+        copies={copies}
       />
       {props.ghosts && props.ghosts.length > 0 ? <GhostGeoms geoms={props.ghosts} color={colors.proposal} /> : null}
       {view ? (

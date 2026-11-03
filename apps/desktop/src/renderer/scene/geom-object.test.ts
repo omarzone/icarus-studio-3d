@@ -1,7 +1,7 @@
 import type { SceneGeom } from "@icarus/contracts";
 import { Group, Mesh, MeshStandardMaterial } from "three";
 import { describe, expect, it } from "vitest";
-import { geomObject } from "./geom-object.ts";
+import { geomObject, lampGlow } from "./geom-object.ts";
 
 const BASE: SceneGeom = {
   name: "car",
@@ -14,6 +14,20 @@ const BASE: SceneGeom = {
 };
 
 describe("geom objects", () => {
+  it("lights a vehicle lamp in its own color without lighting parts that look the same", () => {
+    const lamp = { ...BASE, name: "brake_light_left", color: "#d0302a", light_role: "brake" as const };
+    const twin = geomObject({ ...lamp, name: "trim", light_role: null });
+    const object = geomObject(lamp);
+    lampGlow(object, true);
+    const lit = object instanceof Mesh ? object.material : null;
+    const plain = twin instanceof Mesh ? twin.material : null;
+    expect(lit).toMatchObject({ emissiveIntensity: 2.5 });
+    expect(lit?.emissive.getHexString()).toBe("d0302a");
+    expect(plain).toMatchObject({ emissiveIntensity: 0 });
+    lampGlow(object, false);
+    expect(lit).toMatchObject({ emissiveIntensity: 0 });
+  });
+
   it("draws a geom without style or surface exactly as scenes always looked: one plain matte primitive", () => {
     const object = geomObject(BASE);
     expect(object).toBeInstanceOf(Mesh);

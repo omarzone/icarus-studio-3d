@@ -153,9 +153,10 @@ def test_the_third_identical_call_is_not_run_and_the_turn_wraps_up(copilot, proj
 def test_a_number_from_a_tool_result_backs_the_answer_and_an_invented_one_does_not(
     copilot, store, project_id, monkeypatch
 ):
-    explained = answer_call("Its motor pushes with up to 2000 N.")
-    model(monkeypatch, [{"tool_calls": [call("inspect_object", {"object": "steer_left"})]}, explained])
-    assert say(copilot, project_id, "how strong is the steering?").text == "Its motor pushes with up to 2000 N."
+    text = "Its steering turns the wheels with up to 2000 N·m."
+    explained = answer_call(text)
+    model(monkeypatch, [{"tool_calls": [call("inspect_object", {"object": "car"})]}, explained])
+    assert say(copilot, project_id, "how strong is the steering?").text == text
     bodies = model(monkeypatch, [explained])
     fresh = store.create("Fresh", "parking_car").project.id
     assert say(copilot, fresh, "how strong is the steering?").text == UNSUPPORTED_ANSWER

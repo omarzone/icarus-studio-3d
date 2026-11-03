@@ -989,6 +989,7 @@ export interface CopyPoses {
   positions: [number, number, number][];
   quaternions: [number, number, number, number][];
   rays?: SceneRay[];
+  signals?: SceneSignals | null;
 }
 /**
  * Where a distance sensor looks and what it reads, as MuJoCo computed it; the renderer only draws it.
@@ -1011,6 +1012,39 @@ export interface SceneRay {
   origin: [number, number, number];
   range: number;
   sensor: string;
+}
+/**
+ * Task and vehicle states the viewport shows on top of the poses; computed by the engine, never guessed.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SceneSignals".
+ */
+export interface SceneSignals {
+  goal?: GoalSignal | null;
+  lights?: LightSignal | null;
+}
+/**
+ * Which of the goal zone's success rules hold right now, as the engine measured them.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "GoalSignal".
+ */
+export interface GoalSignal {
+  aligned: boolean;
+  inside: boolean;
+  met: boolean;
+  stopped: boolean;
+}
+/**
+ * Which vehicle lights are on, from the vehicle's commands and motion.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LightSignal".
+ */
+export interface LightSignal {
+  brake: boolean;
+  head: boolean;
+  reverse: boolean;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1136,6 +1170,7 @@ export interface SceneGeom {
         | "rubber"
       )
     | null;
+  light_role?: ("brake" | "reverse" | "head") | null;
   metalness?: number;
   name: string;
   /**
@@ -2153,6 +2188,7 @@ export interface PlayFrame {
   rays?: SceneRay[];
   reward: number;
   senses: PlayReading[];
+  signals?: SceneSignals | null;
   speed: number;
   status: PlayStatus;
   step: number;
@@ -2342,6 +2378,7 @@ export interface RolloutFrame {
   positions: [number, number, number][];
   quaternions: [number, number, number, number][];
   reward: number;
+  signals?: SceneSignals | null;
   time: number;
 }
 /**

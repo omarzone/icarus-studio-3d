@@ -117,7 +117,13 @@ class _EpisodeRun:
         if self.record:
             poses = env.poses()
             self.frames.append(
-                RolloutFrame(time=time, positions=poses.positions, quaternions=poses.quaternions, reward=reward)
+                RolloutFrame(
+                    time=time,
+                    positions=poses.positions,
+                    quaternions=poses.quaternions,
+                    reward=reward,
+                    signals=poses.signals,
+                )
             )
 
     def result(self) -> _Episode:

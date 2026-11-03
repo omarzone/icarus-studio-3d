@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import cast, get_args
 
 from icarus.contracts.project import Project
-from icarus.contracts.scene import GeomFinish, GeomStyle, GeomSurface, SceneSkin
+from icarus.contracts.scene import GeomFinish, GeomStyle, GeomSurface, LightRole, SceneSkin
 from icarus.design.components import ComponentView, view
 from icarus.library.skin_objects import SKIN_ID
 from icarus.projects.document import all_objects
@@ -10,6 +10,7 @@ from icarus.projects.document import all_objects
 _STYLES = set(get_args(GeomStyle))
 _SURFACES = set(get_args(GeomSurface))
 _FINISHES = set(get_args(GeomFinish))
+_ROLES = set(get_args(LightRole))
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class GeomLook:
     metalness: float = 0.5
     emissive: float = 0
     skin: SceneSkin | None = None
+    light_role: LightRole | None = None
 
 
 def _skin(project: Project, skin: ComponentView | None) -> SceneSkin | None:
@@ -56,6 +58,8 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
         surface = ground.text("kind") if ground else material.text("surface")
         style = material.text("style")
         finish = material.text("finish")
+        light = view(obj, "vehicle_light")
+        role = light.text("role") if light else ""
         looks[obj.id] = GeomLook(
             style=cast(GeomStyle, style) if style in _STYLES and style != "plain" else None,
             surface=cast(GeomSurface, surface) if surface in _SURFACES else None,
@@ -67,5 +71,6 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
             metalness=material.number("metalness"),
             emissive=material.number("emissive"),
             skin=skin,
+            light_role=cast(LightRole, role) if role in _ROLES else None,
         )
     return looks

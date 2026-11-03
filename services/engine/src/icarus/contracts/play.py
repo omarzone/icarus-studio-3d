@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from icarus.contracts.scene import Quaternion, SceneDescription, SceneRay, Vector3
+from icarus.contracts.scene import Quaternion, SceneDescription, SceneRay, SceneSignals, Vector3
 
 # Commands stay inside a world the size of the editor's; anything beyond is a mistake, not physics.
 WORLD_LIMIT = 1000.0
@@ -126,6 +126,7 @@ class PlayFrame(_Model):
     episode_return: float
     status: PlayStatus
     rays: list[SceneRay] = []
+    signals: SceneSignals | None = None
 
 
 class PlayEvent(_Model):
