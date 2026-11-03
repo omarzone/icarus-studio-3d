@@ -16,8 +16,8 @@ class AgentLimits:
     per_tool: Mapping[str, int] = field(
         default_factory=lambda: {"look": 4, "try": 6, "propose": 3, "apply": 2, "train": 2}
     )
-    # The whole turn, model and tools.
-    wall_seconds: float = 150.0
+    # The whole turn, model and tools; cloning a reference plans, builds and compares over several model calls.
+    wall_seconds: float = 300.0
     # Sum of measured prompt tokens over the turn's calls: a cost bound.
     turn_prompt_tokens: int = 400_000
     parallel_tools: int = 4
