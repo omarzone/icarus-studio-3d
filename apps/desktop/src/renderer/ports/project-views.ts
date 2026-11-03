@@ -1,5 +1,11 @@
-import type { ProjectSummary as EngineSummary, Revision, RunStatus, TemplateInfo } from "@icarus/contracts";
-import type { ProjectFootprint, ProjectSummary } from "./projects-port.ts";
+import type {
+  ProjectSummary as EngineSummary,
+  ProjectWork as EngineWork,
+  Revision,
+  RunStatus,
+  TemplateInfo,
+} from "@icarus/contracts";
+import type { ProjectFootprint, ProjectSummary, ProjectWork } from "./projects-port.ts";
 import type { RevisionSummary } from "./revisions-port.ts";
 import type { TemplateSummary } from "./templates-port.ts";
 
@@ -63,6 +69,10 @@ export function withRuns(summary: ProjectSummary, runs: readonly RunStatus[]): P
 // does not copy them, and the engine does not measure their size.
 export function projectFootprint(runs: readonly RunStatus[]): ProjectFootprint {
   return { trainingRuns: runs.length, runsBytes: null, runsFollowProject: false };
+}
+
+export function workView(work: EngineWork): ProjectWork {
+  return { kind: work.kind, id: work.id, title: work.title, progress: work.progress ?? null };
 }
 
 export function revisionViews(revisions: readonly Revision[], current: number, now: Date): RevisionSummary[] {

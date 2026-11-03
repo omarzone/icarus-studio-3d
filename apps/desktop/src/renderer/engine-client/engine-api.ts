@@ -12,6 +12,8 @@ import type {
   MixIdeas,
   ModelSettings,
   ModelSettingsPatch,
+  ProjectActivity,
+  ProjectClosed,
   ProjectState,
   ProjectSummary,
   Revision,
@@ -28,6 +30,7 @@ import type {
 } from "@icarus/contracts";
 import { isContextUsage } from "./context-usage-checks.ts";
 import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
+import { isProjectActivity, isProjectClosed } from "./project-activity-checks.ts";
 import { request } from "./request.ts";
 import {
   isLibraryCatalog,
@@ -69,6 +72,9 @@ export const engineApi = {
     request("/projects", post({ name, template }), isProjectState),
   project: (id: string): Promise<ProjectState> => request(at(id), {}, isProjectState),
   deleteProject: (id: string): Promise<undefined> => request(at(id), { method: "DELETE" }, isNothing),
+  projectActivity: (id: string): Promise<ProjectActivity> => request(`${at(id)}/activity`, {}, isProjectActivity),
+  // Stops what the project still runs and waits for it to end; a run that ignores its stop is killed after 60 s.
+  closeProject: (id: string): Promise<ProjectClosed> => request(`${at(id)}/close`, post(), isProjectClosed),
   applyOperations: (id: string, operations: EditOperation[], summary: string): Promise<ProjectState> =>
     request(`${at(id)}/operations`, post({ operations, summary }), isProjectState),
   revisions: (id: string): Promise<Revision[]> => request(`${at(id)}/revisions`, {}, isRevisions),

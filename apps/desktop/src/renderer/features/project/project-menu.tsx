@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Copy, FolderOpen, History, type LucideIcon, Pencil, Settings, Trash2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import type { RouteId } from "../../app/navigation/catalog-id.ts";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { revisionsPort } from "../../ports/revisions-port.ts";
 import { Popover } from "../../ui/popover.tsx";
+import { CloseProjectDialog } from "./close-project-dialog.tsx";
 import { useOpenProject } from "./open-project.ts";
 
 type Item = { label: string; to: RouteId; icon: LucideIcon; meta?: string; hint?: string };
@@ -36,8 +37,14 @@ export function ProjectMenu() {
     { label: "Delete project…", to: "MOD-DELETE-PROJECT", icon: Trash2 },
   ];
   const [active, setActive] = useState(0);
-  // In the app the design's Back to Home closes the project; there is nothing to save first.
+  const [closing, setClosing] = useState(false);
+  // In the app the design's Back to Home closes the project: it stops what the project still runs first.
   const app = useRuntimeMode() === "app";
+  if (closing && project.data) {
+    return <CloseProjectDialog project={project.data} />;
+  }
+  const leaveClass =
+    "rounded-control px-2.5 py-2.25 text-left text-body leading-4 text-fg-secondary hover:bg-fill-hover hover:text-fg active:opacity-80";
   return (
     <>
       <div className="absolute inset-0 z-40 bg-scrim-modal" />
@@ -61,17 +68,29 @@ export function ProjectMenu() {
             </GoTo>
           ))}
           <span className="mx-1.5 my-1 h-px bg-line" />
-          <GoTo
-            to="SCR-HOME"
-            cta="Back to Home"
-            params={app ? {} : undefined}
-            role="menuitem"
-            title={app ? "Every change is already saved. Returns to Home." : undefined}
-            onFocus={() => setActive(items.length)}
-            className="rounded-control px-2.5 py-2.25 text-left text-body leading-4 text-fg-secondary hover:bg-fill-hover hover:text-fg active:opacity-80"
-          >
-            {app ? "Close project" : "Back to Home"}
-          </GoTo>
+          {app ? (
+            <Act
+              cta="Close project"
+              role="menuitem"
+              title="Stops what the project still runs, then returns to Home. Every change is already saved."
+              disabled={!project.data}
+              onClick={() => setClosing(true)}
+              onFocus={() => setActive(items.length)}
+              className={leaveClass}
+            >
+              Close project
+            </Act>
+          ) : (
+            <GoTo
+              to="SCR-HOME"
+              cta="Back to Home"
+              role="menuitem"
+              onFocus={() => setActive(items.length)}
+              className={leaveClass}
+            >
+              Back to Home
+            </GoTo>
+          )}
         </div>
       </Popover>
     </>
