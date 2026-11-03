@@ -7,13 +7,14 @@ import numpy as np
 from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import TaskFamily
-from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch
+from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch, is_ground
 from icarus.design.components import view
 from icarus.projects.document import all_objects
 from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
 from icarus.sim.rewards import RewardState
 from icarus.sim.sensor_info import GOAL_DISTANCE_SCALE, SensorInfo, sensor_infos
+from icarus.sim.spawn_plan import SpawnPlan, spawn_plan
 from icarus.sim.vehicle import VehicleDrive, drive_vehicle, vehicle_drive
 
 CONTROL_PERIOD = 0.05
@@ -23,6 +24,8 @@ FALL_HEIGHT = 0.4
 COVERAGE_CELL = 0.5
 # A vehicle has rolled over once its up axis leans past about 60° (its z component below this).
 VEHICLE_TIPPED = 0.5
+# Any agent has fallen once its root drops this far below the top of the lowest ground, off an edge.
+FALL_BELOW_GROUND = 1.0
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,11 @@ class LiveWorld:
     # The agent as a vehicle, when its root carries one, and its footprint corners for "fully inside" goals.
     vehicle: VehicleDrive | None = None
     footprint: np.ndarray = field(default_factory=lambda: np.zeros((4, 2)))
+    # Height of the top of the lowest ground, None in a world without one.
+    floor: float | None = None
+    # How tries start, and the next spawn point a cycling start uses (None until the first draw).
+    spawn: SpawnPlan | None = None
+    spawn_next: int | None = None
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -172,9 +180,7 @@ def build_world(project: Project) -> LiveWorld:
         index for index in range(model.ngeom) if model.body(int(model.geom_bodyid[index])).name in body_objects
     )
     ground = frozenset(
-        index
-        for index in range(model.ngeom)
-        if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or is_floor_patch(model, index)
+        index for index in range(model.ngeom) if is_ground(compiled, index) or is_floor_patch(model, index)
     )
     agent_mass = float(model.body_subtreemass[agent]) if agent is not None else 10.0
     layout = compiled.vehicles.get(agent_object) if agent_object else None
@@ -204,8 +210,10 @@ def build_world(project: Project) -> LiveWorld:
         cell_size=_cell_size(project),
         target_height=_target_height(project),
         vehicle=vehicle,
+        spawn=spawn_plan(project, model),
     )
     reset_world(world)
+    world.floor = _floor(model, data, frozenset(index for index in range(model.ngeom) if is_ground(compiled, index)))
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
     if agent is not None:
         bodies = {index for index in range(model.nbody) if model.body(index).name in body_objects}
@@ -213,6 +221,17 @@ def build_world(project: Project) -> LiveWorld:
         world.lifted_at = [None] * len(world.feet)
         world.footprint = footprint(model, data, agent, agent_geoms)
     return world
+
+
+def _floor(model: mujoco.MjModel, data: mujoco.MjData, ground: frozenset[int]) -> float | None:
+    """The top of the lowest ground geom: a plane's height, or a slab's highest point."""
+    tops = [
+        float(data.geom_xpos[index, 2])
+        if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE)
+        else float(data.geom_xpos[index, 2] + np.abs(data.geom_xmat[index].reshape(3, 3)[2]) @ model.geom_size[index])
+        for index in ground
+    ]
+    return min(tops) if tops else None
 
 
 def reset_world(world: LiveWorld) -> None:
@@ -372,13 +391,16 @@ def reward_state(world: LiveWorld) -> RewardState:
         position, rotation = data.xpos[world.agent], data.xmat[world.agent].reshape(3, 3)
     up = float(rotation[2, 2])
     dropped = world.agent is not None and float(position[2]) < FALL_HEIGHT * world.start_height
+    off_ground = (
+        world.agent is not None and world.floor is not None and float(position[2]) < world.floor - FALL_BELOW_GROUND
+    )
     match world.family:
         case "locomotion":
-            fallen = dropped
+            fallen = dropped or off_ground
         case "navigation":
-            fallen = up < (VEHICLE_TIPPED if world.vehicle else 0) or (world.legged and dropped)
+            fallen = up < (VEHICLE_TIPPED if world.vehicle else 0) or (world.legged and dropped) or off_ground
         case "none":
-            fallen = False
+            fallen = off_ground
     goal = data.site_xpos[world.goal.site] if world.goal else None
     carried = data.xpos[world.carried] if world.carried is not None else None
     controls = normalized_controls(world)

@@ -28,7 +28,7 @@ export type Finish =
   | "roof";
 
 // A surface's own grain, or a pattern only a part's finish draws.
-export type Grain = NonNullable<SceneGeom["surface"]> | "brick" | "tiles" | "road" | "fabric";
+export type Grain = NonNullable<SceneGeom["surface"]> | "brick" | "tiles" | "road" | "fabric" | "blocks";
 
 // Physically based settings for a Three.js standard or physical material; `color` replaces the part's color, and
 // `shade` darkens it. `grain` lays a procedural texture over the color.
@@ -116,8 +116,8 @@ export function finishLook(finish: Finish): MaterialLook {
 }
 
 // A plain part made of `surface`; without one, the look every scene had before surfaces were exported.
-export function surfaceLook(surface: SceneGeom["surface"], shape: SceneGeom["shape"]): MaterialLook {
-  const grain = shape === "plane" && surface ? surface : undefined;
+export function surfaceLook(surface: SceneGeom["surface"], ground: boolean): MaterialLook {
+  const grain = ground && surface ? surface : undefined;
   switch (surface) {
     case undefined:
     case null:

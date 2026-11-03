@@ -1151,6 +1151,7 @@ export interface SceneBody {
  * via the `definition` "SceneGeom".
  */
 export interface SceneGeom {
+  bevel?: number;
   body: string;
   cast_shadow?: boolean;
   color: string;
@@ -1168,8 +1169,10 @@ export interface SceneGeom {
         | "grass"
         | "fabric"
         | "rubber"
+        | "blocks"
       )
     | null;
+  ground?: boolean;
   light_role?: ("brake" | "reverse" | "head") | null;
   metalness?: number;
   name: string;

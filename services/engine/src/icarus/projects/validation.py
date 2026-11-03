@@ -9,6 +9,8 @@ from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, t
 from icarus.library.skin_objects import SKIN_ID
 from icarus.projects.document import all_objects, containers
 
+WORLD_ONLY = frozenset({"sky", "ground"})
+
 
 def _reference(component: ComponentSpec, prop: str) -> str:
     value = component.properties.get(prop)
@@ -146,18 +148,23 @@ def _randomize_issues(project: Project) -> list[ValidationIssue]:
     ]
 
 
-def _sky_issues(project: Project) -> list[ValidationIssue]:
-    """A world has one sky at most, and a body never carries one."""
-    issues = [
+def _world_only_issues(project: Project) -> list[ValidationIssue]:
+    """A sky and a ground slab belong to the world, never to a body."""
+    return [
         ValidationIssue(
             path=f"objects.{obj.id}.components.{component.id}",
-            message=f"{obj.name} is part of a body; a sky belongs to the world",
+            message=f"{obj.name} is part of a body; a {COMPONENTS[component.kind].label.lower()} belongs to the world",
         )
         for body in project.bodies
         for obj in body.objects
         for component in obj.components
-        if component.kind == "sky"
+        if component.kind in WORLD_ONLY
     ]
+
+
+def _sky_issues(project: Project) -> list[ValidationIssue]:
+    """A world has one sky at most."""
+    issues = _world_only_issues(project)
     skies = [obj for obj in project.world.objects if any(item.kind == "sky" for item in obj.components)]
     if len(skies) > 1:
         issues.append(ValidationIssue(path="objects", message="A world can have only one sky"))
@@ -184,7 +191,4 @@ def validate_project(project: Project) -> list[ValidationIssue]:
         issues += _hierarchy_issues(objects)
     for obj in all_objects(project):
         issues += _component_issues(obj, ids)
-    spawns = [obj for obj in project.world.objects if any(item.kind == "spawn_point" for item in obj.components)]
-    if len(spawns) > 1:
-        issues.append(ValidationIssue(path="objects", message="A world can have only one spawn point"))
     return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)

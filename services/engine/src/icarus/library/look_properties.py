@@ -6,7 +6,18 @@ LOOK_COMPONENTS = frozenset({"sky", "light", "skin"})
 # Properties that only change the drawing or a label; the material's surface sets friction, so it stays.
 LOOK_PROPERTIES = {
     "material": frozenset(
-        {"color", "style", "transparency", "reflectance", "cast_shadow", "finish", "roughness", "metalness", "emissive"}
+        {
+            "color",
+            "style",
+            "transparency",
+            "reflectance",
+            "cast_shadow",
+            "finish",
+            "roughness",
+            "metalness",
+            "emissive",
+            "bevel",
+        }
     ),
     "distance_ray": frozenset({"name"}),
 }

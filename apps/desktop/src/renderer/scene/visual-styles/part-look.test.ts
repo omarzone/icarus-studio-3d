@@ -6,7 +6,7 @@ const BOX = { shape: "box" } as const;
 
 describe("part looks", () => {
   it("keeps every look scenes had before finishes when the part sets none", () => {
-    expect(plainLook({ ...BOX, surface: "wood" })).toEqual(surfaceLook("wood", "box"));
+    expect(plainLook({ ...BOX, surface: "wood" })).toEqual(surfaceLook("wood", false));
     expect(styledLook("paint", BOX)).toEqual(finishLook("paint"));
     expect(styledLook("window", BOX).emissive).toBeUndefined();
   });

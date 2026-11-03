@@ -19,8 +19,11 @@ import {
   SRGBColorSpace,
   type Texture,
 } from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
-import { geomShape } from "./geom-shape.ts";
+import { bevelRadius, geomShape } from "./geom-shape.ts";
+import { drawnSize, isGround } from "./ground-geom.ts";
+import { metricUVs } from "./metric-uv.ts";
 import { partFinish } from "./part-finish.ts";
 import { floorDepth } from "./scene-materials.ts";
 import { skinnedObject } from "./skin-models.ts";
@@ -41,17 +44,27 @@ const LAMP_GLOW = 2.5;
 
 const sizeKey = (geom: SceneGeom) => `${geom.shape}:${geom.size.map((value) => value.toFixed(4)).join(",")}`;
 
-function primitive(geom: SceneGeom): BufferGeometry {
-  const key = sizeKey(geom);
+// Rounding segments of a bevelled box's edges.
+const BEVEL_SEGMENTS = 3;
+
+// How a primitive is built: with its rounded edges (drawing only; outlines show the sharp collider) and with
+// texture coordinates in metres for patterns that keep their real size.
+type Build = { rounded: boolean; metric: boolean };
+
+function primitive(geom: SceneGeom, build: Build = { rounded: false, metric: false }): BufferGeometry {
+  const radius = build.rounded ? bevelRadius(geom) : 0;
+  const key = `${sizeKey(geom)}:${radius.toFixed(4)}:${build.metric}`;
   const cached = geometries.get(key);
   if (cached) {
     return cached;
   }
   const shape = geomShape(geom);
-  const created = (() => {
+  const made = (() => {
     switch (shape.kind) {
       case "box":
-        return new BoxGeometry(...shape.args);
+        return radius > 0
+          ? new RoundedBoxGeometry(...shape.args, BEVEL_SEGMENTS, radius)
+          : new BoxGeometry(...shape.args);
       case "sphere":
         return new SphereGeometry(...shape.args);
       case "cylinder":
@@ -60,6 +73,7 @@ function primitive(geom: SceneGeom): BufferGeometry {
         return new CapsuleGeometry(...shape.args);
     }
   })();
+  const created = build.metric && shape.kind === "box" ? metricUVs(made, shape.args) : made;
   geometries.set(key, created);
   return created;
 }
@@ -91,10 +105,16 @@ function grainTexture(grain: Grain): DataTexture {
   return texture;
 }
 
+// A pattern laid in metres on every face (see metricUVs) rather than stretched over each face.
+const metricGrain = (grain: Grain | undefined) => grain === "blocks";
+
 // How often the grain repeats so one tile covers its metres on the geom's widest faces (x and MuJoCo y).
 function repeats(grain: Grain, geom: SceneGeom): [number, number] {
   const metres = grainMetres(grain);
-  const [x, y] = geom.size;
+  if (metricGrain(grain)) {
+    return [1 / metres, 1 / metres];
+  }
+  const [x, y] = drawnSize(geom);
   const round = (value: number) => Math.round(Math.max(1, value / metres) * 100) / 100;
   return [round(x), round(y)];
 }
@@ -102,7 +122,7 @@ function repeats(grain: Grain, geom: SceneGeom): [number, number] {
 function material(look: MaterialLook, color: string, geom: SceneGeom): Material {
   const repeat = look.grain ? repeats(look.grain, geom) : null;
   const finish = partFinish(geom);
-  const key = JSON.stringify([look, color, repeat, geom.shape === "plane", finish]);
+  const key = JSON.stringify([look, color, repeat, isGround(geom), finish]);
   const cached = materials.get(key);
   if (cached) {
     return cached;
@@ -127,7 +147,7 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
     map,
     emissive: look.emissive ? new Color(look.glow ?? tint) : new Color(0),
     emissiveIntensity: look.emissive ?? 0,
-    ...floorDepth(geom.shape),
+    ...floorDepth(geom),
     ...(look.decal ? { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } : {}),
   };
   const created =
@@ -140,7 +160,7 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
 
 function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Mesh {
   const created = new Mesh(geometry, material(look, geom.color, geom));
-  created.castShadow = geom.shape !== "plane" && !look.decal && geom.cast_shadow !== false;
+  created.castShadow = !isGround(geom) && !look.decal && geom.cast_shadow !== false;
   created.receiveShadow = true;
   return created;
 }
@@ -170,9 +190,10 @@ export function lampGlow(object: Object3D, on: boolean) {
 // Parts never decide physics; this only draws them.
 export function geomObject(geom: SceneGeom): Object3D {
   const pieces = parts(geom);
+  const look = plainLook(geom);
   const drawn = pieces
     ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, styledLook(piece.finish, geom), geom)))
-    : mesh(primitive(geom), plainLook(geom), geom);
+    : mesh(primitive(geom, { rounded: true, metric: metricGrain(look.grain) }), look, geom);
   const object = geom.skin ? skinnedObject(geom, geom.skin, drawn) : drawn;
   if (geom.light_role) {
     ownLampMaterials(drawn, geom);

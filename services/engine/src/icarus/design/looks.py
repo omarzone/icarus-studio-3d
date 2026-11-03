@@ -28,6 +28,7 @@ class GeomLook:
     emissive: float = 0
     skin: SceneSkin | None = None
     light_role: LightRole | None = None
+    bevel: float = 0
 
 
 def _skin(project: Project, skin: ComponentView | None) -> SceneSkin | None:
@@ -72,5 +73,6 @@ def geom_looks(project: Project) -> dict[str, GeomLook]:
             emissive=material.number("emissive"),
             skin=skin,
             light_role=cast(LightRole, role) if role in _ROLES else None,
+            bevel=material.number("bevel"),
         )
     return looks

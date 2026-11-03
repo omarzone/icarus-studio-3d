@@ -48,6 +48,8 @@ class CompiledModel:
     vehicles: dict[str, VehicleLayout] = field(default_factory=dict)
     # Speed and target sensor name → the reading the brain sees as 1.
     sensor_scales: dict[str, float] = field(default_factory=dict)
+    # Object ids whose geom is a ground slab (a ground component).
+    grounds: frozenset[str] = frozenset()
 
 
 def _fmt(values) -> str:
@@ -96,7 +98,32 @@ def _friction(obj: ObjectSpec) -> float | None:
     return SURFACE_FRICTION[material.text("surface")] if material else None
 
 
+def _add_ground(body: ET.Element, obj: ObjectSpec, ground: ComponentView) -> None:
+    """A static slab whose top is the object's height, so the drawn floor and the one bodies stand on agree."""
+    if _is_dynamic(obj):
+        raise CompileError(f"{obj.name} is the ground, and the ground can only be static")
+    width, depth, thickness = ground.vector("size")
+    attributes = {
+        "name": obj.id,
+        "type": "box",
+        "size": _fmt([width / 2, depth / 2, thickness / 2]),
+        "pos": _fmt([0, 0, -thickness / 2]),
+        "mass": "0",
+    }
+    material = view(obj, "material")
+    if material:
+        attributes["rgba"] = _rgba(material.text("color"))
+    friction = _friction(obj)
+    if friction is not None:
+        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+    ET.SubElement(body, "geom", attributes)
+
+
 def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, float]) -> None:
+    ground = view(obj, "ground")
+    if ground is not None:
+        _add_ground(body, obj, ground)
+        return
     mesh = view(obj, "mesh")
     if mesh is None:
         return
@@ -208,6 +235,12 @@ def is_floor_patch(model: mujoco.MjModel, geom: int) -> bool:
     return model.geom(geom).name.endswith(PATCH_SUFFIX)
 
 
+def is_ground(compiled: "CompiledModel", geom: int) -> bool:
+    """The world's floor: an endless plane or a ground slab."""
+    model = compiled.model
+    return int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or model.geom(geom).name in compiled.grounds
+
+
 def _add_body(
     parent: ET.Element,
     obj: ObjectSpec,
@@ -292,7 +325,8 @@ def compile_project(project: Project) -> CompiledModel:
         ray_labels=ray_labels(project),
         vehicles=vehicle_layouts(project),
         sensor_scales=sensor_scales(project),
+        grounds=frozenset(obj.id for obj in project.world.objects if view(obj, "ground")),
     )
 
 
-__all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "to_mjcf"]
+__all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "is_ground", "to_mjcf"]

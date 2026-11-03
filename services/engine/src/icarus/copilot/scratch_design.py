@@ -33,8 +33,8 @@ fits them (car_body, wheel, shell, joint; wall, crate, curb, post, cone, lamp_po
 only changes the drawing inside the shape, and plain draws the bare shape. When the request is clearly one of
 these places, name it in "layout" with a seed and code lays the whole place out around the body's start, with its
 goal when you give none: parking_lot, room, maze (or a corridor), city_block, warehouse, forest (or a park),
-obstacle_course, terrain_steps. Then add only the few props the request asks for beyond it; otherwise leave
-"layout" null.
+obstacle_course, terrain_steps, block_terrain (uneven cube blocks). Then add only the few props the request asks for
+beyond it; otherwise leave "layout" null.
 
 Body: one root part (parent null) is the agent; the first body is the one that learns. Every other part names its
 parent and has a position relative to the parent's center; give it a joint to move (hinge or slide, anchor relative

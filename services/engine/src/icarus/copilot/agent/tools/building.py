@@ -140,9 +140,10 @@ PATTERN = Tool(
     name="pattern",
     description=(
         "Copy an object with everything inside it many times in one call, as plain create_object operations with "
-        "fresh ids: duplicate (offset), linear (count, offset), grid (rows, columns, spacing), circle (count, "
-        "radius, facing the center), mirror (across a plane) or scatter (seeded, inside an area, min spacing, "
-        "jitter of turn, scale and color). keep_clear skips copies that would overlap objects or zones, such as "
+        "fresh ids: duplicate (offset), linear (count, offset), grid (rows, columns, spacing, layers stacked up), "
+        "circle (count, radius, facing the center), mirror (across a plane) or scatter (seeded, inside an area, min "
+        "spacing, jitter of turn, scale and color). Platforms, steps and walls of cube blocks: place the library's "
+        "block piece, then grid it. keep_clear skips copies that would overlap objects or zones, such as "
         f"the path or the spawn; group puts the copies in a new group. {_ROUTE}"
     ),
     args=PatternArgs,

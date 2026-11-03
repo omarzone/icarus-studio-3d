@@ -3,7 +3,7 @@ import { Act } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
-import { type PlayAction, type PlaySession, playPort } from "../../ports/play-port.ts";
+import { PLACED_PIECES, type PlacedPiece, type PlayAction, type PlaySession, playPort } from "../../ports/play-port.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { ErrorState, LoadingState } from "../../ui/states.tsx";
@@ -28,6 +28,8 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
   const speed = useEngineAction(port.setSpeed);
   const act = useEngineAction(port.send);
   const [held, setHeld] = useState<string | null>(null);
+  // The piece Add object places once one is picked; until then the session's own hint and piece.
+  const [piece, setPiece] = useState<PlacedPiece | null>(null);
   const data = session.data;
   const send = (action: PlayAction) => act.mutate({ project, action });
   const pause = data?.paused === undefined ? [] : [data.paused ? "Resume" : "Pause"];
@@ -55,7 +57,7 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
           if (!data) {
             return;
           }
-          const result = pickAction(data.selectedTool, pick, held, live.data ?? null);
+          const result = pickAction(data.selectedTool, pick, held, live.data ?? null, piece?.id);
           setHeld(result.held);
           if (result.action) {
             send(result.action);
@@ -79,7 +81,15 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
         ) : data ? (
           <PlayOverlays
             session={data}
-            placing={held ? `Click where to put ${held}` : data.placing}
+            placing={
+              held
+                ? `Click where to put ${held}`
+                : piece && data.placing
+                  ? `Click to place: ${piece.label}`
+                  : data.placing
+            }
+            piece={data.selectedTool === "add-object" && !held ? (piece ?? PLACED_PIECES[0]) : null}
+            onPiece={setPiece}
             onSelect={(tool) => {
               setHeld(null);
               select.mutate({ project, tool }, { onSuccess: cache });
@@ -99,14 +109,24 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
   );
 }
 
-type OverlayProps = { session: PlaySession; placing?: string; onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"] };
+type OverlayProps = {
+  session: PlaySession;
+  placing?: string;
+  // The piece Add object places, while that tool is picked.
+  piece: PlacedPiece | null;
+  onPiece: (piece: PlacedPiece) => void;
+  onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"];
+};
 
-function PlayOverlays({ session, placing, onSelect }: OverlayProps) {
+function PlayOverlays({ session, placing, piece, onPiece, onSelect }: OverlayProps) {
   return (
     <>
       <PlayToolBar tools={session.tools} selected={session.selectedTool} onSelect={onSelect} />
       {placing ? (
-        <div className="absolute top-1/2 left-[61%] rounded-button bg-overlay px-2.5 py-1.5 text-ui">{placing}</div>
+        <div className="absolute top-1/2 left-[61%] flex flex-col gap-1.5 rounded-button bg-overlay px-2.5 py-1.5 text-ui">
+          <span>{placing}</span>
+          {piece ? <PieceChoice piece={piece} onPiece={onPiece} /> : null}
+        </div>
       ) : null}
       <div
         role="status"
@@ -116,5 +136,24 @@ function PlayOverlays({ session, placing, onSelect }: OverlayProps) {
         <span className="text-ui text-fg-secondary">{session.status.detail}</span>
       </div>
     </>
+  );
+}
+
+// Which library piece Add object places: boxes and spheres, movable or fixed.
+function PieceChoice({ piece, onPiece }: { piece: PlacedPiece; onPiece: (piece: PlacedPiece) => void }) {
+  return (
+    <fieldset className="flex gap-1" aria-label="Piece to place">
+      {PLACED_PIECES.map((item) => (
+        <Act
+          key={item.id}
+          cta={item.label}
+          aria-pressed={item.id === piece.id}
+          onClick={() => onPiece(item)}
+          className={buttonClass(item.id === piece.id ? "secondary" : "ghost", "h-6 px-2")}
+        >
+          {item.label}
+        </Act>
+      ))}
+    </fieldset>
   );
 }

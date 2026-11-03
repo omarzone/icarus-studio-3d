@@ -1,8 +1,9 @@
 import type { SceneGeom } from "@icarus/contracts";
+import { isGround } from "../ground-geom.ts";
 import { type Finish, finishLook, type MaterialLook, surfaceLook } from "./finishes.ts";
 
 type Pattern = NonNullable<SceneGeom["finish"]>;
-type PartLook = Pick<SceneGeom, "finish" | "roughness" | "metalness" | "emissive" | "surface" | "shape">;
+type PartLook = Pick<SceneGeom, "finish" | "roughness" | "metalness" | "emissive" | "surface" | "shape" | "ground">;
 
 // Fixed tones of the asphalt finish, whose lane lines need their own white (tokens: scene.material.style).
 const ROAD = "#ffffff";
@@ -34,6 +35,8 @@ export function patternLook(finish: Pattern | null | undefined): MaterialLook | 
       return { roughness: 0.97, metalness: 0, grain: "fabric" };
     case "rubber":
       return { roughness: 0.92, metalness: 0, grain: "rubber" };
+    case "blocks":
+      return { roughness: 0.7, metalness: 0, grain: "blocks" };
   }
 }
 
@@ -68,7 +71,7 @@ export function styledLook(finish: Finish, geom: PartLook): MaterialLook {
 
 // A part drawn as its plain primitive: its finish, else its surface, glowing as a whole when it has a glow.
 export function plainLook(geom: PartLook): MaterialLook {
-  const look = patternLook(geom.finish) ?? surfaceLook(geom.surface, geom.shape);
+  const look = patternLook(geom.finish) ?? surfaceLook(geom.surface, isGround(geom));
   const glow = geom.emissive ?? 0;
   return tuned(glow > 0 ? { ...look, emissive: glow } : look, geom);
 }

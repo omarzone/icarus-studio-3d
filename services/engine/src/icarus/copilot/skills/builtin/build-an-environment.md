@@ -2,8 +2,8 @@
 name: build-an-environment
 title: Lay out a whole environment in one call with a layout recipe
 when: The person asks for a place for any body to act in, such as a parking lot, a room or house, a maze or corridor, streets or a city, a warehouse, a forest or park, a race track or obstacle course, or steps and platforms.
-tools: [library, layout, look, try, propose]
-version: 1
+tools: [library, layout, pattern, look, try, propose]
+version: 2
 ---
 A layout recipe is engine code with parameters: it lays out dozens of named objects from the library in groups
 (one group per area, such as bays, parked cars, curbs, lamps), puts the spawn at its start and the goal zone at its
@@ -25,6 +25,9 @@ by one whenever the request is one of these places; it works the same for wheels
    - `forest`: trees and rocks around a clear winding path; park turns it into grass with benches and lamps.
    - `obstacle_course`: walled lanes with barriers on alternating sides and humps to climb.
    - `terrain_steps`: steps up to a platform and back down, or separate platforms with a gap, for legged bodies.
+   - `block_terrain`: columns of cube blocks with uneven heights (layer_height, max_layers), neighbours one layer
+     apart, for walking over rough ground; for a single platform, steps or a wall of blocks, place the `block`
+     piece and repeat it with `pattern` grid (layers stacks them up).
 2. **Fit it to the body.** Set clearance to a little more than half the body's width so the checked way is one
    the body can really pass, and passages it must turn in (cell size, door width, aisle width) longer than the
    body; a car about 4 m long needs maze cells of 6 m and doors of 3.5 m.
@@ -35,7 +38,9 @@ by one whenever the request is one of these places; it works the same for wheels
    meant to be climbed does without `collision_penalty`.
 4. **Read the result.** A layout the recipe cannot make (a bay that does not exist, a way that cannot stay open)
    says why: change that parameter and call again. A passing result gives the groups, the start, the goal, the
-   length of the open way and notes such as the free bays; use only those numbers when you explain it.
+   length of the open way and notes such as the free bays; use only those numbers when you explain it. A world
+   on a ground slab (a `ground` component, the default) grows `ground.size` to hold the whole layout; bodies that
+   leave the slab fall off its edge and the try ends, so keep the slab wider than anywhere the body may go.
 5. **Look at it.** `look` with view `top` on the try for the plan, then `three_quarter` from the start: the goal
    must be visible and reachable, nothing must stand on the start.
 6. **Propose.** `propose` with the try_id, naming the recipe, what you chose and why. Say how to customize it:

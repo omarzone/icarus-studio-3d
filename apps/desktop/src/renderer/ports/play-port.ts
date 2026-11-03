@@ -115,8 +115,15 @@ export const playPort = definePort<PlayPort>({
   prototype: createPlayFixture,
 });
 
-// The library piece Add object places.
-export const PLACED_PIECE = { id: "box", label: "Box" } as const;
+// The library pieces Add object can place, the first by default: boxes and spheres, movable and fixed.
+export const PLACED_PIECES = [
+  { id: "box", label: "Box" },
+  { id: "ball", label: "Ball" },
+  { id: "block", label: "Block" },
+  { id: "sphere", label: "Sphere" },
+] as const;
+export type PlacedPiece = (typeof PLACED_PIECES)[number];
+export const PLACED_PIECE: PlacedPiece = PLACED_PIECES[0];
 
 // Tools that act the moment they are picked; the others act on a click in the world.
 export function actsAtOnce(tool: PlayToolId): boolean {

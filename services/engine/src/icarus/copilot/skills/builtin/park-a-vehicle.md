@@ -3,7 +3,7 @@ name: park-a-vehicle
 title: Teach a vehicle to park wholly inside a spot, lined up, nose in or backing in
 when: A car, truck or other wheeled vehicle must park in a bay or spot, line up with it, back into it or stop precisely inside a marked rectangle.
 tools: [library, layout, inspect_object, try, look, propose, train, read_run]
-version: 1
+version: 2
 ---
 Parking is the navigation task with a stricter goal. A rectangular `goal_zone` counts a try as won only when every
 rule holds at once: the body is inside (wholly, with `goal_zone.fully_inside`), it faces the spot's heading within
@@ -28,12 +28,19 @@ as a vehicle first (drive-a-vehicle); the `parking_car` template is a ready exam
 5. **Rewards.** `reach_goal` = 10, `progress_to_goal` = 1, `spot_alignment` = 1–3 (pays the gain in lining up near
    the spot, never for waiting), `gentle_arrival` = 1–3 (pays the speed shed inside), `collision_penalty` = -5 and
    `time_penalty` = -0.01. Keep the per-step terms small next to the bonus (reward-design).
-6. **Teach reversing.** Train nose in first. Then, in a new stage, turn on `spawn_point.random_heading` so some
-   starts face away from the bay (every start is already shifted up to ±1.5 m and turned up to ±35°; this turns
-   it all the way round), set `goal_zone.entry` to back_in when the person wants backing in, and continue from
-   the nose-in brain with a warm start: the body, senses and actions stay the same, so the brain carries over
-   (curriculum-and-warm-start). Rays behind and reverse on in the vehicle are what make backing possible.
-7. **Check and train.** `try`, then `look` with view `top`: the spot sits in free space, flanked but not touched
+6. **Vary the starts.** With `spawn_point.mode` auto every start is shifted up to ±1.5 m and turned up to ±35°
+   from where the car stands. For a brain that parks from anywhere in the aisle, set `spawn_point.mode` area,
+   `spawn_point.area` to the free aisle around the spawn (for example 8 by 3, along the spawn's heading) and
+   `spawn_point.heading_range` = 30–60; keep the area clear of parked cars and curbs, and the spawn on the ground.
+   To start from several entries, add more `spawn_point` objects and set the first one's mode to random_point
+   or cycle_points; each spot keeps its own area and heading range. Training copies vary by their seed and
+   evaluations repeat the same starts, so checkpoints stay comparable.
+7. **Teach reversing.** Train nose in first. Then, in a new stage, turn `spawn_point.heading_range` up to 180 (or
+   `spawn_point.random_heading` on, with a mode other than auto) so some starts face away from the bay, set
+   `goal_zone.entry` to back_in when the person wants backing in, and continue from the nose-in brain with a warm
+   start: the body, senses and actions stay the same, so the brain carries over (curriculum-and-warm-start). Rays
+   behind and reverse on in the vehicle are what make backing possible.
+8. **Check and train.** `try`, then `look` with view `top`: the spot sits in free space, flanked but not touched
    by obstacles, reachable with the body's turning circle. `propose` when it passes; `train` only when the
    person asks, about 1M steps per stage, and `read_run` with `evaluations` and `failures` before saying how
    well it parks. Promise no success rate before its own run.

@@ -65,6 +65,7 @@ const FINISHES: Record<Finish, true> = {
   grass: true,
   fabric: true,
   rubber: true,
+  blocks: true,
 };
 
 const isStyle = (value: string): value is Style => Object.hasOwn(STYLES, value);
@@ -97,5 +98,6 @@ export function pieceLook(components: readonly ComponentSpec[]): Partial<SceneGe
     metalness: numberOf(components, "metalness") ?? 0.5,
     emissive: numberOf(components, "emissive") ?? 0,
     reflectance: numberOf(components, "reflectance") ?? 0,
+    bevel: numberOf(components, "bevel") ?? 0,
   };
 }

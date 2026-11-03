@@ -39,8 +39,9 @@ LAYOUT = Tool(
     name="layout",
     description=(
         "Lay out a whole believable environment in one call from a seeded engine recipe (parking_lot, room, maze, "
-        "city_block, warehouse, forest, obstacle_course, terrain_steps): grouped, named objects from the library, "
-        "the spawn at its start and the goal zone at its goal, with the way between them checked open. It runs a "
+        "city_block, warehouse, forest, obstacle_course, terrain_steps, block_terrain): grouped, named objects from "
+        "the library, the spawn at its start and the goal zone at its goal, with the way between them checked open, "
+        "and the ground slab grown to hold it all. It runs a "
         "try of the layout plus the operations in also and returns its try_id for propose or apply. Read a "
         "recipe's parameters with library first. Customize it by its parameters; once applied, its objects and "
         "groups edit like any others."

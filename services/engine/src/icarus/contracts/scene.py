@@ -63,6 +63,7 @@ GeomFinish = Literal[
     "grass",
     "fabric",
     "rubber",
+    "blocks",
 ]
 GEOM_FINISHES: list[str] = list(get_args(GeomFinish))
 
@@ -125,6 +126,10 @@ class SceneGeom(BaseModel):
     skin: SceneSkin | None = None
     # The vehicle light this part is: it glows while the engine reports that light on.
     light_role: LightRole | None = None
+    # Radius in metres of a box's rounded edges, drawn inside the collider, which stays a sharp box.
+    bevel: float = 0
+    # The world's floor: a slab with edges, framed and picked like a ground plane rather than like an obstacle.
+    ground: bool = False
 
 
 class SceneLight(BaseModel):

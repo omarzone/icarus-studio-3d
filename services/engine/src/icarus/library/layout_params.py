@@ -5,9 +5,18 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 LayoutRecipe = Literal[
-    "parking_lot", "room", "maze", "city_block", "warehouse", "forest", "obstacle_course", "terrain_steps"
+    "parking_lot",
+    "room",
+    "maze",
+    "city_block",
+    "warehouse",
+    "forest",
+    "obstacle_course",
+    "terrain_steps",
+    "block_terrain",
 ]
 Side = Literal["west", "east", "south", "north"]
+MAX_BLOCK_COLUMNS = 400
 Cell = tuple[int, int]
 
 
@@ -169,5 +178,20 @@ class TerrainSteps(_Layout):
     rails: bool = switch(True, "Low walls along both sides.")
 
 
-AnyLayout = ParkingLot | Room | Maze | CityBlock | Warehouse | Forest | ObstacleCourse | TerrainSteps
+class BlockTerrain(_Layout):
+    recipe: Literal["block_terrain"]
+    blocks_x: int = knob(12, 2, 30, "Columns of blocks along x; the start is west of them and the goal east.")
+    blocks_y: int = knob(6, 1, 30, "Columns of blocks along y.")
+    block_size: float = knob(1.0, 0.25, 4, "Side of each block in metres.")
+    layer_height: float = knob(0.1, 0.02, 1, "Height of one layer of blocks in metres.")
+    max_layers: int = knob(3, 1, 10, "Most layers in one column; neighbours differ by at most one layer.")
+
+    @model_validator(mode="after")
+    def _not_too_many(self) -> "BlockTerrain":
+        if self.blocks_x * self.blocks_y > MAX_BLOCK_COLUMNS:
+            raise ValueError(f"at most {MAX_BLOCK_COLUMNS} columns of blocks fit one layout")
+        return self
+
+
+AnyLayout = ParkingLot | Room | Maze | CityBlock | Warehouse | Forest | ObstacleCourse | TerrainSteps | BlockTerrain
 LayoutParams = Annotated[AnyLayout, Field(discriminator="recipe")]

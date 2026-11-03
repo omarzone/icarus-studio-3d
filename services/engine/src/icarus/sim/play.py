@@ -54,6 +54,7 @@ from icarus.sim.play_tools import (
 from icarus.sim.policy import Policy
 from icarus.sim.rewards import compose, inside_goal
 from icarus.sim.signals import scene_signals
+from icarus.sim.start_pose import place_start
 
 PlayReply = PlayEventMessage | PlayErrorMessage | PlayReady
 EventKind = Literal["user", "agent", "world"]
@@ -117,6 +118,10 @@ class PlaySession:
 
     def _restart(self) -> None:
         reset_world(self.world)
+        spawn = self.world.spawn
+        # Play starts where the agent stands unless the spawn point asks for varied starts, which each reset draws.
+        if spawn is not None and spawn.mode != "auto":
+            place_start(self.world, self._rng)
         self.step = 0
         self.reward = 0.0
         self.episode_return = 0.0
