@@ -4,7 +4,7 @@ from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, t
 def test_every_term_has_a_default_weight_inside_its_range():
     for term in REWARD_TERMS.values():
         assert term.weight_min <= term.default_weight <= term.weight_max, term.term
-        assert term.family in {"navigation", "locomotion"}
+        assert term.family in {"navigation", "locomotion", "imitation"}
         assert term.description
 
 

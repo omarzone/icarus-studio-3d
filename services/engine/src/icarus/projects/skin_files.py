@@ -32,6 +32,12 @@ class SkinFile:
 
 
 def _glb_document(data: bytes) -> tuple[dict[str, object], bool]:
+    document, binary = glb_parts(data)
+    return document, binary is not None
+
+
+def glb_parts(data: bytes) -> tuple[dict[str, object], bytes | None]:
+    """A GLB file's description and its binary chunk, when it has one."""
     if len(data) < 20:
         raise SkinRejected("The GLB file is cut short")
     _, version, length = struct.unpack_from("<4sII", data, 0)
@@ -51,10 +57,10 @@ def _glb_document(data: bytes) -> tuple[dict[str, object], bool]:
     kinds = [kind for kind, _ in chunks]
     if kinds not in ([_JSON_CHUNK], [_JSON_CHUNK, _BIN_CHUNK]):
         raise SkinRejected("A GLB file holds its description and at most one binary chunk, and nothing else")
-    return _parse(chunks[0][1]), len(chunks) == 2
+    return parse_gltf(chunks[0][1]), chunks[1][1] if len(chunks) == 2 else None
 
 
-def _parse(text: bytes) -> dict[str, object]:
+def parse_gltf(text: bytes) -> dict[str, object]:
     try:
         document = json.loads(text.decode("utf-8-sig"))
     except (UnicodeDecodeError, ValueError, RecursionError) as error:
@@ -64,7 +70,7 @@ def _parse(text: bytes) -> dict[str, object]:
     return document
 
 
-def _items(document: dict[str, object], key: str) -> list[dict[str, object]]:
+def gltf_items(document: dict[str, object], key: str) -> list[dict[str, object]]:
     value = document.get(key, [])
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
         raise SkinRejected(f"The model's {key} are malformed")
@@ -83,10 +89,10 @@ def _check_links(document: dict[str, object], has_binary: bool) -> None:
             stack.extend(item.values())
         elif isinstance(item, list):
             stack.extend(item)
-    for index, buffer in enumerate(_items(document, "buffers")):
+    for index, buffer in enumerate(gltf_items(document, "buffers")):
         if "uri" not in buffer and not (index == 0 and has_binary):
             raise SkinRejected("A buffer of the model has no data")
-    for image in _items(document, "images"):
+    for image in gltf_items(document, "images"):
         if "uri" not in image and "bufferView" not in image:
             raise SkinRejected("A texture of the model has no data")
 
@@ -108,7 +114,7 @@ def _vector(value: object, length: int, default: list[float]) -> list[float]:
     return [float(x) for x in value]
 
 
-def _local(node: dict[str, object]) -> np.ndarray:
+def node_matrix(node: dict[str, object]) -> np.ndarray:
     if "matrix" in node:
         return np.array(_vector(node["matrix"], 16, []), dtype=float).reshape(4, 4).T
     tx, ty, tz = _vector(node.get("translation"), 3, [0, 0, 0])
@@ -127,16 +133,16 @@ def _local(node: dict[str, object]) -> np.ndarray:
     return matrix
 
 
-def _index(value: object, items: list[dict[str, object]], what: str) -> dict[str, object]:
+def gltf_item(value: object, items: list[dict[str, object]], what: str) -> dict[str, object]:
     if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value < len(items):
         raise SkinRejected(f"The model refers to a {what} it does not have")
     return items[value]
 
 
-def _roots(document: dict[str, object], nodes: list[dict[str, object]]) -> list[object]:
-    scenes = _items(document, "scenes")
+def scene_roots(document: dict[str, object], nodes: list[dict[str, object]]) -> list[object]:
+    scenes = gltf_items(document, "scenes")
     if scenes:
-        scene = _index(document.get("scene", 0), scenes, "scene")
+        scene = gltf_item(document.get("scene", 0), scenes, "scene")
         roots = scene.get("nodes", [])
         return roots if isinstance(roots, list) else []
     children: set[int] = set()
@@ -150,7 +156,7 @@ def _primitive_corners(primitive: dict[str, object], accessors: list[dict[str, o
     attributes = primitive.get("attributes")
     if not isinstance(attributes, dict) or "POSITION" not in attributes:
         raise SkinRejected("A mesh of the model has no positions")
-    accessor = _index(attributes["POSITION"], accessors, "position list")
+    accessor = gltf_item(attributes["POSITION"], accessors, "position list")
     if "min" not in accessor or "max" not in accessor:
         raise SkinRejected("A mesh of the model has positions without bounds")
     low, high = _vector(accessor.get("min"), 3, []), _vector(accessor.get("max"), 3, [])
@@ -159,25 +165,29 @@ def _primitive_corners(primitive: dict[str, object], accessors: list[dict[str, o
     )
     if primitive.get("mode", _TRIANGLES) != _TRIANGLES:
         return corners, 0
-    counted = _index(primitive["indices"], accessors, "index list") if "indices" in primitive else accessor
+    counted = gltf_item(primitive["indices"], accessors, "index list") if "indices" in primitive else accessor
     count = counted.get("count", 0)
     return corners, count // 3 if isinstance(count, int) else 0
 
 
 def _extents(document: dict[str, object]) -> tuple[np.ndarray, int]:
-    nodes, meshes, accessors = _items(document, "nodes"), _items(document, "meshes"), _items(document, "accessors")
+    nodes, meshes, accessors = (
+        gltf_items(document, "nodes"),
+        gltf_items(document, "meshes"),
+        gltf_items(document, "accessors"),
+    )
     low, high = np.full(3, np.inf), np.full(3, -np.inf)
     triangles, visits = 0, 0
-    stack = [(index, np.eye(4)) for index in _roots(document, nodes)]
+    stack = [(index, np.eye(4)) for index in scene_roots(document, nodes)]
     while stack:
         index, parent = stack.pop()
         visits += 1
         if visits > _MAX_NODE_VISITS:
             raise SkinRejected("The model's node tree loops or is too large")
-        node = _index(index, nodes, "node")
-        world = parent @ _local(node)
+        node = gltf_item(index, nodes, "node")
+        world = parent @ node_matrix(node)
         if "mesh" in node:
-            primitives = _index(node["mesh"], meshes, "mesh").get("primitives", [])
+            primitives = gltf_item(node["mesh"], meshes, "mesh").get("primitives", [])
             for primitive in primitives if isinstance(primitives, list) else []:
                 if not isinstance(primitive, dict):
                     raise SkinRejected("A mesh of the model is malformed")
@@ -200,7 +210,7 @@ def read_skin(data: bytes) -> SkinFile:
         document, has_binary = _glb_document(data)
         format: Literal["glb", "gltf"] = "glb"
     elif data.lstrip(b"\xef\xbb\xbf \t\r\n")[:1] == b"{":
-        document, has_binary, format = _parse(data), False, "gltf"
+        document, has_binary, format = parse_gltf(data), False, "gltf"
     else:
         raise SkinRejected("The file is not a glTF or GLB model")
     asset = document.get("asset")

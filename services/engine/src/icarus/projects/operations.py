@@ -18,6 +18,7 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetMotionReference,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
@@ -177,6 +178,8 @@ def _apply(project: Project, operation: EditOperation) -> None:
             if not any(item.term == term_id for item in task.rewards):
                 raise _fail(f"task.rewards.{term_id}", f"The task has no reward term {term_id!r}")
             task.rewards = [item for item in task.rewards if item.term != term_id]
+        case SetMotionReference(reference=reference, agent=agent_id):
+            _task(project, agent_id).motion = reference.model_copy(deep=True) if reference else None
         case SetBrain(agent=None):
             project.brain = _brain(project.brain, operation)
         case SetBrain(agent=str() as agent_id):

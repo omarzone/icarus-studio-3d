@@ -51,5 +51,5 @@ def test_catalog_reward_terms_list_every_family_they_fit():
 
 def test_posture_terms_offer_both_families_in_a_stable_order():
     terms = {info.term: info for info in library_catalog().reward_terms}
-    assert terms["stay_upright"].families == ["locomotion", "navigation"]
+    assert terms["stay_upright"].families == ["imitation", "locomotion", "navigation"]
     assert terms["forward_progress"].families == ["locomotion"]

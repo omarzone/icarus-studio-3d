@@ -180,6 +180,29 @@ def _brain_issues(project: Project) -> list[ValidationIssue]:
     return [ValidationIssue(path="brain.layers", message=message)]
 
 
+def _motion_issues(project: Project) -> list[ValidationIssue]:
+    """An imitation task tracks a motion with parts of the body it drives; other families carry none."""
+    motion = project.task.motion
+    if project.task.family != "imitation":
+        if motion is None:
+            return []
+        return [ValidationIssue(path="task.motion", message="Only an imitation task tracks a motion")]
+    if motion is None:
+        return [ValidationIssue(path="task.motion", message="An imitation task needs a tracked motion to copy")]
+    parts = {obj.id for obj in project.bodies[0].objects} if project.bodies else set()
+    lengths = {len(track.angles) for track in motion.tracks}
+    issues = [
+        ValidationIssue(path=f"task.motion.{track.segment}", message=f"{track.part!r} is not a part of the body")
+        for track in motion.tracks
+        if track.part not in parts
+    ]
+    if len(lengths) != 1 or min(lengths) < 2:
+        issues.append(
+            ValidationIssue(path="task.motion", message="Every tracked segment needs the same 2 or more frames")
+        )
+    return issues
+
+
 def validate_project(project: Project) -> list[ValidationIssue]:
     """Every structural problem: ids, parents, components, property values, references and rewards."""
     issues: list[ValidationIssue] = []
@@ -193,6 +216,8 @@ def validate_project(project: Project) -> list[ValidationIssue]:
     for obj in all_objects(project):
         issues += _component_issues(obj, ids)
     issues += _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)
+    if not project.agents:
+        issues += _motion_issues(project)
     return issues + _agents_issues(project)
 
 
@@ -205,6 +230,6 @@ def _agents_issues(project: Project) -> list[ValidationIssue]:
         if agent.task is None and agent.brain is None:
             continue
         alone = agent_project(project, agent.id)
-        for issue in _reward_issues(alone) + _brain_issues(alone):
+        for issue in _reward_issues(alone) + _brain_issues(alone) + _motion_issues(alone):
             issues.append(issue.model_copy(update={"path": f"agents.{agent.id}.{issue.path}"}))
     return issues

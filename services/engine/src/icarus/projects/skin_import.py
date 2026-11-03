@@ -9,6 +9,7 @@ from icarus.contracts.operations import CreateObject, OperationBatch
 from icarus.contracts.skins import SkinImport, SkinImported, SkinInfo
 from icarus.library.skin_objects import skin_object, skin_size
 from icarus.projects.document import all_objects
+from icarus.projects.mesh_files import as_glb
 from icarus.projects.skin_files import SkinRejected
 from icarus.projects.skins import SkinStore
 from icarus.projects.store import ProjectStore, RejectedBatch
@@ -39,13 +40,14 @@ def _free_id(label: str, taken: set[str]) -> str:
 
 def store_model(skins: SkinStore, project_id: str, name: str, data: str) -> SkinInfo:
     """Keep a model attached in the chat as a skin, so the copilot can put it on an object by its id."""
-    return skins.add(project_id, name, _decode(data))
+    return skins.add(project_id, *as_glb(name, _decode(data)))
 
 
 def import_skin(store: ProjectStore, skins: SkinStore, project_id: str, upload: SkinImport) -> SkinImported:
-    """Keep a model as a skin and add an object that wears it, fitted to its size, in one revision."""
+    """Keep a model as a skin (OBJ and STL become GLB) and add an object that wears it, fitted to its size, in one
+    revision."""
     project = store.state(project_id).project
-    info = skins.add(project_id, upload.name, _decode(upload.data))
+    info = skins.add(project_id, *as_glb(upload.name, _decode(upload.data)))
     label = _label(upload.name)
     object_id = _free_id(label, {item.id for item in all_objects(project)})
     size = skin_size(info.bounds, upload.length)
