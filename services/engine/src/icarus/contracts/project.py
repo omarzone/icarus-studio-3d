@@ -46,6 +46,16 @@ class ProjectSummary(BaseModel):
     updated_at: datetime
 
 
+class RemixOrigin(BaseModel):
+    """The community creation a project was remixed from; publishing the project names it as the original."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    creation_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,32}$")
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1, max_length=200)
+
+
 class ProjectState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -54,6 +64,7 @@ class ProjectState(BaseModel):
     report: DesignReport
     can_undo: bool
     can_redo: bool
+    remix_of: RemixOrigin | None = None
 
 
 class DuplicateProject(BaseModel):
@@ -78,6 +89,7 @@ __all__ = [
     "Project",
     "ProjectState",
     "ProjectSummary",
+    "RemixOrigin",
     "RewardTermSpec",
     "Revision",
     "TaskFamily",
