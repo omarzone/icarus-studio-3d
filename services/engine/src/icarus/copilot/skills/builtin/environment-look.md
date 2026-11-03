@@ -3,11 +3,12 @@ name: environment-look
 title: Make the world look like a believable place
 when: The person asks for a theme, colors, a sky, a mood, decoration, a realistic world or a scene that looks like a place (a street, a parking lot, a warehouse, a park, a farm, a planet).
 tools: [library, inspect_object, find_objects, pattern, edit_matching, try, look, propose]
-version: 3
+version: 4
 ---
 The look never changes the task: the body learns the same thing in a believable world. A place reads as real when
 its surroundings frame it, its pieces share one scale and one palette, and the sky and ground fit the hour and the
-weather. Build it around the task, never on top of it.
+weather. Build it around the task, never on top of it. When the person shows a picture of the place they want,
+follow the skill clone-from-a-reference.
 
 1. **Name the place and its scale.** Say what the scene is and where the task happens in it, then size everything
    from the body: a car is about 4.5 m long and 1.8 m wide, a person 1.7 m tall, a door 2.1 m, a storey 3 m, a

@@ -30,6 +30,7 @@ EXPECTED = {
     "move-a-joint",
     "build-a-scene",
     "build-an-environment",
+    "clone-from-a-reference",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.
