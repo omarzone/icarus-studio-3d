@@ -240,3 +240,15 @@ def test_runs_the_chat_starts_are_coached_unless_the_person_asks_otherwise(tmp_p
     trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1))
     trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1, coach=False))
     assert [start.coach for start in supervisor.started] == [True, False]
+
+
+def test_the_copilot_pauses_and_resumes_the_run_training(tmp_path, store, runs, supervisor, project_id):
+    trainer = ChatTrainer(store, runs, supervisor, TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects"))
+    assert not trainer.act(project_id, TrainingRequest(action="pause")).acted
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1))
+    run = runs.list_runs(project_id)[0]
+    wait_for(state_is(runs, run.run_id, "running"))
+    paused = trainer.act(project_id, TrainingRequest(action="pause"))
+    assert paused.acted and "paused" in paused.text and runs.folder(run.run_id).status().paused
+    resumed = trainer.act(project_id, TrainingRequest(action="resume"))
+    assert resumed.acted and not runs.folder(run.run_id).status().paused

@@ -11,7 +11,7 @@ from icarus.training.run_store import TERMINAL_STATES
 
 
 class TrainArgs(ToolArgs):
-    action: Literal["start", "stop", "status"]
+    action: Literal["start", "stop", "pause", "resume", "status"]
     total_steps: int | None = Field(
         default=None, ge=10_000, le=MAX_STEPS, description="Steps to train; none uses the recommended budget."
     )
@@ -42,6 +42,9 @@ def _status(scope: TurnScope) -> Observation:
     )
 
 
+_PAST = {"start": "started", "stop": "stopped", "pause": "paused", "resume": "resumed"}
+
+
 def train(scope: TurnScope, args: TrainArgs) -> Observation:
     if args.action == "status":
         return _status(scope)
@@ -57,15 +60,16 @@ def train(scope: TurnScope, args: TrainArgs) -> Observation:
         scope.side_effects.append(reply.text)
         started = scope.services.runs.list_runs(scope.project_id) if args.action == "start" else []
         scope.started_runs += [started[0].run_id] if started else []
-    verb = step_said("training_started" if args.action == "start" else "training_stopped", scope.language)
+    verb = step_said(f"training_{_PAST[args.action]}", scope.language)
     return Observation(reply.text, ok=reply.acted, summary=verb if reply.acted else reply.text.rstrip(".")[:200])
 
 
 TRAIN = Tool(
     name="train",
     description=(
-        "Start or stop training this project, or read the status of the run that is training. Start uses the same "
-        "checks as the Train button. Only start when the person asks to train, or in autopilot right after a fix."
+        "Start, stop, pause or resume training this project, or read the status of the run that is training. Start "
+        "uses the same checks as the Train button. Pause holds the run where it is, brain and copies in memory, until "
+        "resume. Only start when the person asks to train, or in autopilot right after a fix."
     ),
     args=TrainArgs,
     step="train",

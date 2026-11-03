@@ -1,0 +1,25 @@
+{
+  "replies": [
+    {
+      "content": {
+        "title": "Heavier car",
+        "world": "An open lot",
+        "body": "A heavier car",
+        "learns": "To park in the spot",
+        "template": "parking_car",
+        "operations": [
+          {
+            "op": "set_property",
+            "object": "car",
+            "component": "physics_body",
+            "property": "mass",
+            "value": {
+              "type": "number",
+              "value": 900
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ from tests.copilot.agent_script import answer_call, scripted_client
 from tests.copilot.test_agent_loop import make_copilot
 
 PADDING = " Tell me more about how the car should drive around the lot and what it should avoid." * 30
-TINY = AgentLimits(context_tokens=40_000, history_share=0.15, keep_recent_tokens=1_500, keep_user_tokens=60)
+TINY = AgentLimits(context_tokens=42_000, history_share=0.15, keep_recent_tokens=1_500, keep_user_tokens=60)
 
 
 @pytest.fixture(scope="module")

@@ -67,6 +67,28 @@ def ray_sites(obj: ObjectSpec) -> list[RaySite]:
     return sites
 
 
+def component_sensors(obj: ObjectSpec, component_id: str) -> frozenset[str]:
+    """The MuJoCo sensor names one sense component of the object adds, as add_sensors names them."""
+    component = next((item for item in obj.components if item.id == component_id), None)
+    if component is None:
+        return frozenset()
+    match component.kind:
+        case "distance_ray":
+            rays = [item.id for item in components_of(obj, "distance_ray")]
+            prefix = obj.id if rays.index(component.id) == 0 else f"{obj.id}:{component.id}"
+            return frozenset(site.site for site in ray_sites(obj) if site.site.rsplit(":", 1)[0] == prefix)
+        case "balance":
+            return frozenset({f"{obj.id}:balance:accel", f"{obj.id}:balance:gyro"})
+        case "touch":
+            return frozenset({f"{obj.id}:touch"})
+        case "speed":
+            return frozenset({f"{obj.id}{SPEED_SUFFIX}", f"{obj.id}{YAW_SUFFIX}"})
+        case "target":
+            return frozenset({f"{obj.id}{TARGET_SUFFIX}", f"{obj.id}{HEADING_SUFFIX}"})
+        case _:
+            return frozenset()
+
+
 def ray_labels(project: Project) -> dict[str, str]:
     """Rangefinder site name → the name its rays carry, for every object in the project."""
     return {site.site: site.label for obj in all_objects(project) for site in ray_sites(obj)}

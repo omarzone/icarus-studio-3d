@@ -7,7 +7,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneSignals
 from icarus.design.components import view
 from icarus.projects.document import all_objects
-from icarus.sim.model_state import CONTROL_PERIOD, LiveWorld, sensor_value
+from icarus.sim.model_state import LiveWorld, sensor_value
 from icarus.sim.rewards import RewardState
 from icarus.sim.sensor_info import reading_number
 
@@ -40,7 +40,7 @@ def _value(world: LiveWorld, state: RewardState, source: str, sensor: str) -> fl
         case "episode_time":
             return float(world.data.time)
         case "step":
-            return float(round(float(world.data.time) / CONTROL_PERIOD))
+            return float(round(float(world.data.time) / world.control_period))
         case "try":
             return float(tally.tries)
         case "training_steps":

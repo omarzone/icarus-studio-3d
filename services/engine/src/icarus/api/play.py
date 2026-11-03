@@ -17,6 +17,7 @@ from icarus.contracts.play import (
     PlaySessionInfo,
 )
 from icarus.contracts.project import Project
+from icarus.contracts.training import WarmStart
 from icarus.copilot.language import Language
 from icarus.design.compiler import CompileError
 from icarus.projects.agents import agent_project
@@ -27,6 +28,7 @@ from icarus.sim.play_agents import AgentBrain, AgentsPlay
 from icarus.sim.policy import UNTRAINED_BRAIN, CheckpointPolicy, Policy, RandomPolicy, untrained_after
 from icarus.training.play_brains import BrainUnavailable, brain_options, chosen_checkpoint
 from icarus.training.run_store import RunStore
+from icarus.training.warm_start import warm_start_problem
 
 router = APIRouter()
 
@@ -82,9 +84,30 @@ def _brain(runs: RunStore, world: _World, agent: str | None = None) -> _Brain:
             return _Brain(policy, status.run_id, status.best_step)
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
+    loaded = _loaded_brain(runs, world)
+    if loaded is not None:
+        return loaded
     ended = runs.latest_ended(project.id, revision, project, agent)
     label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
     return _Brain(RandomPolicy(world.motors, project.brain.seed, label))
+
+
+def _loaded_brain(runs: RunStore, world: _World) -> _Brain | None:
+    """The trained brain the project starts from, until a run of its own trains one; None when it has none or it no
+    longer fits the body."""
+    start = world.project.brain.start_from
+    if start is None:
+        return None
+    warm = WarmStart(run_id=start.run_id, step=start.step)
+    try:
+        if warm_start_problem(runs, world.project, warm) is not None:
+            return None
+        folder = runs.folder(start.run_id)
+        label = f"Loaded brain: {folder.stored_status().name} at {start.step:,} steps"
+        policy = CheckpointPolicy.load(folder.checkpoint_path(start.step), label, world.senses)
+    except Exception:  # noqa: BLE001 - a brain that cannot load falls back to the untrained brain
+        return None
+    return _Brain(policy, start.run_id, start.step)
 
 
 def _chosen_brain(runs: RunStore, world: _World, choice: _Choice) -> _Brain:

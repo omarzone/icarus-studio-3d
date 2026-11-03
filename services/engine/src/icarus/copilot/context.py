@@ -14,7 +14,7 @@ from icarus.library.rewards import REWARD_TERMS, term_families, term_fits
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
 from icarus.projects.operations import apply_operations, empty_project
-from icarus.sim.model_state import CONTROL_PERIOD
+from icarus.sim.model_state import control_period
 from icarus.training.run_store import RunStore
 from icarus.training.schedule import RECOMMENDED_STEPS
 
@@ -103,12 +103,12 @@ def _library(state: ProjectState) -> dict[str, Any]:
     }
 
 
-def _episodes(point: MetricPoint) -> dict[str, Any]:
+def _episodes(point: MetricPoint, period: float) -> dict[str, Any]:
     return {
         "step": point.step,
         "episode_return": point.episode_return,
         "episode_length": point.episode_length,
-        "episode_seconds": None if point.episode_length is None else round(point.episode_length * CONTROL_PERIOD, 2),
+        "episode_seconds": None if point.episode_length is None else round(point.episode_length * period, 2),
         "success_rate": point.success_rate,
         "failure_rate": point.failure_rate,
         "reward_terms": point.reward_terms,
@@ -126,6 +126,7 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
     evaluations = [point for point in metrics if point.kind == "eval"]
     training = [point for point in metrics if point.kind == "train"]
     recommended = RECOMMENDED_STEPS[state.project.task.family]
+    period = control_period(runs.folder(status.run_id).project())
     return {
         "name": status.name,
         "state": status.state,
@@ -136,7 +137,7 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
         "far_below_recommended": status.total_steps < recommended * FAR_BELOW,
         "copies": status.copies,
         # One step is one control decision, so steps convert to simulated seconds only through this rate.
-        "control_rate_hz": round(1 / CONTROL_PERIOD),
+        "control_rate_hz": round(1 / period),
         "best_step": status.best_step,
         "success_rate": status.success_rate,
         # The step of the evaluation that measured success_rate; the run's own step is usually further on.
@@ -151,8 +152,8 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
             }
             for point in evaluations[-RECENT_EVALUATIONS:]
         ],
-        "latest_evaluation": _episodes(evaluations[-1]) if evaluations else None,
-        "latest_training": _episodes(training[-1]) if training else None,
+        "latest_evaluation": _episodes(evaluations[-1], period) if evaluations else None,
+        "latest_training": _episodes(training[-1], period) if training else None,
     }
 
 

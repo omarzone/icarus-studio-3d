@@ -48,6 +48,7 @@ from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.early_look import EarlyLook, default_client
 from icarus.copilot.film_strips import FilmStrips
+from icarus.copilot.idea_revisions import MixRefused
 from icarus.copilot.memory import CopilotMemory, memory_prompt
 from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
@@ -72,7 +73,7 @@ from icarus.storage.data_folder_move import DataFolderMover, MoveRefused
 from icarus.tasks import TaskContext, TaskRegistry
 from icarus.training.run_store import TERMINAL_STATES, RunStore, UnknownRun
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
-from icarus.training.supervisor import NotTrainable, RunInProgress, WarmStartRefused
+from icarus.training.supervisor import NotPausable, NotTrainable, RunInProgress, WarmStartRefused
 
 _CODES = {
     400: "bad_request",
@@ -148,6 +149,10 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
         case NotTrainable():
             return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
         case WarmStartRefused():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
+        case NotPausable():
+            return _error(409, ApiError(code="conflict", message=str(exc)))
+        case MixRefused():
             return _error(422, ApiError(code="invalid", message=str(exc)))
         case NothingToDiagnose() | AutopilotBusy():
             return _error(409, ApiError(code="conflict", message=str(exc)))
@@ -377,6 +382,8 @@ def create_app(
         SkinRejected,
         UnknownSkin,
         WarmStartRefused,
+        NotPausable,
+        MixRefused,
         NothingToDiagnose,
         AutopilotBusy,
         NoAutopilot,

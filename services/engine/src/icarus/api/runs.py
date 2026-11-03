@@ -102,6 +102,17 @@ def stop_run(request: Request, run_id: str) -> RunStatus:
     return _supervisor(request).stop(run_id)
 
 
+@router.post("/runs/{run_id}/pause")
+def pause_run(request: Request, run_id: str) -> RunStatus:
+    """Hold the run between two training steps; its brain and copies wait in memory until it resumes."""
+    return _supervisor(request).pause(run_id)
+
+
+@router.post("/runs/{run_id}/resume")
+def resume_run(request: Request, run_id: str) -> RunStatus:
+    return _supervisor(request).resume(run_id)
+
+
 @router.get("/runs/{run_id}/metrics")
 def get_metrics(request: Request, run_id: str) -> list[MetricPoint]:
     return _runs(request).folder(run_id).metrics()

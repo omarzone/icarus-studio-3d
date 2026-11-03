@@ -263,6 +263,8 @@ A `BehaviorTest` replays a scripted situation and measures the simulated body ag
 - For walking bodies each evaluation episode also records gait signals measured by MuJoCo (root height, tilt, drift, each foot's ground contact and lift-offs, joints at their limits, action change), which `training/run_health.py` turns into facts the coach quotes; the locomotion gait reward terms answer them.
 - Checkpoint 0 is the untrained policy, so every run carries its own before/after baseline.
 - The live view replays what the copies really did. Copies capture a pose only on the steps the view will show; a few times a second the worker writes `live.json` with each copy's frames since the previous write, in contiguous episode segments, within about 100 KB/s. `status.json` names the worker's phase (practicing, updating the brain, testing a checkpoint), so the view always shows a run moving.
+- Pausing is a real suspend at a safe point, the same on every platform: the run folder gets a `pause.request` and the worker waits between two practice steps with the brain, its optimizer and the copies in memory until the request is cleared, so resuming carries on from exactly that state; a stop request ends the wait. The time paused does not count toward the training speed.
+- The task sets how long a try lasts and whether a fall or success ends it early (`set_episode`); the brain sets its decisions per second (the control period), the senses it leaves unread (read as zero) and the motors it leaves at rest, so the observation and action sizes never change and trained brains keep fitting; and `start_from`, a trained checkpoint of any project with the same senses, motors and layers that new runs continue from.
 
 ### Experiments file
 

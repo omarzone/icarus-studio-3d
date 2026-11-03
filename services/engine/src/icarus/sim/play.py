@@ -32,16 +32,15 @@ from icarus.copilot.language import Language, say
 from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
 from icarus.library.pieces import PIECES
+from icarus.sim.brain_readings import action_readings, sense_readings
 from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
     apply_action,
     build_world,
-    command_value,
     control_substeps,
     observation,
     reset_world,
     reward_state,
-    sensor_value,
     touching,
 )
 from icarus.sim.play_drops import (
@@ -65,7 +64,6 @@ from icarus.sim.play_tools import (
 )
 from icarus.sim.policy import Policy
 from icarus.sim.rewards import RewardState, compose, inside_goal
-from icarus.sim.sensor_info import reading_number
 from icarus.sim.signals import scene_signals
 from icarus.sim.start_pose import place_start
 from icarus.sim.success import task_done
@@ -356,15 +354,7 @@ class PlaySession:
         )
 
     def _senses(self) -> list[PlayReading]:
-        readings: list[PlayReading] = []
-        for sensor in self.world.sensors:
-            value = reading_number(sensor.kind, sensor_value(self.world, sensor))
-            readings.append(
-                PlayReading(
-                    id=sensor.id, label=sensor.label, value=value, min=sensor.low, max=sensor.high, unit=sensor.unit
-                )
-            )
-        return readings
+        return sense_readings(self.world)
 
     def _status(self) -> PlayStatus:
         title = "Paused" if self.paused else "Playing"
@@ -401,17 +391,7 @@ class PlaySession:
                     ),
                 )
             )
-        actions = [
-            PlayReading(
-                id=actuator.id,
-                label=actuator.label,
-                value=command_value(self.world, actuator),
-                min=actuator.low,
-                max=actuator.high,
-                unit=actuator.unit,
-            )
-            for actuator in self.world.actuators
-        ]
+        actions = action_readings(self.world)
         return PlayFrame(
             time=float(data.time),
             step=self.step,

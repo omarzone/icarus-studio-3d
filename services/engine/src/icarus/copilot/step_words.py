@@ -63,6 +63,8 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "training_checked": {"en": "Checked {name}", "es": "Revisé {name}"},
     "training_started": {"en": "Started training", "es": "Empecé a entrenar"},
     "training_stopped": {"en": "Stopped training", "es": "Detuve el entrenamiento"},
+    "training_paused": {"en": "Paused training", "es": "Pausé el entrenamiento"},
+    "training_resumed": {"en": "Resumed training", "es": "Reanudé el entrenamiento"},
     "train_offered": {"en": "Offered a Train button", "es": "Ofrecí un botón para entrenar"},
     "tried_invalid": {"en": "Tried {changes}: not valid", "es": "Probé {changes}: no es válido"},
     "tried_failed": {"en": "Tried {changes}: {check} check failed", "es": "Probé {changes}: falló la revisión {check}"},

@@ -88,3 +88,22 @@ def test_a_warm_start_into_a_brain_of_another_size_is_refused(tmp_path, parking_
     problem = warm_start_problem(store, wider.project, WarmStart(run_id=source, step=0))
 
     assert problem is not None and "512 and 512" in problem and "256 and 256" in problem
+
+
+def test_new_runs_start_from_the_brain_the_project_loaded_from_another_project(tmp_path, parking_state):
+    from icarus.contracts.specs import BrainStart
+    from icarus.training.warm_start import brain_start
+
+    store = RunStore(tmp_path)
+    other = parking_state.model_copy(
+        update={"project": parking_state.project.model_copy(update={"id": "ba9876543210"})}
+    )
+    source = _saved_brain(store, other)
+    brain = parking_state.project.brain.model_copy(update={"start_from": BrainStart(run_id=source, step=0)})
+    loaded = parking_state.project.model_copy(update={"brain": brain})
+
+    warm = brain_start(loaded, None)
+
+    assert warm is not None and warm == WarmStart(run_id=source, step=0)
+    assert warm_start_problem(store, loaded, warm) is None
+    assert brain_start(loaded, WarmStart(run_id="asked", step=5)) == WarmStart(run_id="asked", step=5)

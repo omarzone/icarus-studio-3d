@@ -9,6 +9,7 @@ from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import TaskFamily
 from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch, is_ground
 from icarus.design.components import view
+from icarus.design.sensors import component_sensors
 from icarus.projects.document import all_objects
 from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
 from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
@@ -100,6 +101,27 @@ class LiveWorld:
     plate_mode: PlateMode = "all"
     plate_goal: bool = False
     tally: Tally = field(default_factory=Tally)
+    # Seconds between the brain's decisions, from its decisions per second.
+    control_period: float = CONTROL_PERIOD
+    # Sensors the brain reads as zero and actions it leaves at rest, from its muted senses and motors.
+    muted_sensors: frozenset[str] = frozenset()
+    muted_actions: frozenset[int] = frozenset()
+
+
+def control_period(project: Project) -> float:
+    """Seconds between the brain's decisions."""
+    return 1.0 / project.brain.decisions_per_second
+
+
+def _muted(project: Project, actuators: list[ActuatorInfo]) -> tuple[frozenset[str], frozenset[int]]:
+    objects = {obj.id: obj for body in project.bodies for obj in body.objects}
+    sensors: set[str] = set()
+    for item in project.brain.muted_senses:
+        object_id, _, component_id = item.partition("/")
+        if object_id in objects:
+            sensors |= component_sensors(objects[object_id], component_id)
+    motors = {f"{item.partition('/')[0]}:motor" for item in project.brain.muted_motors}
+    return frozenset(sensors), frozenset(index for index, item in enumerate(actuators) if item.id in motors)
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
@@ -221,6 +243,8 @@ def build_world(project: Project) -> LiveWorld:
         vehicle=vehicle,
         spawn=spawn_plan(project, compiled),
     )
+    world.control_period = control_period(project)
+    world.muted_sensors, world.muted_actions = _muted(project, world.actuators)
     agent_bodies = frozenset(index for index in range(model.nbody) if model.body(index).name in body_objects)
     world.plates = plates_of(project, model, agent, agent_bodies)
     world.plate_mode, world.plate_goal = plate_mode(project)
@@ -258,7 +282,7 @@ def reset_world(world: LiveWorld) -> None:
 
 
 def control_substeps(world: LiveWorld) -> int:
-    return max(1, round(CONTROL_PERIOD / float(world.model.opt.timestep)))
+    return max(1, round(world.control_period / float(world.model.opt.timestep)))
 
 
 def sensor_value(world: LiveWorld, sensor: SensorInfo) -> np.ndarray:
@@ -343,7 +367,9 @@ def observed_value(world: LiveWorld, sensor: SensorInfo) -> np.ndarray:
 
 
 def observation(world: LiveWorld) -> np.ndarray:
-    parts = [observed_value(world, sensor) for sensor in world.sensors]
+    parts = [
+        observed_value(world, sensor) * (0.0 if sensor.id in world.muted_sensors else 1.0) for sensor in world.sensors
+    ]
     if world.family == "navigation":
         parts += _navigation_state(world)
         if world.legged:
@@ -361,12 +387,15 @@ def apply_action(world: LiveWorld, action: np.ndarray) -> None:
     commands: dict[str, float] = {}
     for index, actuator in enumerate(world.actuators):
         value = actuator.low + (clipped[index] + 1) / 2 * (actuator.high - actuator.low)
+        if index in world.muted_actions:
+            # A motor the brain does not drive rests at zero, or at the end of its range nearest zero.
+            value = min(max(0.0, actuator.low), actuator.high)
         if actuator.index is None:
             commands[actuator.id] = value
         else:
             world.data.ctrl[actuator.index] = value
     if world.vehicle is not None:
-        drive_vehicle(world.vehicle, world.data, commands, float(agent_velocity(world)[3]), CONTROL_PERIOD)
+        drive_vehicle(world.vehicle, world.data, commands, float(agent_velocity(world)[3]), world.control_period)
 
 
 def command_value(world: LiveWorld, actuator: ActuatorInfo) -> float:

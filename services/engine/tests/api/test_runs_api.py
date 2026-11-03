@@ -71,9 +71,14 @@ def test_a_run_starts_lists_stops_and_serves_its_timeline(tmp_path):
     assert busy.status_code == 409 and busy.json()["code"] == "conflict" and "Run 1" in busy.json()["message"]
     assert [item["run_id"] for item in client.get(f"/projects/{project_id}/runs").json()] == [run_id]
     wait_for(lambda: client.get(f"/runs/{run_id}").json()["state"] == "running")
+    assert client.post(f"/runs/{run_id}/pause").json()["paused"] is True
+    assert client.get(f"/runs/{run_id}").json()["paused"] is True
+    assert client.post(f"/runs/{run_id}/resume").json()["paused"] is False
 
     assert client.post(f"/runs/{run_id}/stop").json()["state"] == "stopping"
     wait_for(lambda: client.get(f"/runs/{run_id}").json()["state"] == "stopped")
+    refused = client.post(f"/runs/{run_id}/pause")
+    assert refused.status_code == 409 and "not training" in refused.json()["message"]
     assert [point["kind"] for point in client.get(f"/runs/{run_id}/metrics").json()] == ["eval"]
     assert client.get(f"/runs/{run_id}/checkpoints").json() == [
         {"step": 0, "episode_return": 0.0, "success_rate": None, "failure_rate": None, "has_rollout": True}

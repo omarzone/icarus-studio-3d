@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from icarus.contracts.specs import TaskFamily
-from icarus.sim.model_state import CONTROL_PERIOD
+from icarus.sim.model_state import control_period
 from icarus.training.episodes import INSTANT_SECONDS, instant_share, success_share
 from icarus.training.experiment_switches import read_experiments
 from icarus.training.run_store import RunFolder, RunStore, UnknownRun
@@ -70,13 +70,14 @@ def run_patience(runs: RunStore, folder: RunFolder) -> int:
 def checkpoint_results(folder: RunFolder) -> list[CheckpointResult]:
     """Evaluations of a run in step order, with locomotion success and instant endings from its episode records."""
     results = []
+    period = control_period(folder.project())
     for point in (point for point in folder.metrics() if point.kind == "eval"):
         episodes = folder.episodes(point.step)
         if episodes is not None and episodes.episodes:
             success, instant = success_share(episodes), instant_share(episodes)
         else:
             success = point.success_rate
-            instant = 1.0 if point.episode_length * CONTROL_PERIOD < INSTANT_SECONDS else 0.0
+            instant = 1.0 if point.episode_length * period < INSTANT_SECONDS else 0.0
         results.append(CheckpointResult(point.step, success, point.episode_return, instant))
     return results
 

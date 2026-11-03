@@ -18,6 +18,7 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetEpisode,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
@@ -34,6 +35,7 @@ from icarus.projects.agents import (
     with_children,
     without_objects,
 )
+from icarus.projects.brain_masks import mask_problem, prune_masks
 from icarus.projects.document import find_object
 
 
@@ -82,8 +84,17 @@ def _component_path(object_id: str, component_id: str) -> str:
     return f"objects.{object_id}.components.{component_id}"
 
 
-def _brain(brain: BrainSpec, change: SetBrain) -> BrainSpec:
-    fields = change.model_dump(include={"template", "copies", "seed", "algorithm", "layers"}, exclude_none=True)
+def _brain(project: Project, brain: BrainSpec, change: SetBrain) -> BrainSpec:
+    included = {"template", "copies", "seed", "algorithm", "layers", "decisions_per_second"}
+    fields = change.model_dump(include=included | {"muted_senses", "muted_motors"}, exclude_none=True)
+    if change.muted_senses is not None or change.muted_motors is not None:
+        senses = list(dict.fromkeys(change.muted_senses if change.muted_senses is not None else brain.muted_senses))
+        motors = list(dict.fromkeys(change.muted_motors if change.muted_motors is not None else brain.muted_motors))
+        if problem := mask_problem(project, senses, motors):
+            raise _fail("brain.muted", problem)
+        fields["muted_senses"], fields["muted_motors"] = senses, motors
+    if change.start_from is not None:
+        fields["start_from"] = None if change.start_from == "none" else change.start_from.model_dump()
     if change.training_steps is not None:
         fields["training_steps"] = None if change.training_steps == "recommended" else change.training_steps
     if change.ppo is not None:
@@ -178,10 +189,18 @@ def _apply(project: Project, operation: EditOperation) -> None:
                 raise _fail(f"task.rewards.{term_id}", f"The task has no reward term {term_id!r}")
             task.rewards = [item for item in task.rewards if item.term != term_id]
         case SetBrain(agent=None):
-            project.brain = _brain(project.brain, operation)
+            project.brain = _brain(project, project.brain, operation)
         case SetBrain(agent=str() as agent_id):
             agent = _agent(project, agent_id)
-            agent.brain = _brain(agent.brain or project.brain, operation)
+            agent.brain = _brain(project, agent.brain or project.brain, operation)
+        case SetEpisode(agent=agent_id):
+            task = _task(project, agent_id)
+            if operation.seconds is not None:
+                task.episode_seconds = operation.seconds
+            if operation.end_on_fall is not None:
+                task.end_on_fall = operation.end_on_fall
+            if operation.end_on_success is not None:
+                task.end_on_success = operation.end_on_success
         case AddAgent(agent=agent, body=body):
             _add_agent(project, agent, body)
         case RemoveAgent(agent=agent_id):
@@ -251,4 +270,5 @@ def apply_operations(project: Project, operations: Sequence[EditOperation]) -> P
     candidate = project.model_copy(deep=True)
     for operation in operations:
         _apply(candidate, operation)
+    prune_masks(candidate)
     return candidate

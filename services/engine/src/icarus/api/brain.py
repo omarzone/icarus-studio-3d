@@ -1,6 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request
 
-from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.brain_network import (
+    BrainActivations,
+    BrainBehaviors,
+    BrainNetwork,
+    BrainReadings,
+    BrainSizes,
+    BrainSources,
+)
+from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunFolder, RunStore
 
 router = APIRouter()
@@ -44,3 +52,47 @@ def get_activations(request: Request, run_id: str, step: int | None = None) -> B
         return read_activations(folder.checkpoint_path(step), folder.project(), run_id, step)
     except ValueError as error:
         raise _invalid(error) from error
+
+
+@router.get("/runs/{run_id}/readings")
+def get_readings(request: Request, run_id: str, step: int | None = None) -> BrainReadings:
+    """What the checkpoint senses and does one second into its first evaluation episode, as MuJoCo computed it."""
+    from icarus.sim.brain_readings import read_readings
+
+    folder, step = _checkpoint(request, run_id, step)
+    try:
+        return read_readings(folder.checkpoint_path(step), folder.project(), run_id, step)
+    except ValueError as error:
+        raise _invalid(error) from error
+
+
+@router.get("/runs/{run_id}/behaviors")
+def get_behaviors(request: Request, run_id: str, step: int | None = None) -> BrainBehaviors:
+    """How the checkpoint's recorded evaluation episodes went, grouped by how they ended."""
+    from icarus.training.brain_insights import behaviors
+
+    folder, step = _checkpoint(request, run_id, step)
+    episodes = folder.episodes(step)
+    if episodes is None or not episodes.episodes:
+        return BrainBehaviors(run_id=run_id, step=step, behaviors=[])
+    return behaviors(run_id, episodes)
+
+
+@router.get("/projects/{project_id}/brain/sizes")
+def get_brain_sizes(request: Request, project_id: str) -> BrainSizes:
+    """The brain sizes offered, each with what a run of this project that trained it measured."""
+    from icarus.training.brain_insights import sizes
+
+    store: ProjectStore = request.app.state.store
+    return sizes(request.app.state.runs, store.state(project_id).project)
+
+
+@router.get("/projects/{project_id}/brain/sources")
+def get_brain_sources(request: Request, project_id: str) -> BrainSources:
+    """Trained brains of every project, each saying whether it can drive this body."""
+    from icarus.training.brain_insights import sources
+
+    store: ProjectStore = request.app.state.store
+    names = {summary.id: summary.name for summary in store.list_projects()}
+    project = store.state(project_id).project
+    return sources(request.app.state.runs, project, lambda other: names.get(other, "A deleted project"))

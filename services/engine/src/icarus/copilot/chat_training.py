@@ -10,15 +10,15 @@ from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunStore
 from icarus.training.schedule import planned_steps
 from icarus.training.settings import TrainingSettingsStore
-from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor, WarmStartRefused
+from icarus.training.supervisor import NotPausable, NotTrainable, RunInProgress, Supervisor, WarmStartRefused
 
 
 class TrainingRequest(BaseModel):
-    """Start or stop training, asked for by the person in the chat."""
+    """Start, stop, pause or resume training, asked for by the person in the chat."""
 
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["start", "stop"]
+    action: Literal["start", "stop", "pause", "resume"]
     total_steps: int | None = Field(default=None, ge=10_000, le=MAX_STEPS)
     copies: int | None = Field(default=None, ge=1, le=MAX_COPIES)
     # Continue from the best brain of the latest run that has one, when the body still senses and acts the same way.
@@ -53,6 +53,8 @@ class ChatTrainer:
                 return self._start(project_id, request, language)
             case "stop":
                 return self._stop(project_id, language)
+            case "pause" | "resume":
+                return self._hold(project_id, request.action == "pause", language)
 
     def _start(self, project_id: str, request: TrainingRequest, language: Language) -> TrainerReply:
         state = self._projects.state(project_id)
@@ -94,6 +96,19 @@ class ChatTrainer:
             if status.best_step > 0 or warm is not None:
                 return WarmStart(run_id=status.run_id, step=status.best_step)
         return None
+
+    def _hold(self, project_id: str, paused: bool, language: Language) -> TrainerReply:
+        self._projects.state(project_id)
+        training = [status for status in self._runs.list_runs(project_id) if status.state in ("starting", "running")]
+        if not training:
+            return TrainerReply(say("train_not_held", language), False)
+        for status in training:
+            try:
+                self._supervisor.pause(status.run_id) if paused else self._supervisor.resume(status.run_id)
+            except NotPausable as error:
+                return TrainerReply(say("train_refused", language, reason=str(error).rstrip(".")), False)
+        names = ", ".join(status.name for status in training)
+        return TrainerReply(say("train_paused" if paused else "train_resumed", language, names=names), True)
 
     def _stop(self, project_id: str, language: Language) -> TrainerReply:
         self._projects.state(project_id)
