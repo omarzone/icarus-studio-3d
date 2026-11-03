@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 
-from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.brain_network import (
+    BrainActivations,
+    BrainBehaviors,
+    BrainNetwork,
+    BrainReadings,
+    BrainSizes,
+    BrainSources,
+)
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
@@ -11,10 +18,12 @@ from icarus.contracts.copilot import (
     Conversation,
     IdeaRequest,
     IdeaSet,
+    MixIdeas,
     ModelSettings,
     ModelSettingsPatch,
     SendMessage,
     SetAutonomy,
+    TweakIdea,
 )
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
@@ -74,6 +83,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     ContextUsage,
     IdeaRequest,
     IdeaSet,
+    TweakIdea,
+    MixIdeas,
     BuildIdea,
     BuildStatus,
     ModelSettings,
@@ -87,6 +98,10 @@ MODELS: tuple[type[BaseModel], ...] = (
     TaskInfo,
     BrainNetwork,
     BrainActivations,
+    BrainReadings,
+    BrainBehaviors,
+    BrainSizes,
+    BrainSources,
     StorageInfo,
     DataFolderMove,
     DataFolderChoice,

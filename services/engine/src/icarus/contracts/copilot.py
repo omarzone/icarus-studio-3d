@@ -232,6 +232,19 @@ class IdeaSet(_Model):
     ideas: list[DesignIdea]
 
 
+class TweakIdea(_Model):
+    """The person's words for changing one idea before it is built."""
+
+    words: str = Field(min_length=1, max_length=1000)
+
+
+class MixIdeas(_Model):
+    """Build the world of one idea with the body of another, from the same set."""
+
+    world_from: str
+    body_from: str
+
+
 class BuildIdea(_Model):
     idea_set: str
     idea: str

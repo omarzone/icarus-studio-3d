@@ -30,11 +30,21 @@ class RewardTermSpec(BaseModel):
     params: dict[str, PropertyValue] = Field(default_factory=dict)
 
 
+MIN_EPISODE_SECONDS = 5.0
+MAX_EPISODE_SECONDS = 300.0
+EpisodeSeconds = Annotated[float, Field(ge=MIN_EPISODE_SECONDS, le=MAX_EPISODE_SECONDS, allow_inf_nan=False)]
+
+
 class TaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     family: TaskFamily
     rewards: list[RewardTermSpec]
+    # Every try ends after this much simulated time.
+    episode_seconds: EpisodeSeconds = 30.0
+    # A try also ends early when the body falls, and when it reaches the goal or succeeds.
+    end_on_fall: bool = True
+    end_on_success: bool = True
 
 
 # Learning methods the worker really trains with.
@@ -46,6 +56,9 @@ MAX_LAYERS = 4
 MIN_NEURONS = 8
 MAX_NEURONS = 1024
 LayerSize = Annotated[int, Field(ge=MIN_NEURONS, le=MAX_NEURONS)]
+MIN_DECISIONS_PER_SECOND = 5
+MAX_DECISIONS_PER_SECOND = 50
+DecisionsPerSecond = Annotated[int, Field(ge=MIN_DECISIONS_PER_SECOND, le=MAX_DECISIONS_PER_SECOND)]
 TrainingSteps = Annotated[int, Field(ge=MIN_TRAINING_STEPS, le=MAX_TRAINING_STEPS)]
 
 
@@ -65,6 +78,15 @@ class PpoSpec(BaseModel):
     ent_coef: float = Field(default=0.0, ge=0.0, le=0.1)
 
 
+class BrainStart(BaseModel):
+    """A trained checkpoint, of this project or another one, that the brain starts from instead of from zero."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str = Field(min_length=1, max_length=64)
+    step: int = Field(ge=0)
+
+
 class BrainSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,6 +99,13 @@ class BrainSpec(BaseModel):
     # Neurons in each hidden layer of the policy and value networks; 1 to MAX_LAYERS layers, checked with the project.
     layers: list[LayerSize] = Field(default_factory=lambda: [256, 256])
     ppo: PpoSpec = Field(default_factory=PpoSpec)
+    # How many times a second the brain reads its senses and sets its motors (the control period's inverse).
+    decisions_per_second: DecisionsPerSecond = 20
+    # Senses the brain does not read and motors it does not drive, as "object/component"; they stay in the body.
+    muted_senses: list[str] = Field(default_factory=list, max_length=64)
+    muted_motors: list[str] = Field(default_factory=list, max_length=64)
+    # A trained brain new runs continue from; None trains from zero.
+    start_from: BrainStart | None = None
 
 
 class AgentSpec(BaseModel):
