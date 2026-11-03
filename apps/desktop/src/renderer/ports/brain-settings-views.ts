@@ -1,4 +1,5 @@
 import type {
+  CopilotProposal,
   EditOperation,
   PropertyValue as EngineValue,
   LibraryCatalog,
@@ -7,6 +8,7 @@ import type {
   SetBrain,
 } from "@icarus/contracts";
 import { formatPropertyValue } from "./property-format.ts";
+import { brainAfter, proposedBrainChanges } from "./proposed-values.ts";
 import type { Inspection, InspectorSection, Property, PropertyValue } from "./scene-port.ts";
 import { toViewValue } from "./scene-views.ts";
 import { recommendedSteps } from "./training-views.ts";
@@ -106,22 +108,62 @@ function settingProperty(project: Project, schema: PropertySchema): Property {
   };
 }
 
+// The value a setting shows for this brain, without its state.
+function settingValue(project: Project, schema: PropertySchema): PropertyValue {
+  const brain = project.brain;
+  if (schema.id === "algorithm") {
+    return toViewValue(schema, { type: "list", value: brain.algorithm ?? "ppo" });
+  }
+  const stored = storedNumber(brain, schema.id);
+  if (schema.id === "training_steps" && stored === undefined) {
+    return { type: "number", value: recommendedSteps(project.task.family), auto: true };
+  }
+  const fallback = "value" in schema.default && typeof schema.default.value === "number" ? schema.default.value : 0;
+  return toViewValue(schema, numeric(schema, stored ?? fallback));
+}
+
+// The setting with the value the copilot's open proposal would give it, when that differs from the brain's own.
+function proposedSetting(project: Project, schema: PropertySchema, changes: readonly SetBrain[]): Property {
+  const property = settingProperty(project, schema);
+  if (changes.length === 0) {
+    return property;
+  }
+  const proposed = settingValue({ ...project, brain: changes.reduce(brainAfter, project.brain) }, schema);
+  if (formatPropertyValue(proposed) === formatPropertyValue(settingValue(project, schema))) {
+    return property;
+  }
+  return { ...property, state: "proposed", was: undefined, note: undefined, proposed };
+}
+
+// Whether one set_brain operation changes what this setting shows.
+export function changesSetting(project: Project, catalog: LibraryCatalog, id: string, change: SetBrain): boolean {
+  const schema = schemaOf(catalog, id);
+  const after = settingValue({ ...project, brain: brainAfter(project.brain, change) }, schema);
+  return formatPropertyValue(after) !== formatPropertyValue(settingValue(project, schema));
+}
+
 const PRACTICE = "practice";
 const EXPERT = "expert";
 
 // The brain as the inspector shows it: practice first, expert settings folded away.
-export function brainInspection(project: Project, catalog: LibraryCatalog): Inspection {
+// `proposal` is the copilot's open proposal; brain settings it would change show as proposed until accepted.
+export function brainInspection(
+  project: Project,
+  catalog: LibraryCatalog,
+  proposal: CopilotProposal | null = null,
+): Inspection {
   const settings = catalog.brain_settings ?? [];
   if (settings.length === 0) {
     return { kind: "nothing" };
   }
+  const changes = proposedBrainChanges(proposal);
   const section = (id: string, title: string, expert: boolean): InspectorSection => ({
     id,
     title,
     collapsed: expert,
     properties: settings
       .filter((schema) => Boolean(schema.expert) === expert)
-      .map((schema) => settingProperty(project, schema)),
+      .map((schema) => proposedSetting(project, schema, changes)),
   });
   return {
     kind: "object",

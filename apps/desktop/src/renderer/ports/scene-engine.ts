@@ -5,6 +5,9 @@ import { trainingVariations, variationOperations } from "./copy-variations.ts";
 import { guideProgress } from "./guide-progress.ts";
 import { type Quat, stretchedScale, turnedRotation, type Vec3, worldToParent } from "./object-transform.ts";
 import { insertPartOperation, isPlaneFloor, partKind, sizedScale, slabOperations } from "./part-insert.ts";
+import type { ProposalApi } from "./proposal-accept.ts";
+import { acceptProposedValue } from "./proposal-accept.ts";
+import { openProposal } from "./proposed-values.ts";
 import { duplicateOperations, reparentOperations } from "./scene-objects.ts";
 import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
 import {
@@ -19,9 +22,7 @@ import {
 
 export { nextComponentId } from "./scene-views.ts";
 
-type SceneApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "scene" | "runs"> & CopiesApi;
-
-export type EngineScenePort = Omit<ScenePort, "acceptProposedValue">;
+type SceneApi = Pick<EngineApi, "library" | "scene" | "runs"> & ProposalApi & CopiesApi;
 
 // Copies are laid out in a grid, as Live training shows them.
 const LAYOUTS = ["Grid"];
@@ -60,7 +61,7 @@ function settingLabel(catalog: LibraryCatalog, id: string): string {
 }
 
 // The scene port on the engine: the document comes from the engine, selection stays in the app.
-export function createEngineScenePort(api: SceneApi): EngineScenePort {
+export function createEngineScenePort(api: SceneApi): ScenePort {
   const selection = new Map<string, string | null>();
   let catalog: Promise<LibraryCatalog> | undefined;
   const library = () => {
@@ -73,6 +74,12 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
   const load = async (scene: string) => {
     const [state, lib] = await Promise.all([api.project(scene), library()]);
     return { project: state.project, catalog: lib, selected: selection.get(scene) ?? null };
+  };
+  // The document with the copilot's open proposal, for views that show proposed values.
+  const loadWithProposal = async (scene: string) => {
+    const [state, lib, conversation] = await Promise.all([api.project(scene), library(), api.conversation(scene)]);
+    const proposal = openProposal(conversation, state.revision.number);
+    return { project: state.project, catalog: lib, selected: selection.get(scene) ?? null, proposal };
   };
   const selectedObject = async (scene: string) => {
     const current = await load(scene);
@@ -147,9 +154,17 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       return sceneTree(project, lib, found.id);
     },
     getInspection: async (scene) => {
-      const { project, catalog: lib, selected } = await load(scene);
-      return inspection(project, lib, selected);
+      const { project, catalog: lib, selected, proposal } = await loadWithProposal(scene);
+      return inspection(project, lib, selected, proposal);
     },
+    acceptProposedValue: async ({ scene, section, property }) =>
+      acceptProposedValue(api, {
+        scene,
+        section,
+        property,
+        selected: selection.get(scene) ?? null,
+        catalog: await library(),
+      }),
     setProperty: async ({ scene, section, property, value }) => {
       const { obj } = await selectedObject(scene);
       const operation: EditOperation = {
@@ -178,8 +193,8 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       return edit(scene, [operation], `Reset ${schema.label} on ${obj.name}`);
     },
     getBrainSettings: async (scene) => {
-      const { project, catalog: lib } = await load(scene);
-      return brainInspection(project, lib);
+      const { project, catalog: lib, proposal } = await loadWithProposal(scene);
+      return brainInspection(project, lib, proposal);
     },
     setBrainSetting: async ({ scene, property, value }) => {
       const { project, catalog: lib } = await load(scene);

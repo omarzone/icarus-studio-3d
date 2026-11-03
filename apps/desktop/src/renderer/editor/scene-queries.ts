@@ -75,5 +75,12 @@ export function useSceneCache(scene: string) {
       client.setQueryData(sceneKeys.brainSettings(scene), settings);
       void refreshOthers("brain-settings");
     },
+    // An accepted copilot value also changes the proposal the chat shows.
+    accepted: (kept: "inspection" | "brain-settings", inspection: Inspection) => {
+      client.setQueryData(["scene", scene, kept], inspection);
+      void refreshOthers(kept);
+      void client.invalidateQueries({ queryKey: ["copilot"] });
+      void client.invalidateQueries({ queryKey: ["copilot-preview"] });
+    },
   };
 }

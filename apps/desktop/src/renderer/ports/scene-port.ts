@@ -1,5 +1,4 @@
 import type { SceneDescription } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { copiesApi, engineApi } from "../engine-client/engine-api.ts";
 import { createSceneFixture } from "./scene.fixture.ts";
@@ -240,14 +239,6 @@ export type ScenePort = {
 };
 
 export const scenePort = definePort<ScenePort>({
-  app: {
-    ...createEngineScenePort({ ...engineApi, ...copiesApi }),
-    acceptProposedValue: pending({
-      key: "scene.acceptProposedValue",
-      summary: "Accepting a value the copilot proposed",
-      sprint: 6,
-      ids: ["REF-PROPERTY-TYPES"],
-    }),
-  },
+  app: createEngineScenePort({ ...engineApi, ...copiesApi }),
   prototype: createSceneFixture,
 });
