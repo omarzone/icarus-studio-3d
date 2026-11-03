@@ -27,6 +27,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: pnpm install --frozen-lockfile
       - run: pnpm engine:sync
+      - run: pnpm community:sync
       - run: pnpm -F @icarus/ui-tokens build
       - run: pnpm check
 
