@@ -293,7 +293,7 @@ export interface AddObjectCommand {
 export interface AgentStep {
   ok?: boolean;
   summary: string;
-  tool: "inspect" | "look" | "try" | "propose" | "train" | "library";
+  tool: "inspect" | "look" | "try" | "propose" | "train" | "library" | "export";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -768,6 +768,14 @@ export interface BuildStep {
   id: string;
   label: string;
   status: "done" | "running" | "todo";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BuildTarget".
+ */
+export interface BuildTarget {
+  detail: string;
+  kind: "community" | "export-brain" | "hardware" | "game" | "animation";
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2554,6 +2562,145 @@ export interface NeuronActivity {
   index: number;
   mean: number;
   peak: number;
+}
+/**
+ * The trained brain an export carries: the best checkpoint of the newest ended run of the revision.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportBrain".
+ */
+export interface ExportBrain {
+  inputs: number;
+  outputs: number;
+  rate_hz: number;
+  run_id: string;
+  run_name: string;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportChoice".
+ */
+export interface ExportChoice {
+  format?: "onnx" | "urdf" | "mjcf" | "package";
+  options?: ("spec" | "runtime" | "parts" | "history")[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportFile".
+ */
+export interface ExportFile {
+  bytes: number;
+  description: string;
+  path: string;
+}
+/**
+ * The files an export writes, with their real sizes, before anything is written.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportPlan".
+ */
+export interface ExportPlan {
+  brain: ExportBrain | null;
+  files: ExportFile[];
+  format: "onnx" | "urdf" | "mjcf" | "package";
+  name: string;
+  notes?: string[];
+  options: ("spec" | "runtime" | "parts" | "history")[];
+  total_bytes: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportRequest".
+ */
+export interface ExportRequest {
+  destination: string;
+  format?: "onnx" | "urdf" | "mjcf" | "package";
+  options?: ("spec" | "runtime" | "parts" | "history")[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ExportResult".
+ */
+export interface ExportResult {
+  files: ExportFile[];
+  path: string;
+  total_bytes: number;
+}
+/**
+ * The body's joints and sensors checked against a hardware kit, with an honest verdict.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwareCheck".
+ */
+export interface HardwareCheck {
+  kit: HardwareKitInfo;
+  kits: HardwareKitInfo[];
+  measured_from: string | null;
+  parts: HardwarePart[];
+  problem: HardwareProblem | null;
+  project_id: string;
+  revision: number;
+  rows: HardwareRow[];
+  safety: string[];
+  verdict: "pass" | "warn" | "fail";
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwareKitInfo".
+ */
+export interface HardwareKitInfo {
+  board: string;
+  id: string;
+  name: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwarePart".
+ */
+export interface HardwarePart {
+  count: number;
+  name: string;
+  usd: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwareProblem".
+ */
+export interface HardwareProblem {
+  fix: string;
+  title: string;
+}
+/**
+ * One joint or sensor of the body checked against the part of the kit that would play it.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwareRow".
+ */
+export interface HardwareRow {
+  fraction: number;
+  gap: string;
+  hardware: string | null;
+  id: string;
+  kind: "joint" | "sensor";
+  limit: number | null;
+  measured: boolean;
+  need: number | null;
+  part: string;
+  role: string;
+  status: "pass" | "warn" | "fail" | "skipped";
+  unit: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "HardwareCheckRequest".
+ */
+export interface HardwareCheckRequest {
+  kit?: string | null;
+  /**
+   * @maxItems 200
+   */
+  skipped?: string[];
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

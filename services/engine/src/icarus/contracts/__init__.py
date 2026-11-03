@@ -9,6 +9,15 @@ from icarus.contracts.behavior import (
     EpisodeActivations,
 )
 from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.build import (
+    BuildTarget,
+    ExportChoice,
+    ExportPlan,
+    ExportRequest,
+    ExportResult,
+    HardwareCheck,
+    HardwareCheckRequest,
+)
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
@@ -109,6 +118,13 @@ MODELS: tuple[type[BaseModel], ...] = (
     SkinInfo,
     SkinImport,
     SkinImported,
+    BuildTarget,
+    ExportChoice,
+    ExportPlan,
+    ExportRequest,
+    ExportResult,
+    HardwareCheck,
+    HardwareCheckRequest,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

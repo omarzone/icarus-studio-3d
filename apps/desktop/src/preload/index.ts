@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { ENGINE_CHANNEL, type EngineBridge, type EngineStatus } from "../shared/engine-bridge.ts";
+import { EXPORT_CHANNEL, type ExportBridge } from "../shared/export-bridge.ts";
 import { STORAGE_CHANNEL, type StorageBridge } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL, type WindowBridge } from "../shared/window-bridge.ts";
 
@@ -24,4 +25,8 @@ const storage: StorageBridge = {
   chooseFolder: () => ipcRenderer.invoke(STORAGE_CHANNEL.chooseFolder),
 };
 
-contextBridge.exposeInMainWorld("icarus", { engine, window: windowBridge, storage });
+const exportBridge: ExportBridge = {
+  chooseDestination: (suggestedName) => ipcRenderer.invoke(EXPORT_CHANNEL.chooseDestination, suggestedName),
+};
+
+contextBridge.exposeInMainWorld("icarus", { engine, window: windowBridge, storage, exports: exportBridge });

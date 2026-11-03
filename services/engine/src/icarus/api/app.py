@@ -13,6 +13,7 @@ from icarus.api import (
     attachments,
     behavior,
     brain,
+    build,
     coach,
     copilot,
     events,
@@ -361,6 +362,7 @@ def create_app(
     app.include_router(tasks.router)
     app.include_router(brain.router)
     app.include_router(behavior.router)
+    app.include_router(build.router)
     app.include_router(notes.router)
     app.include_router(project_runs.router)
     app.include_router(storage.router)

@@ -73,19 +73,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `brain.source` | The brains that can drive this body | `MOD-BRAIN-SOURCE` |
 | `brain.wiring` | How the brain's neurons connect to the body | `STA-BRAIN-CONNECTOME` |
 
-## Sprint 12
-
-| Action | What it does | Used in |
-|---|---|---|
-| `build.export-download` | Downloading an exported brain | `MOD-EXPORT-BRAIN` |
-| `build.export-format` | Choosing the brain export format | `MOD-EXPORT-BRAIN` |
-| `build.export-option` | Choosing what goes in a brain export | `MOD-EXPORT-BRAIN` |
-| `build.export-plan` | Exporting a brain | `MOD-EXPORT-BRAIN` |
-| `build.hardware` | Running a brain on real hardware | `STA-BUILD-HARDWARE` |
-| `build.hardware-recheck` | Checking a sensor on the device again | `STA-BUILD-HARDWARE` |
-| `build.hardware-skip` | Running without one sensor | `STA-BUILD-HARDWARE` |
-| `build.targets` | What you can build from a project | `SCR-BUILD`, `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED` |
-
 ## Sprint 13
 
 | Action | What it does | Used in |

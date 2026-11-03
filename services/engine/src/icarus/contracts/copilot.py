@@ -147,7 +147,7 @@ class ChatSuggestion(_Model):
 class AgentStep(_Model):
     """One thing the copilot did before answering, shown so the person can follow its work."""
 
-    tool: Literal["inspect", "look", "try", "propose", "train", "library"]
+    tool: Literal["inspect", "look", "try", "propose", "train", "library", "export"]
     # What it did, in words ("Looked at the parking spot from the side").
     summary: str = Field(max_length=200)
     ok: bool = True

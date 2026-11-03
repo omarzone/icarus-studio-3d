@@ -6,6 +6,7 @@ from icarus.copilot.agent.tools.behavior_testing import BEHAVIOR_TEST
 from icarus.copilot.agent.tools.building import EDIT_GROUP, EDIT_MATCHING, PATTERN
 from icarus.copilot.agent.tools.cloning import BUILD_OBJECT, REFERENCE_SCENE
 from icarus.copilot.agent.tools.coaching import COACH
+from icarus.copilot.agent.tools.exporting import CHECK_HARDWARE, EXPORT_ROBOT
 from icarus.copilot.agent.tools.finding import FIND_OBJECTS
 from icarus.copilot.agent.tools.inspect import INSPECT_OBJECT, READ_RUN
 from icarus.copilot.agent.tools.layout import LAYOUT
@@ -36,5 +37,7 @@ REGISTRY: dict[str, Tool[Any]] = {
         TRAIN,
         COACH,
         BEHAVIOR_TEST,
+        CHECK_HARDWARE,
+        EXPORT_ROBOT,
     )
 }
