@@ -104,4 +104,7 @@ def test_training_the_parking_car_for_twenty_thousand_steps_with_two_copies(tmp_
     assert [point.step for point in training] == sorted(point.step for point in training)
     snapshot = folder.snapshot()
     assert snapshot is not None and len(snapshot.copies) == 2
+    # The car is a vehicle: every replayed frame says which lights were on and whether the spot's rules held.
+    rollout = folder.rollout(20_000)
+    assert rollout is not None and all(frame.signals and frame.signals.lights for frame in rollout.frames)
     assert all(len(copy.positions) == len(snapshot.geoms) for copy in snapshot.copies)
