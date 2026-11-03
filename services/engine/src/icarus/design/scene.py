@@ -5,6 +5,8 @@ import numpy as np
 
 from icarus.contracts.scene import SceneBody, SceneDescription, SceneGeom, SceneLight, SceneZone
 from icarus.design.compiler import CompiledModel
+from icarus.design.decor import scene_displays, scene_eyes, scene_plates
+from icarus.design.plates import is_plate_name
 from icarus.design.ray_readings import ray_readings
 
 Shape = Literal["plane", "box", "sphere", "capsule", "cylinder"]
@@ -105,7 +107,8 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
     geoms: list[SceneGeom] = []
     for index in range(model.ngeom):
         shape = _SHAPES.get(int(model.geom_type[index]))
-        if shape is None:
+        # Plates are drawn from `plates`, by role and pressed state.
+        if shape is None or is_plate_name(model.geom(index).name):
             continue
         quaternion = np.zeros(4)
         mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
@@ -145,6 +148,9 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
         zones=zones,
         sky=compiled.sky,
         rays=ray_readings(model, data, compiled.ray_labels),
+        plates=scene_plates(model, data, compiled.decor),
+        displays=scene_displays(model, data, compiled.decor),
+        eyes=scene_eyes(model, data, compiled.decor),
     )
 
 

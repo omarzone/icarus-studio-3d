@@ -2,6 +2,7 @@ from icarus.contracts.library import ComponentGroupName, ComponentKindSpec
 from icarus.contracts.objects import ComponentSpec
 from icarus.contracts.properties import PropertySchema
 from icarus.contracts.scene import GEOM_FINISHES, GEOM_STYLES, GEOM_SURFACES
+from icarus.library.decor_kinds import DECOR_KINDS
 from icarus.library.properties import (
     choice,
     color,
@@ -367,7 +368,7 @@ _KINDS = [
     ),
 ]
 
-COMPONENTS: dict[str, ComponentKindSpec] = {kind.kind: kind for kind in [*_KINDS, *VEHICLE_KINDS]}
+COMPONENTS: dict[str, ComponentKindSpec] = {kind.kind: kind for kind in [*_KINDS, *VEHICLE_KINDS, *DECOR_KINDS]}
 
 
 def component_kind(kind: str) -> ComponentKindSpec:

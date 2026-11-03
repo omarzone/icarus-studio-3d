@@ -1,7 +1,7 @@
 from icarus.contracts.library import RewardTermInfo
 from icarus.contracts.properties import PropertySchema
 from icarus.contracts.specs import TaskFamily
-from icarus.library.properties import number, reference
+from icarus.library.properties import choice, number, reference
 
 
 def _term(
@@ -201,6 +201,38 @@ _TERMS = [
         "A penalty each step equal to the share of the body's limited joints within 5% of either end of their "
         "range, from 0 (none) to 1 (all). Stops locked straight legs and joints slammed against their stops.",
     ),
+    _term(
+        "reach_plates",
+        "Reach the plates",
+        "navigation",
+        0,
+        100,
+        10,
+        "A bonus once the floor plates are reached, and the try then ends as a success: any one plate, all of them, "
+        "or all in their Order. The goal plates are the target plates, or every plate but start pads when the world "
+        "has none; a plate is reached when its trigger holds (touch with its press force, or the center over it). "
+        "Setting: mode (any, all or in_order). Replaces the goal zone as what success means.",
+    ),
+    _term(
+        "on_plate",
+        "Stand on a plate",
+        "navigation",
+        0,
+        5,
+        0.1,
+        "Reward each step while a goal plate's trigger holds (the body stands on it). Paid every step, so keep it "
+        "small next to reach_plates.",
+    ),
+    _term(
+        "plates_pressed",
+        "Press new plates",
+        "navigation",
+        0,
+        100,
+        5,
+        "Reward of 1 each time another goal plate is reached in this try (in order when reach_plates asks for "
+        "order), so a body is paid for each plate on the way to all of them.",
+    ),
 ]
 
 REWARD_TERMS: dict[str, RewardTermInfo] = {term.term: term for term in _TERMS}
@@ -212,6 +244,7 @@ TERM_SETTINGS: dict[str, list[PropertySchema]] = {
     "body_height": [
         number("height", "Target height", "m", 0.05, 5, 1, hint="Root height to hold; unset uses the standing height")
     ],
+    "reach_plates": [choice("mode", "Mode", ["any", "all", "in_order"], "all", hint="Which plates complete the goal")],
 }
 
 # Posture and effort do not depend on where the body goes, so a legged body racing to a goal keeps them.
@@ -223,6 +256,10 @@ _ALSO_FOR: dict[str, frozenset[TaskFamily]] = {
     "smooth_actions": frozenset({"navigation"}),
     "feet_air_time": frozenset({"navigation"}),
     "joint_limits": frozenset({"navigation"}),
+    # Plates are places to step on, so a walker racing across them learns them as well as a rover.
+    "reach_plates": frozenset({"navigation", "locomotion"}),
+    "on_plate": frozenset({"navigation", "locomotion"}),
+    "plates_pressed": frozenset({"navigation", "locomotion"}),
 }
 
 

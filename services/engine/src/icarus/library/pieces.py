@@ -1,5 +1,6 @@
 from icarus.contracts.library import PieceCategory, PieceInfo
 from icarus.library.parts import Part, Raw, fixture, solid
+from icarus.library.plate_pieces import PLATE_PIECES
 
 Size = tuple[float, float, float]
 
@@ -341,6 +342,7 @@ _PIECES = [
         "A 30 kg steel barrel 0.9 m tall that can be pushed or knocked over.",
         _movable("barrel", "Barrel", "cylinder", (0.6, 0.6, 0.9), 30, "#2f6db3", "barrel", "metal"),
     ),
+    *PLATE_PIECES,
 ]
 
 PIECES: dict[str, PieceInfo] = {piece.id: piece for piece in _PIECES}

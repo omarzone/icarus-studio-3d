@@ -2,7 +2,7 @@ from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
 
 # Components that physics, senses and rewards never read (ADR 007 and 008: looks stay out of the simulation).
-LOOK_COMPONENTS = frozenset({"sky", "light", "skin"})
+LOOK_COMPONENTS = frozenset({"sky", "light", "skin", "display", "eyes"})
 # Properties that only change the drawing or a label; the material's surface sets friction, so it stays.
 LOOK_PROPERTIES = {
     "material": frozenset(
@@ -20,6 +20,7 @@ LOOK_PROPERTIES = {
         }
     ),
     "distance_ray": frozenset({"name"}),
+    "plate": frozenset({"color", "sink"}),
 }
 # How a brain practices shapes the next run, not what a finished brain can drive; the checkpoint keeps its own layers.
 PRACTICE_FIELDS = frozenset({"copies", "seed", "training_steps", "layers", "ppo"})
