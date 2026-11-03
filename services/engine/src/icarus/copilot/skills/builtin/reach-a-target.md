@@ -31,9 +31,12 @@ example; a rover docking at a station or a legged robot walking to a mark are th
    distance and bearing, so finding the goal needs no sensor. Add a `distance_ray` only when obstacles stand in
    the way (avoid-obstacles), and `balance` plus foot `touch` for legs (sensors-for-a-task).
 5. **Vary the start.** With `spawn_point.mode` auto every navigation episode starts the body a little off where
-   it stands: up to ±1.5 m to the side, up to 2 m back and turned up to ±35°. To reach the target from anywhere,
-   set `spawn_point.mode` area with `spawn_point.area` (width and depth around the spawn, along its heading) and
-   `spawn_point.heading_range` (180, or `spawn_point.random_heading`, faces any way); or place several
+   it stands: up to ±1.5 m to the side, up to 2 m back and turned up to ±35°. Once starts near the spawn are mastered, to
+   reach the target from anywhere set `spawn_point.mode` anywhere in a new stage: each try starts at a free place
+   anywhere on the floor, clear of obstacles, at least `spawn_point.goal_distance` beyond the goal with a way to it,
+   facing any direction. For one region only, set mode area with `spawn_point.area` (width and depth around the
+   spawn, along its heading; 0 × 0 means the whole free map) and `spawn_point.heading_range` (180, or
+   `spawn_point.random_heading`, faces any way); or place several
    `spawn_point` objects and set the first one's mode to random_point or cycle_points; or add `randomize` to the
    goal with `randomize.position_range` of a few metres on X and Y. Keep every start area on the ground and clear
    of obstacles. Training copies differ by seed while evaluations repeat the same starts. Randomize only world objects, never the body's parts. A randomized goal must stay clear of every

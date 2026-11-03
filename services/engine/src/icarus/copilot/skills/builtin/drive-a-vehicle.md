@@ -33,7 +33,8 @@ the component keep their raw motors and work as before.
    the brain learns.
 6. **Rewards and training.** `progress_to_goal` = 1, `reach_goal` = 10, `collision_penalty` = -5 when there is
    something to hit, `time_penalty` = -0.01. For a spot to park in, follow park-a-vehicle. Start with a fixed,
-   open course, then add obstacles and wider starts one stage at a time (curriculum-and-warm-start).
+   open course, then add obstacles and wider starts one stage at a time (curriculum-and-warm-start); once a
+   start near one spawn point is mastered, `spawn_point.mode` anywhere starts each try at a free place anywhere on the map.
 7. **Check.** `try`, then `look` with view `top`: the wheels must touch the ground, the knuckles turn and nothing
    overlaps the body. Fix and try again before you `propose`; `train` only when the person asks, and
    `read_run` before saying anything about learning.

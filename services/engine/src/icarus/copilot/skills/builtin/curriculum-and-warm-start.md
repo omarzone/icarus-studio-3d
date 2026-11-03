@@ -23,8 +23,10 @@ brain. Restarting from zero throws away every step trained so far, so plan the f
    `train` until evaluations succeed most of the time; read them with `read_run` and `evaluations`. Give it time:
    success often stays low for the first few hundred thousand steps and then climbs, so do not change the stage
    before about half the recommended budget unless the facts show a design problem.
-3. **Harden one thing per stage.** Next revision: widen the start with `spawn_point.mode` area, its
-   `spawn_point.area` and `spawn_point.heading_range` (or several spawn points with random_point), then
+3. **Harden one thing per stage.** Next revision: widen the start. To generalize, set `spawn_point.mode`
+   anywhere so each try starts at a free place anywhere on the map, facing any way and at least
+   `spawn_point.goal_distance` from the goal; for a narrower step use mode area with a sized `spawn_point.area`
+   and `spawn_point.heading_range` (or several spawn points with random_point). Then
    `randomize` the goal (`randomize.position_range` of 1 to 3 m), then add obstacles or shrink the zone. Never let a randomized goal
    reach occupied space: keep its range inside free ground, or when it should land in one of several bays, move
    the parked objects with it (put them under one parent and randomize the parent) or train each free position
