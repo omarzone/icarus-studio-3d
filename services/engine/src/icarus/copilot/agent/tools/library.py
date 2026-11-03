@@ -8,6 +8,7 @@ from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnSco
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.context import property_schema
 from icarus.copilot.step_words import step_said
+from icarus.library.body_vault import VAULT_BODIES, use_vault_body
 from icarus.library.components import COMPONENTS
 from icarus.library.layouts import RECIPES, recipe_parameters
 from icarus.library.pieces import PIECES, piece_summary, pieces_by_category
@@ -20,7 +21,8 @@ MATCHES = 8
 
 class LibraryArgs(ToolArgs):
     kind: str | None = Field(
-        default=None, description="Exact id of a component kind, piece, reward term or template to read in full."
+        default=None,
+        description="Exact id of a component kind, piece, vault body, reward term or template to read in full.",
     )
     query: str | None = Field(default=None, description="Words to search in library ids and labels.")
 
@@ -73,6 +75,17 @@ def _entries() -> dict[str, dict[str, Any]]:
     for template_id, template in TEMPLATES.items():
         entries[template_id] = {"type": "template", "label": template.label, "family": template.family}
         entries[template_id]["description"] = template.description
+    # A body shares an id with a template (humanoid): the body is listed with a suffix.
+    for body_id, body in VAULT_BODIES.items():
+        entries[body_id if body_id not in entries else f"{body_id}_body"] = {
+            "type": "body",
+            "label": body.label,
+            "family": body.family,
+            "description": body.description,
+            "color": body.color,
+            "rewards": {reward.term: reward.weight for reward in body.rewards},
+            "vault_id": body_id,
+        }
     return entries
 
 
@@ -97,11 +110,18 @@ def library(scope: TurnScope, args: LibraryArgs) -> Observation:
             )
         if entry["type"] == "template":
             entry["operations_for_this_project"] = template_additions(scope.state.project, args.kind.strip())
+        if entry["type"] == "body":
+            operations = use_vault_body(scope.state.project, entry["vault_id"])
+            entry["operations_for_this_project"] = [op.model_dump() for op in operations]
         return Observation(
             compact({"id": args.kind.strip(), **entry}),
             summary=step_said("library_read", scope.language, name=entry["label"]),
         )
     words = (args.query or "").lower().split()
+    if {"bodies", "vault"} & set(words) or words == ["body"]:
+        bodies = {key: entry["label"] for key, entry in entries.items() if entry["type"] == "body"}
+        summary = step_said("library_search", scope.language, query=(args.query or "")[:40], count=len(bodies))
+        return Observation(compact({"vault_bodies": bodies}), summary=summary)
     shelves = pieces_by_category()
     named = [category for category in shelves if category in words or category.rstrip("s") in words]
     if named:
@@ -126,7 +146,9 @@ LIBRARY = Tool(
         "a template with the operations that add its bodies and task to this project (try them as they are or "
         "adapted), or a layout recipe with its parameters for the layout tool. Give an exact id in kind, or words "
         "in query to find up to 8 entries; the query layout lists the recipes. Pieces come in categories: "
-        "basics, street, buildings, furniture, nature and props; a query naming one lists all its pieces with sizes."
+        "basics, street, buildings, furniture, nature and props; a query naming one lists all its pieces with sizes. "
+        "The query body lists the vault's ready-made bodies (biped, humanoid, dog, spider, hexapod, snake, rover, "
+        "hopper and more); reading one gives the operations that make it this project's agent."
     ),
     args=LibraryArgs,
     step="library",

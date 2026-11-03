@@ -3,14 +3,16 @@ name: walking-robot
 title: Design any legged body that learns to walk
 when: The person wants legs, a walker, a humanoid, a quadruped, an insect or any body that moves forward by stepping.
 tools: [library, inspect_object, try, look, propose, train]
-version: 3
+version: 4
 ---
 Locomotion pays the body for moving forward along +x without falling. A legged body has fallen once its root
 drops below 40% of its start height; the episode then ends. The two templates are examples: a quadruped or a
 six-legged body uses the same leg chain once per leg, spread around the torso.
 
-1. **Start from a template.** Call `library` with `walker_robot` (a 10 kg torso 0.3 × 0.3 × 0.4 m on two legs,
-   six motors) or `humanoid` (twelve motors, balance and foot sensors). Try its operations first and adapt sizes,
+1. **Start from the vault or a template.** The body vault (pick-a-body) has legged bodies that already stand:
+   `biped`, `humanoid_body`, `dog`, `spider` (eight legs), `hexapod` (six), `tripod`, `ball_crawler` and `hopper`.
+   Call `library` with one of them, or with `walker_robot` (a 10 kg torso 0.3 × 0.3 × 0.4 m on two legs, six
+   motors) or `humanoid` (twelve motors, balance and foot sensors). Try its operations first and adapt sizes,
    masses and colors in later tries; a body built from nothing fails the design checks far more often.
 2. **Legs.** Each leg is a chain thigh → shin → foot, every joint a `joint` hinge on axis (0, 1, 0) with a
    position `motor`. The walker uses hips at ±60°, knees from 0 to 120° and ankles at ±45°, with

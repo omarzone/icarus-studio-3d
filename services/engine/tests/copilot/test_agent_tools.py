@@ -62,6 +62,17 @@ def test_a_template_brings_the_operations_that_add_its_body_and_task_to_this_pro
     assert tried["passed"], tried["checks"]
 
 
+def test_a_vault_body_brings_the_operations_that_make_it_this_projects_agent(scope):
+    listed = json.loads(library(scope, LibraryArgs(query="vault bodies")).text)["vault_bodies"]
+    assert {"spider", "dog", "snake", "humanoid_body"} <= set(listed)
+    spider = json.loads(library(scope, LibraryArgs(kind="spider")).text)
+    assert spider["type"] == "body" and spider["family"] == "locomotion"
+    operations = spider["operations_for_this_project"]
+    assert {"op": "remove_body", "body": "car_body"} in operations
+    tried = json.loads(try_change(scope, TryArgs.model_validate({"operations": operations, "look": None})).text)
+    assert tried["passed"], tried["checks"]
+
+
 class _BlankViews:
     def render(self, compiled, camera, zones, timeout=None, colliders=False) -> bytes:
         raise BlankPicture("every pixel is the same")
