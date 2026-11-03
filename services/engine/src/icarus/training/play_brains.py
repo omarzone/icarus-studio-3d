@@ -66,10 +66,32 @@ def _label(status: RunStatus, step: int, success_rate: float | None) -> str:
     return " · ".join(parts)
 
 
+def _newest_fitting(runs: RunStore, project: Project) -> tuple[RunStatus, Path] | None:
+    """The best checkpoint of the newest ended run of any revision whose body the brain still drives."""
+    now = body_size(project)
+    for status in runs.list_runs(project.id):
+        if status.state not in TERMINAL_STATES or not status.best_step or status.agent is not None:
+            continue
+        folder = runs.folder(status.run_id)
+        path = folder.checkpoint_path(status.best_step)
+        if path.is_file() and misfit(now, frozen_size(folder.path)) is None:
+            return status, path
+    return None
+
+
+def default_checkpoint(runs: RunStore, project: Project, revision: int) -> tuple[RunStatus, Path] | None:
+    """The brain Play uses when none is chosen: the best of this revision, else, unless the project loads a brain of
+    its own, the newest trained brain that still fits the body."""
+    trained = runs.trained_checkpoint(project.id, revision, project)
+    if trained is not None or project.brain.start_from is not None:
+        return trained
+    return _newest_fitting(runs, project)
+
+
 def brain_options(runs: RunStore, project: Project, revision: int) -> list[PlayBrainOption]:
     """The best checkpoint of every ended run of the project, newest first, each saying whether it fits the body."""
     now = body_size(project)
-    default = runs.trained_checkpoint(project.id, revision, project)
+    default = default_checkpoint(runs, project, revision)
     default_run = default[0].run_id if default is not None else None
     options: list[PlayBrainOption] = []
     for status in runs.list_runs(project.id):

@@ -35,6 +35,7 @@ from icarus.library.pieces import PIECES
 from icarus.sim.brain_readings import action_readings, sense_readings
 from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
+    LiveWorld,
     apply_action,
     build_world,
     control_substeps,
@@ -113,6 +114,7 @@ class PlaySession:
         # The world as designed; Reset returns to it, dropping whatever Add object brought in.
         self._project = project.model_copy(deep=True)
         self.world = build_world(self._project.model_copy(deep=True))
+        self._visible: tuple[LiveWorld, list[tuple[int, str]]] | None = None
         self._added = 0
         self._rain: list[tuple[AddObjectCommand, PendingDrop]] = []
         self.speed = 1.0
@@ -369,14 +371,19 @@ class PlaySession:
             return PlayStatus(title=title, detail=f"{self._name(world.agent_object)} at {state.position[2]:.2f} m high")
         return PlayStatus(title=title, detail=self.brain.label)
 
+    def _visible_geoms(self) -> list[tuple[int, str]]:
+        """Index and name of each geom the scene shows, worked out once per world instead of on every frame."""
+        if self._visible is None or self._visible[0] is not self.world:
+            model = self.world.model
+            names = {geom.name for geom in scene_description(self.world.compiled, self.revision).geoms}
+            shown = [(index, model.geom(index).name) for index in range(model.ngeom)]
+            self._visible = (self.world, [(index, name) for index, name in shown if name in names])
+        return self._visible[1]
+
     def frame(self) -> PlayFrame:
         model, data = self.world.model, self.world.data
         geoms: list[PlayGeomPose] = []
-        names = {geom.name for geom in scene_description(self.world.compiled, self.revision).geoms}
-        for index in range(model.ngeom):
-            name = model.geom(index).name
-            if name not in names:
-                continue
+        for index, name in self._visible_geoms():
             quaternion = np.zeros(4)
             mujoco.mju_mat2Quat(quaternion, data.geom_xmat[index])
             geoms.append(

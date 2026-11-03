@@ -114,6 +114,17 @@ def test_add_object_keeps_the_running_state_and_resends_the_scene(parking):
     assert texts(second) == ["You added Box 2"]
 
 
+def test_the_frame_follows_the_scene_when_objects_come_and_go(parking):
+    session = session_of(parking)
+    before = [geom.name for geom in session.frame().geoms]
+    session.apply(AddObjectCommand(tool="add_object", piece="box", position=(3.0, 0.0, 0.0)))
+    added = [geom.name for geom in session.frame().geoms]
+    assert added == [geom.name for geom in session.info().scene.geoms]
+    assert "box" in added and "box" not in before
+    session.apply(ResetCommand(tool="reset"))
+    assert [geom.name for geom in session.frame().geoms] == before
+
+
 def test_an_added_wall_in_front_of_the_car_shortens_a_ray(parking):
     session = session_of(parking)
     before = session.frame().senses[2].value

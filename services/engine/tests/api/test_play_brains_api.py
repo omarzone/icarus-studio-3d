@@ -63,7 +63,7 @@ def test_runs_still_training_or_never_trained_are_not_offered(tmp_path):
     assert client.get(f"/projects/{running.project().id}/play/brains").json() == []
 
 
-def test_play_opens_with_a_chosen_brain_from_an_earlier_revision_that_still_fits(tmp_path):
+def test_play_defaults_to_the_newest_brain_of_an_earlier_revision_that_still_fits(tmp_path):
     app = make_app(tmp_path)
     client = TestClient(app)
     folder = stored_run(app, client)
@@ -74,15 +74,28 @@ def test_play_opens_with_a_chosen_brain_from_an_earlier_revision_that_still_fits
 
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
         default = opened(socket)["session"]
-    with client.websocket_connect(f"/projects/{project_id}/play?run={folder.run_id}&step=25000") as socket:
-        chosen = opened(socket)["session"]
+    listed = client.get(f"/projects/{project_id}/play/brains").json()
 
-    assert (default["brain"], default["run_id"]) == ("Untrained brain: random actions", None)
-    assert (chosen["brain"], chosen["run_id"], chosen["step"]) == (
-        "Trained brain: Run 1 at 25,000 steps",
+    assert (default["brain"], default["run_id"], default["step"]) == (
+        "Trained brain: Run 1 at 25,000 steps, from revision 1",
         folder.run_id,
         25_000,
     )
+    assert [item["default"] for item in listed] == [True]
+
+
+def test_play_stays_random_when_no_trained_brain_fits_the_body(tmp_path):
+    app = make_app(tmp_path)
+    client = TestClient(app)
+    folder = stored_run(app, client)
+    project_id = folder.project().id
+    _trained(folder, 25_000)
+    assert client.post(f"/projects/{project_id}/operations", json=_rear_ray()).status_code == 200
+
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        default = opened(socket)["session"]
+
+    assert (default["brain"], default["run_id"]) == ("Untrained brain: random actions", None)
 
 
 @pytest.mark.parametrize("problem", ["body changed", "no such step", "no such run"])
