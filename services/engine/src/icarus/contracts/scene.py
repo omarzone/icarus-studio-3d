@@ -21,12 +21,50 @@ GeomStyle = Literal[
     "curb",
     "marking",
     "tree",
+    "stairs",
+    "step",
+    "slab",
+    "pillar",
+    "planks",
+    "speed_bump",
+    "wheel_stop",
+    "barrier",
+    "fence",
+    "sign",
+    "building",
+    "house",
+    "garage",
+    "table",
+    "bench",
+    "shelf",
+    "bush",
+    "rock",
+    "barrel",
+    "crate_stack",
+    "puddle",
+    "parked_car",
 ]
 GEOM_STYLES: list[str] = list(get_args(GeomStyle))
 
 # What a part is made of, for its look: roughness, shine and the grain on its face.
 GeomSurface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
 GEOM_SURFACES: list[str] = list(get_args(GeomSurface))
+
+# The pattern a part's faces are drawn with; drawing only, never friction (the surface sets that).
+GeomFinish = Literal[
+    "plain",
+    "brick",
+    "concrete",
+    "asphalt",
+    "wood",
+    "tiles",
+    "painted_metal",
+    "glass",
+    "grass",
+    "fabric",
+    "rubber",
+]
+GEOM_FINISHES: list[str] = list(get_args(GeomFinish))
 
 
 class SceneBody(BaseModel):
@@ -57,6 +95,13 @@ class SceneGeom(BaseModel):
     transparency: float = 0
     reflectance: float = 0
     cast_shadow: bool = True
+    # None or plain keeps the look the style and surface give.
+    finish: GeomFinish | None = None
+    # 0 to 1, where 0.5 keeps the finish's own: lower is glossier or less metallic, higher rougher or more metallic.
+    roughness: float = 0.5
+    metalness: float = 0.5
+    # Glow in the part's color, 0 to 3: lit windows and lamp heads of a style, or the whole part without one.
+    emissive: float = 0
 
 
 class SceneLight(BaseModel):

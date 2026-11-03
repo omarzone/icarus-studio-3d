@@ -45,6 +45,10 @@ class TemplateInfo(BaseModel):
     family: TaskFamily
 
 
+# Where a piece sits in the library's lists, for the copilot and the library panel.
+PieceCategory = Literal["basics", "street", "buildings", "furniture", "nature", "props"]
+
+
 class PieceInfo(BaseModel):
     """A ready-made object from the library that can be placed in a world."""
 
@@ -55,6 +59,7 @@ class PieceInfo(BaseModel):
     icon: str
     description: str
     object: ObjectSpec
+    category: PieceCategory = "basics"
 
 
 class LibraryCatalog(BaseModel):

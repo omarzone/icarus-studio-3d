@@ -1050,6 +1050,23 @@ export interface SceneGeom {
   body: string;
   cast_shadow?: boolean;
   color: string;
+  emissive?: number;
+  finish?:
+    | (
+        | "plain"
+        | "brick"
+        | "concrete"
+        | "asphalt"
+        | "wood"
+        | "tiles"
+        | "painted_metal"
+        | "glass"
+        | "grass"
+        | "fabric"
+        | "rubber"
+      )
+    | null;
+  metalness?: number;
   name: string;
   /**
    * @minItems 3
@@ -1062,6 +1079,7 @@ export interface SceneGeom {
    */
   quaternion: [number, number, number, number];
   reflectance?: number;
+  roughness?: number;
   shape: "plane" | "box" | "sphere" | "capsule" | "cylinder";
   /**
    * @minItems 3
@@ -1084,6 +1102,28 @@ export interface SceneGeom {
         | "curb"
         | "marking"
         | "tree"
+        | "stairs"
+        | "step"
+        | "slab"
+        | "pillar"
+        | "planks"
+        | "speed_bump"
+        | "wheel_stop"
+        | "barrier"
+        | "fence"
+        | "sign"
+        | "building"
+        | "house"
+        | "garage"
+        | "table"
+        | "bench"
+        | "shelf"
+        | "bush"
+        | "rock"
+        | "barrel"
+        | "crate_stack"
+        | "puddle"
+        | "parked_car"
       )
     | null;
   surface?: ("asphalt" | "concrete" | "grass" | "snow" | "ice" | "rubber" | "wood" | "metal") | null;
@@ -1755,6 +1795,7 @@ export interface LibraryCatalog {
  * via the `definition` "PieceInfo".
  */
 export interface PieceInfo {
+  category?: "basics" | "street" | "buildings" | "furniture" | "nature" | "props";
   description: string;
   icon: string;
   id: string;
