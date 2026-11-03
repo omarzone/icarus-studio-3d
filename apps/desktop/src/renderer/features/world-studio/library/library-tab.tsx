@@ -30,7 +30,10 @@ export function LibraryTab({ scene, search, importLabel }: Props) {
         return (
           <div className="flex h-full min-h-0">
             {group ? (
-              <nav aria-label="Categories" className="flex shrink-0 flex-col gap-px overflow-x-hidden overflow-y-auto py-2.5 pl-3">
+              <nav
+                aria-label="Categories"
+                className="flex shrink-0 flex-col gap-px overflow-x-hidden overflow-y-auto py-2.5 pl-3"
+              >
                 {groups.map((label) => (
                   <Act
                     key={label}
