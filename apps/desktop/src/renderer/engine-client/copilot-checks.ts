@@ -44,7 +44,7 @@ const SUGGESTION_INTENTS: readonly string[] = [
   "show",
   "share",
 ];
-const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library"];
+const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library", "export"];
 
 function isString(value: unknown): value is string {
   return typeof value === "string";

@@ -87,7 +87,7 @@ export type AnswerActionKind =
 // to send.
 export type AnswerAction = { label: string; kind: AnswerActionKind; target: string | null };
 
-export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library";
+export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library" | "export";
 
 // One thing the copilot did before answering ("Looked at the lot from above").
 export type AgentStep = { tool: AgentTool; summary: string; ok: boolean };

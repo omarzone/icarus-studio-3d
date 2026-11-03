@@ -3,6 +3,7 @@ import {
   CircleAlert,
   Dumbbell,
   Eye,
+  FileArchive,
   FileSearch,
   FlaskConical,
   Library,
@@ -21,6 +22,7 @@ const ICONS: Record<AgentTool, LucideIcon> = {
   propose: PencilLine,
   train: Dumbbell,
   library: Library,
+  export: FileArchive,
 };
 
 // "What the copilot did": the steps it took before answering, open while short, folded when long.

@@ -502,8 +502,8 @@ Get the creation to other people.
 
 Use the brain or motion elsewhere.
 
-1. `MOD-EXPORT-BRAIN` Export brain — ONNX, TorchScript or game engine format
-2. `STA-BUILD-HARDWARE` Build · real hardware — Parts list, connect, calibrate, test drive and load the brain on a real device
+1. `MOD-EXPORT-BRAIN` Export brain — ONNX brain, URDF robot, MuJoCo model or a runtime package
+2. `STA-BUILD-HARDWARE` Build · real hardware — Check the body against a real kit, parts list and safety rules
 3. `MOD-EXPORT-ANIMATION` Export animation — Animation files for game engines
 
 ### `UC-14` Manage projects
@@ -1774,7 +1774,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
 - **Purpose:** Export the trained brain as a file.
 - **Content:**
-  - Format switch, options (sensor layout, runnable example, training history), file summary with inputs, outputs and rate.
+  - Format switch (ONNX brain, URDF robot, MuJoCo, runtime package), options (inputs and outputs, README and reference script, parts list, training history), every file with its size, inputs, outputs and rate, and what is left out. Download saves one zip where the person chooses.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Build**) · Play → `SCR-PLAY` · primary *Publish* → `MOD-PUBLISH`
 - **Left column:** `PNL-BUILD-TARGETS` (**Build**)
 - **Center column:** `PNL-BUILD-TARGET-VIEW` (**Share to community**)
@@ -1803,10 +1803,10 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Kind:** State of a screen of `SCR-BUILD` Build workspace
 - **Mockup:** *Run on real hardware* (`Hardware`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
-- **Purpose:** Run the brain on a real device, step by step and safely.
+- **Purpose:** Check the body against real hardware and get it ready to build, step by step and safely.
 - **Content:**
-  - Steps: get the parts, connect, calibrate sensors, test drive, load the brain.
-  - Live sensor readings from the device with ok or check, a problem card with the fix, Recheck and Skip.
+  - Steps: pick the hardware, check joints and sensors, export robot and brain, run it on the device.
+  - Every joint and sensor against the kit's part for it (need, rating, pass, warn, fail or skipped), measured with the trained brain when there is one; a problem card with the gap and the fix, Recheck and Skip this part.
   - Preview, safety rules and parts list with total. Chat helps with the hardware.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Build**) · Play → `SCR-PLAY` · primary *Publish* → `MOD-PUBLISH`
 - **Side navigation:** no tabbed panels
@@ -1816,7 +1816,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Region | Control | Type | Result |
 |---|---|---|---|
 | Page | Recheck | Button or link | Acts in place |
-| Page | Skip this sensor | Button or link | Acts in place |
+| Page | Skip this part | Button or link | Acts in place |
 | Chat column | History | Tab | → `MOD-HISTORY` History |
 | Chat column | Explain calibration | Chat suggestion | Acts in place |
 | Chat column | Order the parts | Chat suggestion | Acts in place |

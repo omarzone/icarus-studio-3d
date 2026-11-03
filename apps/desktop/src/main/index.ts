@@ -2,11 +2,13 @@ import { dirname, join, resolve } from "node:path";
 import { tokens } from "@icarus/ui-tokens";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
+import { EXPORT_CHANNEL } from "../shared/export-bridge.ts";
 import { STORAGE_CHANNEL } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL } from "../shared/window-bridge.ts";
 import { folderChoice } from "./data-folder-choice.ts";
 import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
+import { saveChoice, suggestedZipName } from "./export-destination.ts";
 import { isTitleBarHeight, resizeTitleBar, windowFrame } from "./window-frame.ts";
 
 const headless = process.env.ICARUS_HEADLESS === "1";
@@ -81,6 +83,17 @@ void app.whenReady().then(() => {
       await dialog.showOpenDialog(win, {
         title: "Choose where Icarus keeps projects and runs",
         properties: ["openDirectory", "createDirectory"],
+      }),
+      [app.getAppPath(), dirname(process.execPath), repoRoot],
+    ),
+  );
+  ipcMain.handle(EXPORT_CHANNEL.chooseDestination, async (_event, name: unknown) =>
+    saveChoice(
+      await dialog.showSaveDialog(win, {
+        title: "Save the export",
+        defaultPath: join(app.getPath("documents"), suggestedZipName(name)),
+        filters: [{ name: "Zip archive", extensions: ["zip"] }],
+        properties: ["createDirectory", "showOverwriteConfirmation"],
       }),
       [app.getAppPath(), dirname(process.execPath), repoRoot],
     ),
