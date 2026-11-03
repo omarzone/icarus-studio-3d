@@ -2,10 +2,14 @@
 import { ViewportSurface } from "../../../editor/viewport/viewport-surface.tsx";
 import type { Comparison } from "../../../ports/results-port.ts";
 import { StatusPill } from "../../../ui/status-pill.tsx";
+import { AgentsTable } from "./agents-table.tsx";
 import { CompareTableView } from "./compare-table.tsx";
 
 // Two runs side by side on the same seed, each with its score chips.
 export function CompareTab({ comparison }: { comparison: Comparison }) {
+  if (comparison.agents) {
+    return <AgentsTable agents={comparison.agents} />;
+  }
   if (comparison.table) {
     return <CompareTableView comparison={comparison} table={comparison.table} />;
   }

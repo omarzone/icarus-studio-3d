@@ -112,6 +112,12 @@ export function playSession({ info, frame, events, selectedTool }: SessionParts)
     speed: formatSpeed(frame.speed),
     paused: frame.paused,
     status: { title: frame.status.title, detail: frame.status.detail },
+    agents: frame.agents?.length
+      ? frame.agents.map((agent) => ({
+          name: agent.name,
+          detail: `${agent.status.detail} · return ${formatValue(agent.episode_return)}`,
+        }))
+      : undefined,
     pieces: playPieces(info.pieces),
     senses: {
       bars: senseBars(frame.senses),

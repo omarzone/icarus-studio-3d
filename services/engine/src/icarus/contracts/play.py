@@ -142,6 +142,16 @@ class PlayStatus(_Model):
     detail: str
 
 
+class PlayAgentStatus(_Model):
+    """How one agent of a project with several is doing in Play right now."""
+
+    agent: str
+    name: str
+    status: PlayStatus
+    reward: float
+    episode_return: float
+
+
 class PlayFrame(_Model):
     time: float
     step: int
@@ -155,6 +165,8 @@ class PlayFrame(_Model):
     status: PlayStatus
     rays: list[SceneRay] = []
     signals: SceneSignals | None = None
+    # Every agent in a project with several, each in its own world with only its body; empty for one agent.
+    agents: list[PlayAgentStatus] = []
 
 
 class PlayEvent(_Model):
@@ -184,6 +196,17 @@ class PlayPiece(_Model):
     color: str
 
 
+class PlayAgentBrain(_Model):
+    """The brain one agent of a project with several plays with."""
+
+    agent: str
+    name: str
+    # In words, like the session's brain.
+    brain: str
+    run_id: str | None = None
+    step: int | None = None
+
+
 class PlaySessionInfo(_Model):
     project_id: str
     revision_number: int
@@ -195,6 +218,7 @@ class PlaySessionInfo(_Model):
     tools: list[PlayToolInfo]
     scene: SceneDescription
     pieces: list[PlayPiece] = []
+    agents: list[PlayAgentBrain] = []
 
 
 class PlayBrainOption(_Model):

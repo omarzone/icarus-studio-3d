@@ -161,6 +161,8 @@ class Autopilot:
 
     def start(self, project_id: str, request: AutopilotStart) -> AutopilotStatus:
         state = self._projects.state(project_id)
+        if state.project.agents:
+            raise NotTrainable("the autopilot drives one agent; train the agents together and coach each run")
         if state.project.task.family == "none":
             raise NotTrainable("it has no task to train")
         with self._lock:

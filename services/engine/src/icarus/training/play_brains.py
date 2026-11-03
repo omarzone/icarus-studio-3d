@@ -73,7 +73,8 @@ def brain_options(runs: RunStore, project: Project, revision: int) -> list[PlayB
     default_run = default[0].run_id if default is not None else None
     options: list[PlayBrainOption] = []
     for status in runs.list_runs(project.id):
-        if status.state not in TERMINAL_STATES or not status.best_step:
+        # An agent's run in a group plays only beside the other agents, each with its own best brain.
+        if status.state not in TERMINAL_STATES or not status.best_step or status.agent is not None:
             continue
         folder = runs.folder(status.run_id)
         if not folder.checkpoint_path(status.best_step).is_file():

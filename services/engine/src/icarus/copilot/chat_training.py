@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.training import MAX_COPIES, MAX_STEPS, StartRun, WarmStart
 from icarus.copilot.language import Language, count, say
+from icarus.projects.agents import agent_project
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunStore
 from icarus.training.schedule import planned_steps
@@ -56,9 +57,11 @@ class ChatTrainer:
     def _start(self, project_id: str, request: TrainingRequest, language: Language) -> TrainerReply:
         state = self._projects.state(project_id)
         project = state.project
-        if project.task.family == "none":
+        # With several agents each trains its own task; the group practices as long as the longest one needs.
+        learners = [agent_project(project, agent.id) for agent in project.agents] or [project]
+        if all(item.task.family == "none" for item in learners):
             return TrainerReply(say("train_no_task", language), False)
-        steps = request.total_steps or planned_steps(project)
+        steps = request.total_steps or max(planned_steps(item) for item in learners)
         copies = request.copies or min(project.brain.copies, MAX_COPIES)
         settings = self._settings.get()
         warm = self._best_brain(project_id) if request.continue_from_best else None
@@ -77,9 +80,10 @@ class ChatTrainer:
         except (NotTrainable, WarmStartRefused) as error:
             return TrainerReply(say("train_refused", language, reason=str(error).rstrip(".")), False)
         steps_text = count(status.total_steps, language)
-        return TrainerReply(
-            say("train_started", language, name=status.name, steps=steps_text, copies=status.copies), True
-        )
+        runs = self._runs.group(status.group).runs if status.group else [status]
+        name = ", ".join(run.name for run in runs)
+        copies = sum(run.copies for run in runs)
+        return TrainerReply(say("train_started", language, name=name, steps=steps_text, copies=copies), True)
 
     def _best_brain(self, project_id: str) -> WarmStart | None:
         """The best checkpoint of the newest ended run that trained one; a run's untrained step 0 does not count."""

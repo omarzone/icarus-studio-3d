@@ -53,6 +53,11 @@ def _world(sky: str) -> list[Part]:
     ]
 
 
+def _race_world() -> list[Part]:
+    """The world of a race: every lane brings its own spawn point."""
+    return [part for part in _world("day") if part.id != "spawn"]
+
+
 def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
     return [
         solid(
@@ -261,11 +266,50 @@ def _templates() -> dict[str, _Template]:
     }
 
 
-TEMPLATES: dict[str, TemplateInfo] = {id: template.info for id, template in _templates().items()}
+RACE = _template(
+    "lanes_race",
+    "Lanes race",
+    "An obstacle course with four lanes: a walker, a humanoid, a car and a motorcycle, each with its own brain.",
+    "locomotion",
+)
+TEMPLATES: dict[str, TemplateInfo] = {
+    **{id: template.info for id, template in _templates().items()},
+    RACE.id: RACE,
+}
+
+
+@dataclass(frozen=True)
+class TemplateBody:
+    """A template's body with the task family and reward terms it trains with, to reuse it as an agent."""
+
+    id: str
+    name: str
+    parts: list[Part]
+    family: TaskFamily
+    rewards: list[str]
+
+
+def template_bodies() -> dict[str, TemplateBody]:
+    """Every template that has a body, by template id."""
+    return {
+        template_id: TemplateBody(
+            template.body[0], template.body[1], template.parts, template.info.family, template.rewards
+        )
+        for template_id, template in _templates().items()
+        if template.body
+    }
 
 
 def template_operations(template_id: str) -> list[EditOperation]:
     """The edit operations that build a template on an empty project."""
+    if template_id == RACE.id:
+        # Imported here: the race puts these templates' bodies in its lanes.
+        from icarus.library.lanes_race import race_template
+
+        return [
+            *(CreateObject(op="create_object", target="world", object=part.spec()) for part in _race_world()),
+            *race_template(),
+        ]
     template = _templates().get(template_id)
     if template is None:
         raise UnknownTemplate(template_id)

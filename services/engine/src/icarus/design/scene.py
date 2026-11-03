@@ -176,6 +176,7 @@ def scene_description(compiled: CompiledModel, revision: int, live: mujoco.MjDat
         plates=scene_plates(model, data, compiled.decor),
         displays=scene_displays(model, data, compiled.decor),
         eyes=scene_eyes(model, data, compiled.decor),
+        agents=compiled.agents,
     )
 
 

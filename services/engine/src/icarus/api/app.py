@@ -315,7 +315,7 @@ def create_app(
     )
     app.state.autopilot.attach_watcher(checkpoints)
     app.state.checkpoint_coach = checkpoints
-    app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_run, publish, checkpoints.comment)
+    app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_runs, publish, checkpoints.comment)
     app.state.supervisor.relay = app.state.run_relay
     app.state.data_folder = DataFolderMover(
         projects_folder,

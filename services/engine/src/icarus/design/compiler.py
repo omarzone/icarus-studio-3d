@@ -8,7 +8,7 @@ import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
-from icarus.contracts.scene import GeomShape, SceneSky
+from icarus.contracts.scene import GeomShape, SceneAgent, SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
 from icarus.design.decor import WorldDecor, world_decor
@@ -21,6 +21,7 @@ from icarus.design.surfaces import SURFACE_FRICTION
 from icarus.design.vehicle import VehicleLayout, add_vehicle_actuators, vehicle_layouts
 from icarus.design.wedges import MESH_SHAPES, add_wedge_mesh
 from icarus.library.materials import SLIPPERY
+from icarus.projects.agents import lane_objects
 from icarus.projects.document import all_objects, containers
 
 TIMESTEP = 0.002
@@ -58,6 +59,8 @@ class CompiledModel:
     decor: WorldDecor = field(default_factory=WorldDecor)
     # Geom name → shape and full size of parts the engine builds as meshes (wedges), which MuJoCo re-centers.
     meshes: dict[str, tuple[GeomShape, tuple[float, float, float]]] = field(default_factory=dict)
+    # Each agent of a project with several, with its parts and lane.
+    agents: list[SceneAgent] = field(default_factory=list)
 
 
 def _fmt(values) -> str:
@@ -360,7 +363,22 @@ def compile_project(project: Project) -> CompiledModel:
         grounds=frozenset(obj.id for obj in project.world.objects if view(obj, "ground")),
         decor=world_decor(project),
         meshes=_meshes(project),
+        agents=_agents(project),
     )
+
+
+def _agents(project: Project) -> list[SceneAgent]:
+    parts = {body.id: [obj.id for obj in body.objects] for body in project.bodies}
+    return [
+        SceneAgent(
+            id=agent.id,
+            name=agent.name,
+            body=agent.body,
+            parts=parts.get(agent.body, []),
+            lane=sorted(lane_objects(agent)),
+        )
+        for agent in project.agents
+    ]
 
 
 __all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "is_ground", "to_mjcf"]

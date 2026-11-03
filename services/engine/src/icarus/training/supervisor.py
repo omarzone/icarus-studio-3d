@@ -7,10 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from icarus.contracts.project import ProjectState
-from icarus.contracts.training import LogLine, RunFailure, RunStatus, StartRun
+from icarus.contracts.training import LogLine, RunFailure, RunGroup, RunStatus, StartRun
+from icarus.projects.agents import agent_project
 from icarus.sim.env import ProjectEnv
 from icarus.training.process_tree import end_worker, kill_tree
-from icarus.training.run_store import TERMINAL_STATES, RunFolder, RunStore
+from icarus.training.run_store import TERMINAL_STATES, GroupMember, RunFolder, RunStore
 from icarus.training.warm_start import warm_start_problem
 
 STOP_TIMEOUT = 60.0
@@ -79,7 +80,8 @@ def _console_tail(folder: RunFolder) -> list[str]:
 
 
 class Supervisor:
-    """Starts training workers as subprocesses, one at a time, and keeps their runs' state honest."""
+    """Starts training workers as subprocesses, one run (or one group of agents) at a time, and keeps their runs' state
+    honest."""
 
     def __init__(
         self, store: RunStore, command: WorkerCommand = worker_command, stop_timeout: float = STOP_TIMEOUT
@@ -88,7 +90,8 @@ class Supervisor:
         self._command = command
         self._stop_timeout = stop_timeout
         self._lock = threading.Lock()
-        self._worker: _Worker | None = None
+        # The run training now, or every run of the group of agents training together.
+        self._workers: dict[str, _Worker] = {}
         self._held: str | None = None
 
     def recover(self) -> None:
@@ -109,9 +112,34 @@ class Supervisor:
 
     def active_run(self) -> str | None:
         with self._lock:
-            return self._worker.folder.run_id if self._worker else None
+            return next(iter(self._workers), None)
+
+    def active_runs(self) -> list[str]:
+        with self._lock:
+            return list(self._workers)
+
+    def _check_free(self) -> None:
+        if self._held is not None:
+            raise NotTrainable(self._held)
+        # A worker whose run already ended may still be closing its copies; it no longer holds the slot.
+        for run_id, worker in self._workers.items():
+            if worker.folder.stored_status().state not in TERMINAL_STATES:
+                raise RunInProgress(run_id)
+        self._workers.clear()
+
+    def _launch(self, status: RunStatus, use_graphics_card: bool) -> None:
+        folder = self.store.folder(status.run_id)
+        process = _spawn(self._command(folder.path, use_graphics_card), folder.console_path)
+        folder.write_worker_pid(process.pid)
+        worker = _Worker(folder, process)
+        worker.watcher = threading.Thread(target=self._watch, args=(worker,), name="run-watch", daemon=True)
+        self._workers[status.run_id] = worker
+        worker.watcher.start()
 
     def start(self, state: ProjectState, start: StartRun, threads: int, use_graphics_card: bool) -> RunStatus:
+        """Start training the current revision; a project with several agents starts its group, led by the first."""
+        if state.project.agents:
+            return self.start_group(state, start, threads, use_graphics_card).runs[0]
         try:
             ProjectEnv(state.project)
         except ValueError as error:
@@ -121,23 +149,59 @@ class Supervisor:
         ):
             raise WarmStartRefused(problem)
         with self._lock:
-            if self._held is not None:
-                raise NotTrainable(self._held)
-            # A worker whose run already ended may still be closing its copies; it no longer holds the slot.
-            if self._worker is not None and self._worker.folder.stored_status().state not in TERMINAL_STATES:
-                raise RunInProgress(self._worker.folder.run_id)
+            self._check_free()
             status = self.store.create(state, start, threads)
-            folder = self.store.folder(status.run_id)
-            process = _spawn(self._command(folder.path, use_graphics_card), folder.console_path)
-            folder.write_worker_pid(process.pid)
-            worker = _Worker(folder, process)
-            worker.watcher = threading.Thread(target=self._watch, args=(worker,), name="run-watch", daemon=True)
-            self._worker = worker
-            worker.watcher.start()
+            self._launch(status, use_graphics_card)
             return status
 
+    def start_group(self, state: ProjectState, start: StartRun, threads: int, use_graphics_card: bool) -> RunGroup:
+        """One run per agent, started together, each with only its own body and an equal share of copies and threads."""
+        agents = state.project.agents
+        if not agents:
+            raise NotTrainable("This project has one agent; train it as a single run")
+        if start.warm_start is not None:
+            raise WarmStartRefused("Agents training together start from zero; continue one agent's run on its own")
+        projects = [agent_project(state.project, agent.id) for agent in agents]
+        for agent, project in zip(agents, projects, strict=True):
+            try:
+                ProjectEnv(project)
+            except ValueError as error:
+                raise NotTrainable(f"{agent.name}: {error}") from error
+        share = start.model_copy(update={"copies": max(1, start.copies // len(agents))})
+        group = self.store.new_group_id()
+        with self._lock:
+            self._check_free()
+            name = self.store.next_run_name(state.project.id)
+            statuses: list[RunStatus] = []
+            for agent, project in zip(agents, projects, strict=True):
+                status = self.store.create(
+                    state,
+                    share,
+                    max(1, threads // len(agents)),
+                    member=GroupMember(project, agent.id, agent.name, group, f"{name} · {agent.name}"),
+                )
+                self._launch(status, use_graphics_card)
+                statuses.append(status)
+        return RunGroup(
+            group_id=group, project_id=state.project.id, revision_number=state.revision.number, runs=statuses
+        )
+
     def stop(self, run_id: str) -> RunStatus:
+        """Stop a run; a run of a group stops its whole group."""
         folder = self.store.folder(run_id)
+        group = folder.config().group
+        if group is not None:
+            self.stop_group(group)
+            return folder.status()
+        return self._stop_one(folder)
+
+    def stop_group(self, group_id: str) -> RunGroup:
+        group = self.store.group(group_id)
+        for status in group.runs:
+            self._stop_one(self.store.folder(status.run_id))
+        return self.store.group(group_id)
+
+    def _stop_one(self, folder: RunFolder) -> RunStatus:
         if folder.status().state in TERMINAL_STATES:
             return folder.status()
         with self._lock:
@@ -145,7 +209,7 @@ class Supervisor:
             if folder.stored_status().state in TERMINAL_STATES:
                 return folder.status()
             folder.request_stop()
-            worker = self._worker if self._worker and self._worker.folder.run_id == run_id else None
+            worker = self._workers.get(folder.run_id)
             if worker is None:
                 self._end(folder, None)
             elif worker.killer is None:
@@ -155,15 +219,15 @@ class Supervisor:
         return folder.status()
 
     def shutdown(self, timeout: float = SHUTDOWN_TIMEOUT) -> None:
-        """Ask the active worker to stop, wait for it, then kill whatever is left."""
+        """Ask the active workers to stop, wait for them, then kill whatever is left."""
         with self._lock:
-            worker = self._worker
-        if worker is None:
-            return
-        worker.folder.request_stop()
-        if not worker.done.wait(timeout):
-            self._kill(worker)
-            worker.done.wait(timeout)
+            workers = list(self._workers.values())
+        for worker in workers:
+            worker.folder.request_stop()
+        for worker in workers:
+            if not worker.done.wait(timeout):
+                self._kill(worker)
+                worker.done.wait(timeout)
 
     def _kill(self, worker: _Worker) -> None:
         if worker.process.poll() is None:
@@ -189,8 +253,8 @@ class Supervisor:
                 reason = "The training worker quit unexpectedly."
                 self._end(folder, RunFailure(reason=reason, details=_console_tail(folder)))
         with self._lock:
-            if self._worker is worker:
-                self._worker = None
+            if self._workers.get(folder.run_id) is worker:
+                del self._workers[folder.run_id]
         worker.done.set()
 
     def _end(self, folder: RunFolder, failure: RunFailure | None) -> None:

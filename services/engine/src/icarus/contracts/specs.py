@@ -77,3 +77,24 @@ class BrainSpec(BaseModel):
     # Neurons in each hidden layer of the policy and value networks; 1 to MAX_LAYERS layers, checked with the project.
     layers: list[LayerSize] = Field(default_factory=lambda: [256, 256])
     ppo: PpoSpec = Field(default_factory=PpoSpec)
+
+
+class AgentSpec(BaseModel):
+    """One learner of a project with several agents: a body with its own task, brain, start and goal (its lane).
+
+    A project without agents has one, its first body, driven by the project's task and brain."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=80)
+    # The body this agent drives.
+    body: str = Field(min_length=1, max_length=64)
+    # Its own task and brain; None uses the project's.
+    task: TaskSpec | None = None
+    brain: BrainSpec | None = None
+    # The world's spawn point and goal zone objects of its lane; None when it uses the world's own.
+    spawn: str | None = None
+    goal: str | None = None
+    # Other world objects only this agent sees in its physics and displays (its lane's scoreboard, its markers).
+    objects: list[str] = Field(default_factory=list)

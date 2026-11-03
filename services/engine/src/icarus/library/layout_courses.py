@@ -214,6 +214,7 @@ def obstacle_course(params: ObstacleCourse, prefix: str) -> Site:
     site = Site(prefix, "Obstacle course")
     site.start, site.goal = (2.5, lane / 2), (length - 2, lane / 2)
     site.goal_radius, site.goal_name = min(1.2, lane / 2 - 0.1), "Finish"
+    site.lanes = [((2.5, k * pitch + lane / 2), (length - 2, k * pitch + lane / 2)) for k in range(params.lanes)]
     track = site.group("track", "Track", middle)
     site.add("floor", track, middle, (length, total, FLOOR), color="#3b3f46")
     site.add("marking", track, (1.0, total / 2), (0.3, total, PAINT), name="Start line")

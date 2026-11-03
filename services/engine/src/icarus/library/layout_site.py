@@ -156,6 +156,8 @@ class Site:
     goal_name: str = "Goal"
     # A bay's length, width and heading in degrees (the way a car faces once parked nose in), for a rectangular goal.
     goal_spot: tuple[float, float, float] | None = None
+    # Side by side lanes, each its own start and goal, where several agents race; empty for one way through.
+    lanes: list[tuple[Point, Point]] = field(default_factory=list)
     objects: list[ObjectSpec] = field(default_factory=list)
     footprints: list[Rect] = field(default_factory=list)
     # The footprint of everything laid out, solid or not, which the ground must hold up.

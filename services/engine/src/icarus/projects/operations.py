@@ -3,25 +3,37 @@ from collections.abc import Sequence
 from icarus.contracts.errors import ValidationIssue
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.operations import (
+    AddAgent,
     AddBody,
     AddComponent,
     CreateObject,
     DeleteObject,
     EditOperation,
+    RemoveAgent,
     RemoveBody,
     RemoveComponent,
     RemoveRewardTerm,
     RenameObject,
     RenameProject,
     ReparentObject,
+    SetAgent,
     SetBrain,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
 )
-from icarus.contracts.project import BrainSpec, Project, TaskSpec, WorldSpec
+from icarus.contracts.project import BodySpec, BrainSpec, Project, TaskSpec, WorldSpec
 from icarus.contracts.properties import ListValue, PropertyValue, SliderValue
+from icarus.contracts.specs import AgentSpec
 from icarus.library.materials import MATERIALS
+from icarus.projects.agents import (
+    UnknownAgent,
+    collapse_single,
+    find_agent,
+    lane_objects,
+    with_children,
+    without_objects,
+)
 from icarus.projects.document import find_object
 
 
@@ -117,6 +129,7 @@ def _apply(project: Project, operation: EditOperation) -> None:
             objects, _ = _object(project, object_id)
             removed = _descendants(objects, object_id)
             objects[:] = [obj for obj in objects if obj.id not in removed]
+            project.agents = [without_objects(agent, removed) for agent in project.agents]
         case RenameObject(object=object_id, name=name):
             _object(project, object_id)[1].name = name
         case ReparentObject(object=object_id, parent=parent):
@@ -153,17 +166,84 @@ def _apply(project: Project, operation: EditOperation) -> None:
             project.name = name
             if description is not None:
                 project.description = description
-        case SetTaskFamily(family=family):
-            project.task.family = family
-        case SetRewardTerm(term=term):
+        case SetTaskFamily(family=family, agent=agent_id):
+            _task(project, agent_id).family = family
+        case SetRewardTerm(term=term, agent=agent_id):
             term = term.model_copy(deep=True)
-            project.task.rewards = [*(item for item in project.task.rewards if item.term != term.term), term]
-        case RemoveRewardTerm(term=term_id):
-            if not any(item.term == term_id for item in project.task.rewards):
+            task = _task(project, agent_id)
+            task.rewards = [*(item for item in task.rewards if item.term != term.term), term]
+        case RemoveRewardTerm(term=term_id, agent=agent_id):
+            task = _task(project, agent_id)
+            if not any(item.term == term_id for item in task.rewards):
                 raise _fail(f"task.rewards.{term_id}", f"The task has no reward term {term_id!r}")
-            project.task.rewards = [item for item in project.task.rewards if item.term != term_id]
-        case SetBrain():
+            task.rewards = [item for item in task.rewards if item.term != term_id]
+        case SetBrain(agent=None):
             project.brain = _brain(project.brain, operation)
+        case SetBrain(agent=str() as agent_id):
+            agent = _agent(project, agent_id)
+            agent.brain = _brain(agent.brain or project.brain, operation)
+        case AddAgent(agent=agent, body=body):
+            _add_agent(project, agent, body)
+        case RemoveAgent(agent=agent_id):
+            _remove_agent(project, agent_id)
+        case SetAgent():
+            _set_agent(project, operation)
+
+
+def _agent(project: Project, agent_id: str) -> AgentSpec:
+    try:
+        return find_agent(project, agent_id)
+    except UnknownAgent:
+        names = ", ".join(repr(item.id) for item in project.agents) or "none"
+        raise _fail(f"agents.{agent_id}", f"There is no agent {agent_id!r}; the agents are {names}") from None
+
+
+def _task(project: Project, agent_id: str | None) -> TaskSpec:
+    """The task an operation changes: the project's, or an agent's own, which starts as a copy of the project's."""
+    if agent_id is None:
+        return project.task
+    agent = _agent(project, agent_id)
+    if agent.task is None:
+        agent.task = project.task.model_copy(deep=True)
+    return agent.task
+
+
+def _add_agent(project: Project, agent: AgentSpec, body: BodySpec | None) -> None:
+    agent = agent.model_copy(deep=True)
+    if body is not None:
+        if body.id != agent.body:
+            raise _fail(f"agents.{agent.id}.body", f"The agent drives {agent.body!r} but the body added is {body.id!r}")
+        _apply(project, AddBody(op="add_body", body=body))
+    if not project.agents and project.bodies and project.bodies[0].id != agent.body:
+        first = project.bodies[0]
+        project.agents.append(AgentSpec(id=first.id, name=first.name, body=first.id))
+    if any(item.id == agent.id for item in project.agents):
+        raise _fail(f"agents.{agent.id}", f"An agent with id {agent.id!r} already exists")
+    project.agents.append(agent)
+
+
+def _remove_agent(project: Project, agent_id: str) -> None:
+    agent = _agent(project, agent_id)
+    project.agents = [item for item in project.agents if item.id != agent_id]
+    if not any(item.body == agent.body for item in project.agents):
+        project.bodies = [body for body in project.bodies if body.id != agent.body]
+    kept: set[str] = set().union(*(lane_objects(item) for item in project.agents))
+    removed = with_children(project.world.objects, lane_objects(agent) - kept)
+    project.world.objects = [obj for obj in project.world.objects if obj.id not in removed]
+    project.agents = [without_objects(item, removed) for item in project.agents]
+    collapse_single(project)
+
+
+def _set_agent(project: Project, change: SetAgent) -> None:
+    agent = _agent(project, change.agent)
+    if change.name is not None:
+        agent.name = change.name
+    if change.spawn is not None:
+        agent.spawn = change.spawn or None
+    if change.goal is not None:
+        agent.goal = change.goal or None
+    if change.objects is not None:
+        agent.objects = list(dict.fromkeys(change.objects))
 
 
 def apply_operations(project: Project, operations: Sequence[EditOperation]) -> Project:

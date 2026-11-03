@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.properties import PropertyValue
 from icarus.contracts.specs import (
+    AgentSpec,
     BodySpec,
     BrainAlgorithm,
     LayerSize,
@@ -81,16 +82,22 @@ class RenameProject(_Operation):
 class SetTaskFamily(_Operation):
     op: Literal["set_task_family"]
     family: TaskFamily
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
 
 
 class SetRewardTerm(_Operation):
     op: Literal["set_reward_term"]
     term: RewardTermSpec
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
 
 
 class RemoveRewardTerm(_Operation):
     op: Literal["remove_reward_term"]
     term: str
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
 
 
 class PpoPatch(BaseModel):
@@ -120,6 +127,35 @@ class SetBrain(_Operation):
     # Neurons in each hidden layer, input side first.
     layers: list[LayerSize] | None = None
     ppo: PpoPatch | None = None
+    # The agent whose brain this changes, in a project with several; None changes the project's own brain.
+    agent: str | None = None
+
+
+class AddAgent(_Operation):
+    """Adds a learner; with `body` the body is added too. The first agent added to a one-agent project also makes
+    its first body an agent, so the agent it had keeps its task and brain."""
+
+    op: Literal["add_agent"]
+    agent: AgentSpec
+    body: BodySpec | None = None
+
+
+class RemoveAgent(_Operation):
+    """Removes an agent with its body and the world objects only it used; one agent left is the project's again."""
+
+    op: Literal["remove_agent"]
+    agent: str
+
+
+class SetAgent(_Operation):
+    """Renames an agent or changes its lane; fields left out keep their value and an empty id clears spawn or goal."""
+
+    op: Literal["set_agent"]
+    agent: str
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    spawn: str | None = None
+    goal: str | None = None
+    objects: list[str] | None = None
 
 
 EditOperation = Annotated[
@@ -136,7 +172,10 @@ EditOperation = Annotated[
     | SetTaskFamily
     | SetRewardTerm
     | RemoveRewardTerm
-    | SetBrain,
+    | SetBrain
+    | AddAgent
+    | RemoveAgent
+    | SetAgent,
     Field(discriminator="op"),
 ]
 

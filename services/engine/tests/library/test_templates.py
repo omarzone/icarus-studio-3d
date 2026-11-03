@@ -32,7 +32,7 @@ def test_unknown_template_is_refused():
 def test_catalog_lists_components_rewards_and_templates():
     catalog = library_catalog()
     assert {"motor", "joint"} <= {kind.kind for kind in catalog.components}
-    assert {"empty_world", "parking_car", "motorcycle", "walker_robot", "humanoid"} == {
+    assert {"empty_world", "parking_car", "motorcycle", "walker_robot", "humanoid", "lanes_race"} == {
         item.id for item in catalog.templates
     }
     assert catalog.reward_terms

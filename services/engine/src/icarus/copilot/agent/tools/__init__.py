@@ -1,5 +1,6 @@
 from typing import Any
 
+from icarus.copilot.agent.tools.agents import ADD_AGENT
 from icarus.copilot.agent.tools.base import Tool
 from icarus.copilot.agent.tools.building import EDIT_GROUP, EDIT_MATCHING, PATTERN
 from icarus.copilot.agent.tools.cloning import BUILD_OBJECT, REFERENCE_SCENE
@@ -23,6 +24,7 @@ REGISTRY: dict[str, Tool[Any]] = {
         LOOK,
         TRY,
         LAYOUT,
+        ADD_AGENT,
         PATTERN,
         EDIT_GROUP,
         EDIT_MATCHING,
