@@ -1,8 +1,9 @@
 """Floor plates the task watches (design/plates.py, sim/plates.py), digital displays that show engine values
-(sim/displays.py) and cartoon eyes; displays and eyes are look-only."""
+(sim/displays.py), cartoon eyes and ornaments; displays, eyes and ornaments are look-only."""
 
 from icarus.contracts.decor import DISPLAY_FORMATS, DISPLAY_SOURCES, DISPLAY_STYLES, EYES_LOOKS, PLATE_ROLES
 from icarus.contracts.library import ComponentKindSpec
+from icarus.contracts.scene import ORNAMENT_STYLES
 from icarus.library.properties import choice, color, count, listing, number, reference, slider, switch, text, vector
 
 ROLE_HINT = (
@@ -25,6 +26,16 @@ SOURCE_HINT = (
 )
 FORMAT_HINT = "Integer, Decimal (with Decimals), Time as mm:ss, or Text for a fixed value"
 SENSOR_HINT = "A sensor reading id as Play lists it, or an object id: its first sensor"
+ORNAMENT_STYLE_HINT = (
+    "crown_round, crown_cone and crown_oval are tree crowns of leaves; lamp_arm is an arm along +X with a glowing "
+    "head at its end; gate_arm is a striped barrier boom along +X; sign_plate is a sign face with a P; shrubs are "
+    "plants for a planter"
+)
+ORNAMENT_SIZE_HINT = (
+    "Length (X), width (Y) and height (Z) it is drawn at, past the part's collider if need be; drawing only, nothing "
+    "collides with it and sensors look through it"
+)
+ORNAMENT_OFFSET_HINT = "From the part's center to the ornament's center, in the part's own axes"
 LOOK_HINT = "Ahead keeps them still; Movement follows the way the body moves; Goal follows the goal zone"
 
 DECOR_KINDS = [
@@ -93,6 +104,22 @@ DECOR_KINDS = [
             number("blink_interval", "Blink every", "s", 0.5, 30, 3),
             slider("blink_jitter", "Blink randomness", 0, 1, 0.05, 0.5),
             choice("look", "Look", EYES_LOOKS, "ahead", hint=LOOK_HINT),
+        ],
+    ),
+    ComponentKindSpec(
+        kind="ornament",
+        label="Ornament",
+        icon="terrain",
+        group="Shape",
+        unique=False,
+        properties=[
+            choice("style", "Style", ORNAMENT_STYLES, "crown_round", hint=ORNAMENT_STYLE_HINT),
+            vector("size", "Size", "m", 0.02, 30, (3, 3, 3), hint=ORNAMENT_SIZE_HINT),
+            vector("offset", "Offset", "m", -30, 30, (0, 0, 2), hint=ORNAMENT_OFFSET_HINT),
+            vector("rotation", "Rotation", "deg", -360, 360, (0, 0, 0), hint="Turns it around its own center"),
+            color("color", "Color", "#4f8a3c"),
+            color("accent", "Accent", "#f2f2f2", hint="A boom's stripes, a sign's P, a lamp's light, flowers"),
+            slider("emissive", "Glow", 0, 3, 0.1, 0, hint="Drawing only: makes a lamp head glow brighter"),
         ],
     ),
 ]

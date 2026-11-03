@@ -54,10 +54,32 @@ class ParkingLot(_Layout):
         default=None, ge=1, description="The bay the goal sits in, always kept empty; none picks one by the seed."
     )
     entry_length: float = knob(8.0, 4, 20, "Length of the entry lane before the lot, where the start is.")
-    lamps: bool = switch(True, "Lamp posts on a grid along the curbs.")
+    lamps: bool = switch(True, "Lamp posts along the curbs; with surroundings, street lights with arms over the lot.")
     lamp_spacing: float = knob(15.0, 8, 30, "Metres between lamp posts.")
     buildings: bool = switch(True, "Buildings along the far side.")
-    trees: bool = switch(True, "Trees along the near side.")
+    trees: bool = switch(True, "Trees around the lot; with surroundings, on the grass strips.")
+    surroundings: bool = switch(
+        True,
+        "The lot's surroundings: ground around it instead of bare floor, raised sidewalks, the streets, gates, paint "
+        "and street furniture below; off lays out the bare lot.",
+    )
+    ground: Literal["grass", "concrete"] = Field(
+        default="grass", description="What covers the ground around the lot, drawing only. Default grass."
+    )
+    streets: int = knob(
+        2,
+        0,
+        2,
+        "Streets beside the lot: 1 along the west side where the entry lane meets it, 2 adds one along the south side.",
+    )
+    street_width: float = knob(8.0, 6, 14, "Street width in metres, both lanes.")
+    sidewalk_width: float = knob(2.5, 1.5, 4, "Width of the raised sidewalks around the lot in metres.")
+    gates: bool = switch(True, "Barrier gates with raised booms on both sides of the entry lane.")
+    paint: bool = switch(True, "P marks painted in the aisle and an arrow on the entry lane.")
+    vehicles: Literal["mixed", "cars"] = Field(
+        default="mixed",
+        description="Parked vehicles: mixed adds pickups, SUVs and hatchbacks among the cars. Default mixed.",
+    )
 
     @model_validator(mode="after")
     def _bays_exist(self) -> "ParkingLot":
@@ -111,9 +133,10 @@ class CityBlock(_Layout):
     min_height: float = knob(6.0, 3, 40, "Lowest building in metres.")
     max_height: float = knob(24.0, 3, 60, "Tallest building in metres.")
     buildings_per_side: int = knob(2, 1, 4, "Buildings along each side of a block.")
-    lamps: bool = switch(True, "Street lamps at the block corners.")
+    lamps: bool = switch(True, "Street lights with arms over the street at the block corners.")
     trees: bool = switch(True, "Trees along the sidewalks.")
-    crossings: bool = switch(True, "Pedestrian crossings at the intersections.")
+    crossings: bool = switch(True, "Zebra crossings at the intersections.")
+    furniture: bool = switch(True, "Litter bins and fire hydrants on the sidewalks.")
     goal_intersection: Cell | None = Field(
         default=None,
         description="Goal intersection (x, y) from 0; the start is intersection (0, 0); none is the far one.",

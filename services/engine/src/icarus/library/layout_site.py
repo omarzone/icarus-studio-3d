@@ -51,6 +51,27 @@ class Rect:
         return math.hypot(dx, dy)
 
 
+def uncovered(outer: Rect, holes: list[Rect]) -> list[Rect]:
+    """The parts of `outer` no hole covers, as few rectangles that never overlap: ground patches laid edge to edge
+    rather than on top of each other, so no two floors fight to be drawn."""
+    xs = sorted({outer.x0, outer.x1, *(min(max(v, outer.x0), outer.x1) for h in holes for v in (h.x0, h.x1))})
+    ys = sorted({outer.y0, outer.y1, *(min(max(v, outer.y0), outer.y1) for h in holes for v in (h.y0, h.y1))})
+    pieces: list[Rect] = []
+    for y0, y1 in zip(ys, ys[1:], strict=False):
+        run: float | None = None
+        for x0, x1 in zip(xs, xs[1:], strict=False):
+            middle = ((x0 + x1) / 2, (y0 + y1) / 2)
+            open_ = all(not (h.x0 <= middle[0] <= h.x1 and h.y0 <= middle[1] <= h.y1) for h in holes)
+            if open_ and run is None:
+                run = x0
+            if not open_ and run is not None:
+                pieces.append(Rect(run, y0, x0, y1))
+                run = None
+        if run is not None:
+            pieces.append(Rect(run, y0, xs[-1], y1))
+    return [piece for piece in pieces if piece.x1 - piece.x0 > 0.01 and piece.y1 - piece.y0 > 0.01]
+
+
 class FloorPlan:
     """Which cells of the ground a body of a given half width can stand on, and whether two places connect."""
 
@@ -173,6 +194,7 @@ class Site:
         color: str | None = None,
         surface: str | None = None,
         blocks: bool | None = None,
+        ornament: dict[str, Any] | None = None,
     ) -> str:
         """One element with its bottom at base; blocks says whether the path check must go around it."""
         look = LOOKS[kind]
@@ -192,6 +214,7 @@ class Site:
                 rotation=(0, tilt, yaw),
                 color=color,
                 surface=surface,
+                ornament=ornament,
             )
         )
         rect = Rect.around(center, size[0], size[1], yaw)

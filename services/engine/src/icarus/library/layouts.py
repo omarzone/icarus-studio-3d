@@ -56,8 +56,10 @@ RECIPES: dict[str, Recipe] = {
             "parking_lot",
             "Parking lot",
             "lot",
-            "Rows of marked bays with parked cars in chosen bays and chosen bays left free, curbs, lamp posts on a "
-            "grid, an entry lane where the start is, buildings and trees around; the goal is a free bay.",
+            "Rows of marked bays with parked vehicles in chosen bays and chosen bays left free, curbs, street "
+            "lights, an entry lane where the start is, and its surroundings: ground, raised sidewalks, streets with "
+            "dashed lines and crossings, barrier gates, trees, P marks, street furniture and buildings; the goal is a "
+            "free bay.",
             ParkingLot,
             parking_lot,
         ),
@@ -82,8 +84,8 @@ RECIPES: dict[str, Recipe] = {
             "city_block",
             "City blocks",
             "city",
-            "Streets with center lines, curbed sidewalks, buildings of varied heights, street lamps, trees and "
-            "crossings; the start and goal are intersections.",
+            "Streets with dashed center lines, curbed sidewalks, buildings of varied heights, street lights, trees, "
+            "zebra crossings, bins and hydrants; the start and goal are intersections.",
             CityBlock,
             city_block,
         ),
