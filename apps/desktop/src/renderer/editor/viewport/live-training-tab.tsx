@@ -10,6 +10,7 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
 import { useLiveCopies } from "../training-queries.ts";
+import { AgentBoard } from "./agent-board.tsx";
 import { RunProgress } from "./run-progress.tsx";
 import { RunStarting } from "./run-starting.tsx";
 import { ViewportSurface, type ViewportSurfaceProps } from "./viewport-surface.tsx";
@@ -142,6 +143,7 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
           </Act>
         ) : null}
         {live.note ? <span className="max-w-80 rounded-card-sm bg-overlay px-3 py-2 text-ui">{live.note}</span> : null}
+        {live.agents && live.agents.length > 0 ? <AgentBoard agents={live.agents} /> : null}
       </div>
     </>
   );

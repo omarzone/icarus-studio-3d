@@ -4,6 +4,7 @@ import { attachmentApi } from "../engine-client/attachment-api.ts";
 import { type CoachApi, coachApi } from "../engine-client/coach-api.ts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
 import { compactNumber } from "../ui/compact-number.ts";
+import { agentComparison } from "./agent-comparison.ts";
 import { diagnosisView, failureReplay, failuresView, latestDiagnosis } from "./coach-views.ts";
 import type { DiagnosisView, ResultsPort } from "./results-port.ts";
 import {
@@ -178,6 +179,7 @@ export function createEngineResultsPort(
     },
     getComparison: async (project) => {
       const list = await records(project);
+      const agents = agentComparison(list) ?? undefined;
       const ids = comparedOf(project, list);
       const sides = list
         .filter((record) => ids.includes(record.run.run_id))
@@ -192,7 +194,7 @@ export function createEngineResultsPort(
           return { ...record, seeds: rollout?.seed ?? null };
         }),
       );
-      return runComparison(withSeeds);
+      return { ...runComparison(withSeeds), agents };
     },
     getLearningHistory: async (project) => learningHistory((await records(project))[0]),
     getFailures: failures,

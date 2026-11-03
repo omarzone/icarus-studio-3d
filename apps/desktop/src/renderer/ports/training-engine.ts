@@ -3,6 +3,7 @@ import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
 import { type OpenRunEvents, openRunEvents, type RunEventsConnection } from "../engine-client/run-events.ts";
 import { createMotionPlayer, type MotionPlayer } from "../scene/motion-player.ts";
 import { compactNumber } from "../ui/compact-number.ts";
+import { groupRuns, joinReplayFrames, joinScenes } from "./agent-lanes.ts";
 import { liveProgress } from "./live-progress.ts";
 import {
   checkpointMarks,
@@ -12,6 +13,7 @@ import {
   snapshotRays,
   snapshotSignals,
 } from "./replay-views.ts";
+import { watchGroup } from "./training-group.ts";
 import { liveMetrics } from "./training-metrics.ts";
 import type { LiveCopies, RunList, TrainingPort } from "./training-port.ts";
 import {
@@ -128,6 +130,33 @@ export function createEngineTrainingPort(
     return startPlan({ runs: runs.length, family: task.family, settings, choice, brain: own });
   };
 
+  // Every agent of a group replaying the same checkpoint in one scene, each from its own run's recorded episode.
+  const groupReplay = async (members: readonly RunStatus[], step: number) => {
+    const recorded = await Promise.all(
+      members.map(async (member) => ({
+        member,
+        rollout: await api.rollout(member.run_id, step).catch(() => undefined),
+        scene: await runScene(member.run_id),
+      })),
+    );
+    const present = recorded.flatMap(({ member, rollout, scene }) => (rollout ? [{ member, rollout, scene }] : []));
+    const scene = joinScenes(present.map((item) => item.scene));
+    if (!scene) {
+      throw new Error(`No agent recorded an episode at checkpoint ${compactNumber(step)}`);
+    }
+    const frames = joinReplayFrames(present.map((item) => replayFrames(item.rollout)));
+    const first = frames[0]?.time ?? 0;
+    return {
+      scene,
+      label: `Checkpoint ${compactNumber(step)} · ${present.length} agents`,
+      outcome: present
+        .map((item) => `${item.member.agent_name ?? item.member.name}: ${item.rollout.outcome}`)
+        .join(" · "),
+      duration: Math.max(0, (frames.at(-1)?.time ?? first) - first),
+      frames,
+    };
+  };
+
   return {
     listRuns,
     selectRun: async ({ project, id }) => {
@@ -193,7 +222,13 @@ export function createEngineTrainingPort(
       return run ? checkpointMarks(run, await api.checkpoints(run.run_id)) : [];
     },
     getReplay: async ({ project, step }) => {
-      const run = await requireRun(project);
+      const { runs, run } = await selectedRun(project);
+      if (!run) {
+        throw new Error("This project has no training run yet");
+      }
+      if (run.group) {
+        return groupReplay(groupRuns(runs, run.group), step);
+      }
       const [rollout, scene] = await Promise.all([api.rollout(run.run_id, step), runScene(run.run_id)]);
       const first = rollout.frames[0]?.time ?? 0;
       return {
@@ -206,6 +241,7 @@ export function createEngineTrainingPort(
     },
     watch: (project, listener) => {
       let connection: RunEventsConnection | null = null;
+      let group: (() => void) | null = null;
       let cancelled = false;
       let shown: LiveCopies = { kind: "connecting" };
       const show = (live: LiveCopies) => {
@@ -216,12 +252,23 @@ export function createEngineTrainingPort(
       };
       show(shown);
       void selectedRun(project).then(
-        ({ run }) => {
+        ({ runs, run }) => {
           if (cancelled) {
             return;
           }
           if (!run) {
             show({ kind: "message", title: "No run yet", body: "Start a run and every copy trains here." });
+            return;
+          }
+          if (run.group) {
+            group = watchGroup({
+              runs: groupRuns(runs, run.group),
+              open,
+              runScene,
+              show,
+              onChange: listener.onChange,
+              onFailed: listener.onFailed,
+            });
             return;
           }
           const lines: LogLine[] = [];
@@ -314,6 +361,7 @@ export function createEngineTrainingPort(
       return () => {
         cancelled = true;
         connection?.close();
+        group?.();
       };
     },
   };

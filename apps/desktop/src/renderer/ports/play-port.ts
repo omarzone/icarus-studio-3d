@@ -42,6 +42,8 @@ export type PlaySession = {
   paused?: boolean;
   // What the agent is doing right now, in one bold and one plain line.
   status: { title: string; detail: string };
+  // Several agents, each in its own world with its own brain: how each one is doing, in the agents' order.
+  agents?: readonly { name: string; detail: string }[];
   // Hint near the cursor while placing an object ("Click to place: Sugar").
   placing?: string;
   senses: { bars: readonly LiveBar[]; note?: string };

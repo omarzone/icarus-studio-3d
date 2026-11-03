@@ -1,5 +1,6 @@
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import type { AgentComparison } from "./agent-comparison.ts";
 import { createResultsFixture } from "./results.fixture.ts";
 import { createEngineResultsPort } from "./results-engine.ts";
 
@@ -37,6 +38,8 @@ export type Comparison = {
   sides: readonly { id: string; title: string; chips: readonly { text: string; tone: Tone }[] }[];
   // The numbers of both runs read from their checkpoints, when the engine compares real runs.
   table?: CompareTable;
+  // The newest group of agents trained together, agent by agent, when the project has several agents.
+  agents?: AgentComparison;
 };
 
 export type CompareTable = {

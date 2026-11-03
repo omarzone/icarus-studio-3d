@@ -133,7 +133,15 @@ function PlayOverlays({ session, placing, options, onSelect }: OverlayProps) {
         className="absolute bottom-3 left-3 flex flex-col gap-0.5 rounded-card-sm bg-overlay px-3 py-2"
       >
         <span className="font-semibold">{session.status.title}</span>
-        <span className="text-ui text-fg-secondary">{session.status.detail}</span>
+        {session.agents ? (
+          session.agents.map((agent) => (
+            <span key={agent.name} className="text-ui text-fg-secondary">
+              <span className="font-semibold text-fg">{agent.name}</span> · {agent.detail}
+            </span>
+          ))
+        ) : (
+          <span className="text-ui text-fg-secondary">{session.status.detail}</span>
+        )}
       </div>
     </>
   );

@@ -2,6 +2,7 @@ import type { SceneDescription, SceneRay, SceneSignals } from "@icarus/contracts
 import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { MotionPlayer } from "../scene/motion-player.ts";
+import type { AgentScore } from "./agent-lanes.ts";
 import { createTrainingFixture } from "./training.fixture.ts";
 import { createEngineAutopilot } from "./training-autopilot.ts";
 import { createEngineTrainingPort } from "./training-engine.ts";
@@ -127,6 +128,8 @@ export type LiveCopies =
       player?: MotionPlayer;
       progress?: LiveProgress;
       note?: string;
+      // Several agents training together: one line per agent, in their lanes' order.
+      agents?: readonly AgentScore[];
     }
   | { kind: "closed"; reason: string };
 
