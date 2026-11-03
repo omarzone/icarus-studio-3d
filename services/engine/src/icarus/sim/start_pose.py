@@ -3,6 +3,7 @@ import math
 import mujoco
 import numpy as np
 
+from icarus.design.free_map import FreeMap
 from icarus.sim.model_state import LiveWorld, touching
 from icarus.sim.spawn_plan import SpawnPlan, SpawnSpot
 
@@ -66,29 +67,46 @@ def _draw(spot: SpawnSpot, mode: str, rng: np.random.Generator) -> tuple[float, 
     return float(along), float(across), math.radians(rng.uniform(-reach, reach))
 
 
-def _place_at(world: LiveWorld, address: int, spot: SpawnSpot, draw: tuple[float, float, float]) -> None:
+def _pose(world: LiveWorld, address: int, spot: SpawnSpot, point: np.ndarray, yaw: float) -> None:
+    """Stand the agent at a point on the floor, at the spawn point's height, turned to yaw from its designed pose."""
     model, data = world.model, world.data
-    frame = data.site_xmat[spot.site].reshape(3, 3)
-    heading = math.atan2(frame[1, 0], frame[0, 0])
-    along, across, turn = draw
-    center = data.site_xpos[spot.site]
     designed = model.qpos0[address : address + 7]
+    data.qpos[address : address + 2] = point
+    data.qpos[address + 2] = designed[2] + data.site_xpos[spot.site][2]
+    data.qpos[address + 3 : address + 7] = _turned(designed[3:7].copy(), yaw)
+    data.qvel[:] = 0
+    mujoco.mj_forward(model, data)
+
+
+def _heading(world: LiveWorld, spot: SpawnSpot) -> float:
+    frame = world.data.site_xmat[spot.site].reshape(3, 3)
+    return math.atan2(frame[1, 0], frame[0, 0])
+
+
+def _place_at(world: LiveWorld, address: int, spot: SpawnSpot, draw: tuple[float, float, float]) -> None:
+    heading = _heading(world, spot)
+    along, across, turn = draw
     offset = (
         np.array([math.cos(heading), math.sin(heading)]) * along
         + np.array([-math.sin(heading), math.cos(heading)]) * across
     )
-    data.qpos[address : address + 2] = center[:2] + offset
-    data.qpos[address + 2] = designed[2] + center[2]
-    data.qpos[address + 3 : address + 7] = _turned(designed[3:7].copy(), heading + turn)
-    data.qvel[:] = 0
-    mujoco.mj_forward(model, data)
+    _pose(world, address, spot, world.data.site_xpos[spot.site][:2] + offset, heading + turn)
+
+
+def _place_free(world: LiveWorld, address: int, spot: SpawnSpot, free: FreeMap, rng: np.random.Generator) -> None:
+    """A free place drawn evenly over the map, facing any way unless Heading range limits the turn from the spawn's."""
+    point = free.places[int(rng.integers(len(free.places)))] + rng.uniform(-0.5, 0.5, 2) * free.cell
+    limited = 0 < spot.heading_range < 180 and not spot.any_heading
+    reach = spot.heading_range if limited else 180.0
+    _pose(world, address, spot, point, _heading(world, spot) + math.radians(rng.uniform(-reach, reach)))
 
 
 def place_start(world: LiveWorld, rng: np.random.Generator) -> None:
     """Move the agent to where this try starts, as its world's spawn point says, drawing from the seeded rng.
 
     Start auto keeps the classic start: a navigation agent shifted beside and behind its designed pose (a legged body
-    keeps its pose: in a lane the shift could put it inside a wall). The other modes start at a spawn point."""
+    keeps its pose: in a lane the shift could put it inside a wall). Start anywhere draws a free place on the map; the
+    other modes start at a spawn point."""
     joint = _free_joint(world)
     if joint is None or world.agent is None:
         return
@@ -98,8 +116,12 @@ def place_start(world: LiveWorld, rng: np.random.Generator) -> None:
         _near_start(world, address, rng)
         return
     spot = _spot(world, plan, rng)
+    free = plan.free
     for _ in range(CLEAR_TRIES):
-        _place_at(world, address, spot, _draw(spot, plan.mode, rng))
+        if free is not None and len(free.places):
+            _place_free(world, address, spot, free, rng)
+        else:
+            _place_at(world, address, spot, _draw(spot, plan.mode, rng))
         if not touching(world):
             return
     _place_at(world, address, spot, (0.0, 0.0, 0.0))
