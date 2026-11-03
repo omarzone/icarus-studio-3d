@@ -30,3 +30,14 @@ world. Make it readable first: the camera must show the body, the goal and the o
 
 Done when the proposal has a stated palette, a fitting sky and ground, props that each have a role, and a
 three-quarter view where the body, the goal and the obstacles are easy to tell apart.
+
+## Places from library pieces
+
+Build a place from ready-made pieces before plain boxes: `library` with the query street, buildings,
+furniture, nature, props or basics lists each category's pieces with their sizes. A street is road ground
+with `curb`, `sidewalk`, `lamp_post`, `sign`, `bollard`, `parked_car` and `traffic_cone`; a block adds `building`,
+`house` and `garage`; a park adds `tree`, `bush`, `rock`, `bench` and `fence`. Every piece is solid to its whole
+shape (nothing passes under a `table`), and `puddle` is as slippery as ice. Detail is drawing only and never
+retrains a brain: `material.finish` (brick, concrete, asphalt with lane lines, wood, tiles, painted_metal, glass,
+grass, fabric, rubber), `material.roughness` and `material.metalness` (0.5 keeps the finish's own) and
+`material.emissive` (lit windows and lamp heads at night).

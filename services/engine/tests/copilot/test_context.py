@@ -1,8 +1,14 @@
 import json
 
+from icarus.contracts.objects import ObjectSpec
+from icarus.contracts.operations import CreateObject
 from icarus.contracts.training import MetricPoint, StartRun
 from icarus.copilot.context import design_reference, project_context
 from icarus.copilot.language import plain_words
+from icarus.design.compiler import to_mjcf
+from icarus.library.pieces import PIECES
+from icarus.library.templates import template_operations
+from icarus.projects.operations import apply_operations, empty_project
 from icarus.training.run_store import RunStore
 from tests.training.conftest import state_of
 
@@ -18,7 +24,8 @@ def test_the_context_summarizes_the_project_and_its_library_entries(tmp_path):
     assert {term["term"] for term in context["project"]["task"]["rewards"]} >= {"reach_goal", "time_penalty"}
     light = context["library"]["components"]["light"]["properties"]["intensity"]
     assert light["min"] == 0 and light["max"] == 5
-    assert "box" in context["library"]["pieces"] and "parking_car" in context["library"]["templates"]
+    assert "box" in context["library"]["pieces"]["basics"] and "parking_car" in context["library"]["templates"]
+    assert "lamp_post" in context["library"]["pieces"]["street"]
     assert context["workspace"] == "World" and context["selection"] is None
     assert context["latest_run"] == "No training has run for this project yet"
 
@@ -63,6 +70,16 @@ def test_the_design_reference_says_where_each_template_object_lives_and_how_to_a
     assert reference["templates"]["empty_world"]["bodies"] == {}
     rule = reference["rules"]["create_object"]
     assert '"world"' in rule and '"bodies"' in rule and "object.id" in rule
+
+
+def test_a_piece_copied_from_the_design_reference_builds_the_same_model_as_the_library_piece():
+    reference = json.loads(design_reference())
+    world = apply_operations(empty_project("0123456789ab", "T"), template_operations("empty_world"))
+    for piece_id, entry in reference["pieces"].items():
+        copied = CreateObject(op="create_object", target="world", object=ObjectSpec.model_validate(entry["object"]))
+        full = CreateObject(op="create_object", target="world", object=PIECES[piece_id].object)
+        assert to_mjcf(apply_operations(world, [copied])) == to_mjcf(apply_operations(world, [full])), piece_id
+    assert reference["pieces"]["parked_car"]["category"] == "street"
 
 
 def test_the_design_reference_says_what_each_body_can_do_and_what_the_library_cannot():
