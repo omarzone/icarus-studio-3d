@@ -21,7 +21,7 @@ AIR_TIME_MAX = 0.5
 AIR_TIME_SPEED = 0.1
 # spot_alignment counts nothing this far from the goal, in metres, rising to its full amount at the goal.
 ALIGN_REACH = 5.0
-# gentle_arrival counts the speed shed inside the goal below this, in m/s.
+# gentle_arrival measures how settled a body is inside the goal against this speed, in m/s.
 ARRIVAL_SPEED = 1.0
 
 
@@ -148,11 +148,14 @@ def spot_alignment(before: RewardState, after: RewardState) -> float:
     return _lined_up(after) - _lined_up(before)
 
 
+def _settled(state: RewardState) -> float:
+    return 1.0 - min(state.speed, ARRIVAL_SPEED) / ARRIVAL_SPEED if inside_goal(state) else 0.0
+
+
 def gentle_arrival(before: RewardState, after: RewardState) -> float:
-    # Pays the speed shed inside the goal (up to ARRIVAL_SPEED), never for staying, so lingering earns nothing.
-    if not inside_goal(after):
-        return 0.0
-    return max(0.0, min(before.speed, ARRIVAL_SPEED) - min(after.speed, ARRIVAL_SPEED)) / ARRIVAL_SPEED
+    # The change in how settled the body is inside the goal: braking pays, speeding up or leaving costs the same,
+    # so rocking, lingering or driving in and out earns nothing over coming to rest once.
+    return _settled(after) - _settled(before)
 
 
 def collision_penalty(before: RewardState, after: RewardState) -> float:

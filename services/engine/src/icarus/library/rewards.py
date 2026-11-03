@@ -76,10 +76,10 @@ _TERMS = [
         0,
         5,
         2.0,
-        "Reward for braking inside the goal zone: it pays the speed shed below 1 m/s (1 for coming to rest from "
-        "1 m/s), never for staying, so lingering earns nothing. Teaches a vehicle to brake and settle in the spot "
-        "instead of rolling through it.",
-        version=2,
+        "Reward for settling inside the goal zone: braking below 1 m/s inside pays, speeding up or leaving costs the "
+        "same, so coming to rest once pays 1 and rocking or lingering earns nothing. Teaches a vehicle to brake and "
+        "settle in the spot instead of rolling through it.",
+        version=3,
     ),
     _term(
         "collision_penalty",
