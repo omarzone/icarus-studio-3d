@@ -23,7 +23,7 @@ from icarus.copilot.language import Language, say
 from icarus.copilot.run_frames import RunFrames
 from icarus.tasks import Publisher
 from icarus.training.failure_groups import failure_groups
-from icarus.training.progress_watch import WatchFinding, checkpoint_results, watch
+from icarus.training.progress_watch import WatchFinding, checkpoint_results, run_patience, watch
 from icarus.training.run_health import run_health
 from icarus.training.run_store import RunFolder
 
@@ -41,6 +41,8 @@ checkpoint. Base every claim on those numbers and pictures; cite no number that 
 {behavior}
 Then decide the next step:
 - keep_training: the brain is still improving, the body moves the way the task needs and the run has budget left.
+  Before patience_step a brain that learns slowly is still learning: keep training unless a watch rule fired or
+  you see a design problem (a goal inside an obstacle, a reward paid for the wrong thing, a body that cannot move).
 - stop_and_fix: a watch rule fired, the coach notes name a design problem, or the numbers and pictures show the
   design keeps the brain from learning, or from learning a real gait. Do not wait for more steps with a bad setup.
   Fix whatever part causes it, with any edit operation that passes a try:
@@ -50,8 +52,9 @@ Then decide the next step:
   world: obstacles in the way, the surface, a goal too far (make the task easier first, widen it once success rises);
   brain: practice settings such as steps, copies or per-copy variation.
   A change to what the body senses or to its motors cannot continue from this brain: the next run trains from
-  zero. Prefer reward or world fixes when they cure the cause, and change the body or sensors when they are the
-  cause; say so in the proposal.
+  zero and every step this brain trained is lost. Prefer reward or world fixes that keep the sizes, so the next
+  run continues from the best brain; change the body or sensors only when they are the cause, and then say in the
+  proposal that it restarts from zero and costs the steps already trained.
 - done: success reached the goal and holds it, with a gait that does the task.
 Call the diagnosis tool as soon as you have read the run and watched the episodes, before you try a fix; call it
 again to update it once your fix is proposed, with each finding's try_id. Then answer with a short summary for the
@@ -169,12 +172,15 @@ class Coach:
         status = folder.status()
         state = self._projects.state(status.project_id)
         results = checkpoint_results(folder)
-        found = watch([result for result in results if result.step <= step], goal)
+        patience = run_patience(self._runs, folder)
+        found = watch([result for result in results if result.step <= step], goal, patience)
         episodes = folder.episodes(step)
         groups = failure_groups(episodes) if episodes else []
         brief = run_facts(state, self._runs, status) | {
             "diagnosed_step": step,
             "goal_success": goal,
+            # Before this step of the run, slow progress alone is no reason to change the design.
+            "patience_step": patience,
             "checkpoints": [
                 {"step": r.step, "success": r.success, "episode_return": round(r.episode_return, 3)} for r in results
             ],

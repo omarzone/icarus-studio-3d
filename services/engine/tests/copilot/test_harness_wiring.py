@@ -17,7 +17,7 @@ from icarus.tasks import TaskRegistry
 from icarus.training.progress_watch import WINDOW
 from tests.copilot.agent_script import answer_call, call
 from tests.copilot.test_agent_loop import NIGHT_OPS, make_copilot, model, say
-from tests.copilot.test_autopilot import ScriptedTrainer
+from tests.copilot.test_autopilot import ScriptedTrainer, set_patience
 
 
 @pytest.fixture(scope="module")
@@ -163,6 +163,8 @@ def test_the_store_tells_observers_about_each_new_revision(store, project_id):
 def test_a_coached_checkpoint_posts_a_grounded_comment_and_diagnoses_only_when_a_rule_fires(
     tmp_path, store, settings, views, project_id
 ):
+    # The flat run stalls at 100k steps, which counts once a tenth of navigation's budget is patience enough.
+    set_patience(0.1)
     copilot = make_copilot(tmp_path, store, settings, views)
     runs = copilot.services.runs
     trainer = ScriptedTrainer(runs, [[0.1] * (WINDOW + 1)])

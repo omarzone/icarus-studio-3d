@@ -19,7 +19,7 @@ from icarus.copilot.coach_words import coach_said, percent
 from icarus.copilot.early_look import EarlyLook, LookResult, look_facts
 from icarus.copilot.language import Language
 from icarus.copilot.run_frames import RunFrames
-from icarus.training.progress_watch import WatchFinding, checkpoint_results, trend, watch
+from icarus.training.progress_watch import WatchFinding, checkpoint_results, run_patience, trend, watch
 from icarus.training.run_health import HealthFact, run_health
 from icarus.training.run_store import RunFolder, RunStore
 
@@ -160,12 +160,13 @@ class CheckpointCoach:
         project_id = status.project_id
         language = self._copilot.language(project_id)
         watched = self._watched[run_id]
-        findings = [f for f in watch(results, DEFAULT_GOAL) if f.rule not in watched.rules]
+        patience = run_patience(self._runs, folder)
+        findings = [f for f in watch(results, DEFAULT_GOAL, patience) if f.rule not in watched.rules]
         watched.rules |= {finding.rule for finding in findings}
         facts = run_health(folder, step)
         fresh = [fact for fact in facts if fact.problem and fact.kind not in watched.problems]
         watched.problems |= {fact.kind for fact in fresh}
-        curve = trend(results)
+        curve = trend(results, patience)
         curve_text = None
         if curve.call != "early":
             curve_text = curve.reason if language == "en" else coach_said(f"trend_{curve.call}", language)

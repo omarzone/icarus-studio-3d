@@ -21,7 +21,16 @@ from icarus.copilot.language import Language
 from icarus.projects.files import write_atomic
 from icarus.projects.operations import OperationError, apply_operations
 from icarus.projects.store import ProjectStore
-from icarus.training.progress_watch import CheckpointResult, WatchFinding, checkpoint_results, watch
+from icarus.training.progress_watch import (
+    CheckpointResult,
+    WatchFinding,
+    checkpoint_results,
+    inherited_steps,
+    patience_steps,
+    run_patience,
+    trend,
+    watch,
+)
 from icarus.training.run_comparison import compare_runs
 from icarus.training.run_store import TERMINAL_STATES, RunStore
 from icarus.training.schedule import planned_steps
@@ -274,6 +283,8 @@ class Autopilot:
             if found:
                 why = ", ".join(RULE_WORDS[finding.rule][language] for finding in found)
                 self._say(pilot, coach_said("flagged", language, name=run.name, why=why))
+            elif self._too_early(pilot, state, run, results):
+                continue
             if iteration < request.max_iterations and not self._coach_step(pilot, run, request, found):
                 return "stopped", coach_said("discarded", language)
             if pilot.held is not None:
@@ -283,6 +294,21 @@ class Autopilot:
             return "stopped", coach_said("stopped", language)
         why = coach_said("budget_minutes" if time.monotonic() >= pilot.deadline else "budget_runs", language)
         return "done", self._done_text(pilot, "budget", why=why)
+
+    def _brain_steps(self, run: RunStatus, results: list[CheckpointResult]) -> int:
+        """Steps the run's last brain trained in all, counting the runs it continued from."""
+        last = results[-1].step if results else 0
+        return inherited_steps(self._runs, self._runs.folder(run.run_id)) + last
+
+    def _too_early(self, pilot: _Pilot, state: ProjectState, run: RunStatus, results: list[CheckpointResult]) -> bool:
+        """Whether a run that ended without a finding trained too little to judge, so the loop continues it."""
+        trained = self._brain_steps(run, results)
+        patience = patience_steps(state.project.task.family)
+        if trained >= patience:
+            return False
+        values = {"name": run.name, "trained": f"{trained:,}", "patience": f"{patience:,}"}
+        self._say(pilot, coach_said("too_early", pilot.language, **values))
+        return True
 
     def _done_text(self, pilot: _Pilot, key: str, **values: object) -> str:
         best = pilot.best
@@ -320,12 +346,27 @@ class Autopilot:
             run = self._starter.start(state, start, settings.threads, settings.use_graphics_card)
         self._update(pilot, iteration=iteration, run_ids=[*pilot.status.run_ids, run.run_id])
         language = pilot.language
-        if warm is None:
+        lost = self._lost(pilot, state) if warm is None else None
+        if lost is not None:
+            self._say(pilot, coach_said("run_zero_lost", language, iteration=iteration, name=run.name, **lost))
+        elif warm is None:
             self._say(pilot, coach_said("run_zero", language, iteration=iteration, name=run.name))
         else:
             source = self._runs.folder(warm.run_id).stored_status().name
             self._say(pilot, coach_said("run_warm", language, iteration=iteration, name=run.name, source=source))
         return run
+
+    def _lost(self, pilot: _Pilot, state: ProjectState) -> dict[str, str] | None:
+        """Why the best brain cannot continue on this design and the steps it trained, when there is one."""
+        best = pilot.best
+        if best is None:
+            return None
+        warm = WarmStart(run_id=best.run_id, step=best.step)
+        why = warm_start_problem(self._runs, state.project, warm)
+        if why is None:
+            return None
+        steps = inherited_steps(self._runs, self._runs.folder(best.run_id)) + best.step
+        return {"why": why, "steps": f"{steps:,}"}
 
     def _watch_run(
         self,
@@ -339,6 +380,7 @@ class Autopilot:
         or for a design problem the coach found."""
         folder = self._runs.folder(run.run_id)
         goal, seen = pilot.status.goal_success, -1
+        patience = run_patience(self._runs, folder)
         while True:
             status = folder.status()
             results = checkpoint_results(folder)
@@ -347,7 +389,7 @@ class Autopilot:
                 chained = lineage + (results[1:] if repeats_first else results)
                 if any(finding.rule == "goal_held" for finding in watch(chained, goal)):
                     return self._ended(folder.run_id, "held"), checkpoint_results(folder), []
-                found = watch(results, goal) if flags else []
+                found = watch(results, goal, patience) if flags else []
                 if found and status.state not in TERMINAL_STATES:
                     for finding in found:
                         self._note(pilot, f"{run.name}: {finding.reason}")
@@ -413,6 +455,8 @@ class Autopilot:
             return True
         proposal = next(item for item in self._copilot.conversation(run.project_id).proposals if item.id == proposal_id)
         stalled = any(finding.rule == "stalled" for finding in found)
+        if request.mode == "fix" and not found and self._keeps_warm(pilot, run, proposal):
+            return True
         if request.mode == "fix" and stalled and self._trial(pilot, proposal_id, proposal.summary):
             return True
         if request.mode == "fix":
@@ -436,6 +480,20 @@ class Autopilot:
                 return current.status == "applied"
             pilot.stop.wait(self._poll)
         self._update(pilot, state="running")
+        return True
+
+    def _keeps_warm(self, pilot: _Pilot, run: RunStatus, proposal: CopilotProposal) -> bool:
+        """Whether the loop skips a fix that would restart from zero while the brain is still improving and nothing
+        flagged the design, and continues from the best brain instead."""
+        state = self._projects.state(pilot.status.project_id)
+        best = self._warm_start(pilot, state)
+        if best is None:
+            return False
+        cold = self._cold_reason(state, proposal, best)
+        folder = self._runs.folder(run.run_id)
+        if cold is None or trend(checkpoint_results(folder), run_patience(self._runs, folder)).call != "improving":
+            return False
+        self._say(pilot, coach_said("kept_warm", pilot.language, summary=proposal.summary, why=cold))
         return True
 
     def _trial_run(self, pilot: _Pilot, warm: WarmStart | None, seed: int, what: str, letter: str) -> RunStatus:

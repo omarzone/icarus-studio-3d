@@ -7,15 +7,35 @@ from fastapi.testclient import TestClient
 
 from icarus.api.app import create_app
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus
+from icarus.contracts.operations import OperationBatch, SetBrain
 from icarus.contracts.project import ProjectState
 from icarus.contracts.training import MetricPoint, RunStatus, StartRun, WarmStart
 from icarus.copilot.autopilot import Autopilot, AutopilotBusy
+from icarus.copilot.settings import settings_dir
+from icarus.training.experiment_switches import EXPERIMENTS_FILE
 from icarus.training.run_store import RunStore
 from tests.copilot.agent_script import answering, script, tool_step
 
 TIME_PENALTY = {"op": "set_reward_term", "term": {"term": "time_penalty", "weight": -0.02}}
+MORE_RAYS = {
+    "op": "set_property",
+    "object": "car",
+    "component": "distance_ray",
+    "property": "count",
+    "value": {"type": "count", "value": 7},
+}
 STALLED = [0.0, 0.1, 0.1, 0.1, 0.1]
 LEARNED = [0.9, 0.9, 0.9]
+
+
+def set_patience(share: float) -> None:
+    (settings_dir() / EXPERIMENTS_FILE).write_text(f'{{"coach_patience": {share}}}', encoding="utf-8")
+
+
+@pytest.fixture(autouse=True)
+def short_patience():
+    """The scripted runs stall at 100k steps, a tenth of navigation's budget: patience lets the stall count there."""
+    set_patience(0.1)
 
 
 class ScriptedTrainer:
@@ -96,12 +116,12 @@ def autopilot(app, trainer: ScriptedTrainer, trial_steps: int | None = None) -> 
     return pilot
 
 
-def coach_fixes(monkeypatch, tmp_path) -> None:
+def coach_fixes(monkeypatch, tmp_path, operation: dict = TIME_PENALTY) -> None:
     script(
         monkeypatch,
         tmp_path,
         coach=[
-            {"match": ["diagnose"], **tool_step("try", operations=[TIME_PENALTY], look=None)},
+            {"match": ["diagnose"], **tool_step("try", operations=[operation], look=None)},
             tool_step("propose", try_id="t1", summary="Softer time penalty", explanation="Less pressure.", warnings=[]),
             tool_step(
                 "diagnosis",
@@ -308,3 +328,40 @@ def test_at_equal_success_the_best_brain_is_the_newer_design_whatever_its_return
 
     status = pilot.status(project_id)
     assert len(status.run_ids) == 2 and status.best_run_id == status.run_ids[1]
+
+
+def test_a_short_run_below_its_patience_continues_warm_without_changing_the_design(app, monkeypatch, tmp_path):
+    set_patience(0.5)
+    coach_fixes(monkeypatch, tmp_path)
+    project_id = project(app)
+    shorter = OperationBatch(operations=[SetBrain(op="set_brain", training_steps=200_000)], summary="Shorter runs")
+    app.state.store.apply(project_id, shorter)
+    # Flat up to 100k steps, which is a tenth of navigation's budget: too early to call it stalled.
+    trainer = ScriptedTrainer(app.state.runs, [STALLED[:4], [0.9] * 4])
+    pilot = autopilot(app, trainer)
+
+    pilot.start(project_id, AutopilotStart(mode="fix", goal_success=0.8))
+    wait_for(ended(pilot, project_id))
+
+    status = pilot.status(project_id)
+    first, second = status.run_ids
+    assert status.state == "done" and status.diagnosis_ids == []
+    assert trainer.started[1].warm_start == WarmStart(run_id=first, step=25_000)
+    assert app.state.runs.folder(second).config().revision_number == 2
+    assert any("below the 500,000" in text for text in texts(app, project_id))
+
+
+def test_a_fix_that_changes_the_senses_says_the_next_run_trains_from_zero_and_the_steps_it_loses(
+    app, monkeypatch, tmp_path
+):
+    coach_fixes(monkeypatch, tmp_path, MORE_RAYS)
+    project_id = project(app)
+    trainer = ScriptedTrainer(app.state.runs, [STALLED, LEARNED])
+    pilot = autopilot(app, trainer)
+
+    pilot.start(project_id, AutopilotStart(mode="fix", goal_success=0.8))
+    wait_for(ended(pilot, project_id))
+
+    assert trainer.started[1].warm_start is None
+    said = next(text for text in texts(app, project_id) if text.startswith("Round 2"))
+    assert "trains from zero" in said and "The 25,000 steps the best brain trained are lost." in said

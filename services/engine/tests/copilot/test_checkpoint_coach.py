@@ -15,6 +15,7 @@ from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
 from icarus.training.run_store import RunFolder
 from tests.copilot.agent_script import scripted_client
 from tests.copilot.test_agent_loop import make_copilot
+from tests.copilot.test_autopilot import set_patience
 
 # The beginner's ball-pushing tank: facing the goal and staying up pay almost the whole return of a brain that idles.
 IDLE_TERMS = {"progress_to_goal": 0.03, "heading_alignment": 144.24, "stay_upright": 115.62, "time_penalty": -12.0}
@@ -217,9 +218,15 @@ def test_how_the_body_moves_reaches_the_message_as_findings_with_their_design_ar
 
 
 def test_a_learning_curve_that_turns_flat_gets_one_more_look_within_the_budget(copilot, run, tmp_path):
+    # Flat by 100k steps counts once the brain has trained a tenth of navigation's budget.
+    set_patience(0.1)
     budget = LookBudget(early_checkpoints=1, per_run=3, after_problem=0)
     watcher, bodies, _ = coach(copilot, tmp_path, [FINE], budget=budget)
-    for step in (0, 25_000, 50_000, 75_000, 100_000):
+    # The return rises once at 50k and then holds: a flat curve, but not yet three checkpoints without a gain.
+    for step in (0, 25_000):
+        checkpoint(run, step, {"progress_to_goal": 0.0, "reach_goal": 0.0}, closer=2.0)
+        watcher.comment(run.run_id, step)
+    for step in (50_000, 75_000, 100_000):
         checkpoint(run, step, {"progress_to_goal": 4.0, "reach_goal": 3.0}, closer=2.0)
         watcher.comment(run.run_id, step)
 

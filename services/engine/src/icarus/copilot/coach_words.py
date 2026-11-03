@@ -25,6 +25,23 @@ COACH_TEXTS: dict[str, dict[Language, str]] = {
         "en": "Round {iteration}: {name} trains from zero.",
         "es": "Ronda {iteration}: {name} entrena desde cero.",
     },
+    "run_zero_lost": {
+        "en": "Round {iteration}: {name} trains from zero. {why} The {steps} steps the best brain trained are lost.",
+        "es": "Ronda {iteration}: {name} entrena desde cero. {why} Se pierden los {steps} pasos que entrenó el mejor "
+        "cerebro.",
+    },
+    "too_early": {
+        "en": "{name} ended after {trained} steps in all, below the {patience} this task gets before slow progress "
+        "counts: the design stays as it is and the next round continues from the best brain.",
+        "es": "{name} terminó con {trained} pasos en total, menos de los {patience} que esta tarea recibe antes de "
+        "juzgar un avance lento: el diseño se queda igual y la siguiente ronda continúa desde el mejor cerebro.",
+    },
+    "kept_warm": {
+        "en": "The coach proposed: {summary} It would restart from zero ({why}) while the brain is still improving, "
+        "so the next round continues from the best brain first.",
+        "es": "El coach propuso: {summary} Eso reiniciaría desde cero ({why}) mientras el cerebro sigue mejorando, "
+        "así que la siguiente ronda continúa primero desde el mejor cerebro.",
+    },
     "run_warm": {
         "en": "Round {iteration}: {name} continues from the best brain of {source}.",
         "es": "Ronda {iteration}: {name} continúa desde el mejor cerebro de {source}.",

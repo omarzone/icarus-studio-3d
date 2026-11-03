@@ -16,6 +16,9 @@ from tests.copilot.test_autopilot import (
 from tests.copilot.test_autopilot import (
     app as app,  # noqa: F401 - the fixture
 )
+from tests.copilot.test_autopilot import (
+    short_patience as short_patience,  # noqa: F401 - the fixture
+)
 
 BLOCKER = "The painted lines have colliders, so every episode touches them and fails."
 

@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from icarus.contracts.specs import TaskFamily
 from icarus.sim.model_state import CONTROL_PERIOD
 from icarus.training.episodes import INSTANT_SECONDS, instant_share, success_share
-from icarus.training.run_store import RunFolder
+from icarus.training.experiment_switches import read_experiments
+from icarus.training.run_store import RunFolder, RunStore, UnknownRun
+from icarus.training.schedule import RECOMMENDED_STEPS
 
 # design_blocker: the coach's early look found something in the design that keeps the brain from the task.
 type WatchRule = Literal["stalled", "reward_hacking", "instant_failures", "goal_held", "design_blocker"]
@@ -41,6 +44,29 @@ class WatchFinding:
     reason: str
 
 
+def inherited_steps(runs: RunStore, folder: RunFolder) -> int:
+    """Steps the brain a run starts from already trained, along every run it continues from; 0 from zero."""
+    total, seen, warm = 0, {folder.run_id}, folder.config().warm_start
+    while warm is not None and warm.run_id not in seen:
+        seen.add(warm.run_id)
+        total += warm.step
+        try:
+            warm = runs.folder(warm.run_id).config().warm_start
+        except UnknownRun:
+            break
+    return total
+
+
+def patience_steps(family: TaskFamily, inherited: int = 0) -> int:
+    """The step a run must reach before slow progress may stop it or change its design: a share of the task's
+    recommended budget, less what its brain already trained before this run."""
+    return max(0, round(RECOMMENDED_STEPS[family] * read_experiments().coach_patience) - inherited)
+
+
+def run_patience(runs: RunStore, folder: RunFolder) -> int:
+    return patience_steps(folder.project().task.family, inherited_steps(runs, folder))
+
+
 def checkpoint_results(folder: RunFolder) -> list[CheckpointResult]:
     """Evaluations of a run in step order, with locomotion success and instant endings from its episode records."""
     results = []
@@ -59,8 +85,8 @@ def _gain(before: float) -> float:
     return max(RETURN_GAIN_SHARE * abs(before), RETURN_GAIN_FLOOR)
 
 
-def _stalled(results: list[CheckpointResult], goal: float) -> WatchFinding | None:
-    if len(results) < WINDOW + 1:
+def _stalled(results: list[CheckpointResult], goal: float, patience: int) -> WatchFinding | None:
+    if len(results) < WINDOW + 1 or results[-1].step < patience:
         return None
     before, window = results[:-WINDOW], results[-WINDOW:]
     best_success = max(result.success or 0.0 for result in before)
@@ -119,14 +145,15 @@ def _held(results: list[CheckpointResult], goal: float) -> WatchFinding | None:
     )
 
 
-def watch(results: list[CheckpointResult], goal_success: float) -> list[WatchFinding]:
-    """What the evaluations so far say about a run: a goal held ends it well; the other rules flag a run to fix."""
+def watch(results: list[CheckpointResult], goal_success: float, patience: int = 0) -> list[WatchFinding]:
+    """What the evaluations so far say about a run: a goal held ends it well; the other rules flag a run to fix.
+    Before the patience step slow progress is ordinary learning, so only rules that show a broken design fire."""
     if not results:
         return []
     held = _held(results, goal_success)
     if held is not None:
         return [held]
-    found = [_stalled(results, goal_success), _hacking(results), _instant(results)]
+    found = [_stalled(results, goal_success, patience), _hacking(results), _instant(results)]
     return [finding for finding in found if finding is not None]
 
 
@@ -143,8 +170,9 @@ class Trend:
     reason: str
 
 
-def trend(results: list[CheckpointResult]) -> Trend:
-    """Whether more steps should help, from the slope of the last evaluations; a flat curve needs a fix instead."""
+def trend(results: list[CheckpointResult], patience: int = 0) -> Trend:
+    """Whether more steps should help, from the slope of the last evaluations; a flat curve needs a fix instead,
+    once the run has passed its patience step."""
     trained = [result for result in results if result.step > 0]
     if len(trained) < 3:
         return Trend("early", "Too few trained checkpoints yet to read the learning curve.")
@@ -165,6 +193,13 @@ def trend(results: list[CheckpointResult]) -> Trend:
             "improving",
             f"Return reached {last.episode_return:.2f} at step {last.step:,}, above {best_before:.2f} before: the "
             "brain is still learning.",
+        )
+    if last.step < patience:
+        return Trend(
+            "early",
+            f"Success moved {success_slope:.2f} per 100k steps between {steps}, but the brain has not reached "
+            f"{patience:,} steps of this run yet, the share of the task's recommended budget it gets before slow "
+            "progress counts as flat: keep training.",
         )
     return Trend(
         "flat",

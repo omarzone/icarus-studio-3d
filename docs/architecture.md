@@ -213,7 +213,7 @@ When a project starts from a sentence, the Architect first returns three `Design
 ### Design compilation and tests
 
 - `design/compiler.py` turns `WorldSpec` + `BodySpec` into an MJCF model, computing inertias from part geometry and mass.
-- `design/checks.py` runs fast physics checks on every candidate revision: it compiles, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
+- `design/checks.py` runs fast physics checks on every candidate revision: it compiles, the goal zone stays clear of every obstacle collider across its own and the obstacles' randomization (`design/reachable.py`, sampling a grid of each range) and the body starts outside every obstacle, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
 - Failures become a `DesignReport` with readable reasons. The copilot receives the report and repairs the design through new operations, up to a fixed number of attempts.
 
 ### Simulation
@@ -252,7 +252,7 @@ A `BehaviorTest` replays a scripted situation and measures the simulated body ag
 
 ### Experiments file
 
-Behaviors still being compared before one becomes the default are switched in `experiments.json` in the settings folder (`~/.icarus`, `ICARUS_SETTINGS_DIR` overrides it), declared in the `Experiments` model (`contracts/experiments.py`) and read by `training/experiment_switches.py`. A missing file, key or invalid value keeps the default. Switches today: `live_view` — `"realtime"` (default: recorded motion at 1x sim speed, about 3 s behind), `"fast"` (recorded motion sped up to keep pace with training) or `"classic"` (one pose per snapshot, eased). The worker reads it when a run starts and the snapshots say which mode they were recorded for.
+Behaviors still being compared before one becomes the default are switched in `experiments.json` in the settings folder (`~/.icarus`, `ICARUS_SETTINGS_DIR` overrides it), declared in the `Experiments` model (`contracts/experiments.py`) and read by `training/experiment_switches.py`. A missing file, key or invalid value keeps the default. Switches today: `live_view` — `"realtime"` (default: recorded motion at 1x sim speed, about 3 s behind), `"fast"` (recorded motion sped up to keep pace with training) or `"classic"` (one pose per snapshot, eased). The worker reads it when a run starts and the snapshots say which mode they were recorded for. `coach_patience` — a share of the task's recommended steps from 0.1 to 1 (default `0.5`): before a brain has trained that share, counting the runs it continues from, the coach does not call a run stalled or flat, the autopilot does not change the design for slow progress and continues from the best brain instead. A design problem found by a look, by a watch rule other than the stall, or by the design tests still stops a run at once.
 
 ### Run store
 

@@ -18,6 +18,7 @@ from icarus.training.failure_groups import failure_groups
 from icarus.training.progress_watch import CheckpointResult, Trend
 from icarus.training.run_health import HealthFact
 from icarus.training.run_store import RunFolder
+from icarus.training.schedule import RECOMMENDED_STEPS
 
 # Pictures sent per look: the 2x2 sheets of the first recorded episodes.
 SHEETS_LOOKED = 2
@@ -35,8 +36,9 @@ way the task needs, report moves_well. An untrained brain moves at random: then 
 (a body that cannot stand up, legs too weak to lift it, a part that drags by its shape). After the first
 checkpoints a gait that will not do the task (crawling, hopping, dragging a leg) is a problem too: more steps
 reinforce it.
-Set problem to true only when the design must change before more training can help, and name the blocker. Write
-every text in {language}, plainly, for a beginner. Cite only numbers that appear in the facts."""
+Set problem to true only when the design must change before more training can help, and name the blocker. Slow
+learning is not a design problem: a brain far below recommended_steps that does not succeed yet is still learning.
+Write every text in {language}, plainly, for a beginner. Cite only numbers that appear in the facts."""
 SHEETS_TEXT = """Each picture is a 2x2 sheet of one episode in time order: top left start, top right middle,
 bottom row the failure moment (when there is one) and the end."""
 STRIP_TEXT = """The first picture is {layout}; the facts give its frame times. The next one is a 2x2 sheet of an
@@ -85,6 +87,7 @@ def look_facts(
         "step": step,
         "untrained": step == 0 and folder.config().warm_start is None,
         "total_steps": status.total_steps,
+        "recommended_steps": RECOMMENDED_STEPS[folder.project().task.family],
         "evaluations": [
             {"step": r.step, "success": r.success, "episode_return": round(r.episode_return, 2)} for r in results
         ],

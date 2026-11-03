@@ -3,7 +3,7 @@ name: watch-a-training
 title: Watch a training run and name what the body really does
 when: The person wants a run watched, asks how the body moves or what it is doing wrong, or the body moves badly: crawls, hops, drags a leg, twitches, spins or veers.
 tools: [read_run, coach, inspect_object, try, look, propose, train]
-version: 1
+version: 2
 ---
 Watching judges how the body moves, not only whether it succeeds. Every claim comes from the run: its recorded
 evaluation episodes, its health facts and its gait signals. Never describe a frame nobody looked at; when a
@@ -11,7 +11,11 @@ checkpoint has no pictures, say so and judge from the numbers.
 
 1. **Find the run.** `read_run` with `status`, `evaluations` and `failures`. When nothing has trained, say no run
    exists yet and offer one. When the run is far below its recommended steps, say early behavior is still
-   changing and watch anyway: a bad habit is cheaper to fix early.
+   changing and watch anyway: a bad habit is cheaper to fix early. Slow progress is not a reason to change the
+   design before the brain has trained about half the recommended budget (500k steps for navigation, 1M for
+   locomotion), counting the runs it continued from: a curve that is low but rising needs more steps, not a fix.
+   Only a design problem (a goal inside an obstacle, a reward paid for the wrong thing, a body that cannot move or
+   stand) is worth stopping early for.
 2. **Watch it frame by frame.** `coach` with action diagnose: the coach opens the latest evaluated checkpoint,
    watches recorded episodes with its film_strip (about 20 pictures at a fixed interval plus the failure moment,
    from a camera that follows the body) and compare_strips (two checkpoints one above the other, to see whether
@@ -35,6 +39,8 @@ checkpoint has no pictures, say so and judge from the numbers.
    value inside its library range.
 6. **Propose it.** `propose` with the behavior, the fact and its number from the run, the area and what should
    change in the next run. Offer `train` continuing from the best brain when the senses and motors did not change.
+   When the change adds or removes a sensor or a motor, say plainly that the next run starts from zero and loses
+   the steps already trained; prefer a fix that keeps them when one cures the same cause.
 7. **Watch again.** After the next run, ask the coach to watch it the same way. Its strips compare checkpoints
    within one run; between runs, compare the same fact's number at a similar step and say whether the behavior
    got better, stayed or got worse.
