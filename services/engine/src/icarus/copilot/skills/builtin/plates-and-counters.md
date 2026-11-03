@@ -19,8 +19,8 @@ Every value a display shows is measured by the engine per frame in training, rep
    `plate.watch` agent, object (with `plate.object`, for pushing a crate onto a plate) or anything.
 2. **Make them the goal or pay for them.** `reach_plates` = 10 with setting mode any, all or in_order ends the
    try as a success once the plates are reached; for in_order number the plates with `plate.order` 1, 2, 3.
-   `plates_pressed` = 5 pays each plate on the way; `on_plate` = 0.1 pays every step on a goal plate, so keep it
-   small. The goal plates are the target plates, or every plate but start pads when there is no target plate.
+   `plates_pressed` = 5 pays each plate on the way; `on_plate` = 0.01 pays every step on a goal plate, so keep it
+   that small. The goal plates are the target plates, or every plate but start pads when there is no target plate.
    Plate terms fit navigation and locomotion. Keep `progress_to_goal` only when a `goal_zone` also guides the body;
    otherwise a body learns the plates from the plate terms and its own senses (add a `target` sense pointed at a
    goal zone over the last plate, or rays, when plates are far apart).
