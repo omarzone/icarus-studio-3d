@@ -5,6 +5,7 @@ import type {
   PlayCommandEnvelope,
   PlayMessageEnvelope,
   RunEventEnvelope,
+  SceneGeom,
 } from "./generated.ts";
 
 export type {
@@ -50,10 +51,12 @@ export type {
   DuplicateProject,
   EngineEventEnvelope,
   FailureGroup,
+  GoalSignal,
   HealthStatus,
   IdeaRequest,
   IdeaSet,
   LibraryCatalog,
+  LightSignal,
   ListValue,
   LogLine,
   MetricPoint,
@@ -102,6 +105,7 @@ export type {
   SceneGeom,
   SceneLight,
   SceneRay,
+  SceneSignals,
   SceneSkin,
   SceneSky,
   SceneZone,
@@ -128,6 +132,7 @@ export type {
 } from "./generated.ts";
 
 // Unions the generator inlines, named once from the generated types.
+export type LightRole = NonNullable<SceneGeom["light_role"]>;
 export type PropertyValue = ComponentSpec["properties"][string];
 export type EditOperation = OperationBatch["operations"][number];
 export type PlayCommand = PlayCommandEnvelope["command"];
