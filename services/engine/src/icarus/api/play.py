@@ -88,7 +88,7 @@ def _open_session(
     state = store.state(project_id)
     project, revision = state.project, state.revision.number
     brain = _brain(runs, project, revision) if choice is None else _chosen_brain(runs, project, choice)
-    session = PlaySession(project, revision, brain.policy, project.brain.seed, language)
+    session = PlaySession(project, revision, brain.policy, project.brain.seed, language, brain.step or 0)
     return session, session.info().model_copy(update={"run_id": brain.run_id, "step": brain.step})
 
 
