@@ -1,5 +1,6 @@
 import json
 import secrets
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -23,7 +24,7 @@ from icarus.copilot.agent.loop import merged_steps, run_loop
 from icarus.copilot.agent.prompt import system_prompt
 from icarus.copilot.agent.summary_store import SummaryStore
 from icarus.copilot.agent.tools.base import Tool, ToolServices, TurnScope
-from icarus.copilot.client import CopilotError, ModelClient
+from icarus.copilot.client import CopilotError, ModelClient, capability_client
 from icarus.copilot.context import lean_context
 from icarus.copilot.hooks import HookRegistry
 from icarus.copilot.language import detect, say
@@ -79,6 +80,8 @@ def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -
     scope = TurnScope(project_id, state, conversation.autonomy, services, request=message.text, language=language)
     scope.earlier_proposal = any(item.status == "open" for item in conversation.proposals)
     scope.tools, scope.hooks, scope.turn_id = setup.tools, setup.hooks, secrets.token_hex(6)
+    scope.client, scope.attachments = setup.client, list(message.attachments)
+    scope.vision = setup.client if setup.capability == "vision" else capability_client(setup.settings, "vision")
     publish = setup.publish
     if publish is not None:
         scope.publish = lambda event: publish(event, project_id)
@@ -128,6 +131,8 @@ def _turn(
     system = system_prompt(scope.autonomy, context, history.summary, setup.skills, memory)
     messages = [{"role": "system", "content": system}, *history.messages]
     messages.append({"role": "user", "content": media.user_content(message.text)})
+    # The loop's own budget starts now, so tools that plan with a model know when the turn ends.
+    scope.deadline = time.monotonic() + setup.limits.wall_seconds
     outcome = run_loop(
         setup.client,
         scope,

@@ -3,11 +3,12 @@ name: build-a-scene
 title: Build and edit large, detailed scenes
 when: The person asks for a big or detailed place (a city block, a warehouse, a forest, a stadium, a maze), many copies of something, or to change many objects at once.
 tools: [find_objects, library, inspect_object, pattern, edit_group, edit_matching, try, look, propose]
-version: 1
+version: 2
 ---
 Large scenes are built from a few good pieces repeated, never from hundreds of hand-written operations. Every
 tool below expands into ordinary edit operations and returns a try_id, so the result is tried, proposed and undone
-like any other change. One change holds up to 500 operations.
+like any other change. One change holds up to 500 operations. To recreate a place from a reference picture
+or a description, follow the skill clone-from-a-reference instead.
 
 1. **Read the scene.** `find_objects` answers "what is there and where": filter by text, kinds (group for a
    transform-only parent), material color or style, inside an object, a region or near a point, and ask only the

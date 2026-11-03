@@ -21,6 +21,7 @@ from icarus.training.run_store import RunStore
 
 if TYPE_CHECKING:
     from icarus.copilot.agent.tools.coaching import Coaching
+    from icarus.copilot.client import ModelClient
     from icarus.copilot.hooks import HookRegistry
 
 type StepKind = Literal["inspect", "look", "try", "propose", "train", "library"]
@@ -114,6 +115,12 @@ class TurnScope:
     turn_id: str = ""
     # Runs this turn started, for the message's run card.
     started_runs: list[str] = field(default_factory=list)
+    # The turn's model and the one that sees pictures, for tools that plan with a model; none means not connected.
+    client: "ModelClient | None" = None
+    vision: "ModelClient | None" = None
+    # The person's attachments sent with this message, by id, and when the turn must end (time.monotonic).
+    attachments: list[str] = field(default_factory=list)
+    deadline: float | None = None
     guard: threading.Lock = field(default_factory=threading.Lock)
 
     def emit(self, event: EngineEvent) -> None:
