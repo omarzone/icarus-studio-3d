@@ -1,32 +1,49 @@
 ---
 name: environment-look
-title: Make the world look like the request
-when: The person asks for a theme, colors, a sky, a mood, decoration or a scene that looks like a place.
+title: Make the world look like a believable place
+when: The person asks for a theme, colors, a sky, a mood, decoration, a realistic world or a scene that looks like a place (a street, a parking lot, a warehouse, a park, a farm, a planet).
 tools: [library, inspect_object, try, look, propose]
-version: 1
+version: 2
 ---
-The look never changes physics except where a surface sets friction; the body learns the same task in a pretty
-world. Make it readable first: the camera must show the body, the goal and the obstacles at a glance.
+The look never changes the task: the body learns the same thing in a believable world. A place reads as real when
+its surroundings frame it, its pieces share one scale and one palette, and the sky and ground fit the hour and the
+weather. Build it around the task, never on top of it.
 
-1. **Choose a palette.** Three to six colors: ground, frame (walls, shelves), props, accents for goals and
-   hazards. The body gets a color that stands out from the ground. Set each with `material.color`.
-2. **Sky and light.** One `sky` per world: `sky.preset` is `day`, `dusk`, `night`, `overcast` or `custom`; its
-   `sky.top` and `sky.horizon` apply only with `custom`, so "blue sky" means `day`. `sky.ambient` = 0.6–1.2 keeps
-   shadows readable, `sky.fog` = 0–0.3 adds haze without hiding the goal. A `light` sun at `light.intensity` = 1
-   lights the scene; add point lamps above for night scenes. For a time of day set `sky.use_clock` on and
-   `sky.clock_time` (hours); `sky.clouds`, `sky.stars`, `sky.sun_size`, `sky.glare`, `sky.haze` and the color grade
-   (`sky.exposure`, `sky.saturation`, `sky.tint`) set the mood. None of them change the physics.
-3. **Ground.** Give the ground a fitting `material.surface` and `surface` kind: `asphalt` (friction 1.0), `grass`
-   (0.6), `wood` (0.7), `metal` (0.5), `rubber` (1.2), `ice` (0.05). Snow is white `ice` with
-   `surface.friction` = 0.3. Changing friction changes what the body must learn: say so in the proposal.
-4. **Props with roles.** Build the layout from props that each have a job: walls and shelves (tall static boxes)
-   frame the space, ramps and platforms change height, floor markings (static boxes 0.01 to 0.02 m tall) show
-   lanes and spots, decoration fills the edges, movable crates and balls (`box`, `ball`) can be pushed. Rest each
-   prop on the ground, keep 1 m clear around the start and the path, and keep the scene within about 30 m.
-5. **Vary the look per copy.** `randomize.color` shifts a world object's color between copies; it helps a brain
-   that will see different scenes and costs nothing in physics.
-6. **Check.** `try`, then `look` with view `three_quarter` at the whole scene and with view `onboard` from the
-   body. The goal and obstacles must stand out from the ground; nothing floats or hides the path. Then `propose`.
+1. **Name the place and its scale.** Say what the scene is and where the task happens in it, then size everything
+   from the body: a car is about 4.5 m long and 1.8 m wide, a person 1.7 m tall, a door 2.1 m, a storey 3 m, a
+   road lane 3.5 m, a parking bay 2.5 by 5 m, a sidewalk 2 to 3 m wide and 0.12 m high, a curb 0.15 m high. Keep
+   the whole scene within about 40 m so the camera can show it.
+2. **Frame the space.** Surround the task area with context that says where it is, outside the path:
+   `building` pieces (tall static boxes, `wall` style, 6 to 15 m high) along the far edges like a street front or
+   the walls of a hall; `sidewalk` slabs and `curb` lines at road edges; `tree`, `lamp_post` and `sign` pieces in
+   regular rows (a lamp every 10 to 15 m, trees every 6 to 10 m) on the sidewalks or verges; `cone` pieces only
+   where they mark something. Indoors, use walls, shelves (tall static boxes) and pillars instead. Repeat pieces at
+   even spacing and vary them a little (`randomize.color` on, small size changes) so rows do not look stamped.
+3. **Keep the task's path and senses clear.** Decoration never blocks the way from the start to the goal, never
+   sits on or inside the goal zone, and never stands where a `distance_ray` would read it as an obstacle unless the
+   task is about avoiding it. Pieces that are only looks (`tree`, `lamp_post`, `sign`, markings) have no
+   `collider` and no `physics_body`, so nothing touches them; pieces that frame the space for real (`building`,
+   `curb`, walls) keep their collider. Keep at least 2 m between decoration and the path, and rest every piece on
+   the ground: nothing floats.
+4. **One palette.** Three to six related colors set with `material.color`: ground, frame (buildings, walls), props
+   and one accent for goals and hazards. Muted for buildings and ground (warm greys, sand, brick, concrete), one
+   saturated accent, and a body color that stands out from the ground. Floor markings are static boxes 0.01 to
+   0.02 m tall in white or yellow with the marking style.
+5. **Ground and surfaces.** Give the ground a fitting `material.surface` and `surface` kind: `asphalt` for roads
+   and lots (friction 1.0), `concrete` for sidewalks and halls, `grass` for parks (0.6), `wood` for floors (0.7),
+   `metal` (0.5), `ice` (0.05). Snow is white `ice` with `surface.friction` = 0.3. Changing friction changes what
+   the body must learn: say so in the proposal.
+6. **Sky that fits the hour.** One `sky` per world. For a time of day turn `sky.use_clock` on and set
+   `sky.clock_time` (7 for morning, 14 for afternoon, 18.5 for sunset, 22 for night); otherwise pick
+   `sky.preset` (`day`, `dusk`, `night`, `overcast`). Add weather with `sky.clouds` = 0.2–0.6, `sky.haze` = 0.1–0.4
+   for distance, `sky.sun_size` = 2–5 with `sky.glare` = 0.2–0.5 for a visible sun, `sky.stars` at night, and keep
+   `sky.ambient` = 0.6–1.2 so shadows stay readable and `sky.fog` at 0.3 or less so the goal stays visible. At
+   night add point lights above the `lamp_post` pieces. None of these change the physics.
+7. **Check.** `try`, then `look` with view `three_quarter` at the whole scene, view `top` to confirm the path and
+   goal are clear, and view `onboard` from the body. The body, the goal and the obstacles must stand out; the
+   surroundings frame them without hiding anything. Fix and try again, then `propose` with the place, the palette
+   and the sky in plain words.
 
-Done when the proposal has a stated palette, a fitting sky and ground, props that each have a role, and a
-three-quarter view where the body, the goal and the obstacles are easy to tell apart.
+Done when the proposal names the place, frames it with context at the edges, keeps one scale and one palette,
+has a sky and ground that fit, leaves the path, the goal and the senses clear, and a three-quarter view shows a
+believable scene where the body, the goal and the obstacles are easy to tell apart.
