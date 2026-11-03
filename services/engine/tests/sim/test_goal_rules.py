@@ -130,7 +130,7 @@ def test_gentle_arrival_pays_for_slowing_down_inside_not_for_lingering():
     # Speeding up inside costs what braking paid, so rocking back and forth earns nothing.
     assert gentle_arrival(state(speed=0.0), state(speed=0.5)) == pytest.approx(-0.5)
     rock = [state(speed=0.0), state(speed=0.6), state(speed=0.0), state(speed=0.6), state(speed=0.0)]
-    assert sum(gentle_arrival(a, b) for a, b in zip(rock, rock[1:])) == pytest.approx(0.0)
+    assert sum(gentle_arrival(a, b) for a, b in zip(rock, rock[1:], strict=False)) == pytest.approx(0.0)
     # Leaving the spot gives back what settling in it paid.
     assert gentle_arrival(state(speed=0.5), state(speed=0.0, goal_inside=False)) == pytest.approx(-0.5)
 
