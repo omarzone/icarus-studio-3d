@@ -385,6 +385,307 @@ export interface AutopilotStatus {
   state: "running" | "waiting_approval" | "done" | "stopped" | "failed";
 }
 /**
+ * Two checkpoints on the same test: their numbers side by side and how far apart their paths ran.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorComparison".
+ */
+export interface BehaviorComparison {
+  a: BehaviorTestResult;
+  b: BehaviorTestResult;
+  path_gap: number;
+  rows: BehaviorMatchRow[];
+  similarity: number;
+  test_id: string;
+}
+/**
+ * One checkpoint judged on one test, measured by MuJoCo: runs/<id>/tests/<step>/<test>.json.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorTestResult".
+ */
+export interface BehaviorTestResult {
+  episodes: BehaviorEpisode[];
+  fall_share: number;
+  has_goal: boolean;
+  mean_displacement: number;
+  mean_end_distance?: number | null;
+  mean_path_length: number;
+  mean_return: number;
+  mean_seconds: number;
+  passed: boolean;
+  passed_share: number;
+  path_interval: number;
+  ran_at: string;
+  run_id: string;
+  step: number;
+  test: BehaviorTest;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorEpisode".
+ */
+export interface BehaviorEpisode {
+  ending: string;
+  episode_return: number;
+  passed: boolean;
+  path: [number, number][];
+  seconds: number;
+  seed: number;
+}
+/**
+ * A fixed scenario a checkpoint is judged on: the same starts and world changes for every brain.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorTest".
+ */
+export interface BehaviorTest {
+  id: string;
+  name: string;
+  pass_share?: number;
+  /**
+   * @maxItems 10
+   */
+  shifts?:
+    | []
+    | [ObjectShift]
+    | [ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift
+      ]
+    | [
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift
+      ];
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
+  starts:
+    | [number]
+    | [number, number]
+    | [number, number, number]
+    | [number, number, number, number]
+    | [number, number, number, number, number]
+    | [number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number, number, number, number, number]
+    | [number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ];
+}
+/**
+ * An object of the world moved along the ground for a test, in metres; the project itself never changes.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ObjectShift".
+ */
+export interface ObjectShift {
+  dx: number;
+  dy: number;
+  object: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorMatchRow".
+ */
+export interface BehaviorMatchRow {
+  a: number;
+  b: number;
+  close: boolean;
+  label: string;
+  unit: string;
+}
+/**
+ * A new test as the desktop or the copilot asks for it; the engine picks its id and start seeds.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BehaviorTestDraft".
+ */
+export interface BehaviorTestDraft {
+  name: string;
+  pass_share?: number;
+  /**
+   * @maxItems 10
+   */
+  shifts?:
+    | []
+    | [ObjectShift]
+    | [ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift, ObjectShift]
+    | [
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift
+      ]
+    | [
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift,
+        ObjectShift
+      ];
+  start_count?: number;
+}
+/**
  * What every neuron of a checkpoint's policy computes for the first observation of an evaluation episode.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -514,6 +815,20 @@ export interface ChatSuggestion {
 export interface CheckItem {
   text: string;
   tone: "ok" | "warn";
+}
+/**
+ * One evaluation episode of a checkpoint with pass or fail, from runs/<id>/frames/<step>/episodes.json.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CheckpointEpisode".
+ */
+export interface CheckpointEpisode {
+  ending: string;
+  episode_return: number;
+  index: number;
+  passed: boolean;
+  seconds: number;
+  seed: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -2204,6 +2519,41 @@ export interface MessagePostedEvent {
   message_id: string;
   role: "user" | "copilot";
   type: "message_posted";
+}
+/**
+ * What every hidden neuron of a checkpoint computed over its recorded evaluation episode, step by step.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "EpisodeActivations".
+ */
+export interface EpisodeActivations {
+  frames: number;
+  layers: LayerActivity[];
+  matches_recording: boolean;
+  outcome: string;
+  run_id: string;
+  seconds: number;
+  step: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "LayerActivity".
+ */
+export interface LayerActivity {
+  activation: string;
+  name: string;
+  neurons: NeuronActivity[];
+  size: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "NeuronActivity".
+ */
+export interface NeuronActivity {
+  active_share: number;
+  index: number;
+  mean: number;
+  peak: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

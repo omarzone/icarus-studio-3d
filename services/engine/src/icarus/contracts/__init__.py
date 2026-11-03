@@ -1,5 +1,13 @@
 from pydantic import BaseModel
 
+from icarus.contracts.behavior import (
+    BehaviorComparison,
+    BehaviorTest,
+    BehaviorTestDraft,
+    BehaviorTestResult,
+    CheckpointEpisode,
+    EpisodeActivations,
+)
 from icarus.contracts.brain_network import BrainActivations, BrainNetwork
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
@@ -87,6 +95,12 @@ MODELS: tuple[type[BaseModel], ...] = (
     TaskInfo,
     BrainNetwork,
     BrainActivations,
+    EpisodeActivations,
+    BehaviorTest,
+    BehaviorTestDraft,
+    BehaviorTestResult,
+    BehaviorComparison,
+    CheckpointEpisode,
     StorageInfo,
     DataFolderMove,
     DataFolderChoice,
