@@ -24,6 +24,7 @@ from icarus.sim.start_pose import place_start
 from icarus.sim.success import task_done
 from icarus.sim.variation import WorldVariation
 
+# The task's default try length; each project sets its own in task.episode_seconds.
 EPISODE_SECONDS = 30.0
 
 
@@ -49,6 +50,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._substeps = control_substeps(self.world)
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
+        self._seconds = project.task.episode_seconds
+        self._end_on_fall = project.task.end_on_fall
+        self._end_on_success = project.task.end_on_success
         size = observation(self.world).shape[0]
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(size,), dtype=np.float32)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(len(self.world.actuators),), dtype=np.float32)
@@ -63,6 +67,8 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
     def _start_episode(self) -> None:
         self._episode_terms = dict.fromkeys(self._terms, 0.0)
         self._collided = False
+        self._reached = False
+        self._fell = False
 
     @property
     def state(self) -> RewardState:
@@ -104,14 +110,17 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._collided = self._collided or after.colliding
         self.world.tally.episode_return += float(reward)
         reached = task_done(self.world, after)
-        if reached:
+        if reached and not self._reached:
             self.world.tally.successes += 1
-        terminated = after.fallen or reached
-        truncated = float(self.world.data.time) >= EPISODE_SECONDS - 1e-9
+        self._reached = self._reached or reached
+        self._fell = self._fell or after.fallen
+        terminated = (self._end_on_fall and after.fallen) or (self._end_on_success and reached)
+        truncated = float(self.world.data.time) >= self._seconds - 1e-9
         info: dict[str, Any] = {"reward_parts": parts}
         if terminated or truncated:
-            info["is_success"] = reached
-            info["failed"] = not reached and (after.fallen or self._collided)
+            info["is_success"] = self._reached
+            info["failed"] = not self._reached and (self._fell or self._collided)
+            info["fell"] = self._fell
             info["episode_terms"] = dict(self._episode_terms)
         if self.live_recording:
             rows = pose_rows(self.world, self._geoms)

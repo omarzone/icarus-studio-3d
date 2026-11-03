@@ -30,7 +30,7 @@ def body_size(project: Project) -> BodySize | None:
 
 
 @lru_cache(maxsize=256)
-def _frozen_size(run_path: Path) -> BodySize | None:
+def frozen_size(run_path: Path) -> BodySize | None:
     """The body a run trained with; a run's project never changes, so it is computed once."""
     try:
         return body_size(RunFolder(run_path).project())
@@ -80,7 +80,7 @@ def brain_options(runs: RunStore, project: Project, revision: int) -> list[PlayB
         if not folder.checkpoint_path(status.best_step).is_file():
             continue
         success = next((info.success_rate for info in folder.checkpoints() if info.step == status.best_step), None)
-        reason = misfit(now, _frozen_size(folder.path))
+        reason = misfit(now, frozen_size(folder.path))
         options.append(
             PlayBrainOption(
                 run_id=status.run_id,
@@ -108,7 +108,7 @@ def chosen_checkpoint(runs: RunStore, project: Project, run_id: str, step: int) 
     path = folder.checkpoint_path(step)
     if not path.is_file() or step not in {info.step for info in folder.checkpoints()}:
         raise BrainUnavailable(f"{status.name} has no brain saved at {step:,} steps")
-    reason = misfit(body_size(project), _frozen_size(folder.path))
+    reason = misfit(body_size(project), frozen_size(folder.path))
     if reason is not None:
         raise BrainUnavailable(reason)
     return path, f"Trained brain: {status.name} at {step:,} steps"

@@ -134,12 +134,12 @@ class _EpisodeRun:
     def result(self) -> _Episode:
         world, info, touched = self.env.world, self.info, self.touched
         time = float(world.data.time)
-        fell = bool(self.terminated and not info["is_success"])
+        fell = bool(info.get("fell", self.terminated) and not info["is_success"])
         if info["is_success"] and world.plate_goal:
             outcome = f"Reached the plates at {time:.1f} s"
         elif info["is_success"] and world.goal is not None:
             outcome = f"Reached the {_lower_first(world.object_names[world.goal.object])} at {time:.1f} s"
-        elif self.terminated:
+        elif fell:
             outcome = f"Fell over at {time:.1f} s"
         else:
             outcome = self.first_touch or "Time ran out"

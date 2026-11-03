@@ -194,6 +194,18 @@ TEXTS: dict[str, dict[Language, str]] = {
         "en": "No run of this project is training, so there was nothing to stop.",
         "es": "Ningún entrenamiento de este proyecto está en marcha, así que no había nada que detener.",
     },
+    "train_paused": {
+        "en": "I paused {names}; it waits where it is, brain and all, until you resume it.",
+        "es": "Pausé {names}; espera donde está, con su cerebro, hasta que lo reanudes.",
+    },
+    "train_resumed": {
+        "en": "I resumed {names} from where it paused.",
+        "es": "Reanudé {names} desde donde se pausó.",
+    },
+    "train_not_held": {
+        "en": "No run of this project is training, so there was nothing to pause or resume.",
+        "es": "Ningún entrenamiento de este proyecto está en marcha, así que no había nada que pausar o reanudar.",
+    },
     "train_stopping": {
         "en": "I asked {names} to stop; it keeps its best checkpoint.",
         "es": "Pedí a {names} que se detenga; conserva su mejor punto guardado.",

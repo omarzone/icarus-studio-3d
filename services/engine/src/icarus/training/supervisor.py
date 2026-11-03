@@ -12,7 +12,7 @@ from icarus.projects.agents import agent_project
 from icarus.sim.env import ProjectEnv
 from icarus.training.process_tree import end_worker, kill_tree
 from icarus.training.run_store import TERMINAL_STATES, GroupMember, RunFolder, RunStore
-from icarus.training.warm_start import warm_start_problem
+from icarus.training.warm_start import brain_start, warm_start_problem
 
 STOP_TIMEOUT = 60.0
 SHUTDOWN_TIMEOUT = 30.0
@@ -29,6 +29,10 @@ class RunInProgress(Exception):
 
 class NotTrainable(Exception):
     pass
+
+
+class NotPausable(Exception):
+    """A pause or resume that has no training run to act on, with a sentence a person can read."""
 
 
 class WarmStartRefused(Exception):
@@ -144,6 +148,7 @@ class Supervisor:
             ProjectEnv(state.project)
         except ValueError as error:
             raise NotTrainable(str(error)) from error
+        start = start.model_copy(update={"warm_start": brain_start(state.project, start.warm_start)})
         if start.warm_start is not None and (
             problem := warm_start_problem(self.store, state.project, start.warm_start)
         ):
@@ -216,6 +221,32 @@ class Supervisor:
                 worker.killer = threading.Timer(self._stop_timeout, self._kill, args=(worker,))
                 worker.killer.daemon = True
                 worker.killer.start()
+        return folder.status()
+
+    def pause(self, run_id: str) -> RunStatus:
+        """Hold a training run between two steps; a run of a group pauses its whole group."""
+        return self._hold(run_id, True)
+
+    def resume(self, run_id: str) -> RunStatus:
+        return self._hold(run_id, False)
+
+    def _hold(self, run_id: str, paused: bool) -> RunStatus:
+        folder = self.store.folder(run_id)
+        group = folder.config().group
+        members = [status.run_id for status in self.store.group(group).runs] if group is not None else [run_id]
+        with self._lock:
+            for member in members:
+                other = self.store.folder(member)
+                if other.status().state not in ("starting", "running"):
+                    continue
+                if member not in self._workers:
+                    raise NotPausable(f"{other.stored_status().name} is not training in this engine")
+                if paused:
+                    other.request_pause()
+                else:
+                    other.clear_pause()
+        if folder.status().state not in ("starting", "running") and paused:
+            raise NotPausable(f"{folder.stored_status().name} is not training, so it cannot pause")
         return folder.status()
 
     def shutdown(self, timeout: float = SHUTDOWN_TIMEOUT) -> None:

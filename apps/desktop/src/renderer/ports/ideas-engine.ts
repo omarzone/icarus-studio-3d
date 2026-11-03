@@ -5,11 +5,9 @@ import { ideaSetView } from "./ideas-views.ts";
 
 // Ideas on the engine: the copilot's architect generates compiled ideas; using one starts a build.
 
-type IdeasApi = Pick<EngineApi, "createIdeas" | "ideas" | "startBuild">;
+type IdeasApi = Pick<EngineApi, "createIdeas" | "ideas" | "startBuild" | "tweakIdea" | "mixIdeas">;
 
-export type EngineIdeas = Pick<IdeasPort, "generateIdeas" | "getIdeas" | "useIdea">;
-
-export function createEngineIdeas(api: IdeasApi = engineApi): EngineIdeas {
+export function createEngineIdeas(api: IdeasApi = engineApi): IdeasPort {
   let latest: string | null = null;
   return {
     generateIdeas: async (prompt) => {
@@ -27,6 +25,11 @@ export function createEngineIdeas(api: IdeasApi = engineApi): EngineIdeas {
     },
     useIdea: async ({ set, idea }) => {
       const status = await withCopilot(api.startBuild({ idea_set: set, idea }));
+      return { build: status.build_id };
+    },
+    tweakIdea: async ({ set, idea, words }) => ideaSetView(await withCopilot(api.tweakIdea(set, idea, { words }))),
+    mixAndBuild: async ({ set, mix }) => {
+      const status = await api.mixIdeas(set, { world_from: mix.worldIdea, body_from: mix.bodyIdea });
       return { build: status.build_id };
     },
   };

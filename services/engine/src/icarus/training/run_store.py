@@ -164,6 +164,8 @@ class RunFolder:
         status = self.stored_status()
         if status.state in ("starting", "running") and self.stop_requested():
             return status.model_copy(update={"state": "stopping"})
+        if status.state in ("starting", "running") and self.pause_requested():
+            return status.model_copy(update={"paused": True})
         return status
 
     def write_status(self, status: RunStatus) -> None:
@@ -258,6 +260,15 @@ class RunFolder:
 
     def stop_requested(self) -> bool:
         return (self.path / "stop.request").is_file()
+
+    def request_pause(self) -> None:
+        (self.path / "pause.request").touch()
+
+    def clear_pause(self) -> None:
+        (self.path / "pause.request").unlink(missing_ok=True)
+
+    def pause_requested(self) -> bool:
+        return (self.path / "pause.request").is_file()
 
     def write_worker_pid(self, pid: int) -> None:
         _write(self.path / "worker.pid", str(pid))

@@ -9,6 +9,7 @@ import {
   renameInputOperation,
   rewardOptions,
   sensesActions,
+  toggleOperation,
   weightOperation,
 } from "./brain-views.ts";
 
@@ -17,6 +18,8 @@ type BrainApi = Pick<EngineApi, "project" | "library" | "applyOperations">;
 export type EngineBrainPort = Pick<
   BrainPort,
   | "getSensesActions"
+  | "toggleInput"
+  | "toggleOutput"
   | "addInput"
   | "removeInput"
   | "renameInput"
@@ -63,6 +66,10 @@ export function createEngineBrainPort(api: BrainApi): EngineBrainPort {
       const { project, catalog: lib } = await load(brain);
       return sensesActions(project, lib);
     },
+    toggleInput: ({ brain, id }) =>
+      sense(brain, (project) => toggleOperation(project, "senses", id), "Turned a sense on or off"),
+    toggleOutput: ({ brain, id }) =>
+      sense(brain, (project) => toggleOperation(project, "motors", id), "Turned a motor on or off"),
     addInput: (brain) => sense(brain, addRayOperation, "Added a distance ray"),
     removeInput: ({ brain, id }) =>
       sense(brain, (project) => removeInputOperation(project, id), "Removed a sensor from the body"),

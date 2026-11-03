@@ -12,6 +12,8 @@ from icarus.training.progress import EpisodeTally, RunProgress
 SNAPSHOT_PERIOD = 0.2
 # How often a stop request is looked for during practice, so Stop answers in about this long.
 STOP_CHECK_PERIOD = 0.5
+# How often a paused worker looks for a resume or a stop.
+PAUSE_POLL = 0.25
 
 
 class TrainingCallback(BaseCallback):
@@ -55,6 +57,7 @@ class TrainingCallback(BaseCallback):
         now = time.monotonic()
         if now - self._last_stop_check >= STOP_CHECK_PERIOD:
             self._last_stop_check = now
+            self._hold()
             if self._stop_requested():
                 return False
         if self._motion is not None:
@@ -72,6 +75,22 @@ class TrainingCallback(BaseCallback):
             self._last_snapshot = now
             self._snapshot(now)
         return True
+
+    def _hold(self) -> None:
+        """While a pause is requested, wait between two steps with the brain, the copies and the rollout in memory,
+        so resuming carries on from exactly this state; a stop request ends the wait."""
+        folder = self.progress.folder
+        if not folder.pause_requested() or folder.stop_requested():
+            return
+        self.progress.log(f"Paused at step {self.num_timesteps:,}: training waits here until it is resumed")
+        started = time.monotonic()
+        while folder.pause_requested() and not folder.stop_requested():
+            time.sleep(PAUSE_POLL)
+        waited = time.monotonic() - started
+        # The pause does not count toward the training speed.
+        self._last_end += waited
+        if not folder.stop_requested():
+            self.progress.log(f"Resumed at step {self.num_timesteps:,} after {waited:.0f} s")
 
     def _stop_requested(self) -> bool:
         if not self.progress.stopping and self.progress.folder.stop_requested():

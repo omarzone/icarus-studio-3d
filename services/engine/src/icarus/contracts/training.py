@@ -91,6 +91,8 @@ class RunStatus(_Model):
     agent: str | None = None
     agent_name: str | None = None
     group: str | None = None
+    # The worker holds training where it was until the run is resumed.
+    paused: bool = False
 
 
 class RunGroup(_Model):

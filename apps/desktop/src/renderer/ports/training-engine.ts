@@ -36,6 +36,8 @@ type TrainingApi = Pick<
   | "runs"
   | "startRun"
   | "stopRun"
+  | "pauseRun"
+  | "resumeRun"
   | "metrics"
   | "checkpoints"
   | "rollout"
@@ -47,7 +49,7 @@ type TrainingApi = Pick<
 
 export type EngineTrainingPort = Omit<
   TrainingPort,
-  "pauseRun" | "getAutopilot" | "setAutopilot" | "startAutopilot" | "stopAutopilot"
+  "getAutopilot" | "setAutopilot" | "startAutopilot" | "stopAutopilot"
 >;
 
 const MAX_LOG_LINES = 500;
@@ -203,6 +205,12 @@ export function createEngineTrainingPort(
     getStopSummary: async (project) => {
       const run = await requireActive(project);
       return stopSummary(run, await api.checkpoints(run.run_id));
+    },
+    // The worker holds training between two steps, brain and copies in memory, and carries on from there.
+    pauseRun: async (project) => {
+      const run = await requireActive(project);
+      await (run.paused ? api.resumeRun(run.run_id) : api.pauseRun(run.run_id));
+      return listRuns(project);
     },
     stopRun: async (project) => {
       const run = await requireActive(project);

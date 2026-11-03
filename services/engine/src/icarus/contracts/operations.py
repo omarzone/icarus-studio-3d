@@ -8,6 +8,9 @@ from icarus.contracts.specs import (
     AgentSpec,
     BodySpec,
     BrainAlgorithm,
+    BrainStart,
+    DecisionsPerSecond,
+    EpisodeSeconds,
     LayerSize,
     RewardTermSpec,
     TaskFamily,
@@ -127,7 +130,24 @@ class SetBrain(_Operation):
     # Neurons in each hidden layer, input side first.
     layers: list[LayerSize] | None = None
     ppo: PpoPatch | None = None
+    decisions_per_second: DecisionsPerSecond | None = None
+    # The whole list of senses and motors left out, as "object/component"; an empty list turns them all back on.
+    muted_senses: list[str] | None = Field(default=None, max_length=64)
+    muted_motors: list[str] | None = Field(default=None, max_length=64)
+    # A trained checkpoint new runs start from; "none" trains from zero again.
+    start_from: BrainStart | Literal["none"] | None = None
     # The agent whose brain this changes, in a project with several; None changes the project's own brain.
+    agent: str | None = None
+
+
+class SetEpisode(_Operation):
+    """Changes how each try of the task ends; fields left out keep their value."""
+
+    op: Literal["set_episode"]
+    seconds: EpisodeSeconds | None = None
+    end_on_fall: bool | None = None
+    end_on_success: bool | None = None
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
     agent: str | None = None
 
 
@@ -173,6 +193,7 @@ EditOperation = Annotated[
     | SetRewardTerm
     | RemoveRewardTerm
     | SetBrain
+    | SetEpisode
     | AddAgent
     | RemoveAgent
     | SetAgent,

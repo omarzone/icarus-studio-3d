@@ -17,7 +17,6 @@ from icarus.contracts.training import (
     RunState,
     TrainingSnapshot,
 )
-from icarus.sim.env import EPISODE_SECONDS
 from icarus.sim.policy import CheckpointPolicy
 from icarus.training import episode_frames, film_strip
 from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
@@ -134,7 +133,9 @@ class RunProgress:
         has_goal = result.success_rate is not None
         records = self._pictured(step, result)
         self.folder.write_episodes(
-            CheckpointEpisodes(step=step, has_goal=has_goal, episode_seconds=EPISODE_SECONDS, episodes=records)
+            CheckpointEpisodes(
+                step=step, has_goal=has_goal, episode_seconds=self.project.task.episode_seconds, episodes=records
+            )
         )
         self.folder.append_metric(result.metric(step, self.elapsed()))
         rank = (result.success_rate if result.success_rate is not None else 0.0, result.episode_return)

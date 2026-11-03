@@ -169,7 +169,17 @@ describe("stop and failure", () => {
         "Keep the best checkpoint (250k)",
         "Keep the metrics and replays",
       ],
+      paused: false,
     });
+  });
+
+  it("says a paused run holds where it was, and lists it as paused", () => {
+    const run = status({ best_step: 250_000, paused: true });
+    expect(stopSummary(run, [checkpoint(250_000, 0.714)])).toMatchObject({
+      paused: true,
+      intro: expect.stringContaining("It is paused"),
+    });
+    expect(runSummary(run)).toMatchObject({ status: "paused", detail: expect.stringContaining("paused ·") });
   });
 
   it("explains a stop before the first checkpoint and without a goal", () => {

@@ -37,9 +37,19 @@ export interface AgentSpec {
 export interface BrainSpec {
   algorithm?: "ppo";
   copies: number;
+  decisions_per_second?: number;
   layers?: number[];
+  /**
+   * @maxItems 64
+   */
+  muted_motors?: string[];
+  /**
+   * @maxItems 64
+   */
+  muted_senses?: string[];
   ppo?: PpoSpec;
   seed: number;
+  start_from?: BrainStart | null;
   template: string | null;
   training_steps?: number | null;
 }
@@ -59,10 +69,23 @@ export interface PpoSpec {
   n_steps?: number;
 }
 /**
+ * A trained checkpoint, of this project or another one, that the brain starts from instead of from zero.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainStart".
+ */
+export interface BrainStart {
+  run_id: string;
+  step: number;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "TaskSpec".
  */
 export interface TaskSpec {
+  end_on_fall?: boolean;
+  end_on_success?: boolean;
+  episode_seconds?: number;
   family: "none" | "navigation" | "locomotion";
   rewards: RewardTermSpec[];
 }
@@ -700,6 +723,29 @@ export interface BrainActivations {
   step: number;
 }
 /**
+ * One way the evaluation episodes of a checkpoint went, with how many of them went that way.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainBehavior".
+ */
+export interface BrainBehavior {
+  detail: string;
+  episodes: number;
+  id: string;
+  name: string;
+  of: number;
+  seconds?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainBehaviors".
+ */
+export interface BrainBehaviors {
+  behaviors: BrainBehavior[];
+  run_id: string;
+  step: number;
+}
+/**
  * The policy network of a checkpoint, with its inputs and outputs named after the body.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -738,6 +784,95 @@ export interface NetworkOutput {
   actuator?: string | null;
   index: number;
   label: string;
+}
+/**
+ * What a checkpoint's brain senses and does at one moment of its first evaluation episode, as MuJoCo computed.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainReadings".
+ */
+export interface BrainReadings {
+  actions: PlayReading[];
+  run_id: string;
+  seconds: number;
+  senses: PlayReading[];
+  step: number;
+}
+/**
+ * One live sensor reading or brain output, with the range it is shown against.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayReading".
+ */
+export interface PlayReading {
+  id: string;
+  label: string;
+  max: number;
+  min: number;
+  unit?: string | null;
+  value: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainSizeOption".
+ */
+export interface BrainSizeOption {
+  current: boolean;
+  id: string;
+  label: string;
+  layers: number[];
+  recommended: boolean;
+  trained?: TrainedSize | null;
+}
+/**
+ * A finished run of the project that trained a brain with this size.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TrainedSize".
+ */
+export interface TrainedSize {
+  minutes: number;
+  run_id: string;
+  run_name: string;
+  steps: number;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainSizes".
+ */
+export interface BrainSizes {
+  motors: number;
+  project_id: string;
+  senses: number;
+  sizes: BrainSizeOption[];
+}
+/**
+ * A trained checkpoint, of this project or another one, the body could start from.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainSourceOption".
+ */
+export interface BrainSourceOption {
+  fits: boolean;
+  project_id: string;
+  project_name: string;
+  reason?: string | null;
+  run_id: string;
+  run_name: string;
+  step: number;
+  success_rate?: number | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "BrainSources".
+ */
+export interface BrainSources {
+  motors: number;
+  options: BrainSourceOption[];
+  project_id: string;
+  selected?: BrainStart | null;
+  senses: number;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -1183,6 +1318,7 @@ export interface CopilotProposal {
       | SetRewardTerm
       | RemoveRewardTerm
       | SetBrain
+      | SetEpisode
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1202,6 +1338,7 @@ export interface CopilotProposal {
       | SetRewardTerm
       | RemoveRewardTerm
       | SetBrain
+      | SetEpisode
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1343,10 +1480,14 @@ export interface SetBrain {
   agent?: string | null;
   algorithm?: "ppo" | null;
   copies?: number | null;
+  decisions_per_second?: number | null;
   layers?: number[] | null;
+  muted_motors?: string[] | null;
+  muted_senses?: string[] | null;
   op: "set_brain";
   ppo?: PpoPatch | null;
   seed?: number | null;
+  start_from?: BrainStart | "none" | null;
   template?: string | null;
   training_steps?: number | "recommended" | null;
 }
@@ -1364,6 +1505,19 @@ export interface PpoPatch {
   learning_rate?: number | null;
   n_epochs?: number | null;
   n_steps?: number | null;
+}
+/**
+ * Changes how each try of the task ends; fields left out keep their value.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SetEpisode".
+ */
+export interface SetEpisode {
+  agent?: string | null;
+  end_on_fall?: boolean | null;
+  end_on_success?: boolean | null;
+  op: "set_episode";
+  seconds?: number | null;
 }
 /**
  * Removes an agent with its body and the world objects only it used; one agent left is the project's again.
@@ -2393,6 +2547,7 @@ export interface RunStatus {
   finished_at?: string | null;
   group?: string | null;
   name: string;
+  paused?: boolean;
   phase?: ("practicing" | "updating" | "testing") | null;
   project_id: string;
   revision_number: number;
@@ -2803,6 +2958,16 @@ export interface LightCommand {
   tool: "light";
 }
 /**
+ * Build the world of one idea with the body of another, from the same set.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "MixIdeas".
+ */
+export interface MixIdeas {
+  body_from: string;
+  world_from: string;
+}
+/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ModelConnection".
  */
@@ -2876,6 +3041,7 @@ export interface OperationBatch {
       | SetRewardTerm
       | RemoveRewardTerm
       | SetBrain
+      | SetEpisode
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -2895,6 +3061,7 @@ export interface OperationBatch {
       | SetRewardTerm
       | RemoveRewardTerm
       | SetBrain
+      | SetEpisode
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -3080,20 +3247,6 @@ export interface PlayFrame {
   time: number;
 }
 /**
- * One live sensor reading or brain output, with the range it is shown against.
- *
- * This interface was referenced by `IcarusContracts`'s JSON-Schema
- * via the `definition` "PlayReading".
- */
-export interface PlayReading {
-  id: string;
-  label: string;
-  max: number;
-  min: number;
-  unit?: string | null;
-  value: number;
-}
-/**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "PlayGeomPose".
  */
@@ -3243,6 +3396,7 @@ export interface Revision {
     | SetRewardTerm
     | RemoveRewardTerm
     | SetBrain
+    | SetEpisode
     | AddAgent
     | RemoveAgent
     | SetAgent
@@ -3468,6 +3622,15 @@ export interface TrainingSettings {
 export interface TrainingSettingsPatch {
   threads?: number | null;
   use_graphics_card?: boolean | null;
+}
+/**
+ * The person's words for changing one idea before it is built.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "TweakIdea".
+ */
+export interface TweakIdea {
+  words: string;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

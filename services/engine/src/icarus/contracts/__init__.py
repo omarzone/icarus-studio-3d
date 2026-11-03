@@ -8,7 +8,14 @@ from icarus.contracts.behavior import (
     CheckpointEpisode,
     EpisodeActivations,
 )
-from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.brain_network import (
+    BrainActivations,
+    BrainBehaviors,
+    BrainNetwork,
+    BrainReadings,
+    BrainSizes,
+    BrainSources,
+)
 from icarus.contracts.build import (
     BuildTarget,
     ExportChoice,
@@ -28,10 +35,12 @@ from icarus.contracts.copilot import (
     Conversation,
     IdeaRequest,
     IdeaSet,
+    MixIdeas,
     ModelSettings,
     ModelSettingsPatch,
     SendMessage,
     SetAutonomy,
+    TweakIdea,
 )
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
@@ -91,6 +100,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     ContextUsage,
     IdeaRequest,
     IdeaSet,
+    TweakIdea,
+    MixIdeas,
     BuildIdea,
     BuildStatus,
     ModelSettings,
@@ -110,6 +121,10 @@ MODELS: tuple[type[BaseModel], ...] = (
     BehaviorTestResult,
     BehaviorComparison,
     CheckpointEpisode,
+    BrainReadings,
+    BrainBehaviors,
+    BrainSizes,
+    BrainSources,
     StorageInfo,
     DataFolderMove,
     DataFolderChoice,

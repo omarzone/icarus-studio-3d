@@ -1,5 +1,4 @@
 import type { SceneDescription, SceneRay, SceneSignals } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import type { MotionPlayer } from "../scene/motion-player.ts";
 import type { AgentScore } from "./agent-lanes.ts";
@@ -77,7 +76,8 @@ export type StartPlan = {
   coach: boolean;
 };
 
-export type StopSummary = { run: string; intro: string; keeps: readonly string[] };
+// `paused` while the run waits between two steps; Pause then resumes it.
+export type StopSummary = { run: string; intro: string; keeps: readonly string[]; paused?: boolean };
 
 export type AutopilotMode = "off" | "ask" | "fix";
 
@@ -181,6 +181,7 @@ export type TrainingPort = {
   updateStartPlan: (input: { project: string; steps?: number; copies?: number; coach?: boolean }) => Promise<StartPlan>;
   startRun: (project: string) => Promise<RunList>;
   getStopSummary: (project: string) => Promise<StopSummary>;
+  // Pauses the run training, or resumes it when it is paused.
   pauseRun: (project: string) => Promise<RunList>;
   stopRun: (project: string) => Promise<RunList>;
   getAutopilot: (project: string) => Promise<AutopilotSettings>;
@@ -201,7 +202,6 @@ export type TrainingPort = {
 export const trainingPort = definePort<TrainingPort>({
   app: {
     ...createEngineTrainingPort(),
-    pauseRun: pending({ key: "training.pause", summary: "Pausing a training run", sprint: 8, ids: ["MOD-STOP-RUN"] }),
     ...createEngineAutopilot(),
   },
   prototype: createTrainingFixture,

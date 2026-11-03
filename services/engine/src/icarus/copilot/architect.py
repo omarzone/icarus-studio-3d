@@ -129,7 +129,7 @@ def estimate_minutes(project: Project, compiled: CompiledModel) -> float:
     return RECOMMENDED_STEPS[project.task.family] / speed / 60
 
 
-def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
+def compile_idea(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
     """A compiled idea whose preview is a real scene, or why it failed its design tests."""
     draft = planned.draft
     try:
@@ -162,14 +162,14 @@ def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
     )
 
 
-def _fixed(client: ModelClient, system: str, fix: str, deadline: float) -> PlannedIdea | str | None:
+def fixed_idea(client: ModelClient, system: str, fix: str, deadline: float) -> PlannedIdea | str | None:
     try:
         return PlannedIdea(client.ask("design_idea_fix", IdeaDraft, system, fix, deadline=deadline).value)
     except CopilotError:
         return None
 
 
-def _from_scratch(client: ModelClient, prompt: str, draft: IdeaDraft, deadline: float) -> PlannedIdea | str | None:
+def scratch_idea(client: ModelClient, prompt: str, draft: IdeaDraft, deadline: float) -> PlannedIdea | str | None:
     """The draft with its planned and stage-tested design, or why it could not be built."""
     texts = {"title": draft.title, "world": draft.world, "body": draft.body, "learns": draft.learns}
     try:
@@ -201,10 +201,10 @@ def _second_round(
     """At the same time: plan and build each from-scratch idea, and fix each failing template idea once."""
     pool = ThreadPoolExecutor(max_workers=len(failing))
     futures: dict[int, Future[PlannedIdea | str | None]] = {
-        index: pool.submit(_from_scratch, client, prompt, drafts[index], deadline)
+        index: pool.submit(scratch_idea, client, prompt, drafts[index], deadline)
         if drafts[index].from_scratch
         else pool.submit(
-            _fixed, client, system, FIX.format(title=drafts[index].title, prompt=prompt, problem=problem), deadline
+            fixed_idea, client, system, FIX.format(title=drafts[index].title, prompt=prompt, problem=problem), deadline
         )
         for index, problem in failing.items()
     }
@@ -226,7 +226,7 @@ def propose_ideas(client: ModelClient, prompt: str) -> tuple[IdeaSet, dict[str, 
     titles = _unique_titles(drafts)
     planned = [PlannedIdea(draft) for draft in drafts]
     results: list[DesignIdea | str] = [
-        UNFINISHED if draft.from_scratch else _compile(plan, idea_id)
+        UNFINISHED if draft.from_scratch else compile_idea(plan, idea_id)
         for draft, plan, idea_id in zip(drafts, planned, ids, strict=True)
     ]
     failing = {index: result for index, result in enumerate(results) if isinstance(result, str)}
@@ -238,7 +238,7 @@ def propose_ideas(client: ModelClient, prompt: str) -> tuple[IdeaSet, dict[str, 
                 failing[index] += "; its fix-up did not arrive in time or was not valid"
             else:
                 planned[index] = outcome
-                results[index] = _compile(outcome, ids[index])
+                results[index] = compile_idea(outcome, ids[index])
                 if isinstance(results[index], str):
                     failing[index] += f"; after the fix-up: {results[index]}"
     valid = [(result, plan) for result, plan in zip(results, planned, strict=True) if isinstance(result, DesignIdea)]
@@ -266,6 +266,20 @@ class IdeaBook:
     def add(self, idea_set: IdeaSet, drafts: dict[str, PlannedIdea]) -> None:
         with self._lock:
             self._sets[idea_set.id] = (idea_set, drafts)
+
+    def put(self, idea_set_id: str, idea: DesignIdea, plan: PlannedIdea) -> IdeaSet:
+        """The set with this idea in place of the one with its id, or added after the others."""
+        with self._lock:
+            found = self._sets.get(idea_set_id)
+            if found is None:
+                raise UnknownIdeas(idea_set_id)
+            idea_set, planned = found
+            ideas = [idea if item.id == idea.id else item for item in idea_set.ideas]
+            if all(item.id != idea.id for item in idea_set.ideas):
+                ideas.append(idea)
+            updated = idea_set.model_copy(update={"ideas": ideas})
+            self._sets[idea_set_id] = (updated, {**planned, idea.id: plan})
+            return updated
 
     def get(self, idea_set_id: str) -> tuple[IdeaSet, dict[str, PlannedIdea]]:
         with self._lock:

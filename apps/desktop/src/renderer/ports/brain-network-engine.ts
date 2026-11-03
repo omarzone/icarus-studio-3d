@@ -3,7 +3,7 @@ import type { EngineApi } from "../engine-client/engine-api.ts";
 import { checkpointLabel, networkView } from "./brain-network-views.ts";
 import type { BrainPort, NetworkView } from "./brain-port.ts";
 
-type NetworkSources = Pick<EngineApi, "runs" | "checkpoints"> & BrainNetworkApi;
+type NetworkSources = Pick<EngineApi, "runs" | "checkpoints"> & Pick<BrainNetworkApi, "network" | "activations">;
 
 const EMPTY: NetworkView = { checkpoints: [], checkpoint: "", columns: [], links: [], name: "", summary: "" };
 

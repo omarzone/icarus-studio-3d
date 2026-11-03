@@ -17,13 +17,14 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetEpisode,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
 )
 from icarus.contracts.project import Project
 from icarus.contracts.properties import PropertyValue, RangeValue, SwitchValue, VectorValue
-from icarus.contracts.specs import BrainSpec
+from icarus.contracts.specs import BrainSpec, TaskSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.rewards import REWARD_TERMS
 from icarus.projects.agents import agent_project
@@ -83,7 +84,20 @@ def _brain_facts(brain: BrainSpec) -> list[str]:
         f"discount {_number(ppo.gamma)}",
         f"advantage smoothing {_number(ppo.gae_lambda)}",
         f"exploration bonus {_number(ppo.ent_coef)}",
+        f"{brain.decisions_per_second} decisions a second",
+        f"senses off: {', '.join(brain.muted_senses)}" if brain.muted_senses else "every sense on",
+        f"motors off: {', '.join(brain.muted_motors)}" if brain.muted_motors else "every motor on",
+        f"starts from {brain.start_from.run_id} at {brain.start_from.step:,}"
+        if brain.start_from
+        else "starts from zero",
     ]
+
+
+def _episode_facts(task: TaskSpec) -> str:
+    ends = [f"{_number(task.episode_seconds)} s per try"]
+    ends += ["ends on a fall"] if task.end_on_fall else ["keeps going after a fall"]
+    ends += ["ends on success"] if task.end_on_success else ["keeps going after success"]
+    return ", ".join(ends)
 
 
 def _seen_by(project: Project, agent: str | None) -> Project:
@@ -149,6 +163,10 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
         case SetBrain():
             return _brain_change(project, op)
+        case SetEpisode(agent=agent):
+            before = _episode_facts(_seen_by(project, agent).task)
+            after = _episode_facts(_seen_by(apply_operations(project, [op]), agent).task)
+            return ProposalChange(label="Each try", before=before, after=after)
         case AddAgent(agent=agent):
             return ProposalChange(label=f"Agent {agent.name}", after="Added")
         case RemoveAgent(agent=agent_id):
