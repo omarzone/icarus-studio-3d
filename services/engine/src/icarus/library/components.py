@@ -44,6 +44,10 @@ RAY_HEADING_HINT = (
     "Where the rays point around the part: 0 is straight ahead, above zero turns them left and below zero right; "
     "several rays fan 30° to each side of it"
 )
+SKIN_HINT = (
+    "Id of a glTF or GLB model stored with the project (from an import or a model attached in the chat); "
+    "drawn scaled to fit inside the collider, never read by physics"
+)
 SKY_PRESETS = ["day", "dusk", "night", "overcast", "custom"]
 CLOCK_HINT = (
     "On: Clock time moves every sun light across the sky (Latitude sets how high it climbs) and, unless the preset is "
@@ -101,6 +105,20 @@ _KINDS = [
             slider("roughness", "Roughness", 0, 1, 0.05, 0.5, hint=ADJUST_HINT),
             slider("metalness", "Metalness", 0, 1, 0.05, 0.5, hint=ADJUST_HINT),
             slider("emissive", "Glow", 0, 3, 0.1, 0, hint=EMISSIVE_HINT),
+        ],
+        unique=True,
+    ),
+    # A 3D model drawn over the part, fitted inside its collider; physics and training never read it (ADR 008).
+    _kind(
+        "skin",
+        "Skin",
+        "mesh",
+        "Shape",
+        [
+            reference("asset", "Model", SKIN_HINT),
+            slider("fill", "Fill", 0.1, 1, 0.05, 1, hint="How much of the collider the model fills; drawing only"),
+            vector("offset", "Offset", "m", -10, 10, (0, 0, 0), hint="Shifts the model; it never leaves the collider"),
+            vector("rotation", "Rotation", "deg", -360, 360, (0, 0, 0), hint="Turns the model before it is fitted"),
         ],
         unique=True,
     ),

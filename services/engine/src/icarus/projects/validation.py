@@ -6,6 +6,7 @@ from icarus.contracts.specs import MAX_LAYERS, RewardTermSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
 from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, term_fits
+from icarus.library.skin_objects import SKIN_ID
 from icarus.projects.document import all_objects, containers
 
 
@@ -28,6 +29,11 @@ def _reference_issues(
         if link and link not in ids:
             message = f"Joint on {obj.name} connects to {link!r}, which does not exist"
             return [ValidationIssue(path=f"{base}.connects_to", message=message)]
+    if component.kind == "skin":
+        asset = _reference(component, "asset")
+        if asset and not SKIN_ID.fullmatch(asset):
+            message = f"Skin on {obj.name} names {asset!r}, which is not a stored model's id"
+            return [ValidationIssue(path=f"{base}.asset", message=message)]
     return []
 
 

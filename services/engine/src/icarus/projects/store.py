@@ -183,6 +183,10 @@ class ProjectStore:
         report, _ = design_report(project)
         directory = self.root / copy_id
         directory.mkdir(parents=True)
+        # Skins are project data the copy's document still points to (ADR 008).
+        skins = self.root / project_id / "skins"
+        if skins.is_dir():
+            shutil.copytree(skins, directory / "skins")
         batch = OperationBatch(
             operations=[RenameProject(op="rename_project", name=name)], summary=f"Duplicated from {source.name}"
         )

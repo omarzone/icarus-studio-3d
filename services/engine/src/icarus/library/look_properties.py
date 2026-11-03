@@ -1,8 +1,8 @@
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
 
-# Components that physics, senses and rewards never read (ADR 007: looks stay out of the simulation).
-LOOK_COMPONENTS = frozenset({"sky", "light"})
+# Components that physics, senses and rewards never read (ADR 007 and 008: looks stay out of the simulation).
+LOOK_COMPONENTS = frozenset({"sky", "light", "skin"})
 # Properties that only change the drawing or a label; the material's surface sets friction, so it stays.
 LOOK_PROPERTIES = {
     "material": frozenset(
