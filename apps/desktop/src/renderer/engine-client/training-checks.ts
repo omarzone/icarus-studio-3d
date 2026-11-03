@@ -12,7 +12,7 @@ import type {
   TrainingSettings,
   TrainingSnapshot,
 } from "@icarus/contracts";
-import { has, isListOf, isOptionalRays, isRecord, isTriple } from "./response-checks.ts";
+import { has, isListOf, isOptionalRays, isOptionalSignals, isRecord, isTriple } from "./response-checks.ts";
 
 // Structural checks of training answers and run events: the fields the app reads, not the whole schema.
 
@@ -117,7 +117,8 @@ function isPoses(value: Record<string, unknown>, count: number): boolean {
 const LIVE_VIEWS: readonly unknown[] = [undefined, null, "classic", "realtime", "fast"];
 
 function isCopyPoses(count: number) {
-  return (copy: unknown): copy is CopyPoses => isRecord(copy) && isPoses(copy, count) && isOptionalRays(copy.rays);
+  return (copy: unknown): copy is CopyPoses =>
+    isRecord(copy) && isPoses(copy, count) && isOptionalRays(copy.rays) && isOptionalSignals(copy.signals);
 }
 
 // Recorded motion: per copy, episode segments with one time per frame.
@@ -159,7 +160,11 @@ export function isRollout(value: unknown): value is Rollout {
   return isListOf(
     value.frames,
     (frame): frame is RolloutFrame =>
-      isRecord(frame) && has(frame, "time", "number") && has(frame, "reward", "number") && isPoses(frame, count),
+      isRecord(frame) &&
+      has(frame, "time", "number") &&
+      has(frame, "reward", "number") &&
+      isPoses(frame, count) &&
+      isOptionalSignals(frame.signals),
   );
 }
 

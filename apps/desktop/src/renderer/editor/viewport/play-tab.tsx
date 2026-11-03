@@ -35,6 +35,7 @@ export function PlayTab({ play, ...surface }: ViewportSurfaceProps & { play?: Pl
                 description={scene}
                 poses={play.live.poses}
                 onPick={play.onPick}
+                signals={[play.live.signals]}
                 rays={rays?.shown ? play.live.rays : undefined}
                 rayValues={rays?.values}
               />

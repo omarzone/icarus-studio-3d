@@ -127,7 +127,9 @@ function ReplayPlayer({ replay, marks, step, autoplay, onChoose }: PlayerProps) 
   const [player, setPlayer] = usePlayer(replay.duration, autoplay);
   const times = useMemo(() => replay.frames.map((frame) => frame.time), [replay]);
   const start = times[0] ?? 0;
-  const poses = replay.frames[frameAt(times, start + player.time)]?.poses ?? new Map();
+  const shownFrame = replay.frames[frameAt(times, start + player.time)];
+  const poses = shownFrame?.poses ?? new Map();
+  const signals = useMemo(() => [shownFrame?.signals], [shownFrame]);
   const shown = playerAt(player);
   const mark = marks.find((item) => item.step === step);
   const options = marks
@@ -141,7 +143,7 @@ function ReplayPlayer({ replay, marks, step, autoplay, onChoose }: PlayerProps) 
         )}
       >
         <Suspense fallback={null}>
-          <SceneView mode="play" description={replay.scene} poses={poses} onPick={ignorePick} />
+          <SceneView mode="play" description={replay.scene} poses={poses} signals={signals} onPick={ignorePick} />
         </Suspense>
       </RenderBoundary>
       <div className="absolute top-3 right-3 flex max-w-80 flex-col gap-0.5 rounded-card-sm bg-overlay px-3.25 py-2.5">

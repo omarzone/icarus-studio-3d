@@ -110,6 +110,8 @@ function CopiesScene({ live }: { live: Extract<LiveCopies, { kind: "live" }> }) 
             player={player}
             onPick={ignorePick}
             framing={grid.extent}
+            signals={live.signals}
+            copies={copies.length}
             follows={follows}
             rays={rays}
             rayValues={view?.values}

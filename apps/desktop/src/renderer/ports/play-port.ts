@@ -1,4 +1,4 @@
-import type { PlayGeomPose, SceneDescription, SceneRay } from "@icarus/contracts";
+import type { PlayGeomPose, SceneDescription, SceneRay, SceneSignals } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { createPlayFixture } from "./play.fixture.ts";
 import { createEnginePlayPort } from "./play-engine.ts";
@@ -64,6 +64,8 @@ export type PlayLive = {
   poses: ReadonlyMap<string, PlayPose>;
   // Where each distance sensor looks now and what it reads.
   rays: readonly SceneRay[];
+  // Whether the goal's rules hold and which vehicle lights are on, as the engine measured them.
+  signals?: SceneSignals | null;
   paused: boolean;
   speed: number;
 };

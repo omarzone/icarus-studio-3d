@@ -99,7 +99,7 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
     scene.add(geomObject(geom));
   }
   // Where the task starts and ends, as the viewport paints it, so a parking card shows where it parks.
-  const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal };
+  const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal, spot: colors.spot };
   const zones = (description.zones ?? []).map((zone) => {
     const mesh = zoneMesh(zone, zoneColors);
     scene.add(mesh);

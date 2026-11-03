@@ -1,4 +1,4 @@
-import type { SceneRay } from "@icarus/contracts";
+import type { SceneRay, SceneSignals } from "@icarus/contracts";
 import { lerpPosition, type Pose, type Poses } from "./pose-track.ts";
 import { slerp } from "./quaternion.ts";
 import { easeRays } from "./ray-lines.ts";
@@ -9,12 +9,21 @@ import { easeRays } from "./ray-lines.ts";
 // "realtime": 1x sim speed, a moment behind the newest frame. "fast": sped up to keep pace with training.
 export type MotionPlayback = "realtime" | "fast";
 
-export type RecordedFrame = { episode: number; time: number; poses: Poses; rays: readonly SceneRay[] };
+// `signals`: the goal and light states MuJoCo's state gave at this frame; they switch with frames, never blend.
+export type RecordedFrame = {
+  episode: number;
+  time: number;
+  poses: Poses;
+  rays: readonly SceneRay[];
+  signals?: SceneSignals | null;
+};
 
-export type PlayedCopies = { copies: Poses[]; rays: SceneRay[][] };
+export type PlayedCopies = { copies: Poses[]; rays: SceneRay[][]; signals: (SceneSignals | null)[] };
 
-// What a live view draws at a moment of the render clock (performance.now()), geoms by name.
-export type PosePlayer = { at: (now: number) => { poses: Poses; rays: readonly SceneRay[] } };
+// What a live view draws at a moment of the render clock (performance.now()), geoms by name; signals per copy.
+export type PosePlayer = {
+  at: (now: number) => { poses: Poses; rays: readonly SceneRay[]; signals?: readonly (SceneSignals | null)[] };
+};
 
 export type MotionPlayer = {
   readonly mode: MotionPlayback;
@@ -71,7 +80,10 @@ function blend(from: Poses, to: Poses, t: number): Poses {
   return poses;
 }
 
-function frameAt(frames: readonly Stored[], at: number): { poses: Poses; rays: SceneRay[] } {
+function frameAt(
+  frames: readonly Stored[],
+  at: number,
+): { poses: Poses; rays: SceneRay[]; signals: SceneSignals | null } {
   let index = 0;
   while (index + 1 < frames.length && (frames[index + 1]?.stream ?? Number.POSITIVE_INFINITY) <= at) {
     index += 1;
@@ -79,13 +91,14 @@ function frameAt(frames: readonly Stored[], at: number): { poses: Poses; rays: S
   const from = frames[index];
   const to = frames[index + 1];
   if (!from) {
-    return { poses: new Map(), rays: [] };
+    return { poses: new Map(), rays: [], signals: null };
   }
+  const signals = from.signals ?? null;
   if (!to || to.cut || at <= from.stream) {
-    return { poses: from.poses, rays: [...from.rays] };
+    return { poses: from.poses, rays: [...from.rays], signals };
   }
   const t = (at - from.stream) / (to.stream - from.stream);
-  return { poses: blend(from.poses, to.poses, t), rays: easeRays(from.rays, to.rays, t) };
+  return { poses: blend(from.poses, to.poses, t), rays: easeRays(from.rays, to.rays, t), signals };
 }
 
 export function createMotionPlayer(mode: MotionPlayback): MotionPlayer {
@@ -121,7 +134,11 @@ export function createMotionPlayer(mode: MotionPlayback): MotionPlayer {
     },
     sample(now) {
       const played = tracks.map((track) => frameAt(track.frames, playhead(track, now)));
-      return { copies: played.map((frame) => frame.poses), rays: played.map((frame) => frame.rays) };
+      return {
+        copies: played.map((frame) => frame.poses),
+        rays: played.map((frame) => frame.rays),
+        signals: played.map((frame) => frame.signals),
+      };
     },
   };
 }

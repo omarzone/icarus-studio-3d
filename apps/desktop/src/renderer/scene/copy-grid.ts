@@ -142,7 +142,7 @@ export function gridPlayer(player: MotionPlayer, grid: CopyGrid, rays: number | 
       }
       const played = player.sample(now);
       const shown = rays === null ? [] : grid.placeRays(played.rays, rays === "all" ? undefined : rays);
-      last = { now, frame: { poses: grid.place(played.copies), rays: shown } };
+      last = { now, frame: { poses: grid.place(played.copies), rays: shown, signals: played.signals } };
       return last.frame;
     },
   };

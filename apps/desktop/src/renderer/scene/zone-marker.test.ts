@@ -25,6 +25,13 @@ describe("zoneMarker", () => {
     expect(marker).toEqual({ kind: "ring", tone: "spawn", position: [0, 0.01, -0], radius: 0.5 });
   });
 
+  it("draws a rectangular goal as a spot outline on the ground, turned to the spot's heading", () => {
+    const quarter = Math.SQRT1_2;
+    const marker = zoneMarker(zone({ shape: "box", size: [5, 3.2, 0.02], quaternion: [quarter, 0, 0, quarter] }));
+    expect(marker).toMatchObject({ kind: "spot", tone: "spot", position: [12, 0.01, 2], length: 5, width: 3.2 });
+    expect(marker.kind === "spot" ? marker.yaw : null).toBeCloseTo(Math.PI / 2);
+  });
+
   it("draws a marked area as a box where it is", () => {
     const marker = zoneMarker(zone({ kind: "zone", shape: "box", size: [2, 4, 1], position: [1, 2, 0.5] }));
     expect(marker).toEqual({ kind: "box", tone: "area", position: [1, 0.5, -2], size: [2, 1, 4] });
@@ -32,7 +39,7 @@ describe("zoneMarker", () => {
 });
 
 describe("zoneMesh", () => {
-  const colors = { goal: "#00ff00", spawn: "#ffffff", area: "#00ff00" };
+  const colors = { goal: "#00ff00", spawn: "#ffffff", area: "#00ff00", spot: "#ff0000" };
 
   it("paints a goal flat on the ground in the goal color, see-through like the viewport", () => {
     const mesh = zoneMesh(zone({}), colors);
@@ -40,6 +47,17 @@ describe("zoneMesh", () => {
     expect(mesh.rotation.x).toBeCloseTo(-Math.PI / 2);
     expect(mesh.material.color.getHexString()).toBe("00ff00");
     expect(mesh.material.opacity).toBe(ZONE_OPACITY);
+  });
+
+  it("paints a spot's outline in the spot color, flat and turned about the vertical", () => {
+    const mesh = zoneMesh(zone({ shape: "box", size: [5, 3.2, 0.02], quaternion: [0, 0, 0, 1] }), colors);
+    expect(mesh.material.color.getHexString()).toBe("ff0000");
+    expect(mesh.rotation.x).toBeCloseTo(-Math.PI / 2);
+    expect(Math.abs(mesh.rotation.z)).toBeCloseTo(Math.PI);
+    mesh.geometry.computeBoundingBox();
+    const box = mesh.geometry.boundingBox;
+    expect(box?.max.x).toBeCloseTo(2.5);
+    expect(box?.max.y).toBeCloseTo(1.6);
   });
 
   it("stands a marked area upright where it is", () => {
