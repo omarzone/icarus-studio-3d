@@ -15,6 +15,7 @@ from icarus.contracts.training import (
     Rollout,
     RunEvent,
     RunEventEnvelope,
+    RunGroup,
     RunStatus,
     SnapshotEvent,
     StartRun,
@@ -59,6 +60,24 @@ def start_run(request: Request, project_id: str, body: StartRun) -> RunStatus:
     state = _projects(request).state(project_id)
     settings = _settings(request).get()
     return _supervisor(request).start(state, body, settings.threads, settings.use_graphics_card)
+
+
+@router.post("/projects/{project_id}/run-groups", status_code=201)
+def start_run_group(request: Request, project_id: str, body: StartRun) -> RunGroup:
+    """Train every agent of a project with several at once, one run each, sharing the copies and threads."""
+    state = _projects(request).state(project_id)
+    settings = _settings(request).get()
+    return _supervisor(request).start_group(state, body, settings.threads, settings.use_graphics_card)
+
+
+@router.get("/run-groups/{group_id}")
+def get_run_group(request: Request, group_id: str) -> RunGroup:
+    return _runs(request).group(group_id)
+
+
+@router.post("/run-groups/{group_id}/stop")
+def stop_run_group(request: Request, group_id: str) -> RunGroup:
+    return _supervisor(request).stop_group(group_id)
 
 
 @router.get("/projects/{project_id}/runs")

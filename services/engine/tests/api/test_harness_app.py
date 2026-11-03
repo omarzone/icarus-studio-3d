@@ -45,7 +45,7 @@ def test_the_relay_republishes_run_events_and_hands_coached_checkpoints_on(tmp_p
     def publish(event, project):
         published.append((event, project))
 
-    relay = RunRelay(runs, lambda: run_id, publish, lambda run, step: coached.append((run, step)))
+    relay = RunRelay(runs, lambda: [run_id], publish, lambda run, step: coached.append((run, step)))
     relay.coach(run_id)
     relay.poll()
     kinds = [event.event.type for event, _ in published]

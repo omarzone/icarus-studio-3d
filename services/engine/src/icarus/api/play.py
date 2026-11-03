@@ -19,9 +19,11 @@ from icarus.contracts.play import (
 from icarus.contracts.project import Project
 from icarus.copilot.language import Language
 from icarus.design.compiler import CompileError
+from icarus.projects.agents import agent_project
 from icarus.projects.store import ProjectStore, UnknownProject
 from icarus.sim.model_state import build_world, observation
 from icarus.sim.play import PlayReply, PlaySession
+from icarus.sim.play_agents import AgentBrain, AgentsPlay
 from icarus.sim.policy import UNTRAINED_BRAIN, CheckpointPolicy, Policy, RandomPolicy, untrained_after
 from icarus.training.play_brains import BrainUnavailable, brain_options, chosen_checkpoint
 from icarus.training.run_store import RunStore
@@ -67,10 +69,11 @@ class _World:
     motors: int
 
 
-def _brain(runs: RunStore, world: _World) -> _Brain:
-    """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions."""
+def _brain(runs: RunStore, world: _World, agent: str | None = None) -> _Brain:
+    """The best trained brain of this revision, or of an earlier one that differs only in looks, else random actions;
+    with several agents, `world` is one agent's world and only that agent's runs count."""
     project, revision = world.project, world.revision
-    trained = runs.trained_checkpoint(project.id, revision, project)
+    trained = runs.trained_checkpoint(project.id, revision, project, agent)
     if trained is not None:
         status, path = trained
         label = f"Trained brain: {status.name} at {status.best_step:,} steps"
@@ -79,7 +82,7 @@ def _brain(runs: RunStore, world: _World) -> _Brain:
             return _Brain(policy, status.run_id, status.best_step)
         except Exception:  # noqa: BLE001 - an unreadable checkpoint falls back to the untrained brain
             pass
-    ended = runs.latest_ended(project.id, revision, project)
+    ended = runs.latest_ended(project.id, revision, project, agent)
     label = untrained_after(ended.name) if ended is not None and not ended.best_step else UNTRAINED_BRAIN
     return _Brain(RandomPolicy(world.motors, project.brain.seed, label))
 
@@ -93,10 +96,24 @@ def _chosen_brain(runs: RunStore, world: _World, choice: _Choice) -> _Brain:
     return _Brain(policy, choice.run_id, choice.step)
 
 
+def _world_of(project: Project, revision: int) -> _World:
+    built = build_world(project)
+    return _World(project, revision, observation(built).shape[0], built.model.nu)
+
+
 def _load_world(store: ProjectStore, project_id: str) -> _World:
     state = store.state(project_id)
-    built = build_world(state.project)
-    return _World(state.project, state.revision.number, observation(built).shape[0], built.model.nu)
+    return _world_of(state.project, state.revision.number)
+
+
+def _agents_brains(runs: RunStore, world: _World) -> list[AgentBrain]:
+    """Each agent's best trained brain, from its own runs, in the agents' order."""
+    brains: list[AgentBrain] = []
+    for agent in world.project.agents:
+        alone = _world_of(agent_project(world.project, agent.id), world.revision)
+        brain = _brain(runs, alone, agent.id)
+        brains.append(AgentBrain(brain.policy, brain.run_id, brain.step))
+    return brains
 
 
 def _load_brain(runs: RunStore, world: _World, choice: _Choice | None) -> _Brain:
@@ -110,13 +127,18 @@ def _start(world: _World, brain: _Brain, language: Language) -> tuple[PlaySessio
     return session, session.info().model_copy(update={"run_id": brain.run_id, "step": brain.step})
 
 
-async def _open_session(websocket: WebSocket, project_id: str) -> tuple[PlaySession, PlaySessionInfo]:
+async def _open_session(websocket: WebSocket, project_id: str) -> tuple[PlaySession | AgentsPlay, PlaySessionInfo]:
     """Compile the world, load the brain and start, telling the app which of the three it is waiting for."""
     state = websocket.app.state
     language = await asyncio.to_thread(state.copilot.language, project_id)
     await _send(websocket, PlayProgressMessage(type="progress", stage="world"))
     world = await asyncio.to_thread(_load_world, state.store, project_id)
     await _send(websocket, PlayProgressMessage(type="progress", stage="brain"))
+    if world.project.agents:
+        brains = await asyncio.to_thread(_agents_brains, state.runs, world)
+        await _send(websocket, PlayProgressMessage(type="progress", stage="starting"))
+        agents = await asyncio.to_thread(AgentsPlay, world.project, world.revision, brains, language)
+        return agents, agents.info()
     brain = await asyncio.to_thread(_load_brain, state.runs, world, _choice(websocket))
     await _send(websocket, PlayProgressMessage(type="progress", stage="starting"))
     return await asyncio.to_thread(_start, world, brain, language)
@@ -157,7 +179,7 @@ async def _receive(websocket: WebSocket, inbox: asyncio.Queue[Inbound]) -> None:
             inbox.put_nowait(_error(f"The command is not valid: {detail}"))
 
 
-async def _run(websocket: WebSocket, session: PlaySession, receiver: asyncio.Task[None], inbox) -> None:
+async def _run(websocket: WebSocket, session: PlaySession | AgentsPlay, receiver: asyncio.Task[None], inbox) -> None:
     loop = asyncio.get_running_loop()
     last = loop.time()
     while not receiver.done():
