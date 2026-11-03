@@ -5,6 +5,7 @@ from icarus.copilot.agent.tools.base import Tool
 from icarus.copilot.agent.tools.building import EDIT_GROUP, EDIT_MATCHING, PATTERN
 from icarus.copilot.agent.tools.cloning import BUILD_OBJECT, REFERENCE_SCENE
 from icarus.copilot.agent.tools.coaching import COACH
+from icarus.copilot.agent.tools.exporting import CHECK_HARDWARE, EXPORT_ROBOT
 from icarus.copilot.agent.tools.finding import FIND_OBJECTS
 from icarus.copilot.agent.tools.inspect import INSPECT_OBJECT, READ_RUN
 from icarus.copilot.agent.tools.layout import LAYOUT
@@ -34,5 +35,7 @@ REGISTRY: dict[str, Tool[Any]] = {
         APPLY,
         TRAIN,
         COACH,
+        CHECK_HARDWARE,
+        EXPORT_ROBOT,
     )
 }

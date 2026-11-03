@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from icarus.copilot.client import ModelClient
     from icarus.copilot.hooks import HookRegistry
 
-type StepKind = Literal["inspect", "look", "try", "propose", "train", "library"]
+type StepKind = Literal["inspect", "look", "try", "propose", "train", "library", "export"]
 type Effect = Literal["read", "write"]
 
 log = logging.getLogger(__name__)

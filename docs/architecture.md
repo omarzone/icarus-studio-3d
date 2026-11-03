@@ -116,7 +116,7 @@ icarus-studio-3d/
 │   │   │   ├── events.py     # in-process event bus
 │   │   │   ├── tasks.py      # background tasks registry
 │   │   │   ├── motion/       # planned: pose extraction, retargeting, animation export
-│   │   │   ├── hardware/     # planned: profiles, parts lists, URDF/ONNX export, runtime package
+│   │   │   ├── hardware/     # body needs, hardware checks, URDF/MJCF/ONNX export, runtime package
 │   │   │   └── bundles/      # planned: pack and unpack shareable bundles
 │   │   └── tests/
 │   └── community/            # online service: accounts, bundle storage, catalog
@@ -342,6 +342,8 @@ See [`plans/sprint-07-coach.md`](./plans/sprint-07-coach.md).
 
 - A `HardwareProfile` constrains design: parts map to real components, actuators inherit real torque and speed limits, dimensions follow real parts.
 - `hardware/` exports a project as URDF and MJCF, the trained policy as ONNX, a parts list, and a small runtime package that reads sensors, runs the policy and drives actuators on a single-board computer.
+- Hardware classes (servos, motors, sensors with rated torque, speed, travel and range) and kits live in `library/hardware.py`. `hardware/demands.py` reads what the body asks of each joint and sensor from the compiled model; with a trained brain it runs one evaluation episode and uses the peaks it measured. `hardware/check.py` gives pass (inside an 80% margin), warn or fail per joint and sensor with the gap in words; senses only the simulator provides (speed, goal position) always warn.
+- An export is planned before it is written (`POST /projects/{id}/export/plan` lists every file with its real size); `POST /projects/{id}/export` writes one zip to the path the person chose in the app's save dialog, checked by the main process and again by the engine. The runtime package is data and a reference script template, never a binary. The copilot's `export_robot` writes the same zip into the data folder's `exports/`.
 - Commercial robots are library presets with their published models and limits; their bodies are fixed and only their brains are trained.
 
 ### Bundles
@@ -385,8 +387,11 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `GET` · `PUT` · `POST` | `/settings/models` · `/settings/models/test` | Model connections per capability · test a connection |
 | `GET` | `/events` | Engine events stream (router built, not yet mounted) |
 | `GET` · `DELETE` | `/tasks` · `/tasks/{id}` | Background tasks · cancel one (router built, not yet mounted) |
+| `GET` | `/projects/{id}/build/targets` | What the revision can be built into, with real facts |
+| `POST` | `/projects/{id}/export/plan` · `/projects/{id}/export` | Files and sizes of an export · write it as a zip to a chosen path |
+| `POST` | `/projects/{id}/hardware/check` | The body against a hardware kit, pass, warn or fail per joint and sensor |
 
-Planned: `POST /motion/clips`, `POST /runs/{id}/behavior-tests`, `POST /projects/{id}/export`, `POST /bundles/pack` · `/bundles/unpack`.
+Planned: `POST /motion/clips`, `POST /runs/{id}/behavior-tests`, `POST /bundles/pack` · `/bundles/unpack`.
 
 ## Desktop studio
 

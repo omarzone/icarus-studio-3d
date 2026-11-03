@@ -56,6 +56,12 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
         "en": "Applied “{summary}” as revision {revision}",
         "es": "Apliqué “{summary}” como revisión {revision}",
     },
+    "hardware_checked": {
+        "en": "Checked the body against {kit}: {verdict}",
+        "es": "Revisé el cuerpo con {kit}: {verdict}",
+    },
+    "hardware_kit_missing": {"en": "Looked for a hardware kit: not found", "es": "Busqué un kit de hardware: no está"},
+    "exported": {"en": "Exported {format}: {count} files", "es": "Exporté {format}: {count} archivos"},
     "training_idle": {
         "en": "Checked training: nothing is running",
         "es": "Revisé el entrenamiento: no hay nada en marcha",
