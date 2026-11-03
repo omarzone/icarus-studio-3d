@@ -55,7 +55,7 @@ describe("behavior tests on the Results views", () => {
     const sides = judgedCheckpoints([newest], ["run-3"]);
     const passed = referenceTestsView([test], [result("run-3", 50_000, true)], sides, undefined);
     expect(passed.tests[0]?.state).toBe("pass");
-    const moved = { ...test, starts: [20_100] };
+    const moved: BehaviorTest = { ...test, starts: [20_100] };
     const stale = referenceTestsView([moved], [result("run-3", 50_000, true)], sides, undefined);
     expect(stale.tests[0]?.state).toBe("not-run");
     expect(referenceTestsView([test], [result("run-3", 50_000, false)], sides, "standard-starts").tests[0]?.state).toBe(
