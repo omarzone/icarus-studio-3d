@@ -7,7 +7,7 @@ import type {
   PlaySessionInfo,
 } from "@icarus/contracts";
 import { type EngineUrl, engineUrl } from "./engine-url.ts";
-import { isPlayFrame, isPlayMessageEnvelope } from "./response-checks.ts";
+import { isPlayMessageEnvelope } from "./response-checks.ts";
 
 // The part of the browser WebSocket that Play uses; tests pass a fake class with the same shape.
 export type PlaySocketLike = {
@@ -83,10 +83,7 @@ export const openPlay: OpenPlay = (projectId, handlers, options = {}) => {
         handlers.onReady(message.session);
         return;
       case "frame":
-        // Checked again only to narrow the type to the frame with its status title.
-        if (isPlayFrame(message.frame)) {
-          handlers.onFrame(message.frame);
-        }
+        handlers.onFrame(message.frame);
         return;
       case "event":
         handlers.onEvent(message.event);

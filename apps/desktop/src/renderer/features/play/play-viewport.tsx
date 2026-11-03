@@ -12,7 +12,7 @@ import { freshDrop, pieceOf, placingHint } from "./drop-choice.ts";
 import { PlayLoading } from "./play-loading.tsx";
 import { PlayToolBar } from "./play-tool-bar.tsx";
 import { instantAction, nextSpeed, pickAction } from "./play-tools.ts";
-import { usePlayCache, usePlayLive, usePlayProgress, usePlaySession } from "./use-play-session.ts";
+import { usePlayCache, usePlayLive, usePlayProgress, usePlaySlice } from "./use-play-session.ts";
 
 const PLAIN_VIEWS = [
   { id: "play", label: "Play" },
@@ -21,10 +21,28 @@ const PLAIN_VIEWS = [
 
 type Props = { project: string; closed: string | null; onReconnect: () => void };
 
-// The live world with the Play tools; it re-renders with every frame, so it reads the session on its own.
+// What the viewport and its tools show; the senses, decisions and events change without re-rendering it.
+type ViewportSession = Pick<
+  PlaySession,
+  "views" | "tools" | "selectedTool" | "speed" | "paused" | "status" | "agents" | "placing" | "pieces"
+>;
+
+const viewportOf = (session: PlaySession): ViewportSession => ({
+  views: session.views,
+  tools: session.tools,
+  selectedTool: session.selectedTool,
+  speed: session.speed,
+  paused: session.paused,
+  status: session.status,
+  agents: session.agents,
+  placing: session.placing,
+  pieces: session.pieces,
+});
+
+// The live world with the Play tools; it re-renders with every live frame, so it reads its slice on its own.
 export function PlayViewport({ project, closed, onReconnect }: Props) {
   const port = usePort(playPort);
-  const session = usePlaySession(project);
+  const session = usePlaySlice(project, viewportOf);
   const live = usePlayLive(project);
   const cache = usePlayCache(project);
   const select = useEngineAction(port.selectTool);
@@ -114,7 +132,7 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
 }
 
 type OverlayProps = {
-  session: PlaySession;
+  session: ViewportSession;
   placing?: string;
   options: ReactNode;
   onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"];

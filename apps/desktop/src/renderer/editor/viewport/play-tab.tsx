@@ -1,5 +1,5 @@
 // TAB-PLAY
-import { lazy, Suspense, useContext } from "react";
+import { lazy, Suspense, useContext, useMemo } from "react";
 import type { PlayLive } from "../../ports/play-port.ts";
 import { RayViewContext } from "../../scene/ray-lines.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
@@ -16,6 +16,9 @@ export type PlayView = { live: PlayLive | null; onPick: (pick: ScenePick) => voi
 export function PlayTab({ play, ...surface }: ViewportSurfaceProps & { play?: PlayView }) {
   const scene = play?.live?.scene;
   const rays = useContext(RayViewContext);
+  const signals = play?.live?.signals;
+  // One array per reading of the signals, so the scene keeps its signal feed between frames that did not change them.
+  const copies = useMemo(() => [signals], [signals]);
   return (
     <ViewportSurface {...surface}>
       {play?.live && scene ? (
@@ -35,7 +38,7 @@ export function PlayTab({ play, ...surface }: ViewportSurfaceProps & { play?: Pl
                 description={scene}
                 poses={play.live.poses}
                 onPick={play.onPick}
-                signals={[play.live.signals]}
+                signals={copies}
                 rays={rays?.shown ? play.live.rays : undefined}
                 rayValues={rays?.values}
               />

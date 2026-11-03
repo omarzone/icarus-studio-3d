@@ -24,31 +24,35 @@ export function usePlayBrains(project: string) {
   return useQuery({ queryKey: playBrainsKey(project), queryFn: () => port.brains(project) });
 }
 
-export function usePlaySession(project: string) {
+// One slice of the live session: structural sharing keeps an unchanged slice's reference, so a component that reads
+// only its slice skips the frames that do not touch it. `select` must be a module-level function.
+export function usePlaySlice<T>(project: string, select: (session: PlaySession) => T) {
   const port = usePort(playPort);
-  return useQuery({ queryKey: playKey(project), queryFn: () => port.getSession(project), retry: false });
+  return useQuery({ queryKey: playKey(project), queryFn: () => port.getSession(project), retry: false, select });
 }
+
+const layoutOf = (session: PlaySession) => ({
+  vision: session.vision !== undefined,
+  activity: session.activity === true,
+});
 
 // Only what shapes the Play layout, so the workspace does not re-render with every live frame.
 export function usePlayLayout(project: string) {
-  const port = usePort(playPort);
-  return useQuery({
-    queryKey: playKey(project),
-    queryFn: () => port.getSession(project),
-    retry: false,
-    select: (session: PlaySession) => ({ vision: session.vision !== undefined, activity: session.activity === true }),
-  });
+  return usePlaySlice(project, layoutOf);
 }
+
+const brainOf = (session: PlaySession) => session.decisions?.brain;
+
+const playingOf = (session: PlaySession) => session.decisions?.playing;
 
 // Which brain plays, in words; it changes only when a new session starts.
 export function usePlayBrain(project: string): string | undefined {
-  const port = usePort(playPort);
-  return useQuery({
-    queryKey: playKey(project),
-    queryFn: () => port.getSession(project),
-    retry: false,
-    select: (session: PlaySession) => session.decisions?.brain,
-  }).data;
+  return usePlaySlice(project, brainOf).data;
+}
+
+// The trained brain that plays (its run and checkpoint), when it is one.
+export function usePlayPlaying(project: string): PlayBrainPick | undefined {
+  return usePlaySlice(project, playingOf).data;
 }
 
 // The live world the Play viewport draws, written by the Play connection.
@@ -87,7 +91,10 @@ export function usePlayConnection(
       project,
       {
         onUpdate: (session, live) => {
-          client.setQueryData(playKey(project), session);
+          // The port hands back the same session between its panel updates; only the live world moved then.
+          if (client.getQueryData(playKey(project)) !== session) {
+            client.setQueryData(playKey(project), session);
+          }
           client.setQueryData(playLiveKey(project), live);
         },
         onClosed: setClosed,

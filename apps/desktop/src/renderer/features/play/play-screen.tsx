@@ -1,5 +1,5 @@
 // SCR-PLAY · SCR-PLAY.b
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
@@ -15,8 +15,18 @@ import { PlayShell } from "./play-shell.tsx";
 import { PLAY_CONFIGS, PLAY_VARIANTS, type PlayConfig } from "./play-variants.ts";
 import { PlayViewport } from "./play-viewport.tsx";
 import { SensesPanel } from "./senses/senses-panel.tsx";
-import { usePlayBrain, usePlayBrains, usePlayConnection, usePlayLayout, usePlaySession } from "./use-play-session.ts";
+import { usePlayBrain, usePlayBrains, usePlayConnection, usePlayLayout, usePlayPlaying } from "./use-play-session.ts";
 import { VisionPanel } from "./vision/vision-panel.tsx";
+
+// The panels read their own slices of the live session, so a new frame never re-renders the ones it leaves alone.
+const Senses = memo(SensesPanel);
+const Vision = memo(VisionPanel);
+const Decisions = memo(DecisionsPanel);
+const Events = memo(EventsPanel);
+const Activity = memo(BrainActivityPanel);
+const Chat = memo(ChatPanel);
+
+const ACTIVITY_TABS = ["activity"] as const;
 
 // Play mode: the current brain live in its world; the panels follow what the body senses and what brain it has.
 export function PlayScreen() {
@@ -38,7 +48,7 @@ function PlaySession({ config, project }: { config: PlayConfig; project: { id: s
   const brain = usePlayBrain(project.id);
   const app = useRuntimeMode() === "app";
   const brains = usePlayBrains(project.id);
-  const playing = usePlaySession(project.id).data?.decisions?.playing;
+  const playing = usePlayPlaying(project.id);
   const choice: BrainChoice | undefined = app
     ? { brains: brains.data, failure: brains.error?.message, playing, onChoose: choose }
     : undefined;
@@ -49,12 +59,8 @@ function PlaySession({ config, project }: { config: PlayConfig; project: { id: s
       }
       left={
         <>
-          <SensesPanel project={project.id} className={layout?.vision ? "flex-1" : "flex-none"} />
-          {layout?.vision ? (
-            <VisionPanel project={project.id} />
-          ) : (
-            <DecisionsPanel project={project.id} onChooseBrain={choose} />
-          )}
+          <Senses project={project.id} className={layout?.vision ? "flex-1" : "flex-none"} />
+          {layout?.vision ? <Vision project={project.id} /> : <Decisions project={project.id} onChooseBrain={choose} />}
         </>
       }
       center={
@@ -62,16 +68,16 @@ function PlaySession({ config, project }: { config: PlayConfig; project: { id: s
           <PlayViewport project={project.id} closed={connection.closed} onReconnect={connection.reconnect} />
           {layout?.activity ? (
             <div className="grid h-49 flex-none grid-cols-[1.4fr_1fr] gap-2.5">
-              <BrainActivityPanel brain={project.id} tabs={["activity"]} className="min-w-0" />
-              <EventsPanel project={project.id} className="min-w-0" />
+              <Activity brain={project.id} tabs={ACTIVITY_TABS} className="min-w-0" />
+              <Events project={project.id} className="min-w-0" />
             </div>
           ) : (
-            <EventsPanel project={project.id} />
+            <Events project={project.id} />
           )}
         </>
       }
       chat={
-        <ChatPanel
+        <Chat
           conversation={config.conversation}
           placeholder="Ask what it is doing…"
           suggestionRoutes={config.suggestionRoutes}
