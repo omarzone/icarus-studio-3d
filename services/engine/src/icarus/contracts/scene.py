@@ -45,8 +45,27 @@ GeomStyle = Literal[
     "crate_stack",
     "puddle",
     "parked_car",
+    "trunk",
+    "pole",
+    "gate_post",
+    "pickup",
+    "hatchback",
+    "suv",
+    "bin",
+    "hydrant",
+    "planter",
+    "sidewalk",
+    "crosswalk",
+    "dashed_line",
+    "parking_mark",
+    "road_arrow",
 ]
 GEOM_STYLES: list[str] = list(get_args(GeomStyle))
+
+# Look-only shapes drawn on a part at their own size, past its collider (ADR 007 amendment): a tree's crown, a lamp's
+# arm and head, a barrier gate's boom, a sign's plate, the plants in a planter.
+OrnamentStyle = Literal["crown_round", "crown_cone", "crown_oval", "lamp_arm", "gate_arm", "sign_plate", "shrubs"]
+ORNAMENT_STYLES: list[str] = list(get_args(OrnamentStyle))
 
 # What a part is made of, for its look: roughness, shine and the grain on its face.
 GeomSurface = Literal["asphalt", "concrete", "grass", "snow", "ice", "rubber", "wood", "metal"]
@@ -99,6 +118,23 @@ class SceneSkin(BaseModel):
     rotation: Vector3 = (0, 0, 0)
 
 
+class SceneOrnament(BaseModel):
+    """A look-only shape riding on its geom; MuJoCo never compiles it, so physics, rays and training never see it."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    style: OrnamentStyle
+    # Full extents in metres along its own x, y and z (z up), with the part's scale applied.
+    size: Vector3
+    # Its center from the geom's center, in the geom's own frame (MuJoCo axes), and its turn there (wxyz).
+    offset: Vector3 = (0, 0, 0)
+    quaternion: Quaternion = (1, 0, 0, 0)
+    color: str
+    # Second color: a gate boom's stripes, a sign's symbol, a lamp head's light, flowers among plants.
+    accent: str = "#f2f2f2"
+    emissive: float = 0
+
+
 class SceneGeom(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -132,6 +168,8 @@ class SceneGeom(BaseModel):
     bevel: float = 0
     # The world's floor: a slab with edges, framed and picked like a ground plane rather than like an obstacle.
     ground: bool = False
+    # Look-only shapes drawn on this geom at their own size; they never change its collider.
+    ornaments: list[SceneOrnament] = []
 
 
 class SceneLight(BaseModel):
