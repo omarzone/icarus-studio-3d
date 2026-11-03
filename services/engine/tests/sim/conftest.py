@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from icarus.contracts.operations import CreateObject, EditOperation, RemoveRewardTerm, SetRewardTerm, SetTaskFamily
@@ -7,9 +9,16 @@ from icarus.library.pieces import PIECES
 from icarus.library.templates import Part, template_operations
 from icarus.projects.operations import apply_operations, empty_project
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 
 def project_from(template: str) -> Project:
     return apply_operations(empty_project("0123456789ab", "Test"), template_operations(template))
+
+
+def raw_parking() -> Project:
+    """The parking car as stored before vehicles: two steering motors, two rear torque motors, a circular goal."""
+    return Project.model_validate_json((FIXTURES / "raw_motor_parking.json").read_text(encoding="utf-8"))
 
 
 def walker_navigation() -> Project:
@@ -29,7 +38,7 @@ def walker_navigation() -> Project:
 
 @pytest.fixture
 def parking() -> Project:
-    return project_from("parking_car")
+    return raw_parking()
 
 
 @pytest.fixture
@@ -47,5 +56,5 @@ def pusher() -> Project:
     """The parking car with a movable crate 3 m ahead that it must push into the parking spot."""
     crate = PIECES["box"].object.model_copy(update={"id": "crate", "name": "Crate"})
     add = CreateObject(op="create_object", target="world", object=crate)
-    project = apply_operations(project_from("parking_car"), [add])
+    project = apply_operations(raw_parking(), [add])
     return with_term(project, "object_to_goal", 1.0, object={"type": "asset", "value": "crate"})

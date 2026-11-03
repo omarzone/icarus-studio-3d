@@ -18,6 +18,7 @@ from icarus.sim.model_state import (
 )
 from icarus.sim.poses import geom_poses, live_rays, moving_geoms, pose_rows
 from icarus.sim.rewards import RewardState, compose, delivered, parked
+from icarus.sim.signals import scene_signals
 from icarus.sim.start_pose import place_start
 from icarus.sim.variation import WorldVariation
 
@@ -67,8 +68,10 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         return self._state
 
     def poses(self) -> CopyPoses:
-        """Where this copy's moving geoms are right now, for the live view of training."""
-        return geom_poses(self.world, self._geoms, rays=True)
+        """Where this copy's moving geoms are right now, with its goal and light states, for the live view."""
+        poses = geom_poses(self.world, self._geoms, rays=True)
+        poses.signals = scene_signals(self.world, self._state)
+        return poses
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
@@ -105,5 +108,6 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
             info["episode_terms"] = dict(self._episode_terms)
         if self.live_recording:
             rows = pose_rows(self.world, self._geoms)
-            info["live_frame"] = (self._episode, round(float(self.world.data.time), 3), rows, live_rays(self.world))
+            time = round(float(self.world.data.time), 3)
+            info["live_frame"] = (self._episode, time, rows, live_rays(self.world), scene_signals(self.world, after))
         return observation(self.world), float(reward), terminated, truncated, info

@@ -1,0 +1,2440 @@
+{
+ "id": "0123456789ab",
+ "name": "Test",
+ "description": "",
+ "schema_version": 1,
+ "world": {
+  "objects": [
+   {
+    "id": "ground",
+    "name": "Ground",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "plane"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         100.0,
+         100.0,
+         0.1
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#3a3f47"
+       },
+       "surface": {
+        "type": "list",
+        "value": "asphalt"
+       },
+       "style": {
+        "type": "list",
+        "value": "plain"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     },
+     {
+      "id": "physics_body",
+      "kind": "physics_body",
+      "properties": {
+       "mode": {
+        "type": "choice",
+        "value": "static"
+       },
+       "mass": {
+        "type": "number",
+        "value": 1.0
+       },
+       "density": {
+        "type": "number",
+        "value": 1000.0
+       }
+      }
+     },
+     {
+      "id": "surface",
+      "kind": "surface",
+      "properties": {
+       "kind": {
+        "type": "list",
+        "value": "asphalt"
+       },
+       "friction": {
+        "type": "slider",
+        "value": 1.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "sun",
+    "name": "Sun",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         10.0
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "light",
+      "kind": "light",
+      "properties": {
+       "kind": {
+        "type": "choice",
+        "value": "sun"
+       },
+       "intensity": {
+        "type": "slider",
+        "value": 1.0
+       },
+       "color": {
+        "type": "color",
+        "value": "#ffffff"
+       },
+       "shadows": {
+        "type": "switch",
+        "value": true
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "spawn",
+    "name": "Spawn point",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "spawn_point",
+      "kind": "spawn_point",
+      "properties": {
+       "random_heading": {
+        "type": "switch",
+        "value": false
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "sky",
+    "name": "Sky",
+    "parent": null,
+    "components": [
+     {
+      "id": "sky",
+      "kind": "sky",
+      "properties": {
+       "preset": {
+        "type": "choice",
+        "value": "day"
+       },
+       "top": {
+        "type": "color",
+        "value": "#5f8fc4"
+       },
+       "horizon": {
+        "type": "color",
+        "value": "#e4ecef"
+       },
+       "ambient": {
+        "type": "slider",
+        "value": 1.0
+       },
+       "ambient_color": {
+        "type": "color",
+        "value": "#ffffff"
+       },
+       "fog": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "use_clock": {
+        "type": "switch",
+        "value": false
+       },
+       "clock_time": {
+        "type": "slider",
+        "value": 14.0
+       },
+       "latitude": {
+        "type": "slider",
+        "value": 42.0
+       },
+       "sun_size": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "glare": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "haze": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "stars": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "clouds": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cloud_density": {
+        "type": "slider",
+        "value": 0.7
+       },
+       "cloud_color": {
+        "type": "color",
+        "value": "#ffffff"
+       },
+       "shadows": {
+        "type": "switch",
+        "value": true
+       },
+       "shadow_softness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "exposure": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "brightness": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "contrast": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "saturation": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "tint": {
+        "type": "color",
+        "value": "#ffffff"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_0",
+    "name": "Bay line 1",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         -6.5,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_1",
+    "name": "Bay line 2",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         -3.9,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_2",
+    "name": "Bay line 3",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         -1.3,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_3",
+    "name": "Bay line 4",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         1.3,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_4",
+    "name": "Bay line 5",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         3.9,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_line_5",
+    "name": "Bay line 6",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         12.0,
+         6.5,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         5.0,
+         0.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   },
+   {
+    "id": "bay_end_line",
+    "name": "Bay end line",
+    "parent": null,
+    "components": [
+     {
+      "id": "transform",
+      "kind": "transform",
+      "properties": {
+       "position": {
+        "type": "vector",
+        "value": [
+         14.5,
+         0.0,
+         0.005
+        ]
+       },
+       "rotation": {
+        "type": "vector",
+        "value": [
+         0.0,
+         0.0,
+         0.0
+        ]
+       },
+       "scale": {
+        "type": "vector",
+        "value": [
+         1.0,
+         1.0,
+         1.0
+        ]
+       }
+      }
+     },
+     {
+      "id": "mesh",
+      "kind": "mesh",
+      "properties": {
+       "shape": {
+        "type": "list",
+        "value": "box"
+       },
+       "size": {
+        "type": "vector",
+        "value": [
+         0.12,
+         13.12,
+         0.01
+        ]
+       }
+      }
+     },
+     {
+      "id": "material",
+      "kind": "material",
+      "properties": {
+       "color": {
+        "type": "color",
+        "value": "#e8eaed"
+       },
+       "surface": {
+        "type": "list",
+        "value": "rubber"
+       },
+       "style": {
+        "type": "list",
+        "value": "marking"
+       },
+       "transparency": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "reflectance": {
+        "type": "slider",
+        "value": 0.0
+       },
+       "cast_shadow": {
+        "type": "switch",
+        "value": true
+       },
+       "finish": {
+        "type": "list",
+        "value": "plain"
+       },
+       "roughness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "metalness": {
+        "type": "slider",
+        "value": 0.5
+       },
+       "emissive": {
+        "type": "slider",
+        "value": 0.0
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "bodies": [
+  {
+   "id": "car_body",
+   "name": "Car",
+   "objects": [
+    {
+     "id": "car",
+     "name": "Car",
+     "parent": null,
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.5
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "box"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          4.0,
+          1.8,
+          0.6
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#c8553d"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "car_body"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 900.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 0.8
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "distance_ray",
+       "kind": "distance_ray",
+       "properties": {
+        "name": {
+         "type": "text",
+         "value": "Front"
+        },
+        "heading": {
+         "type": "number",
+         "value": 0.0
+        },
+        "range": {
+         "type": "number",
+         "value": 10.0
+        },
+        "count": {
+         "type": "count",
+         "value": 5
+        },
+        "tilt": {
+         "type": "number",
+         "value": 0.0
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "steer_left",
+     "name": "Front left steering",
+     "parent": "car",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          1.3,
+          1.2,
+          -0.2
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "sphere"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.12,
+          0.12,
+          0.12
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#2b2d31"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "joint"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 4.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 0.8
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -35.0,
+         "high": 35.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 0.5
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      },
+      {
+       "id": "motor",
+       "kind": "motor",
+       "properties": {
+        "joint": {
+         "type": "asset",
+         "value": ""
+        },
+        "kind": {
+         "type": "choice",
+         "value": "position"
+        },
+        "max_force": {
+         "type": "number",
+         "value": 2000.0
+        },
+        "gear": {
+         "type": "number",
+         "value": 1.0
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "wheel_front_left",
+     "name": "Front left wheel",
+     "parent": "steer_left",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          -90.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "cylinder"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.6,
+          0.6,
+          0.25
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#1f2023"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "wheel"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 20.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 1.2
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -180.0,
+         "high": 180.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 0.5
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "wheel_rear_left",
+     "name": "Rear left wheel",
+     "parent": "car",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          -1.3,
+          1.2,
+          -0.2
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          -90.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "cylinder"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.6,
+          0.6,
+          0.25
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#1f2023"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "wheel"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 20.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 1.2
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -180.0,
+         "high": 180.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 80.0
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      },
+      {
+       "id": "motor",
+       "kind": "motor",
+       "properties": {
+        "joint": {
+         "type": "asset",
+         "value": ""
+        },
+        "kind": {
+         "type": "choice",
+         "value": "torque"
+        },
+        "max_force": {
+         "type": "number",
+         "value": 400.0
+        },
+        "gear": {
+         "type": "number",
+         "value": 1.0
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "steer_right",
+     "name": "Front right steering",
+     "parent": "car",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          1.3,
+          -1.2,
+          -0.2
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "sphere"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.12,
+          0.12,
+          0.12
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#2b2d31"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "joint"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 4.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 0.8
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -35.0,
+         "high": 35.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 0.5
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      },
+      {
+       "id": "motor",
+       "kind": "motor",
+       "properties": {
+        "joint": {
+         "type": "asset",
+         "value": ""
+        },
+        "kind": {
+         "type": "choice",
+         "value": "position"
+        },
+        "max_force": {
+         "type": "number",
+         "value": 2000.0
+        },
+        "gear": {
+         "type": "number",
+         "value": 1.0
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "wheel_front_right",
+     "name": "Front right wheel",
+     "parent": "steer_right",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          -90.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "cylinder"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.6,
+          0.6,
+          0.25
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#1f2023"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "wheel"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 20.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 1.2
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -180.0,
+         "high": 180.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 0.5
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "wheel_rear_right",
+     "name": "Rear right wheel",
+     "parent": "car",
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          -1.3,
+          -1.2,
+          -0.2
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          -90.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "mesh",
+       "kind": "mesh",
+       "properties": {
+        "shape": {
+         "type": "list",
+         "value": "cylinder"
+        },
+        "size": {
+         "type": "vector",
+         "value": [
+          0.6,
+          0.6,
+          0.25
+         ]
+        }
+       }
+      },
+      {
+       "id": "material",
+       "kind": "material",
+       "properties": {
+        "color": {
+         "type": "color",
+         "value": "#1f2023"
+        },
+        "surface": {
+         "type": "list",
+         "value": "rubber"
+        },
+        "style": {
+         "type": "list",
+         "value": "wheel"
+        },
+        "transparency": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "reflectance": {
+         "type": "slider",
+         "value": 0.0
+        },
+        "cast_shadow": {
+         "type": "switch",
+         "value": true
+        },
+        "finish": {
+         "type": "list",
+         "value": "plain"
+        },
+        "roughness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "metalness": {
+         "type": "slider",
+         "value": 0.5
+        },
+        "emissive": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "physics_body",
+       "kind": "physics_body",
+       "properties": {
+        "mode": {
+         "type": "choice",
+         "value": "dynamic"
+        },
+        "mass": {
+         "type": "number",
+         "value": 20.0
+        },
+        "density": {
+         "type": "number",
+         "value": 1000.0
+        }
+       }
+      },
+      {
+       "id": "collider",
+       "kind": "collider",
+       "properties": {
+        "friction": {
+         "type": "slider",
+         "value": 1.2
+        },
+        "restitution": {
+         "type": "slider",
+         "value": 0.0
+        }
+       }
+      },
+      {
+       "id": "joint",
+       "kind": "joint",
+       "properties": {
+        "kind": {
+         "type": "choice",
+         "value": "hinge"
+        },
+        "axis": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          1.0
+         ]
+        },
+        "limits": {
+         "type": "range",
+         "low": -180.0,
+         "high": 180.0
+        },
+        "anchor": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "damping": {
+         "type": "number",
+         "value": 80.0
+        },
+        "connects_to": {
+         "type": "asset",
+         "value": ""
+        }
+       }
+      },
+      {
+       "id": "motor",
+       "kind": "motor",
+       "properties": {
+        "joint": {
+         "type": "asset",
+         "value": ""
+        },
+        "kind": {
+         "type": "choice",
+         "value": "torque"
+        },
+        "max_force": {
+         "type": "number",
+         "value": 400.0
+        },
+        "gear": {
+         "type": "number",
+         "value": 1.0
+        }
+       }
+      }
+     ]
+    },
+    {
+     "id": "goal",
+     "name": "Parking spot",
+     "parent": null,
+     "components": [
+      {
+       "id": "transform",
+       "kind": "transform",
+       "properties": {
+        "position": {
+         "type": "vector",
+         "value": [
+          12.0,
+          0.0,
+          0.0
+         ]
+        },
+        "rotation": {
+         "type": "vector",
+         "value": [
+          0.0,
+          0.0,
+          0.0
+         ]
+        },
+        "scale": {
+         "type": "vector",
+         "value": [
+          1.0,
+          1.0,
+          1.0
+         ]
+        }
+       }
+      },
+      {
+       "id": "goal_zone",
+       "kind": "goal_zone",
+       "properties": {
+        "radius": {
+         "type": "number",
+         "value": 1.5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "task": {
+  "family": "navigation",
+  "rewards": [
+   {
+    "term": "reach_goal",
+    "weight": 10.0,
+    "params": {}
+   },
+   {
+    "term": "progress_to_goal",
+    "weight": 1.0,
+    "params": {}
+   },
+   {
+    "term": "collision_penalty",
+    "weight": -5.0,
+    "params": {}
+   },
+   {
+    "term": "time_penalty",
+    "weight": -0.01,
+    "params": {}
+   }
+  ]
+ },
+ "brain": {
+  "template": null,
+  "copies": 16,
+  "seed": 0,
+  "algorithm": "ppo",
+  "training_steps": null,
+  "layers": [
+   256,
+   256
+  ],
+  "ppo": {
+   "learning_rate": 0.0003,
+   "n_steps": 1024,
+   "batch_size": 2048,
+   "n_epochs": 10,
+   "gamma": 0.99,
+   "gae_lambda": 0.95,
+   "ent_coef": 0.0
+  }
+ }
+}

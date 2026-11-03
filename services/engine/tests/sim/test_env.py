@@ -5,7 +5,7 @@ from gymnasium.utils.env_checker import check_env
 
 from icarus.sim.env import ProjectEnv
 from icarus.sim.model_state import GOAL_DISTANCE_SCALE, observation
-from tests.sim.conftest import project_from, walker_navigation
+from tests.sim.conftest import project_from, raw_parking, walker_navigation
 
 
 @pytest.mark.parametrize("template", ["parking_car", "walker_robot"])
@@ -199,7 +199,8 @@ def test_a_recording_copy_hands_its_pose_and_episode_over_with_each_step(parking
     action = np.zeros(len(env.world.actuators), dtype=np.float32)
     assert "live_frame" not in env.step(action)[4]
     env.live_recording = True
-    episode, time, rows, rays = env.step(action)[4]["live_frame"]
+    episode, time, rows, rays, signals = env.step(action)[4]["live_frame"]
+    assert signals is not None and signals.goal is not None and signals.lights is None
     assert time == round(float(env.world.data.time), 3)
     assert [row[:3] for row in rows] == [list(position) for position in env.poses().positions]
     env.reset(seed=1)
@@ -238,7 +239,7 @@ def test_full_steering_reaches_its_limit_and_turns_the_car_on_a_tight_circle(par
 
 
 def test_each_copy_reports_where_its_distance_sensors_look_for_the_live_view():
-    env = ProjectEnv(project_from("parking_car"))
+    env = ProjectEnv(raw_parking())
     env.reset(seed=0)
     env.step(np.zeros(len(env.world.actuators), dtype=np.float32))
     rays = env.poses().rays

@@ -34,6 +34,7 @@ from icarus.design.scene import scene_description
 from icarus.sim.model_state import (
     apply_action,
     build_world,
+    command_value,
     control_substeps,
     observation,
     reset_world,
@@ -52,6 +53,7 @@ from icarus.sim.play_tools import (
 )
 from icarus.sim.policy import Policy
 from icarus.sim.rewards import compose, inside_goal
+from icarus.sim.signals import scene_signals
 
 PlayReply = PlayEventMessage | PlayErrorMessage | PlayReady
 EventKind = Literal["user", "agent", "world"]
@@ -74,6 +76,21 @@ _CORE_TOOLS = [
 
 def _amount(value: float) -> str:
     return f"{value:.0f}" if abs(value) >= 10 else f"{value:.2g}"
+
+
+def _reading(kind: str, raw: np.ndarray) -> float:
+    """One number per sense for Play: forward speed, turn rate, target distance and spot heading in degrees."""
+    match kind:
+        case "ray" | "touch" | "speed":
+            return float(raw[0])
+        case "yaw":
+            return float(raw[2])
+        case "target":
+            return float(np.hypot(raw[0], raw[1]))
+        case "heading":
+            return float(np.degrees(np.arctan2(raw[1], raw[0])))
+        case _:
+            return float(np.linalg.norm(raw))
 
 
 def _vector(values) -> tuple[float, float, float]:
@@ -246,8 +263,7 @@ class PlaySession:
     def _senses(self) -> list[PlayReading]:
         readings: list[PlayReading] = []
         for sensor in self.world.sensors:
-            raw = sensor_value(self.world, sensor)
-            value = float(raw[0]) if sensor.kind in ("ray", "touch") else float(np.linalg.norm(raw))
+            value = _reading(sensor.kind, sensor_value(self.world, sensor))
             readings.append(
                 PlayReading(
                     id=sensor.id, label=sensor.label, value=value, min=sensor.low, max=sensor.high, unit=sensor.unit
@@ -294,12 +310,12 @@ class PlaySession:
             PlayReading(
                 id=actuator.id,
                 label=actuator.label,
-                value=float(data.ctrl[index]),
+                value=command_value(self.world, actuator),
                 min=actuator.low,
                 max=actuator.high,
                 unit=actuator.unit,
             )
-            for index, actuator in enumerate(self.world.actuators)
+            for actuator in self.world.actuators
         ]
         return PlayFrame(
             time=float(data.time),
@@ -313,4 +329,5 @@ class PlaySession:
             episode_return=self.episode_return,
             status=self._status(),
             rays=ray_readings(model, data, {sensor.id: sensor.label for sensor in self.world.sensors}),
+            signals=scene_signals(self.world, self._state),
         )
