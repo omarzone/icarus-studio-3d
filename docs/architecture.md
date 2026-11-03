@@ -119,7 +119,7 @@ icarus-studio-3d/
 │   │   │   ├── hardware/     # planned: profiles, parts lists, URDF/ONNX export, runtime package
 │   │   │   └── bundles/      # planned: pack and unpack shareable bundles
 │   │   └── tests/
-│   └── community/            # online service: accounts, bundle storage, catalog
+│   └── community/            # online service: accounts, creations, moderation, sharing (FastAPI, Alembic)
 ├── assets/
 │   ├── library/              # meshes and textures for library parts and presets, with licenses
 │   └── presets/              # ready-made bodies and worlds (including commercial robots)
@@ -405,7 +405,7 @@ Every screen, module and tab has an identifier in [`docs/design/screens.md`](./d
 Implementation:
 
 - **Main process** starts the engine with `uv run icarus-engine --port <free port>`, waits for `/health`, passes the URL through preload and restarts the engine on request if it exits. `ICARUS_ENGINE_URL` points the app at an engine already running during development.
-- **Security:** `contextIsolation: true`, `nodeIntegration: false`, no secrets in the renderer; model credentials live only in the engine's environment.
+- **Security:** `contextIsolation: true`, `nodeIntegration: false`, no secrets in the renderer; model credentials live only in the engine's environment and the community session only in the main process.
 - **Editing:** gizmos and property edits produce `EditOperation`s sent to the engine; the viewport updates from the resulting revision. Optimistic previews are allowed, but the engine's revision is the truth.
 - **Scene:** a `SceneDescription` becomes R3F meshes. `RolloutPlayer` applies rollout frames with time-based interpolation; coordinate conversion (MuJoCo Z-up, wxyz → Three.js Y-up, xyzw) lives in one module.
 - **Play mode** opens a play session in the engine, sends tool actions and draws the streamed frames; the renderer never steps physics.
@@ -418,10 +418,16 @@ Icarus ships as one installable application per platform (Windows, macOS, Linux)
 
 ## Community service
 
-`services/community` is an online service with accounts, bundle storage, a searchable catalog with previews (thumbnails, short rollouts) and lineage between creations. The desktop app talks to it through `community-client`; uploads and downloads are bundles produced and validated by the engine, and validated again by the service before they are stored. Its stack and hosting are recorded in an ADR when it is built.
+`services/community` is the online service for accounts, creations, votes, moderation and sharing ([ADR 014](./decisions/014-community-service-and-supabase-auth.md)). Setup, settings, migrations and deployment are in its [README](../services/community/README.md).
 
-- **Open source and self-hostable.** The service lives in this repository and runs with one `docker compose up`. The maintainers operate the official instance; anyone can run their own, and the app's *Community server* setting chooses which one to use.
-- **Accounts only for sharing.** Sign-in (Google, GitHub, email) is needed to publish, remix, vote and comment, never to create or train. The desktop app signs in through the system browser with OAuth PKCE and an `icarus://` deep link, and keeps the session in the operating system keychain.
+- **Stack.** FastAPI, Pydantic v2 with `extra="forbid"`, pydantic-settings, SQLAlchemy 2 and Alembic; SQLite and a local folder in development, Postgres on a server through `DATABASE_URL`. Bundles, thumbnails and photos go through a small `FileStore` (`LocalFileStore` now, an object store later). It runs locally with `pnpm community:dev` (port 8790) and on a VPS with its `Dockerfile` and `docker-compose.yml`.
+- **What it keeps.** Creations (a published project bundle, a thumbnail and page text) with numbered versions and remix lineage, categories, search and sorting (featured, recent, most voted), votes, reports, a moderation queue with keep, remove and ban decisions and appeals (moderator role from `MODERATOR_EMAILS`), profiles with photos, follows, notifications (votes, remixes, follows, invites, moderation results), each project's community page with its visibility (public, unlisted, invited, private) and invites with roles (viewer, editor), privacy settings, blocks, a data export and account deletion. The API is versioned under `/v1`.
+- **Bundles carry data, never code.** A bundle is the engine's project document in a JSON envelope (`format: "icarus.bundle"`, `format_version`, `kind: "project"`, `contract_version`, `library_version`, `lineage`). The service refuses unknown fields and kinds, strings that carry scripts or embedded programs, blobs, deep nesting and oversized files, and stores the canonical JSON with its SHA-256; pictures must be PNG, JPEG or WebP by their bytes. Remixing into a local project waits for the engine to import bundles.
+- **Sign-in with Supabase Auth; no passwords in Icarus.** The desktop main process runs `@supabase/supabase-js` with PKCE: Google and GitHub open in the system browser, email sends a one-time link, and both return to a loopback callback on `http://127.0.0.1:8791/auth/callback` that exchanges the code. The session is stored encrypted with Electron `safeStorage` (the OS keychain) in the app's user data, or only in memory where no keychain exists. The service verifies each token's signature with the project's JWKS (or the legacy JWT secret), audience, issuer and expiry, and keys accounts by `sub`.
+- **Development sign-in.** With `DEV_AUTH=true` (what `pnpm community:dev` sets) the service signs one-hour tokens itself at `POST /v1/dev/token`; with `ENV=production` it refuses to start in that mode. The desktop uses it whenever no Supabase project is configured, signing in as `dev@icarus.localhost`.
+- **One setting chooses the server.** `community.json` in the settings folder holds `community_url` (default `http://127.0.0.1:8790`), `supabase_url` and `supabase_anon_key`, edited in Settings › Profile › Community server. Changing the server or the Supabase project signs out.
+- **The renderer never holds a token.** `community-client` sends each request over IPC to the main process, which only forwards `/v1/` paths to the configured server with the access token attached and returns the JSON or, for pictures, a data URL. Answers are checked structurally (`community-checks.ts`) before ports map them to views. Views show *Connect your community server* when it does not answer and *Sign in to the community* when an account is needed.
+- **Protections.** CORS is closed unless `CORS_ORIGINS` lists origins, writes are rate-limited per account, request bodies are capped before they are read, answers carry `nosniff`, and suspended accounts cannot write. Accounts are needed only to publish, vote, follow and share, never to create or train.
 
 ## Quality
 
@@ -431,7 +437,7 @@ One command verifies the whole repository:
 pnpm check
 ```
 
-It runs `biome check`, `tsc --noEmit`, `vitest run`, the file-size guideline report (`check:max-lines`, warnings only), the contract staleness check, `ruff check`, `ruff format --check`, `pyright` and `pytest -m "not slow and not live"`.
+It runs `biome check`, `tsc --noEmit`, `vitest run`, the file-size guideline report (`check:max-lines`, warnings only), the contract staleness check, and `ruff check`, `ruff format --check`, `pyright` and `pytest` for the engine (`-m "not slow and not live"`) and for the community service.
 
 | Layer | What is real | Command |
 |---|---|---|
@@ -468,6 +474,5 @@ Decisions are recorded as ADRs in `docs/decisions/` once data settles them.
 1. Default training budgets per task family, from measured learning curves on CPU.
 2. Pose extraction pipeline and retargeting approach for motion clips.
 3. Animation export formats and the runtime target for hardware export.
-4. Community service stack, hosting and bundle format versioning.
 
-Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)).
+Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)); community service stack, hosting and sign-in ([ADR 014](./decisions/014-community-service-and-supabase-auth.md)).
