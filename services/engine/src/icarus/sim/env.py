@@ -75,6 +75,9 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
+        if seed is not None:
+            # A seeded reset restarts a cycling start at the seed's spawn point, so fixed seeds give fixed starts.
+            self.world.spawn_next = seed
         if self.randomize:
             self.variation.start_copy(self.np_random)
         else:
