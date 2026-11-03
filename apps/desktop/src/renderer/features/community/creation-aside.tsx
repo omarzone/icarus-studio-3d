@@ -9,10 +9,9 @@ type Props = {
   creation: CreationDetail;
   onVote: () => void;
   onFollow: () => void;
-  onRemix: () => void;
 };
 
-export function CreationAside({ creation, onVote, onFollow, onRemix }: Props) {
+export function CreationAside({ creation, onVote, onFollow }: Props) {
   const { author } = creation;
   return (
     <aside className="flex flex-col gap-3.5">
@@ -53,7 +52,6 @@ export function CreationAside({ creation, onVote, onFollow, onRemix }: Props) {
           to="STA-WORLD-EMPTY"
           params={{ remix: creation.id }}
           cta="Remix into my projects"
-          onClick={onRemix}
           className={buttonClass("primary", "h-8.5 text-body")}
         >
           Remix into my projects

@@ -80,6 +80,11 @@ it("bundles the project document as data with the versions it was made with", ()
   expect(bundle.project).toBe(STATE.project);
 });
 
+it("names the original of a remixed project in the bundle's lineage", () => {
+  const remixed = { ...STATE, remix_of: { creation_id: "c42", version: 2, title: "Valet Bot" } };
+  expect(projectBundle(remixed, "6").lineage).toEqual({ remix_of: "c42" });
+});
+
 it("reads a removed creation as not published", () => {
   expect(reviewView({ ...PAGE, status: "public", creation_id: "c1" })).toEqual({ status: "public", creationId: "c1" });
   expect(reviewView({ ...PAGE, status: "removed", creation_id: "c1" }).status).toBe("draft");

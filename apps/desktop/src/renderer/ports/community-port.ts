@@ -1,8 +1,10 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { communityApi } from "../community-client/community-api.ts";
+import { engineApi } from "../engine-client/engine-api.ts";
 import type { AvatarTone } from "../ui/avatar.tsx";
 import { createCommunityCatalog } from "./catalog-community.ts";
 import { createCommunityFixture } from "./community.fixture.ts";
+import { createCommunityRemix } from "./community-remix.ts";
 
 export type CreationSort = "featured" | "recent" | "most-voted";
 
@@ -47,27 +49,22 @@ export type CreationReport = { id: string; reason: ReportReason; details: string
 
 export type CreationQuery = { sort: CreationSort; category: string | null; search: string; limit?: number };
 
+export type RemixedProject = { projectId: string; name: string };
+
 export type CommunityPort = {
   listCategories: () => Promise<string[]>;
   listCreations: (query: CreationQuery) => Promise<CreationSummary[]>;
   // Without an id, the creation the community features first.
   getCreation: (id: string | undefined) => Promise<CreationDetail>;
   vote: (id: string) => Promise<CreationDetail>;
-  remix: (id: string) => Promise<void>;
+  // Makes a new local project of the creation's latest version, remembering where it came from.
+  remix: (id: string) => Promise<RemixedProject>;
   report: (report: CreationReport) => Promise<void>;
   // A creation's or person's picture as a data URL, or null when there is none.
   getPicture: (picture: string) => Promise<string | null>;
 };
 
 export const communityPort = definePort<CommunityPort>({
-  app: {
-    ...createCommunityCatalog(),
-    remix: pending({
-      key: "community.remix",
-      summary: "Remixing a creation into your projects",
-      sprint: 13,
-      ids: ["SCR-CREATION"],
-    }),
-  },
+  app: { ...createCommunityCatalog(), remix: createCommunityRemix(communityApi, engineApi) },
   prototype: createCommunityFixture,
 });

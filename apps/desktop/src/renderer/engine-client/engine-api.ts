@@ -24,6 +24,7 @@ import type {
   TrainingSettings,
   TrainingSettingsPatch,
   TweakIdea,
+  UnpackBundle,
 } from "@icarus/contracts";
 import { isContextUsage } from "./context-usage-checks.ts";
 import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
@@ -78,6 +79,8 @@ export const engineApi = {
     request(`${at(id)}/duplicate`, post({ name }), isProjectState),
   restoreRevision: (id: string, revision: number): Promise<ProjectState> =>
     request(`${at(id)}/revisions/${revision}/restore`, post(), isProjectState),
+  // A community bundle becomes a new project; the engine checks it is data, in a known version, and passes its tests.
+  unpackBundle: (body: UnpackBundle): Promise<ProjectState> => request("/bundles/unpack", post(body), isProjectState),
   startRun: (id: string, body: StartRun): Promise<RunStatus> => request(`${at(id)}/runs`, post(body), isRunStatus),
   runs: (id: string): Promise<RunStatus[]> => request(`${at(id)}/runs`, {}, isRunStatuses),
   run: (runId: string): Promise<RunStatus> => request(run(runId), {}, isRunStatus),

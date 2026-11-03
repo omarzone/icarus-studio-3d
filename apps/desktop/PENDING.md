@@ -39,12 +39,6 @@ Every action below is reachable in the interface and shows *Not available yet* u
 | `motion.trainWeakest` | Training the weakest moment | `SCR-MOTION` |
 | `motion.videoSource` | Reading the reference video | `MOD-MOTION-VIDEO` |
 
-## Sprint 13
-
-| Action | What it does | Used in |
-|---|---|---|
-| `community.remix` | Remixing a creation into your projects | `SCR-CREATION` |
-
 ## Screens not built yet
 
 None.
