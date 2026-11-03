@@ -218,10 +218,10 @@ _TERMS = [
         "Stand on a plate",
         "navigation",
         0,
-        5,
-        0.1,
-        "Reward each step while a goal plate's trigger holds (the body stands on it). Paid every step, so keep it "
-        "small next to reach_plates.",
+        1,
+        0.01,
+        "Reward each step while a goal plate's trigger holds (the body stands on it). Paid every step: over a 600-step "
+        "try 0.01 adds at most 6, below reach_plates, so standing on one plate never beats reaching them all.",
     ),
     _term(
         "plates_pressed",
