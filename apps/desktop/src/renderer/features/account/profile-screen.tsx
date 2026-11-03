@@ -1,10 +1,11 @@
 // SCR-PROFILE
 import { tokens } from "@icarus/ui-tokens";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowBigUp, Plus } from "lucide-react";
 import { useState } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import {
@@ -48,6 +49,8 @@ export function ProfileScreen() {
 
 function ProfilePage({ profile }: { profile: Profile }) {
   const account = usePort(accountPort);
+  const client = useQueryClient();
+  const photo = useCommunityPicture(profile.picture);
   const follow = useEngineAction(account.follow);
   const [shelf, setShelf] = useState<ProfileShelf>("creations");
   const creations = useQuery({
@@ -58,7 +61,7 @@ function ProfilePage({ profile }: { profile: Profile }) {
   return (
     <div className="flex flex-col gap-5.5 pt-2.5">
       <div className="flex items-center gap-5">
-        <Avatar initials={profile.initials} tone={profile.tone} className="size-24 text-4xl" />
+        <Avatar initials={profile.initials} tone={profile.tone} photo={photo} className="size-24 text-4xl" />
         <div className="flex flex-col gap-1">
           <h1 className="m-0 text-title-1 leading-tight font-bold">{profile.name}</h1>
           <span className="leading-tight text-fg-tertiary">{about}</span>
@@ -90,10 +93,13 @@ function ProfilePage({ profile }: { profile: Profile }) {
           ) : (
             <Act
               cta="Follow"
-              onClick={() => follow.mutate(profile.handle)}
-              className={buttonClass("primary", "h-8.5 text-body")}
+              aria-pressed={profile.following}
+              onClick={() =>
+                follow.mutate(profile.handle, { onSuccess: () => client.invalidateQueries({ queryKey: ["profile"] }) })
+              }
+              className={buttonClass(profile.following ? "secondary" : "primary", "h-8.5 text-body")}
             >
-              Follow
+              {profile.following ? "Following" : "Follow"}
             </Act>
           )}
         </div>

@@ -4,8 +4,9 @@ Icarus Studio 3D is a 3D studio for embodied AI: an Electron editor and a local 
 
 # Useful Commands
 
-- **Before handoff**: `pnpm check` (Biome, TypeScript, Vitest, file-size warnings, contract staleness, ruff, pyright, pytest without `slow`/`live`)
-- **Install**: `pnpm install && pnpm engine:sync`
+- **Before handoff**: `pnpm check` (Biome, TypeScript, Vitest, file-size warnings, contract staleness, ruff, pyright, pytest without `slow`/`live`, for the engine and the community service)
+- **Install**: `pnpm install && pnpm engine:sync && pnpm community:sync`
+- **Community service**: `pnpm community:dev` (port 8790, local development sign-in; rules in [`services/community/AGENTS.md`](./services/community/AGENTS.md))
 - **Dev**: `pnpm dev` (desktop app + engine); engine only: `pnpm engine:dev`
 - **Contracts**: `pnpm gen:contracts` after any change in `services/engine/src/icarus/contracts/`
 - **Slow tests** (short real training): `pnpm engine:test:slow`

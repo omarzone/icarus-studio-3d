@@ -1,6 +1,6 @@
 // POP-NOTIFICATIONS
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, History } from "lucide-react";
+import { ArrowBigUp, Check, Copy, History, UserPlus, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
@@ -16,6 +16,10 @@ const ICONS: Record<NotificationKind, { icon: ReactNode; className: string }> = 
   "run-finished": { icon: <History size={14} strokeWidth={1.75} />, className: "text-fg" },
   remix: { icon: <Copy size={14} strokeWidth={1.75} />, className: "text-warn" },
   attention: { icon: "!", className: "text-warn" },
+  vote: { icon: <ArrowBigUp size={14} strokeWidth={1.75} />, className: "text-ok" },
+  follow: { icon: <UserPlus size={14} strokeWidth={1.75} />, className: "text-fg" },
+  invite: { icon: <Users size={14} strokeWidth={1.75} />, className: "text-fg" },
+  moderation: { icon: "!", className: "text-warn" },
 };
 
 export function NotificationsPopover() {

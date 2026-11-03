@@ -5,6 +5,7 @@ import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
 import { EXPORT_CHANNEL } from "../shared/export-bridge.ts";
 import { STORAGE_CHANNEL } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL } from "../shared/window-bridge.ts";
+import { registerCommunity } from "./community/community-ipc.ts";
 import { folderChoice } from "./data-folder-choice.ts";
 import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
@@ -78,6 +79,7 @@ void app.whenReady().then(() => {
   ipcMain.handle(ENGINE_CHANNEL.status, () => engine.status);
   ipcMain.handle(ENGINE_CHANNEL.restart, () => engine.restart());
   const win = createWindow();
+  registerCommunity(win);
   ipcMain.handle(STORAGE_CHANNEL.chooseFolder, async () =>
     folderChoice(
       await dialog.showOpenDialog(win, {

@@ -8,9 +8,22 @@ type Props = {
   tone: AvatarTone;
   // Tailwind size and text classes, for example "size-6.5 text-[9px]".
   className?: string;
+  // A photo as a data URL; without one the initials show.
+  photo?: string | null;
 };
 
-export function Avatar({ initials, tone, className = "size-6.5 text-micro" }: Props) {
+export function Avatar({ initials, tone, className = "size-6.5 text-micro", photo = null }: Props) {
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className={`shrink-0 rounded-full object-cover ${className}`}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

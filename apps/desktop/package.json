@@ -22,6 +22,7 @@
     "@icarus/ui-tokens": "workspace:*",
     "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.2",
+    "@supabase/supabase-js": "2.118.0",
     "@tanstack/react-query": "5.90.5",
     "dockview-react": "8.8.0",
     "lucide-react": "1.61.0",

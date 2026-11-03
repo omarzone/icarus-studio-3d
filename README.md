@@ -123,6 +123,8 @@ pnpm dev                           # run the desktop app and the engine
 pnpm check                         # lint, types and tests for everything
 ```
 
+The community (publishing, profiles, moderation) is a separate service: `pnpm community:sync` once, then `pnpm community:dev` in another terminal serves it on `http://127.0.0.1:8790` with a local development sign-in. See [`services/community/README.md`](./services/community/README.md).
+
 
 ## Repository
 

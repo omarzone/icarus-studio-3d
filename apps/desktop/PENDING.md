@@ -77,43 +77,7 @@ Every action below is reachable in the interface and shows *Not available yet* u
 
 | Action | What it does | Used in |
 |---|---|---|
-| `account.change-photo` | Changing your photo | `SCR-SETTINGS-PROFILE` |
-| `account.follow` | Following people | `SCR-CREATION` |
-| `account.get` | Your community account | `SCR-HOME`, `SCR-PROFILE` |
-| `account.profile` | Profiles | `SCR-PROFILE` |
-| `account.profile-creations` | Creations on a profile | `SCR-PROFILE` |
-| `account.remove-photo` | Removing your photo | `SCR-SETTINGS-PROFILE` |
-| `account.sign-in` | Signing in | `MOD-SIGN-IN` |
-| `account.update-profile` | Editing your profile | `SCR-SETTINGS-PROFILE` |
-| `community.categories` | Community categories | `SCR-COMMUNITY` |
-| `community.creation` | Creation pages | `SCR-CREATION` |
-| `community.list` | Creations from the community | `SCR-HOME`, `SCR-COMMUNITY` |
 | `community.remix` | Remixing a creation into your projects | `SCR-CREATION` |
-| `community.report` | Reporting a creation | `MOD-REPORT` |
-| `community.vote` | Voting for a creation | `SCR-CREATION` |
-| `moderation.counts` | Moderation queues | `SCR-MODERATION` |
-| `moderation.decide` | Keeping, removing or banning | `SCR-MODERATION` |
-| `moderation.list` | Reported creations | `SCR-MODERATION` |
-| `notifications.list` | Notifications | `POP-NOTIFICATIONS` |
-| `notifications.mark-all-read` | Marking notifications read | `POP-NOTIFICATIONS` |
-| `publish.guidelines` | Agreeing to the community guidelines | `MOD-PUBLISH` |
-| `publish.page` | The community page of a project | `SCR-BUILD`, `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED` |
-| `publish.page-edit` | Editing the community page | `SCR-BUILD` |
-| `publish.readiness` | Checking a creation before it is published | `MOD-PUBLISH` |
-| `publish.review` | The review of a published creation | `MOD-PUBLISHED` |
-| `publish.save-draft` | Saving the community page as a draft | `SCR-BUILD` |
-| `publish.send` | Publishing to the community | `MOD-PUBLISH` |
-| `settings.delete-account` | Deleting your account | `SCR-SETTINGS-PRIVACY` |
-| `settings.download-data` | Downloading your data | `SCR-SETTINGS-PRIVACY` |
-| `settings.notifications` | Notification settings | `SCR-SETTINGS-NOTIFICATIONS` |
-| `settings.notifications-set` | Changing notification settings | `SCR-SETTINGS-NOTIFICATIONS` |
-| `settings.privacy` | Privacy settings | `SCR-SETTINGS-PRIVACY` |
-| `settings.privacy-set` | Changing privacy settings | `SCR-SETTINGS-PRIVACY` |
-| `settings.unblock` | Unblocking people | `SCR-SETTINGS-PRIVACY` |
-| `share.get` | Sharing a project | `MOD-SHARE` |
-| `share.invite` | Inviting people to a project | `MOD-SHARE` |
-| `share.role` | Changing what a collaborator can do | `MOD-SHARE` |
-| `share.visibility` | Changing who can open a project | `MOD-SHARE` |
 
 ## Screens not built yet
 
