@@ -91,6 +91,8 @@ Left column, bottom. Edits whatever is selected. Folder: `editor/inspector/`. Us
 | `TAB-PROPERTIES` | Properties | `properties-tab.tsx` | Selected item's title and subtitle, a filter field, then one collapsible section per component (Transform, Physics body, Joint, Motor, Sensor, Randomize per copy…) or per settings group (Practice, Expert settings). Every row uses one of the 12 property types (see `REF-PROPERTY-TYPES`). | Edit values with the control of their type, drag names to scrub, right-click to reset or ask the copilot, `···` for component actions (*Remove ‹component›*), **+ Add component** (objects only) → `POP-ADD-COMPONENT`. |
 
 - Expert settings (algorithm, learning rate, network) are a collapsed section, never a separate screen.
+- `POP-MATERIAL-PALETTE` Material palette (`controls/material-palette.tsx`): the Material property of a part opens a grid of swatches (Plastic, Smooth plastic, Wood, Wood planks, Brick, Cobblestone, Concrete, Metal, Diamond plate, Corroded metal, Grass, Sand, Ground, Ice, Glass, Neon, Marble, Granite, Fabric, Foil and Custom), each drawn with its pattern in the part's color, and the color picker that tints them. Picking one is one edit that also sets the part's surface and friction. Escape or a click outside closes it.
+- An older project's endless floor plane shows *Make it a slab* under the title: one edit adds a ground component of the plane's size, 1 m thick, so the floor gets edges. It is offered, never done on its own.
 - Runs, brains and motion settings use the inspector without *Add component*: only scene objects have components.
 
 ### `PNL-VIEWPORT` Viewport
@@ -116,7 +118,11 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 Strip above the viewport. Icon + label buttons in groups. The selected tool is white. Every tool's tooltip is its name and one line on what it is for. In the app, a tool with nothing behind it yet is dimmed and says *not available yet* on hover and click; Terrain, Sky and Light select the ground, sky and sun so the Inspector shows them, and Agent and Goal ask the copilot to add one. Folder: `editor/viewport/toolbar/`.
 
 - **Gizmo** (app, every editable World state): Move, Rotate, Scale lead the tools and pick what dragging the selected object does; the one in use is white and follows W, E and R in the view. Rotate and scale work along the object's own axes.
-- **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`).
+- **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`). In the app the building menus follow (`build-menus.tsx`):
+  - `POP-INSERT-PART` **Part**: Block, Sphere, Cylinder, Wedge, Corner wedge, Capsule. Each inserts a static plastic part (one create-object edit) resting on the ground at the middle of the view, on the move snap, and selects it. *Place where I click* (remembered) makes the next click in the view place it instead, on the ground or on top of the part clicked; the button reads *Placing…* until then, and Esc or *Cancel placing* stops it.
+  - `POP-SNAP` **Snap**: Move off, 0.25, 0.5, 1 or 2 m and Rotate off, 15°, 45° or 90°, applied by the Move, Rotate and Scale gizmos (Scale lands the part's sides on the move step). Holding Ctrl (Cmd on macOS) while dragging moves freely. The button shows both steps.
+  - `POP-GRID` **Grid**: the helper grid automatic (hidden where a ground slab already shows the floor), always or hidden, and its cell size (0.25 to 5 m).
+  - Snaps, grid and *Place where I click* are remembered on this computer.
 - **New project**: Terrain, Sky, Light · Part, Agent (→ `SCR-IDEAS`), Goal · Import.
 - **Body**: Import, Auto-rig · Bone, Joint, Motor, Sensor · Mirror, Collider, Weights · Test pose.
 - **Brain**: Senses (rays overlay), Network (→ `STA-BRAIN-NETWORK`). Connectome brains: Neurons, Connections, Regions · Senses map, Motor map.
