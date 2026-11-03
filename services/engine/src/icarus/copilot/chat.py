@@ -3,7 +3,7 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
@@ -47,6 +47,10 @@ from icarus.design.scene import scene_description
 from icarus.projects.store import PROJECT_ID, ProjectStore
 from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore
+
+if TYPE_CHECKING:
+    from icarus.motion.clip_store import ClipStore
+    from icarus.projects.skins import SkinStore
 
 __all__ = ["ChatReply", "Copilot", "CopilotBusy", "ProposalClosed", "ProposalOutdated", "UnknownProposal", "dry_run"]
 
@@ -142,6 +146,10 @@ class Copilot:
     def attach_coaching(self, coaching: Coaching) -> None:
         """Hands the chat's tools the coach and the autopilot, which are built after the copilot they post through."""
         self._services = replace(self._services, coaching=coaching)
+
+    def attach_stores(self, skins: "SkinStore", clips: "ClipStore") -> None:
+        """Hands the rigging and motion tools where models and reference clips are kept."""
+        self._services = replace(self._services, skins=skins, clips=clips)
 
     def attach_harness(self, harness: Harness) -> None:
         """Turns on the harness extensions: their tools, the skill catalog, memory, hooks and live events."""

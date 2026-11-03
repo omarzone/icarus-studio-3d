@@ -17,6 +17,7 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetMotionReference,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
@@ -147,6 +148,8 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
         case RemoveRewardTerm(term=term_id):
             info = REWARD_TERMS.get(term_id)
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
+        case SetMotionReference(reference=reference):
+            return ProposalChange(label="Motion to copy", after=reference.name if reference else "Removed")
         case SetBrain():
             return _brain_change(project, op)
         case AddAgent(agent=agent):

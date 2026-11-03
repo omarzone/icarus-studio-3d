@@ -17,7 +17,7 @@ from icarus.projects.store import PROJECT_ID
 MAX_BYTES = 15 * 1024 * 1024
 ATTACHMENT_ID = re.compile(r"^([0-9a-f]{12})-([0-9a-f]{10})$")
 DOCUMENT_TYPES = frozenset({"application/json", "application/pdf"})
-MODEL_TYPES = frozenset({"model/gltf-binary", "model/gltf+json"})
+MODEL_TYPES = frozenset({"model/gltf-binary", "model/gltf+json", "model/obj", "model/stl"})
 # Raster formats a vision model reads, recognized by their first bytes rather than by the declared type.
 _PICTURES = {
     b"\x89PNG\r\n\x1a\n": "image/png",
