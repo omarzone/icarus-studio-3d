@@ -16,6 +16,8 @@ function rounded(shape: SceneGeom["shape"], { x, y, z }: Extents): BufferGeometr
     case "cylinder":
       return new CylinderGeometry(x / 2, x / 2, y, 32);
     case "plane":
+    case "wedge":
+    case "corner_wedge":
       return null;
   }
 }

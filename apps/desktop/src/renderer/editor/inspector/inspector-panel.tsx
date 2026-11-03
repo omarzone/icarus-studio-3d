@@ -69,6 +69,7 @@ function InspectorBody({ scene, addComponentTo, panelRoutes }: BodyProps) {
   const reset = useEngineAction(port.resetProperty);
   const accept = useEngineAction(port.acceptProposedValue);
   const remove = useEngineAction(port.removeComponent);
+  const slab = useEngineAction(port.makeGroundSlab);
   return (
     <QueryView query={inspection}>
       {(data) => (
@@ -81,6 +82,7 @@ function InspectorBody({ scene, addComponentTo, panelRoutes }: BodyProps) {
           onReset={(target) => reset.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
           onAccept={(target) => accept.mutate({ scene, ...target }, { onSuccess: cache.inspection })}
           onRemove={(section) => remove.mutate({ scene, section }, { onSuccess: cache.inspection })}
+          onMakeSlab={() => slab.mutate(scene, { onSuccess: cache.inspection })}
         />
       )}
     </QueryView>

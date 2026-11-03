@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { RouteId } from "../../app/navigation/catalog-id.ts";
-import { GoTo } from "../../app/navigation/go-to.tsx";
+import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import type { Inspection, Property, PropertyValue } from "../../ports/scene-port.ts";
+import { buttonClass } from "../../ui/button-styles.ts";
 import { EmptyState } from "../../ui/states.tsx";
-import type { PanelRoutes } from "./controls/property-control.tsx";
+import type { ColorCompanion, PanelRoutes } from "./controls/property-control.tsx";
 import { InspectorSection } from "./inspector-section.tsx";
 import { PropertyRow } from "./property-row.tsx";
 
@@ -17,6 +18,8 @@ export type PropertiesTabProps = {
   onAccept: (target: PropertyTarget) => void;
   // Removes a component section from the selected object.
   onRemove?: (section: string) => void;
+  // Turns the selected endless floor plane into a ground slab (offered only for one).
+  onMakeSlab?: () => void;
   // Where "+ Add component" leads; it only shows for scene objects.
   addComponentTo?: RouteId;
   // Scene key the new component goes to, passed to the picker as the `addTo` route parameter.
@@ -42,6 +45,7 @@ function ObjectProperties({
   onReset,
   onAccept,
   onRemove,
+  onMakeSlab,
   addComponentTo,
   scene,
   panelRoutes,
@@ -52,6 +56,7 @@ function ObjectProperties({
   return (
     <div className="flex flex-col">
       <Heading title={inspection.title} subtitle={inspection.subtitle} />
+      {inspection.planeFloor && onMakeSlab ? <SlabOffer onMakeSlab={onMakeSlab} /> : null}
       <Filter value={filter} onChange={setFilter} />
       {inspection.sections.map((section) => {
         const properties = section.properties.filter(matches);
@@ -71,6 +76,9 @@ function ObjectProperties({
                 <PropertyRow
                   key={property.id}
                   property={property}
+                  companion={paletteColor(section.properties, property, (value) =>
+                    onChange({ section: section.id, property: "color" }, value),
+                  )}
                   panelRoutes={panelRoutes}
                   onChange={(value) => onChange(target, value)}
                   onReset={() => onReset(target)}
@@ -82,6 +90,32 @@ function ObjectProperties({
         );
       })}
       {inspection.components && addComponentTo ? <AddComponent to={addComponentTo} scene={scene} /> : null}
+    </div>
+  );
+}
+
+// A palette list carries its section's color, so the palette popover can tint its swatches and pick the color.
+function paletteColor(
+  properties: readonly Property[],
+  property: Property,
+  onChange: (value: PropertyValue) => void,
+): ColorCompanion | undefined {
+  const color = properties.find((item) => item.id === "color");
+  if (property.id !== "preset" || property.type !== "list" || color?.type !== "color") {
+    return undefined;
+  }
+  return { value: color.value, onChange: (hex) => onChange({ type: "color", value: hex }) };
+}
+
+function SlabOffer({ onMakeSlab }: { onMakeSlab: () => void }) {
+  return (
+    <div className="mx-3 my-1.5 flex flex-col gap-1.5 rounded-card bg-control p-2.5">
+      <span className="text-ui text-fg-secondary">
+        This floor is an endless plane. As a slab it gets edges, a thickness and a size, and bodies can fall off it.
+      </span>
+      <Act cta="Make it a slab" onClick={onMakeSlab} className={buttonClass("secondary", "self-start")}>
+        Make it a slab
+      </Act>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { fromThreePosition, fromThreeQuaternion, toThreePosition, toThreeQuatern
 import { GeomShape } from "./geom-geometry.tsx";
 import { geomGeometry, geomObject } from "./geom-object.ts";
 import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
+import { useSnapBypass } from "./held-key.ts";
 import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
 import type { PosePlayer } from "./motion-player.ts";
@@ -19,6 +20,7 @@ import { groundColor } from "./scene-lighting.ts";
 import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
 import { type CopySignals, signalFeed } from "./scene-signals.ts";
 import { skyLook } from "./scene-sky.ts";
+import { ViewFocusProbe } from "./view-focus-probe.ts";
 import { WorldDecor } from "./world-decor.tsx";
 import { Sky, Suns } from "./world-lighting.tsx";
 import { ZoneMarkers } from "./zone-markers.tsx";
@@ -40,6 +42,13 @@ type EditProps = {
   onRotate?: (objectId: string, delta: [number, number, number, number]) => void;
   // A stretch ended: the factor along each of the object's own axes, MuJoCo order.
   onScale?: (objectId: string, factor: Vec3) => void;
+  // The helper grid: hidden when "off", its cell size in metres.
+  grid?: { mode: "auto" | "on" | "off"; cell: number };
+  // Move snap in metres and turn snap in degrees; null moves freely. Holding Ctrl or Cmd skips them.
+  snap?: { move: number | null; rotate: number | null };
+  // While a part waits to be placed, a click anywhere reports the point it hit (MuJoCo axes) instead of selecting.
+  placing?: boolean;
+  onPlace?: (point: Vec3) => void;
 };
 
 type PlayProps = {
@@ -72,6 +81,8 @@ export type SceneViewProps = {
 } & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
+// Cells between the grid's stronger section lines.
+const GRID_SECTION = 10;
 const CAMERA_FRAMES = 12;
 
 type GeomProps = {
@@ -80,9 +91,11 @@ type GeomProps = {
   onSelect: (id: string) => void;
   // Three position the geom is drawn relative to (its body, while it can be dragged).
   origin?: readonly [number, number, number];
+  // Set while a part waits to be placed: a click reports where it hit instead of selecting.
+  onPlace?: (point: Vec3) => void;
 };
 
-function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
+function Geom({ geom, selected, onSelect, origin = [0, 0, 0], onPlace }: GeomProps) {
   const colors = useMemo(sceneColors, []);
   const object = useMemo(() => geomObject(geom), [geom]);
   const [x, y, z] = toThreePosition(geom.position);
@@ -93,9 +106,14 @@ function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
       position={[x - origin[0], y - origin[1], z - origin[2]]}
       onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
-        if (isDeliberateClick(event.delta)) {
-          onSelect(geom.body);
+        if (!isDeliberateClick(event.delta)) {
+          return;
         }
+        if (onPlace) {
+          onPlace(fromThreePosition([event.point.x, event.point.y, event.point.z]));
+          return;
+        }
+        onSelect(geom.body);
       }}
     >
       {/* The outline of a selected part is its collider, whatever style it is drawn in. */}
@@ -147,9 +165,33 @@ function reportDrag(group: Group, picked: Picked, gizmo: GizmoMode, props: EditP
   }
 }
 
+// Catches clicks that hit no part while a part waits to be placed, on the ground level.
+function PlaceCatcher({ onPlace }: { onPlace: (point: Vec3) => void }) {
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js object, not a DOM element; Esc cancels placing from the keyboard.
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      onClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation();
+        if (isDeliberateClick(event.delta)) {
+          onPlace(fromThreePosition([event.point.x, 0, event.point.z]));
+        }
+      }}
+    >
+      <planeGeometry args={[PLACE_REACH, PLACE_REACH]} />
+      <meshBasicMaterial visible={false} />
+    </mesh>
+  );
+}
+
+const PLACE_REACH = 2000;
+const DEGREES = Math.PI / 180;
+
 function EditGeoms(props: { description: SceneDescription } & EditProps) {
-  const { description, selected, onSelect, gizmo = "move" } = props;
+  const { description, selected, onSelect, gizmo = "move", snap } = props;
   const [dragged, setDragged] = useState<Group | null>(null);
+  const free = useSnapBypass();
+  const onPlace = props.placing ? props.onPlace : undefined;
   const picked = description.geoms.filter((geom) => geom.body === selected);
   const body = description.bodies.find((item) => item.name === selected);
   const rest = description.geoms.filter((geom) => geom.body !== selected);
@@ -160,15 +202,24 @@ function EditGeoms(props: { description: SceneDescription } & EditProps) {
   return (
     <>
       {rest.map((geom) => (
-        <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} />
+        <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} onPlace={onPlace} />
       ))}
+      {onPlace ? <PlaceCatcher onPlace={onPlace} /> : null}
+      <ViewFocusProbe />
       {target && picked.length > 0 ? (
         <>
           {/* Turned like the object, so rotate and scale work along its own axes; the inner group undoes the turn. */}
           <group ref={setDragged} position={target.anchor} quaternion={target.turn}>
             <group quaternion={new Quaternion(...target.turn).invert()}>
               {picked.map((geom) => (
-                <Geom key={geom.name} geom={geom} selected onSelect={onSelect} origin={target.anchor} />
+                <Geom
+                  key={geom.name}
+                  geom={geom}
+                  selected
+                  onSelect={onSelect}
+                  origin={target.anchor}
+                  onPlace={onPlace}
+                />
               ))}
             </group>
           </group>
@@ -177,6 +228,8 @@ function EditGeoms(props: { description: SceneDescription } & EditProps) {
             object={dragged ?? undefined}
             mode={CONTROL_MODES[gizmo]}
             space={gizmo === "move" ? "world" : "local"}
+            translationSnap={free || !snap?.move ? null : snap.move}
+            rotationSnap={free || !snap?.rotate ? null : snap.rotate * DEGREES}
             onMouseUp={() => {
               if (dragged) {
                 reportDrag(dragged, target, gizmo, props);
@@ -305,9 +358,11 @@ function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObje
       />
       <Suns description={description} />
       {/* The grid is an editing aid: Play, replays and training show the world as it is. */}
-      {props.mode === "play" ? null : (
+      {props.mode === "play" || props.grid?.mode === "off" ? null : (
         <Grid
           infiniteGrid
+          cellSize={props.grid?.cell ?? 1}
+          sectionSize={(props.grid?.cell ?? 1) * GRID_SECTION}
           cellColor={colors.grid}
           sectionColor={colors.gridStrong}
           fadeDistance={60 * scale}

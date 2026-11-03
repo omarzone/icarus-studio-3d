@@ -4,6 +4,7 @@ import { brainInspection, brainSettingOperation, brainSettingReset } from "./bra
 import { trainingVariations, variationOperations } from "./copy-variations.ts";
 import { guideProgress } from "./guide-progress.ts";
 import { type Quat, stretchedScale, turnedRotation, type Vec3, worldToParent } from "./object-transform.ts";
+import { insertPartOperation, isPlaneFloor, partKind, sizedScale, slabOperations } from "./part-insert.ts";
 import { duplicateOperations, reparentOperations } from "./scene-objects.ts";
 import type { PropertyReference, PropertyType, ScenePort, TrainingCopies } from "./scene-port.ts";
 import {
@@ -245,8 +246,31 @@ export function createEngineScenePort(api: SceneApi): EngineScenePort {
       }),
     rotateObject: ({ scene, id, delta }) =>
       editTransform(scene, id, "rotation", "Rotated", (rotation, parent) => turnedRotation(rotation, delta, parent)),
-    scaleObject: ({ scene, id, factor }) =>
-      editTransform(scene, id, "scale", "Scaled", (scale) => stretchedScale(scale, factor)),
+    scaleObject: async ({ scene, id, factor, snap }) => {
+      const { obj } = await objectOf(scene, id);
+      return editTransform(scene, id, "scale", "Scaled", (scale) =>
+        sizedScale(obj, stretchedScale(scale, factor), snap),
+      );
+    },
+    insertPart: async ({ scene, shape, at, snap }) => {
+      const { project } = await load(scene);
+      const kind = partKind(shape);
+      if (!kind) {
+        throw new Error(`${shape} is not a part shape`);
+      }
+      const operation = insertPartOperation(project, kind, at, snap);
+      const state = await api.applyOperations(scene, [operation], `Inserted a ${kind.label.toLowerCase()}`);
+      const created = operation.op === "create_object" ? operation.object.id : null;
+      selection.set(scene, created);
+      return sceneTree(state.project, await library(), created);
+    },
+    makeGroundSlab: async (scene) => {
+      const { obj } = await selectedObject(scene);
+      if (!isPlaneFloor(obj)) {
+        throw new Error(`${obj.name} is not an endless floor plane`);
+      }
+      return edit(scene, slabOperations(obj), `Made ${obj.name} a slab with edges`);
+    },
     renameObject: async ({ scene, id, name }) => {
       const { obj } = await objectOf(scene, id);
       const trimmed = name.trim();

@@ -104,3 +104,20 @@ export function poseUnder(world: Pose, parent: Pose | null): { position: Vec3; r
     rotation: quatToEuler(multiply(conjugate(origin.quaternion), world.quaternion)),
   };
 }
+
+// The value rounded to the nearest multiple of `step`; null or a non-positive step keeps it.
+export function snapped(value: number, step: number | null): number {
+  if (step === null || step <= 0) {
+    return value;
+  }
+  return Math.round(value / step) * step;
+}
+
+// A scale factor rounded so the part's size along that axis lands on a multiple of `step`, never below one step.
+export function snappedScale(scale: number, size: number, step: number | null): number {
+  if (step === null || step <= 0 || size <= 0) {
+    return scale;
+  }
+  const length = Math.max(step, snapped(scale * size, step));
+  return length / size;
+}

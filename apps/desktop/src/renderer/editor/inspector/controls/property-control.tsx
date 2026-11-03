@@ -9,17 +9,22 @@ import { Select } from "../../../ui/select.tsx";
 import { SCENE_ICONS } from "../../scene-icons.ts";
 import { parseHex } from "./color-math.ts";
 import { ColorPicker } from "./color-picker.tsx";
+import { type ColorCompanion, MaterialPalette } from "./material-palette.tsx";
+import { isPaletteList } from "./material-swatches.ts";
 import { RangeTrack, SliderTrack } from "./slider-track.tsx";
 import { SwitchToggle } from "./switch-toggle.tsx";
 import { type ControlTone, fieldBox, fieldClass, parseNumber, toneText, ValueField } from "./value-field.tsx";
 
 export type PanelRoutes = Partial<Record<PropertyPanel, RouteId>>;
+export type { ColorCompanion } from "./material-palette.tsx";
 
 type Props = {
   property: Property;
   onChange: (value: PropertyValue) => void;
   // Where "Opens a panel" values lead in this workspace; without a route they act in place.
   panelRoutes?: PanelRoutes;
+  // The section's color, which a material palette tints its swatches with and lets the user pick.
+  companion?: ColorCompanion;
 };
 
 const ratioOf = (value: number, min: number, max: number) => (max === min ? 0 : (value - min) / (max - min));
@@ -34,7 +39,7 @@ function toneOf(property: Property): ControlTone {
 }
 
 // The one control of each of the 13 property types.
-export function PropertyControl({ property, onChange, panelRoutes }: Props) {
+export function PropertyControl({ property, onChange, panelRoutes, companion }: Props) {
   if (property.state === "locked") {
     return <ReadOnly text={formatPropertyValue(property)} locked />;
   }
@@ -58,6 +63,7 @@ export function PropertyControl({ property, onChange, panelRoutes }: Props) {
       tone={toneOf(property)}
       onChange={onChange}
       panelRoutes={panelRoutes}
+      companion={companion}
     />
   );
 }
@@ -68,9 +74,10 @@ type ValueProps = {
   tone: ControlTone;
   onChange: (value: PropertyValue) => void;
   panelRoutes?: PanelRoutes;
+  companion?: ColorCompanion;
 };
 
-function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps) {
+function ValueControl({ label, value, tone, onChange, panelRoutes, companion }: ValueProps) {
   const notYet = useNotYet();
   switch (value.type) {
     case "number":
@@ -171,6 +178,18 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
         </span>
       );
     case "list":
+      if (isPaletteList(value.options)) {
+        return (
+          <MaterialPalette
+            label={label}
+            value={value.value}
+            options={value.options}
+            tone={tone}
+            onPick={(next) => onChange({ ...value, value: next })}
+            color={companion}
+          />
+        );
+      }
       return (
         <ListControl
           label={label}

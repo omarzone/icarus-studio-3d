@@ -1,9 +1,17 @@
 import type { SceneGeom } from "@icarus/contracts";
 import { isGround } from "../ground-geom.ts";
 import { type Finish, finishLook, type MaterialLook, surfaceLook } from "./finishes.ts";
+import { paletteLook } from "./palette-look.ts";
 
 type Pattern = NonNullable<SceneGeom["finish"]>;
-type PartLook = Pick<SceneGeom, "finish" | "roughness" | "metalness" | "emissive" | "surface" | "shape" | "ground">;
+type PartLook = Pick<
+  SceneGeom,
+  "finish" | "roughness" | "metalness" | "emissive" | "surface" | "shape" | "ground" | "material"
+>;
+
+// A palette material draws its own pattern; without one the part's finish does.
+const facePattern = (geom: PartLook): MaterialLook | null =>
+  geom.material ? paletteLook(geom.material) : patternLook(geom.finish);
 
 // Fixed tones of the asphalt finish, whose lane lines need their own white (tokens: scene.material.style).
 const ROAD = "#ffffff";
@@ -63,7 +71,7 @@ function tuned(look: MaterialLook, geom: PartLook): MaterialLook {
 // the part's glow on its windows and lamps.
 export function styledLook(finish: Finish, geom: PartLook): MaterialLook {
   const base = finishLook(finish);
-  const pattern = PATTERNED.has(finish) ? patternLook(geom.finish) : null;
+  const pattern = PATTERNED.has(finish) ? facePattern(geom) : null;
   const look = pattern ? { ...base, ...pattern } : base;
   const glow = geom.emissive ?? 0;
   return tuned(LIT.has(finish) && glow > 0 ? { ...look, emissive: (look.emissive ?? 0) + glow } : look, geom);
@@ -71,7 +79,7 @@ export function styledLook(finish: Finish, geom: PartLook): MaterialLook {
 
 // A part drawn as its plain primitive: its finish, else its surface, glowing as a whole when it has a glow.
 export function plainLook(geom: PartLook): MaterialLook {
-  const look = patternLook(geom.finish) ?? surfaceLook(geom.surface, isGround(geom));
+  const look = facePattern(geom) ?? surfaceLook(geom.surface, isGround(geom));
   const glow = geom.emissive ?? 0;
-  return tuned(glow > 0 ? { ...look, emissive: glow } : look, geom);
+  return tuned(glow > 0 ? { ...look, emissive: (look.emissive ?? 0) + glow } : look, geom);
 }

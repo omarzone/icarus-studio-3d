@@ -6,6 +6,7 @@ import type {
   Project,
   PropertySchema,
 } from "@icarus/contracts";
+import { isPlaneFloor } from "./part-insert.ts";
 import { formatPropertyValue } from "./property-format.ts";
 import type {
   ComponentGroup,
@@ -244,6 +245,7 @@ export function inspection(project: Project, catalog: LibraryCatalog, selected: 
     icon: objectIcon(obj, body !== undefined),
     sections,
     components: true,
+    ...(isPlaneFloor(obj) ? { planeFloor: true } : {}),
   };
 }
 

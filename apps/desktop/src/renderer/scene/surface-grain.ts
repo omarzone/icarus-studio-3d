@@ -21,6 +21,20 @@ const METRES: Record<Grain, number> = {
   fabric: 0.4,
   // Two blocks of a metre each way, in two tones like a checkerboard.
   blocks: 2,
+  plastic: 2,
+  sand: 3,
+  dirt: 4,
+  stone: 3,
+  glass: 4,
+  wood_grain: 2,
+  // Four by four stones of a quarter metre.
+  cobblestone: 1,
+  // Eight by eight raised diamonds.
+  diamond_plate: 0.6,
+  corroded: 2,
+  marble: 3,
+  granite: 1.5,
+  foil: 0.8,
 };
 
 export function grainMetres(grain: Grain): number {
@@ -134,7 +148,81 @@ function shade(grain: Grain, u: number, v: number, x: number, y: number): number
       const warp = Math.sin(x * Math.PI * 0.5) * Math.sin(y * Math.PI * 0.5);
       return 0.8 + warp * 0.08 + fbm(u, v, 6, 15) * 0.08;
     }
+    case "plastic":
+      return 0.95 + fbm(u, v, 4, 16) * 0.04 + (speck - 0.5) * 0.01;
+    case "sand":
+      return 0.82 + noise(u, v, 6, 24, 17) * 0.06 + (speck - 0.5) * 0.14;
+    case "dirt":
+      return 0.62 + fbm(u, v, 7, 18) * 0.26 + (speck > 0.94 ? -0.1 : 0);
+    case "stone":
+      return 0.74 + fbm(u, v, 5, 19) * 0.2 + (speck - 0.5) * 0.05;
+    case "glass":
+      return 0.98 + fbm(u, v, 2, 20) * 0.02;
+    case "wood_grain":
+      return 0.7 + noise(u, v, 6, 96, 21) * 0.16 + Math.sin((v + fbm(u, v, 3, 22) * 0.2) * Math.PI * 20) * 0.04;
+    case "cobblestone":
+      return cobble(u, v, speck);
+    case "diamond_plate":
+      return diamond(u, v);
+    case "corroded": {
+      const rust = fbm(u, v, 5, 23);
+      return rust > 0.55 ? 0.5 + rust * 0.25 : 0.82 + noise(u, v, 2, 64, 24) * 0.12;
+    }
+    case "marble": {
+      const vein = Math.abs(Math.sin((u + v + fbm(u, v, 4, 25) * 0.9) * Math.PI * 4));
+      return 0.95 - (vein < 0.08 ? (0.08 - vein) * 3 : 0) + (speck - 0.5) * 0.02;
+    }
+    case "granite":
+      return 0.72 + fbm(u, v, 8, 26) * 0.12 + (speck > 0.9 ? 0.18 : speck < 0.12 ? -0.2 : 0);
+    case "foil":
+      return 0.78 + Math.abs(noise(u, v, 12, 12, 27) - 0.5) * 0.4 + fbm(u, v, 6, 28) * 0.1;
   }
+}
+
+// Rounded stones on a jittered grid of four by four: lit in the middle, darker toward their edges, mortar between.
+const STONES = 4;
+function cobble(u: number, v: number, speck: number): number {
+  const cellU = Math.floor(u * STONES);
+  const cellV = Math.floor(v * STONES);
+  let nearest = Number.POSITIVE_INFINITY;
+  let second = Number.POSITIVE_INFINITY;
+  let tone = 0;
+  for (let dv = -1; dv <= 1; dv += 1) {
+    for (let du = -1; du <= 1; du += 1) {
+      const cu = cellU + du;
+      const cv = cellV + dv;
+      const wrapU = ((cu % STONES) + STONES) % STONES;
+      const wrapV = ((cv % STONES) + STONES) % STONES;
+      const pu = (cu + 0.25 + hash(wrapU, wrapV, 29) * 0.5) / STONES;
+      const pv = (cv + 0.25 + hash(wrapU, wrapV, 30) * 0.5) / STONES;
+      const distance = Math.hypot(u - pu, v - pv) * STONES;
+      if (distance < nearest) {
+        second = nearest;
+        nearest = distance;
+        tone = hash(wrapU, wrapV, 31);
+      } else if (distance < second) {
+        second = distance;
+      }
+    }
+  }
+  const gap = second - nearest;
+  if (gap < 0.08) {
+    return 0.45;
+  }
+  return 0.7 + tone * 0.15 - nearest * 0.12 + (speck - 0.5) * 0.04;
+}
+
+// Raised diamonds in alternating directions on a brushed metal plate, each lit on one side.
+const DIAMONDS = 8;
+function diamond(u: number, v: number): number {
+  const fu = (u * DIAMONDS) % 1;
+  const fv = (v * DIAMONDS) % 1;
+  const flip = (Math.floor(u * DIAMONDS) + Math.floor(v * DIAMONDS)) % 2 === 0;
+  const along = flip ? fu - fv : fu + fv - 1;
+  const across = flip ? fu + fv - 1 : fu - fv;
+  const raised = Math.abs(along) < 0.12 && Math.abs(across) < 0.5;
+  const brushed = 0.82 + noise(u, v, 2, 96, 32) * 0.08;
+  return raised ? brushed + (across > 0 ? 0.12 : -0.1) : brushed;
 }
 
 export function grainImage(grain: Grain): GrainImage {
