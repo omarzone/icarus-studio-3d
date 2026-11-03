@@ -10,6 +10,7 @@ from icarus.projects.skins import skin_id
 MAX_TURN_IMAGES = 8
 # Characters of document text one message may carry, shared by all its documents.
 DOCUMENT_BUDGET = 24_000
+VIEW_LABEL = "a render of the current scene, taken by the app"
 
 
 def _data_url(media_type: str, data: bytes) -> str:
@@ -66,7 +67,7 @@ class TurnMedia:
         self.infos.append(info)
         match info.kind:
             case "view":
-                self._picture("a render of the current scene, taken by the app", info.media_type, attachment.content())
+                self._picture(VIEW_LABEL, info.media_type, attachment.content())
             case "image":
                 self._picture(f"the person's reference image {info.name}", info.media_type, attachment.content())
             case "video":
@@ -80,6 +81,11 @@ class TurnMedia:
                 self._document(attachment)
             case "model":
                 self._model(attachment)
+
+    def expect_views(self, count: int) -> None:
+        """Scene renders the app takes only when it sends the message, counted as the pictures they will be."""
+        for _ in range(count):
+            self._picture(VIEW_LABEL, "image/jpeg", b"")
 
     def user_content(self, text: str) -> UserContent:
         """The person's turn: plain text, or text and pictures as content parts when it carries pictures."""

@@ -76,21 +76,34 @@ def _summarize(client: ModelClient, folded: str, previous: str | None, live: set
     return summary_text(reply.value)
 
 
-def build_history(
-    conversation: Conversation,
-    store: SummaryStore,
-    client: ModelClient,
-    limits: AgentLimits,
-    window: int,
-    live: set[str],
-) -> History:
-    """Recent messages verbatim and, when they no longer fit, a rolling summary of the older ones."""
+@dataclass
+class HistoryPlan:
+    """Which messages stay verbatim and what the stored summary covers, decided without a model call."""
+
+    texts: list[str]
+    # Whether the conversation is past the share it may take, so older messages fold into the summary.
+    folds: bool
+    verbatim: list[CopilotMessage]
+    older: list[CopilotMessage]
+    # Older messages the stored summary does not cover yet; the turn folds them in with a model call.
+    fresh: list[CopilotMessage]
+    summary: str | None
+
+
+def history_tokens(texts: list[str]) -> int:
+    return sum(text_tokens(text) for text in texts)
+
+
+def fold_threshold(limits: AgentLimits, window: int) -> int:
+    return int(limits.history_share * ceiling(window, limits))
+
+
+def plan_history(conversation: Conversation, store: SummaryStore, limits: AgentLimits, window: int) -> HistoryPlan:
     messages = conversation.messages
     texts = [rendered(message, conversation) for message in messages]
-    top = ceiling(window, limits)
-    if sum(text_tokens(text) for text in texts) <= limits.history_share * top:
-        return History([history_message(m, conversation) for m in messages], None, texts)
-    keep = min(limits.keep_recent_tokens, int(0.2 * top))
+    if history_tokens(texts) <= fold_threshold(limits, window):
+        return HistoryPlan(texts, False, list(messages), [], [], None)
+    keep = min(limits.keep_recent_tokens, int(0.2 * ceiling(window, limits)))
     start, used = len(messages), 0
     while start > 0 and (used + text_tokens(texts[start - 1]) <= keep or len(messages) - start < MIN_RECENT_MESSAGES):
         start -= 1
@@ -101,16 +114,32 @@ def build_history(
     covered = next((i for i, message in enumerate(older) if stored and message.id == stored.covers_until), None)
     fresh = older[covered + 1 :] if covered is not None else older
     summary = stored.summary if stored and covered is not None else None
-    if fresh:
-        folded = "\n".join(f"{m.role}: {texts[messages.index(m)]}" for m in fresh)
+    return HistoryPlan(texts, True, [*kept_users, *messages[start:]], older, fresh, summary)
+
+
+def build_history(
+    conversation: Conversation,
+    store: SummaryStore,
+    client: ModelClient,
+    limits: AgentLimits,
+    window: int,
+    live: set[str],
+) -> History:
+    """Recent messages verbatim and, when they no longer fit, a rolling summary of the older ones."""
+    plan = plan_history(conversation, store, limits, window)
+    messages, texts = conversation.messages, plan.texts
+    if not plan.folds:
+        return History([history_message(m, conversation) for m in messages], None, texts)
+    summary = plan.summary
+    if plan.fresh:
+        folded = "\n".join(f"{m.role}: {texts[messages.index(m)]}" for m in plan.fresh)
         try:
             summary = _summarize(client, folded, summary, live)
-            store.write(conversation.project_id, summary, older[-1].id)
+            store.write(conversation.project_id, summary, plan.older[-1].id)
         except CopilotError:
             summary = f"{summary}\n{LEFT_OUT}" if summary else LEFT_OUT
-    verbatim = [*kept_users, *messages[start:]]
-    sources = [texts[messages.index(message)] for message in verbatim]
-    return History([history_message(m, conversation) for m in verbatim], summary, sources)
+    sources = [texts[messages.index(message)] for message in plan.verbatim]
+    return History([history_message(m, conversation) for m in plan.verbatim], summary, sources)
 
 
 def _older_users(older: list[CopilotMessage], texts: list[str], budget: int) -> list[CopilotMessage]:

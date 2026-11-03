@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import Any
 
+from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
     Autonomy,
     Capability,
@@ -19,6 +20,7 @@ from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
 from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.context_usage import MeterSources, measure_context
 from icarus.copilot.agent.harness import SUBAGENT_NOTE, chat_tools, worker_tools
 from icarus.copilot.agent.loop import run_loop
 from icarus.copilot.agent.prompt import system_prompt
@@ -268,6 +270,22 @@ class Copilot:
             skills=skills,
             memory=harness.memory,
         )
+
+    def context_usage(self, project_id: str, request: ContextRequest) -> ContextUsage:
+        """How full the next turn's prompt would be, built from the same pieces a turn uses."""
+        harness = self._harness
+        skills = skill_catalog_text() if self._tools is not None else ""
+        sources = MeterSources(
+            self._services,
+            self._settings,
+            self._summaries,
+            self._attachments,
+            self._limits,
+            self._tools,
+            skills,
+            harness.memory,
+        )
+        return measure_context(sources, self.conversation(project_id), request)
 
     def subagent_loop(self, job: SubagentJob) -> SubagentOutcome:
         """A subagent's turn: the loop with the job's brief, tools, skills and budget, outside the conversation."""

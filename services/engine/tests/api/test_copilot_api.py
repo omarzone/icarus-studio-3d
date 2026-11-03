@@ -72,6 +72,16 @@ def test_an_outdated_proposal_is_refused_with_409(client, project_id):
     assert client.get(f"/projects/{project_id}/conversation").json()["proposals"][0]["status"] == "outdated"
 
 
+def test_the_context_meter_answers_without_a_model_and_names_none(client, project_id, monkeypatch):
+    monkeypatch.delenv("ICARUS_COPILOT_PROVIDER")
+    meter = client.post(f"/projects/{project_id}/conversation/context", json={"scene_views": 2})
+    assert meter.status_code == 200
+    body = meter.json()
+    assert body["model"] is None and body["used"] == sum(category["tokens"] for category in body["categories"])
+    unknown = client.post(f"/projects/{project_id}/conversation/context", json={"attachments": ["nope"]})
+    assert unknown.status_code == 404
+
+
 def test_discard_and_autonomy(client, project_id):
     sent = client.post(f"/projects/{project_id}/conversation/messages", json={"text": "make it night"}).json()
     discarded = client.post(f"/proposals/{sent['proposals'][0]['id']}/discard")
