@@ -1,10 +1,10 @@
 // TAB-LIBRARY
 
 import { useState } from "react";
+import { Act } from "../../../app/navigation/go-to.tsx";
 import { usePort } from "../../../app/runtime/port.tsx";
 import { type LibraryItem, libraryPort } from "../../../ports/library-port.ts";
 import { QueryView } from "../../../ui/query-view.tsx";
-import { Segmented } from "../../../ui/segmented.tsx";
 import { EmptyState } from "../../../ui/states.tsx";
 import { LibraryCards } from "./library-cards.tsx";
 import { useLibraryShelf, usePreviewItem } from "./use-library.ts";
@@ -28,14 +28,27 @@ export function LibraryTab({ scene, search, importLabel }: Props) {
         const group = search || groups.length === 0 ? null : groups.includes(picked ?? "") ? picked : groups[0];
         const shown = group ? data.filter((item) => item.group === group) : data;
         return (
-          <div className="flex h-full min-h-0 flex-col">
+          <div className="flex h-full min-h-0">
             {group ? (
-              <Segmented
-                className="mx-3 mt-2 self-start"
-                items={groups.map((label) => ({ label, active: label === group, onSelect: () => setPicked(label) }))}
-              />
+              <nav aria-label="Categories" className="flex shrink-0 flex-col gap-px overflow-x-hidden overflow-y-auto py-2.5 pl-3">
+                {groups.map((label) => (
+                  <Act
+                    key={label}
+                    cta={label}
+                    aria-current={label === group ? "true" : undefined}
+                    onClick={() => setPicked(label)}
+                    className={
+                      label === group
+                        ? "rounded-control bg-selected px-2.5 py-0.5 text-left text-meta font-semibold text-on-selected"
+                        : "rounded-control px-2.5 py-0.5 text-left text-meta text-fg-secondary hover:bg-fill-hover hover:text-fg active:opacity-80"
+                    }
+                  >
+                    {label}
+                  </Act>
+                ))}
+              </nav>
             ) : null}
-            <div className="min-h-0 flex-1">
+            <div className="min-w-0 flex-1">
               <LibraryCards items={shown} onPreview={preview} importLabel={importLabel} scene={port.itemScene} />
             </div>
           </div>
