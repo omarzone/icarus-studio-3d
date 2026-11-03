@@ -92,7 +92,7 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
           title: "Inspector",
           optionsLabel: "Inspector options",
           home: HOME.below("senses", 432),
-          render: () => <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} />,
+          render: () => <InspectorPanel scene={config.scene} panelRoutes={PANEL_ROUTES} subject="brain" />,
         },
         viewport: view,
         learning: {
@@ -143,6 +143,7 @@ function BrainView({ variant, config }: Props) {
         <ViewportPanel
           label="The body with its sensor rays, as the brain senses them"
           scene={config.scene}
+          senses
           toolbar={toolbar}
           overlays={<ReadingsCard brain={config.brain} />}
         />

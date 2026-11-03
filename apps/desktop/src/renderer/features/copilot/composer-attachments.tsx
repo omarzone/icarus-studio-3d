@@ -56,7 +56,7 @@ function DraftTile({ draft, onRemove }: { draft: DraftAttachment; onRemove: () =
   const busy = draft.status === "reading" || draft.status === "uploading";
   const failed = draft.status === "failed";
   const status = failed && draft.error ? draft.error : STATUS_LABEL[draft.status];
-  const pictured = draft.kind !== "document";
+  const pictured = draft.kind === "image" || draft.kind === "video";
   return (
     <div
       title={status ? `${draft.name} · ${status}` : draft.name}

@@ -58,6 +58,14 @@ function engine(initial: RunStatus[]) {
       runs = runs.map((run) => (run.run_id === runId ? { ...run, state: "stopping" as const } : run));
       return runs[0] ?? status();
     }),
+    pauseRun: vi.fn(async (runId: string) => {
+      runs = runs.map((run) => (run.run_id === runId ? { ...run, paused: true } : run));
+      return runs[0] ?? status();
+    }),
+    resumeRun: vi.fn(async (runId: string) => {
+      runs = runs.map((run) => (run.run_id === runId ? { ...run, paused: false } : run));
+      return runs[0] ?? status();
+    }),
     metrics: vi.fn(async () => [trainPoint(16_384, { reward_terms: { reach_goal: 1 } })]),
     checkpoints: vi.fn(async () => [checkpoint(0, 0), checkpoint(25_000, 0.2)]),
     rollout: vi.fn(async (_runId: string, step: number) => rollout(step)),
@@ -98,6 +106,23 @@ function listener() {
   return { calls, lives, changes };
 }
 
+describe("pausing a run on the engine", () => {
+  it("pauses the run training, shows it paused, and resumes it on the next press", async () => {
+    const { api } = engine([status({ run_id: "a", name: "Run 1" })]);
+    const port = createEngineTrainingPort(api, streams().open);
+    expect((await port.pauseRun("p")).runs[0]).toMatchObject({ status: "paused" });
+    expect(api.pauseRun).toHaveBeenCalledWith("a");
+    expect(await port.getStopSummary("p")).toMatchObject({ paused: true });
+    expect((await port.pauseRun("p")).runs[0]).toMatchObject({ status: "running" });
+    expect(api.resumeRun).toHaveBeenCalledWith("a");
+  });
+
+  it("says so when nothing is training", async () => {
+    const { api } = engine([status({ run_id: "a", name: "Run 1", state: "done" })]);
+    await expect(createEngineTrainingPort(api, streams().open).pauseRun("p")).rejects.toThrow("No run is training");
+  });
+});
+
 describe("training on the engine", () => {
   it("lists the runs and keeps the chosen one selected", async () => {
     const { api } = engine([
@@ -111,6 +136,19 @@ describe("training on the engine", () => {
     expect((await port.getMetrics("p")).breakdown.terms[0]?.label).toBe(label);
   });
 
+  it("follows a run started elsewhere unless the person picks another run after it started", async () => {
+    const { api } = engine([
+      status({ run_id: "b", name: "Run 2", state: "stopped" }),
+      status({ run_id: "a", name: "Run 1", state: "done" }),
+    ]);
+    const port = createEngineTrainingPort(api, streams().open);
+    await port.selectRun({ project: "p", id: "b" });
+    await api.startRun("p", { total_steps: 30_000, copies: 4, coach: false });
+    expect((await port.listRuns("p")).selected).toBe("run-new");
+    expect((await port.selectRun({ project: "p", id: "b" })).selected).toBe("b");
+    expect((await port.listRuns("p")).selected).toBe("b");
+  });
+
   it("plans a run from the task defaults and the chosen changes, then starts it and selects it", async () => {
     const { api, started } = engine([]);
     const port = createEngineTrainingPort(api, streams().open);
@@ -122,7 +160,7 @@ describe("training on the engine", () => {
     await port.updateStartPlan({ project: "p", steps: 30_000 });
     expect(await port.updateStartPlan({ project: "p", copies: 4 })).toMatchObject({ steps: 30_000, copies: 4 });
     const list = await port.startRun("p");
-    expect(started).toEqual([{ total_steps: 30_000, copies: 4, coach: false }]);
+    expect(started).toEqual([{ total_steps: 30_000, copies: 4, coach: true }]);
     expect(list.selected).toBe("run-new");
     expect(list.runs[0]).toMatchObject({ status: "running", detail: "starting" });
   });
@@ -170,6 +208,8 @@ describe("training on the engine", () => {
       throw new Error("no stream");
     }
     expect(lives.at(-1)).toMatchObject({ kind: "message", title: "Run 3 is starting" });
+    stream.handlers.onLog({ elapsed: 2, level: "info", text: "Starting 12 copies of the world" });
+    expect(lives.at(-1)).toMatchObject({ title: "Run 3 is starting", body: "Starting 12 copies of the world" });
     stream.handlers.onSnapshot({
       step: 32_768,
       geoms: ["chassis"],
@@ -183,8 +223,11 @@ describe("training on the engine", () => {
     stream.handlers.onLog({ elapsed: 3, level: "info", text: "checkpoint 0 saved" });
     stream.handlers.onMetric(trainPoint(32_768));
     stream.handlers.onCheckpoint(checkpoint(0, 0));
-    expect(changes).toEqual(["console", "metrics", "checkpoints", "live-view"]);
-    expect(await port.getConsole("p")).toEqual([{ time: "0:00:03", text: "checkpoint 0 saved", level: "info" }]);
+    expect(changes).toEqual(["console", "console", "metrics", "checkpoints", "live-view"]);
+    expect(await port.getConsole("p")).toEqual([
+      { time: "0:00:02", text: "Starting 12 copies of the world", level: "info" },
+      { time: "0:00:03", text: "checkpoint 0 saved", level: "info" },
+    ]);
     stream.handlers.onStatus(status({ state: "failed" }));
     expect(calls.onFailed).toHaveBeenCalledTimes(1);
     expect(lives.at(-1)).toMatchObject({

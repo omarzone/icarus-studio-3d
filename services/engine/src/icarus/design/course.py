@@ -5,8 +5,9 @@ import mujoco
 import numpy as np
 
 from icarus.contracts.project import Project
-from icarus.design.compiler import CompiledModel, is_floor_patch
+from icarus.design.compiler import CompiledModel, is_floor_patch, is_ground
 from icarus.design.components import view
+from icarus.design.sensors import ray_sites
 
 # A world object this long along one side is a lane boundary, not an obstacle on the way.
 BOUNDARY_LENGTH = 4.0
@@ -15,7 +16,7 @@ _NONE = -1
 
 
 @dataclass(frozen=True)
-class _Extent:
+class Extent:
     low: np.ndarray
     high: np.ndarray
 
@@ -29,35 +30,39 @@ class CourseReport:
     seen: list[str] = field(default_factory=list)
 
 
-def _extent(model: mujoco.MjModel, data: mujoco.MjData, geom: int) -> _Extent:
+def geom_extent(model: mujoco.MjModel, data: mujoco.MjData, geom: int) -> Extent:
     """The world-frame box around one geom at the current pose."""
     rotation = data.geom_xmat[geom].reshape(3, 3)
     half = np.abs(rotation) @ model.geom_size[geom]
+    if int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_MESH):
+        center = data.geom_xpos[geom] + rotation @ model.geom_aabb[geom][:3]
+        half = np.abs(rotation) @ model.geom_aabb[geom][3:]
+        return Extent(center - half, center + half)
     if int(model.geom_type[geom]) in (int(mujoco.mjtGeom.mjGEOM_SPHERE),):
         half = np.full(3, model.geom_size[geom][0])
     elif int(model.geom_type[geom]) in (int(mujoco.mjtGeom.mjGEOM_CYLINDER), int(mujoco.mjtGeom.mjGEOM_CAPSULE)):
         radius, length = model.geom_size[geom][0], model.geom_size[geom][1]
         half = np.abs(rotation) @ np.array([radius, radius, length])
     center = data.geom_xpos[geom]
-    return _Extent(center - half, center + half)
+    return Extent(center - half, center + half)
 
 
-def _merged(extents: list[_Extent]) -> _Extent:
-    return _Extent(np.min([item.low for item in extents], 0), np.max([item.high for item in extents], 0))
+def _merged(extents: list[Extent]) -> Extent:
+    return Extent(np.min([item.low for item in extents], 0), np.max([item.high for item in extents], 0))
 
 
-def _object_extents(project: Project, compiled: CompiledModel, data: mujoco.MjData) -> dict[str, _Extent]:
+def _object_extents(project: Project, compiled: CompiledModel, data: mujoco.MjData) -> dict[str, Extent]:
     """World-frame boxes of every world object with solid geoms, by object id."""
     model = compiled.model
     owners = {name: object_id for object_id, name in compiled.objects.items()}
     world = {obj.id for obj in project.world.objects}
-    found: dict[str, list[_Extent]] = {}
+    found: dict[str, list[Extent]] = {}
     for geom in range(model.ngeom):
-        if int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or is_floor_patch(model, geom):
+        if is_ground(compiled, geom) or is_floor_patch(model, geom):
             continue
         owner = owners.get(model.body(int(model.geom_bodyid[geom])).name)
         if owner in world:
-            found.setdefault(owner, []).append(_extent(model, data, geom))
+            found.setdefault(owner, []).append(geom_extent(model, data, geom))
     return {object_id: _merged(items) for object_id, items in found.items()}
 
 
@@ -80,7 +85,7 @@ def _lane(project: Project) -> tuple[np.ndarray, np.ndarray, float | None]:
     return start, way / np.linalg.norm(way), float(np.linalg.norm(way))
 
 
-def _span(extent: _Extent, start: np.ndarray, axis: np.ndarray) -> tuple[float, float]:
+def _span(extent: Extent, start: np.ndarray, axis: np.ndarray) -> tuple[float, float]:
     """The interval a box covers along one horizontal axis measured from the spawn."""
     center = (extent.low[:2] + extent.high[:2]) / 2 - start
     half = (extent.high[:2] - extent.low[:2]) / 2
@@ -92,7 +97,7 @@ def _body_width(project: Project, compiled: CompiledModel, data: mujoco.MjData, 
     model = compiled.model
     names = {compiled.objects[obj.id] for body in project.bodies for obj in body.objects if obj.id in compiled.objects}
     parts = [
-        _extent(model, data, geom)
+        geom_extent(model, data, geom)
         for geom in range(model.ngeom)
         if model.body(int(model.geom_bodyid[geom])).name in names
     ]
@@ -103,7 +108,7 @@ def _body_width(project: Project, compiled: CompiledModel, data: mujoco.MjData, 
 
 
 def _gap_warnings(
-    names: dict[str, str], obstacles: dict[str, _Extent], bounds: dict[str, _Extent], frame: tuple, width: float
+    names: dict[str, str], obstacles: dict[str, Extent], bounds: dict[str, Extent], frame: tuple, width: float
 ) -> list[str]:
     start, along, side = frame
     warnings: list[str] = []
@@ -141,11 +146,7 @@ def _ray_sites(project: Project, compiled: CompiledModel) -> list[tuple[int, flo
     sites: list[tuple[int, float]] = []
     for body in project.bodies:
         for obj in body.objects:
-            ray = view(obj, "distance_ray")
-            if ray is None:
-                continue
-            for index in range(ray.count("count")):
-                sites.append((compiled.model.site(f"{obj.id}:ray{index}").id, ray.number("range")))
+            sites += [(compiled.model.site(ray.site).id, ray.range) for ray in ray_sites(obj)]
     return sites
 
 

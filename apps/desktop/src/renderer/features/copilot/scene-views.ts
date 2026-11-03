@@ -8,6 +8,9 @@ const VIEWS = [
   { name: "Top view", view: "top" },
 ] as const;
 
+// How many renders go with each message when the scene has something to draw.
+export const SCENE_VIEW_COUNT = VIEWS.length;
+
 const WIDTH = 768;
 const HEIGHT = 480;
 

@@ -1,14 +1,19 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.contracts.coach import CoachFinding, FilmStrip
 from icarus.contracts.operations import EditOperation
 from icarus.contracts.scene import SceneDescription
 from icarus.contracts.specs import TaskFamily
 
 Capability = Literal["reasoning", "vision", "image", "pose"]
 Autonomy = Literal["ask", "autopilot"]
+# A model's context window as the person may set it: from small local models to million-token ones.
+MIN_CONTEXT_TOKENS = 4_000
+MAX_CONTEXT_TOKENS = 10_000_000
+ContextTokens = Annotated[int, Field(ge=MIN_CONTEXT_TOKENS, le=MAX_CONTEXT_TOKENS)]
 
 
 class _Model(BaseModel):
@@ -23,6 +28,8 @@ class ModelConnection(_Model):
     connected: bool
     # Why it is not connected, in words, when it is not.
     detail: str | None = None
+    # The context window the person set for this model, in tokens; none means the engine assumes one.
+    context_tokens: int | None = None
 
 
 class ModelSettings(_Model):
@@ -36,6 +43,8 @@ class ModelSettingsPatch(_Model):
     endpoint: str | None = Field(default=None, max_length=500)
     api_key: str | None = Field(default=None, max_length=500)
     models: dict[Capability, str] | None = None
+    # A context window per capability in tokens; null clears it back to the assumed one.
+    context_tokens: dict[Capability, ContextTokens | None] | None = None
 
 
 class ProposalChange(_Model):
@@ -61,7 +70,8 @@ class CopilotProposal(_Model):
     applied_revision: int | None = None
 
 
-AttachmentKind = Literal["image", "video", "document", "view"]
+# "model" is a glTF or GLB file the person adds; it is also stored as a skin of the project (ADR 008).
+AttachmentKind = Literal["image", "video", "document", "view", "model"]
 
 # Base64 payloads stay under ~15 MB of file per upload.
 MAX_ATTACHMENT_CHARS = 20_000_000
@@ -137,7 +147,7 @@ class ChatSuggestion(_Model):
 class AgentStep(_Model):
     """One thing the copilot did before answering, shown so the person can follow its work."""
 
-    tool: Literal["inspect", "look", "try", "propose", "train", "library"]
+    tool: Literal["inspect", "look", "try", "propose", "train", "library", "export"]
     # What it did, in words ("Looked at the parking spot from the side").
     summary: str = Field(max_length=200)
     ok: bool = True
@@ -163,6 +173,10 @@ class CopilotMessage(_Model):
     # A project build the message follows live.
     build_id: str | None = None
     run: RunCard | None = None
+    # The coach's pictures of one episode at a fixed interval.
+    film_strip: FilmStrip | None = None
+    # What the coach saw the body do, each with the design area to change.
+    findings: list[CoachFinding] = Field(default=[], max_length=8)
 
 
 class Conversation(_Model):
@@ -216,6 +230,19 @@ class IdeaSet(_Model):
     id: str
     prompt: str
     ideas: list[DesignIdea]
+
+
+class TweakIdea(_Model):
+    """The person's words for changing one idea before it is built."""
+
+    words: str = Field(min_length=1, max_length=1000)
+
+
+class MixIdeas(_Model):
+    """Build the world of one idea with the body of another, from the same set."""
+
+    world_from: str
+    body_from: str
 
 
 class BuildIdea(_Model):

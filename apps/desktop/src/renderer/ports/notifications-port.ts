@@ -1,10 +1,21 @@
 import type { RouteId } from "../app/navigation/catalog-id.ts";
 import type { RouteParams } from "../app/navigation/navigation-store.tsx";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import type { CommunityApi } from "../community-client/community-api.ts";
+import { communityApi } from "../community-client/community-api.ts";
+import { notificationView } from "./community-views.ts";
 import { createNotificationsFixture } from "./notifications.fixture.ts";
 
-export type NotificationKind = "run-failed" | "published" | "run-finished" | "remix" | "attention";
+export type NotificationKind =
+  | "run-failed"
+  | "published"
+  | "run-finished"
+  | "remix"
+  | "attention"
+  | "vote"
+  | "follow"
+  | "invite"
+  | "moderation";
 
 export type AppNotification = {
   id: string;
@@ -24,20 +35,20 @@ export type NotificationsPort = {
   markAllRead: () => Promise<void>;
 };
 
+// Community notifications: votes, remixes, follows, invitations and moderation results for the signed-in person.
+export function createCommunityNotifications(
+  api: Pick<CommunityApi, "notifications" | "markAllRead"> = communityApi,
+  now: () => Date = () => new Date(),
+): NotificationsPort {
+  return {
+    listNotifications: async () => (await api.notifications()).map((item) => notificationView(item, now())),
+    markAllRead: async () => {
+      await api.markAllRead();
+    },
+  };
+}
+
 export const notificationsPort = definePort<NotificationsPort>({
-  app: {
-    listNotifications: pending({
-      key: "notifications.list",
-      summary: "Notifications",
-      sprint: 13,
-      ids: ["POP-NOTIFICATIONS"],
-    }),
-    markAllRead: pending({
-      key: "notifications.mark-all-read",
-      summary: "Marking notifications read",
-      sprint: 13,
-      ids: ["POP-NOTIFICATIONS"],
-    }),
-  },
+  app: createCommunityNotifications(),
   prototype: createNotificationsFixture,
 });

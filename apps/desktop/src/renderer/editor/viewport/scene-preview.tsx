@@ -16,7 +16,7 @@ export function ScenePreview({ description }: { description: SceneDescription })
         )}
       >
         <Suspense fallback={null}>
-          <SceneView description={description} selected={null} onSelect={ignore} onMove={ignore} />
+          <SceneView description={description} selected={null} onSelect={ignore} onMove={ignore} viewCube={false} />
         </Suspense>
       </RenderBoundary>
     </div>

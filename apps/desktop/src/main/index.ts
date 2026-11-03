@@ -1,10 +1,15 @@
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tokens } from "@icarus/ui-tokens";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { ENGINE_CHANNEL } from "../shared/engine-bridge.ts";
+import { EXPORT_CHANNEL } from "../shared/export-bridge.ts";
+import { STORAGE_CHANNEL } from "../shared/storage-bridge.ts";
 import { WINDOW_CHANNEL } from "../shared/window-bridge.ts";
+import { registerCommunity } from "./community/community-ipc.ts";
+import { folderChoice } from "./data-folder-choice.ts";
 import { findRepoRoot } from "./engine/repo-root.ts";
 import { EngineSupervisor } from "./engine/supervisor.ts";
+import { saveChoice, suggestedZipName } from "./export-destination.ts";
 import { isTitleBarHeight, resizeTitleBar, windowFrame } from "./window-frame.ts";
 
 const headless = process.env.ICARUS_HEADLESS === "1";
@@ -15,8 +20,8 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 1280,
-    minHeight: 800,
+    minWidth: 1024,
+    minHeight: 720,
     useContentSize: true,
     show: false,
     backgroundColor: tokens.color.bg.app,
@@ -74,6 +79,27 @@ void app.whenReady().then(() => {
   ipcMain.handle(ENGINE_CHANNEL.status, () => engine.status);
   ipcMain.handle(ENGINE_CHANNEL.restart, () => engine.restart());
   const win = createWindow();
+  registerCommunity(win);
+  ipcMain.handle(STORAGE_CHANNEL.chooseFolder, async () =>
+    folderChoice(
+      await dialog.showOpenDialog(win, {
+        title: "Choose where Icarus keeps projects and runs",
+        properties: ["openDirectory", "createDirectory"],
+      }),
+      [app.getAppPath(), dirname(process.execPath), repoRoot],
+    ),
+  );
+  ipcMain.handle(EXPORT_CHANNEL.chooseDestination, async (_event, name: unknown) =>
+    saveChoice(
+      await dialog.showSaveDialog(win, {
+        title: "Save the export",
+        defaultPath: join(app.getPath("documents"), suggestedZipName(name)),
+        filters: [{ name: "Zip archive", extensions: ["zip"] }],
+        properties: ["createDirectory", "showOverwriteConfirmation"],
+      }),
+      [app.getAppPath(), dirname(process.execPath), repoRoot],
+    ),
+  );
   ipcMain.on(WINDOW_CHANNEL.titleBarHeight, (_event, height: unknown) => {
     if (isTitleBarHeight(height)) {
       resizeTitleBar(win, process.platform, height);

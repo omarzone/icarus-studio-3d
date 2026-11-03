@@ -4,10 +4,14 @@ from dataclasses import dataclass, field
 from icarus.contracts.copilot import AttachmentInfo, SendMessage
 from icarus.copilot.attachments import Attachment, AttachmentStore
 from icarus.copilot.client import UserContent
+from icarus.projects.mesh_files import as_glb
+from icarus.projects.skin_files import SkinRejected, read_skin
+from icarus.projects.skins import skin_id
 
 MAX_TURN_IMAGES = 8
 # Characters of document text one message may carry, shared by all its documents.
 DOCUMENT_BUDGET = 24_000
+VIEW_LABEL = "a render of the current scene, taken by the app"
 
 
 def _data_url(media_type: str, data: bytes) -> str:
@@ -45,12 +49,28 @@ class TurnMedia:
         self.documents.append(shown)
         self.lines.append(f"Document {name}{cut}:\n```\n{shown}\n```")
 
+    def _model(self, attachment: Attachment) -> None:
+        name = attachment.info.name
+        try:
+            data = as_glb(name, attachment.content())[1]
+            x, y, z = read_skin(data).bounds
+        except SkinRejected as error:
+            self.lines.append(f"3D model {name}: it cannot be drawn as a skin ({error})")
+            return
+        self.lines.append(
+            f"3D model {name}: stored with the project as skin {skin_id(data)}, "
+            f"{x:.3g} × {y:.3g} × {z:.3g} in its own units. To draw it over an object, add a skin component "
+            "whose asset is that id; it is fitted inside the object's collider, which alone decides the physics, "
+            "so size the mesh to match the model. To make it the project's body with joints and motors, call auto_rig "
+            f"with attachment {attachment.info.id}."
+        )
+
     def add(self, attachment: Attachment) -> None:
         info = attachment.info
         self.infos.append(info)
         match info.kind:
             case "view":
-                self._picture("a render of the current scene, taken by the app", info.media_type, attachment.content())
+                self._picture(VIEW_LABEL, info.media_type, attachment.content())
             case "image":
                 self._picture(f"the person's reference image {info.name}", info.media_type, attachment.content())
             case "video":
@@ -62,6 +82,13 @@ class TurnMedia:
                     self._picture(label, media_type, path.read_bytes())
             case "document":
                 self._document(attachment)
+            case "model":
+                self._model(attachment)
+
+    def expect_views(self, count: int) -> None:
+        """Scene renders the app takes only when it sends the message, counted as the pictures they will be."""
+        for _ in range(count):
+            self._picture(VIEW_LABEL, "image/jpeg", b"")
 
     def user_content(self, text: str) -> UserContent:
         """The person's turn: plain text, or text and pictures as content parts when it carries pictures."""

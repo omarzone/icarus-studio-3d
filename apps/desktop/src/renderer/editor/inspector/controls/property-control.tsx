@@ -7,17 +7,24 @@ import type { ListOption, Property, PropertyPanel, PropertyValue, Swatch } from 
 import { NOT_YET_CLASS, useNotYet } from "../../../ui/not-yet.ts";
 import { Select } from "../../../ui/select.tsx";
 import { SCENE_ICONS } from "../../scene-icons.ts";
+import { parseHex } from "./color-math.ts";
+import { ColorPicker } from "./color-picker.tsx";
+import { type ColorCompanion, MaterialPalette } from "./material-palette.tsx";
+import { isPaletteList } from "./material-swatches.ts";
 import { RangeTrack, SliderTrack } from "./slider-track.tsx";
 import { SwitchToggle } from "./switch-toggle.tsx";
 import { type ControlTone, fieldBox, fieldClass, parseNumber, toneText, ValueField } from "./value-field.tsx";
 
 export type PanelRoutes = Partial<Record<PropertyPanel, RouteId>>;
+export type { ColorCompanion } from "./material-palette.tsx";
 
 type Props = {
   property: Property;
   onChange: (value: PropertyValue) => void;
   // Where "Opens a panel" values lead in this workspace; without a route they act in place.
   panelRoutes?: PanelRoutes;
+  // The section's color, which a material palette tints its swatches with and lets the user pick.
+  companion?: ColorCompanion;
 };
 
 const ratioOf = (value: number, min: number, max: number) => (max === min ? 0 : (value - min) / (max - min));
@@ -31,8 +38,8 @@ function toneOf(property: Property): ControlTone {
   return property.state === "proposed" ? "proposed" : "default";
 }
 
-// The one control of each of the 12 property types.
-export function PropertyControl({ property, onChange, panelRoutes }: Props) {
+// The one control of each of the 13 property types.
+export function PropertyControl({ property, onChange, panelRoutes, companion }: Props) {
   if (property.state === "locked") {
     return <ReadOnly text={formatPropertyValue(property)} locked />;
   }
@@ -56,6 +63,7 @@ export function PropertyControl({ property, onChange, panelRoutes }: Props) {
       tone={toneOf(property)}
       onChange={onChange}
       panelRoutes={panelRoutes}
+      companion={companion}
     />
   );
 }
@@ -66,9 +74,10 @@ type ValueProps = {
   tone: ControlTone;
   onChange: (value: PropertyValue) => void;
   panelRoutes?: PanelRoutes;
+  companion?: ColorCompanion;
 };
 
-function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps) {
+function ValueControl({ label, value, tone, onChange, panelRoutes, companion }: ValueProps) {
   const notYet = useNotYet();
   switch (value.type) {
     case "number":
@@ -132,6 +141,18 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
       );
     }
     case "choice":
+      // A segmented row only fits a few options in the inspector's width; more read better as a list.
+      if (value.options.length > MAX_SEGMENTS) {
+        return (
+          <ListControl
+            label={label}
+            value={value.value}
+            options={value.options.map((option) => ({ value: option, label: option }))}
+            tone={tone}
+            onPick={(next) => onChange({ ...value, value: next })}
+          />
+        );
+      }
       return (
         <span role="radiogroup" aria-label={label} className="flex gap-0.5 rounded-control bg-control p-0.5">
           {value.options.map((option) => {
@@ -144,7 +165,7 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
                 aria-checked={active}
                 aria-current={active ? "true" : undefined}
                 onClick={() => onChange({ ...value, value: option })}
-                className={`flex-1 rounded-control py-1 text-meta ${
+                className={`min-w-0 flex-1 truncate rounded-control py-1 text-meta ${
                   active
                     ? "bg-selected font-semibold text-on-selected"
                     : "text-fg-secondary hover:bg-fill-hover hover:text-fg"
@@ -157,6 +178,18 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
         </span>
       );
     case "list":
+      if (isPaletteList(value.options)) {
+        return (
+          <MaterialPalette
+            label={label}
+            value={value.value}
+            options={value.options}
+            tone={tone}
+            onPick={(next) => onChange({ ...value, value: next })}
+            color={companion}
+          />
+        );
+      }
       return (
         <ListControl
           label={label}
@@ -175,17 +208,22 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
     case "color":
       return (
         <span className={`${fieldClass} flex items-center gap-1.5 px-2`}>
-          <SwatchMark swatch={{ kind: "color", value: value.value }} large />
+          <ColorPicker
+            label={label}
+            tone={tone}
+            value={value.value}
+            onCommit={(hex) => onChange({ ...value, value: hex })}
+          />
           <ValueField
             label={label}
             tone={tone}
             value={value.value}
             onCommit={(text) => {
-              const valid = /^#[0-9a-f]{6}$/i.test(text.trim());
-              if (valid) {
-                onChange({ ...value, value: text.trim().toUpperCase() });
+              const hex = parseHex(text);
+              if (hex) {
+                onChange({ ...value, value: hex });
               }
-              return valid;
+              return hex !== null;
             }}
             className="h-6 w-full bg-transparent text-meta"
           />
@@ -264,8 +302,31 @@ function ValueControl({ label, value, tone, onChange, panelRoutes }: ValueProps)
       return <PanelLink label={value.value} to={panelRoutes?.[value.panel]} tone={tone} />;
     case "readonly":
       return <ReadOnly text={value.value} locked={false} />;
+    case "text":
+      return (
+        <ValueField
+          label={label}
+          value={value.value}
+          mono={false}
+          tone={tone}
+          placeholder="Default name"
+          onCommit={(text) => {
+            const name = text.trim();
+            if (name.length > TEXT_MAX) {
+              return false;
+            }
+            onChange({ ...value, value: name });
+            return true;
+          }}
+          className={`${fieldBox} w-full`}
+        />
+      );
   }
 }
+
+// Mirrors the engine's TextValue limit.
+const TEXT_MAX = 40;
+const MAX_SEGMENTS = 3;
 
 const withUnit = (value: number, unit: string | undefined) =>
   unit === "°" ? `${value}°` : unit ? `${value} ${unit}` : String(value);

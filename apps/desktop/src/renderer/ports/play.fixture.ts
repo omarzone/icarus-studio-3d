@@ -1,4 +1,4 @@
-import type { CompoundEye, PlayPort, PlaySession, PlayTool } from "./play-port.ts";
+import type { CompoundEye, PlayBrain, PlayPort, PlaySession, PlayTool } from "./play-port.ts";
 
 // Sample Play sessions from the design (a learned car brain and a connectome fly), for the prototype and tests only.
 const tool = (id: PlayTool["id"], label: string): PlayTool => ({ id, label });
@@ -97,6 +97,24 @@ const SESSIONS: Readonly<Record<string, PlaySession>> = {
   },
 };
 
+const BRAINS: readonly PlayBrain[] = [
+  {
+    runId: "run-3",
+    step: 500_000,
+    label: "Run 3 · 500k steps · revision 12 · 80% success",
+    fits: true,
+    isDefault: true,
+  },
+  {
+    runId: "run-1",
+    step: 200_000,
+    label: "Run 1 · 200k steps · revision 4 · 35% success",
+    fits: false,
+    reason: "The body changed: 41 senses now, 37 then",
+    isDefault: false,
+  },
+];
+
 // In-memory sessions that behave: picking a tool selects it, changing the speed changes it.
 export function createPlayFixture(): PlayPort {
   const sessions = new Map<string, PlaySession>(Object.entries(SESSIONS));
@@ -113,12 +131,13 @@ export function createPlayFixture(): PlayPort {
   };
   return {
     getSession: async (project) => find(project),
+    brains: async () => BRAINS,
     // Emits the sample session once; the sample world does not move.
     connect: (project, listener) => {
       let connected = true;
       void Promise.resolve().then(() => {
         if (connected) {
-          listener.onUpdate(find(project), { scene: null, poses: new Map(), paused: false, speed: 1 });
+          listener.onUpdate(find(project), { scene: null, poses: new Map(), rays: [], paused: false, speed: 1 });
         }
       });
       return () => {

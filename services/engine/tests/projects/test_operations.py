@@ -1,9 +1,10 @@
 import pytest
 
 from icarus.contracts.objects import ObjectSpec
-from icarus.contracts.operations import CreateObject, DeleteObject, RenameObject, SetProperty
+from icarus.contracts.operations import CreateObject, DeleteObject, PpoPatch, RenameObject, SetBrain, SetProperty
 from icarus.contracts.properties import NumberValue
 from icarus.projects.operations import OperationError, apply_operations
+from icarus.projects.validation import validate_project
 from tests.sim.conftest import project_from
 
 
@@ -28,6 +29,25 @@ def test_set_property_changes_only_that_value_and_keeps_the_input(base):
     assert mass_of(changed, "car") == NumberValue(type="number", value=900)
     assert mass_of(base, "car") == NumberValue(type="number", value=1)
     assert mass_of(changed, "arm") == mass_of(base, "arm")
+
+
+def test_set_brain_changes_only_the_settings_it_names():
+    parking = project_from("parking_car")
+    changed = apply_operations(
+        parking,
+        [SetBrain(op="set_brain", layers=[64, 64], training_steps=200_000, ppo=PpoPatch(learning_rate=1e-3))],
+    )
+    brain = changed.brain
+    assert (brain.layers, brain.training_steps, brain.ppo.learning_rate) == ([64, 64], 200_000, 1e-3)
+    assert (brain.copies, brain.seed, brain.ppo.n_steps) == (parking.brain.copies, parking.brain.seed, 1024)
+    back = apply_operations(changed, [SetBrain(op="set_brain", training_steps="recommended")])
+    assert back.brain.training_steps is None and back.brain.layers == [64, 64]
+
+
+def test_a_brain_with_too_many_layers_is_reported():
+    parking = project_from("parking_car")
+    changed = apply_operations(parking, [SetBrain(op="set_brain", layers=[64] * 5)])
+    assert [issue.path for issue in validate_project(changed)] == ["brain.layers"]
 
 
 def test_deleting_a_parent_removes_its_children(base):

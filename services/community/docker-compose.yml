@@ -1,0 +1,37 @@
+# The community service with Postgres on one server: `docker compose up -d` from this folder.
+# Values come from `.env` next to this file (see .env.example); put a reverse proxy with TLS in front of port 8790.
+services:
+  community:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+psycopg://icarus:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/icarus
+      FILES_DIR: /data/files
+    volumes:
+      - files:/data
+    ports:
+      - "127.0.0.1:8790:8790"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: icarus
+      POSTGRES_DB: icarus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U icarus -d icarus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  files:
+  db:

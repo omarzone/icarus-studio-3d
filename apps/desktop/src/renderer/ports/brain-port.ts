@@ -1,16 +1,28 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { brainNetworkApi } from "../engine-client/brain-network-api.ts";
 import { engineApi } from "../engine-client/engine-api.ts";
 import { createBrainFixture } from "./brain.fixture.ts";
+import { createEngineBrainActivity } from "./brain-activity-engine.ts";
 import { createEngineBrainPort } from "./brain-engine.ts";
 import { createEngineNetwork } from "./brain-network-engine.ts";
+import { createEngineBrainShape } from "./brain-shape-engine.ts";
 import type { CheckFact, LiveReadings } from "./progress-step.ts";
 
 // View types of the brain workspace: what the brain senses and does, how it is rewarded, its shape and activity.
 
-export type SenseInput = { id: string; name: string; detail: string; enabled: boolean; proposed?: boolean };
-export type ActionOutput = { id: string; name: string; detail: string; enabled: boolean };
+export type SenseInput = {
+  id: string;
+  name: string;
+  detail: string;
+  enabled: boolean;
+  proposed?: boolean;
+  // The sensor carries its own name, which the brain, Play and the view show.
+  renamable?: boolean;
+  removable?: boolean;
+  // Why its switch cannot change, when it cannot.
+  lockedReason?: string;
+};
+export type ActionOutput = { id: string; name: string; detail: string; enabled: boolean; lockedReason?: string };
 export type SensesActions = { inputs: readonly SenseInput[]; outputs: readonly ActionOutput[] };
 
 // Goal terms are the main reward, rewards help, penalties punish mistakes, costs nudge (time, energy).
@@ -40,7 +52,8 @@ export type BrainShape = {
   layers: readonly BrainLayer[];
   decisionsPerSecond: { value: number; max: number };
   hint: string;
-  rules: readonly { id: string; label: string; enabled: boolean }[];
+  // A rule that cannot be switched says why.
+  rules: readonly { id: string; label: string; enabled: boolean; lockedReason?: string }[];
 };
 
 export type NeuronState = "hot" | "on" | "idle";
@@ -95,6 +108,9 @@ export type Wiring = {
 export type BrainPort = {
   getSensesActions: (brain: string) => Promise<SensesActions>;
   toggleInput: (input: { brain: string; id: string }) => Promise<SensesActions>;
+  addInput: (brain: string) => Promise<SensesActions>;
+  removeInput: (input: { brain: string; id: string }) => Promise<SensesActions>;
+  renameInput: (input: { brain: string; id: string; name: string }) => Promise<SensesActions>;
   toggleOutput: (input: { brain: string; id: string }) => Promise<SensesActions>;
   getLearning: (brain: string) => Promise<Learning>;
   setRewardWeight: (input: { brain: string; id: string; weight: number }) => Promise<Learning>;
@@ -117,89 +133,12 @@ export type BrainPort = {
   getWiring: (brain: string) => Promise<Wiring>;
 };
 
-const learned = ["SCR-BRAIN"] as const;
-const network = ["STA-BRAIN-NETWORK", "MOD-BRAIN-SIZES"] as const;
-const connectome = ["STA-BRAIN-CONNECTOME", "MOD-BRAIN-SOURCE"] as const;
-
 export const brainPort = definePort<BrainPort>({
   app: {
     ...createEngineBrainPort(engineApi),
-    toggleInput: pending({
-      key: "brain.toggleInput",
-      summary: "Turning a sense on or off",
-      sprint: 8,
-      ids: [...learned],
-    }),
-    toggleOutput: pending({
-      key: "brain.toggleOutput",
-      summary: "Turning an action on or off",
-      sprint: 8,
-      ids: [...learned],
-    }),
-    getReadings: pending({
-      key: "brain.readings",
-      summary: "What the brain senses right now",
-      sprint: 8,
-      ids: [...learned, "STA-BRAIN-CONNECTOME"],
-    }),
-    getShape: pending({ key: "brain.shape", summary: "The shape of the brain", sprint: 8, ids: [...network] }),
-    setLayerSize: pending({
-      key: "brain.setLayerSize",
-      summary: "Changing a layer size",
-      sprint: 8,
-      ids: [...network],
-    }),
-    setDecisionsPerSecond: pending({
-      key: "brain.setDecisionsPerSecond",
-      summary: "Changing how often the brain decides",
-      sprint: 8,
-      ids: [...network],
-    }),
-    toggleRule: pending({ key: "brain.toggleRule", summary: "Changing an episode rule", sprint: 8, ids: [...network] }),
-    addLayer: pending({ key: "brain.addLayer", summary: "Adding a layer to the brain", sprint: 8, ids: [...network] }),
+    ...createEngineBrainShape({ ...engineApi, ...brainNetworkApi }),
     ...createEngineNetwork({ ...engineApi, ...brainNetworkApi }),
-    getSizes: pending({
-      key: "brain.sizes",
-      summary: "Brain sizes with their training estimates",
-      sprint: 8,
-      ids: ["MOD-BRAIN-SIZES"],
-    }),
-    chooseSize: pending({
-      key: "brain.chooseSize",
-      summary: "Choosing a brain size",
-      sprint: 8,
-      ids: ["MOD-BRAIN-SIZES"],
-    }),
-    getSource: pending({
-      key: "brain.source",
-      summary: "The brains that can drive this body",
-      sprint: 11,
-      ids: ["MOD-BRAIN-SOURCE"],
-    }),
-    loadSource: pending({
-      key: "brain.loadSource",
-      summary: "Loading a brain into the body",
-      sprint: 11,
-      ids: ["MOD-BRAIN-SOURCE"],
-    }),
-    getActivity: pending({
-      key: "brain.activity",
-      summary: "Brain activity by region",
-      sprint: 11,
-      ids: [...connectome],
-    }),
-    getBehaviors: pending({
-      key: "brain.behaviors",
-      summary: "Behaviors observed so far",
-      sprint: 11,
-      ids: ["STA-BRAIN-CONNECTOME"],
-    }),
-    getWiring: pending({
-      key: "brain.wiring",
-      summary: "How the brain's neurons connect to the body",
-      sprint: 11,
-      ids: ["STA-BRAIN-CONNECTOME"],
-    }),
+    ...createEngineBrainActivity({ ...engineApi, ...brainNetworkApi }),
   },
   prototype: createBrainFixture,
 });

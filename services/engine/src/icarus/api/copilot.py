@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 
+from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import Conversation, SendMessage, SetAutonomy
 from icarus.contracts.scene import SceneDescription
 from icarus.copilot.chat import Copilot
@@ -19,6 +20,12 @@ def get_conversation(request: Request, project_id: str) -> Conversation:
 @router.post("/projects/{project_id}/conversation/messages")
 def send_message(request: Request, project_id: str, body: SendMessage) -> Conversation:
     return _copilot(request).send(project_id, body)
+
+
+@router.post("/projects/{project_id}/conversation/context")
+def get_context_usage(request: Request, project_id: str, body: ContextRequest) -> ContextUsage:
+    """What the next message would send to the model, measured piece by piece; nothing is sent."""
+    return _copilot(request).context_usage(project_id, body)
 
 
 @router.post("/projects/{project_id}/conversation/autonomy")

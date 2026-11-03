@@ -8,11 +8,15 @@ import numpy as np
 from icarus.contracts.design import DesignCheck, DesignReport
 from icarus.contracts.project import Project
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
+from icarus.design.free_map import spawn_room
+from icarus.design.reachable import reachable
+from icarus.design.vehicle import BRAKE_SUFFIX
+from icarus.projects.agents import agent_project
 from icarus.projects.document import all_objects
 from icarus.projects.validation import validate_project
 
 Status = Literal["pass", "fail", "skip"]
-CheckId = Literal["structure", "compiles", "settles", "actuators", "sensors"]
+CheckId = Literal["structure", "compiles", "reachable", "settles", "actuators", "sensors"]
 Outcome = tuple[Status, str]
 
 SETTLE_SECONDS = 1.5
@@ -25,6 +29,7 @@ MIN_JOINT_MOVE = 1e-3
 LABELS: dict[CheckId, str] = {
     "structure": "Structure",
     "compiles": "Compiles",
+    "reachable": "Goal and start are clear",
     "settles": "Settles at rest",
     "actuators": "Motors move their joints",
     "sensors": "Sensors read finite values",
@@ -51,7 +56,7 @@ def _settles(compiled: CompiledModel, names: dict[str, str]) -> Outcome:
     lowest = int(data.xpos[:, 2].argmin())
     if data.xpos[lowest, 2] < LOWEST_Z:
         body = names.get(model.body(lowest).name, "A part")
-        return "fail", f"{body} fell through the ground"
+        return "fail", f"{body} fell off the ground or through it; move it over the ground or widen the ground"
     return "pass", f"Everything is still after {SETTLE_SECONDS:g} s"
 
 
@@ -70,6 +75,8 @@ def _actuators(compiled: CompiledModel, names: dict[str, str]) -> Outcome:
     baseline = _drive(model, np.zeros(model.nu))
     stuck: list[str] = []
     for index in range(model.nu):
+        if model.actuator(index).name.endswith(BRAKE_SUFFIX):
+            continue
         low, high = model.actuator_ctrlrange[index]
         controls = np.zeros(model.nu)
         controls[index] = low + DRIVE_POINT * (high - low)
@@ -93,6 +100,21 @@ def _sensors(compiled: CompiledModel, _: dict[str, str]) -> Outcome:
     if not np.all(np.isfinite(data.sensordata)):
         return "fail", "A sensor returned an invalid reading"
     return "pass", f"All {model.nsensor} sensors read finite values"
+
+
+def _reachable(project: Project, compiled: CompiledModel) -> Outcome:
+    """Start and goal clear; with several agents each one compiled alone, as it trains, in its own lane."""
+    if not project.agents:
+        return reachable(project, compiled)
+    for agent in project.agents:
+        alone = agent_project(project, agent.id)
+        try:
+            status, detail = reachable(alone, compile_project(alone))
+        except CompileError as error:
+            return "fail", f"{agent.name} does not build on its own: {error.reason}"
+        if status == "fail":
+            return "fail", f"{agent.name}: {detail}"
+    return "pass", f"Each of the {len(project.agents)} agents builds on its own with a clear start and goal"
 
 
 PHYSICS: list[tuple[CheckId, Callable[[CompiledModel, dict[str, str]], Outcome]]] = [
@@ -129,6 +151,17 @@ def design_report(project: Project) -> tuple[DesignReport, CompiledModel | None]
         add("compiles", "fail", error.reason)
         return finish(None)
     add("compiles", "pass", f"{compiled.model.nbody - 1} parts, {compiled.model.njnt} joints")
+    try:
+        status, detail = _reachable(project, compiled)
+    except (mujoco.FatalError, ValueError) as error:
+        status, detail = "fail", f"The physics engine stopped: {str(error).strip().splitlines()[0]}"
+    if status != "fail":
+        room = spawn_room(project, compiled)
+        if room is not None and room[0] == "fail":
+            status, detail = room
+    add("reachable", status, detail)
+    if status == "fail":
+        return finish(compiled)
     names = {obj.id: obj.name for obj in all_objects(project)}
     for check, run in PHYSICS:
         try:

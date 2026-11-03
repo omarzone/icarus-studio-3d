@@ -129,7 +129,7 @@ Inside a tab bar: 12 px, padding 5 × 10, radius 8. Active: `bg.control-raised`,
 See `REF-PROPERTY-TYPES` and `POP-ADD-COMPONENT` in the catalog.
 
 - Every object is a list of **components**; each component is a collapsible section with icon, name, optional note and `···`.
-- Every property is one of **12 types**, each with exactly one control: Number, Slider, Range, Choice, List, Switch, Color, Vector, Count, Asset, Opens a panel, Read only.
+- Every property is one of **13 types**, each with exactly one control: Number, Slider, Range, Choice, List, Switch, Color, Vector, Count, Asset, Opens a panel, Read only, Text (a short name typed in place).
 - Every property has the same **6 states**: default; changed by you (white dot, *was …*, Reset); proposed by the copilot (blue dot and value, Accept); out of range (red, with the reason); mixed (multi-selection); locked (lock icon, while a run uses it).
 - Interactions: click edits in place or opens a small picker; dragging the name scrubs numbers (Shift for fine steps); right-click offers reset, copy, paste, randomize per copy and *Ask the copilot*; hover explains in one line and highlights the property in 3D.
 - Row: label column flexible, control column 150 px, control height 26. Units always shown, in the control or right after the value.

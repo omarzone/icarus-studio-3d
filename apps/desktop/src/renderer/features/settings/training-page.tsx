@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { settingsPort, type TrainingSettings } from "../../ports/settings-port.ts";
@@ -11,8 +12,15 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { SettingSwitchRow } from "./setting-switch-row.tsx";
 import { SettingsLayout } from "./settings-layout.tsx";
+import { StoragePage } from "./storage-page.tsx";
 
 export function TrainingPage() {
+  // Storage shares this route so the design inventory stays as drawn; it is its own page in the navigation.
+  const storage = useNavigation((state) => state.params.page === "storage");
+  return storage ? <StoragePage /> : <TrainingSettingsPage />;
+}
+
+function TrainingSettingsPage() {
   const settings = usePort(settingsPort);
   const query = useQuery({ queryKey: ["settings", "training"], queryFn: settings.getTraining });
   return (
@@ -63,7 +71,6 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
   const setTraining = useEngineAction(settings.setTraining);
   const restart = useEngineAction(settings.restartEngine);
   const app = useRuntimeMode() === "app";
-  const [folder, setFolder] = useState(training.projectsFolder);
   const [checkpoints, setCheckpoints] = useState(training.checkpoints);
   const free = training.maxThreads - training.threads;
   return (
@@ -99,20 +106,24 @@ function TrainingForm({ training }: { training: TrainingSettings }) {
         disabledReason={training.graphicsCard === null ? "No graphics card was found on this computer" : undefined}
         onChange={(value) => setTraining.mutate({ useGraphicsCard: value }, store)}
       />
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label="Projects folder"
-          value={folder}
-          onChange={(event) => setFolder(event.target.value)}
-          onBlur={() => setTraining.mutate({ projectsFolder: folder }, store)}
-        />
-        <TextField
-          label="Keep checkpoints"
-          value={checkpoints}
-          onChange={(event) => setCheckpoints(event.target.value)}
-          onBlur={() => setTraining.mutate({ checkpoints }, store)}
-        />
-      </div>
+      {app ? (
+        // Checkpoints are not a choice in the app: every scheduled one stays with its run, in the data folder.
+        <div className="flex flex-col gap-1">
+          <span className="text-ui text-fg-secondary">Checkpoints</span>
+          <span className="text-body text-fg-tertiary">
+            Every scheduled checkpoint is kept with its run, inside the data folder shown in Storage.
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Keep checkpoints"
+            value={checkpoints}
+            onChange={(event) => setCheckpoints(event.target.value)}
+            onBlur={() => setTraining.mutate({ checkpoints }, store)}
+          />
+        </div>
+      )}
       <div className="flex items-center gap-3 rounded-card-sm bg-control px-3.5 py-3">
         {training.engine.healthy ? (
           <Check size={16} strokeWidth={1.75} className="text-ok" aria-hidden />

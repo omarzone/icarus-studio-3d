@@ -12,7 +12,7 @@ import type {
 
 // Pure mappings from the engine's training documents onto the Train view types.
 
-type TaskFamily = "none" | "navigation" | "locomotion";
+type TaskFamily = "none" | "navigation" | "locomotion" | "imitation";
 
 const FINAL: readonly RunStatus["state"][] = ["done", "stopped", "failed"];
 
@@ -46,7 +46,8 @@ function runDetail(run: RunStatus): string {
       return run.state;
     case "running": {
       const where = `${steps} of ${compactNumber(run.total_steps)} steps`;
-      return success ? `${success} · ${where}` : where;
+      const detail = success ? `${success} · ${where}` : where;
+      return run.paused ? `paused · ${detail}` : detail;
     }
     case "done":
     case "stopped":
@@ -70,9 +71,9 @@ function viewStatus(state: RunStatus["state"]): RunSummary["status"] {
 }
 
 export function runSummary(run: RunStatus): RunSummary {
-  const status = viewStatus(run.state);
+  const status = run.paused && run.state === "running" ? "paused" : viewStatus(run.state);
   const summary: RunSummary = { id: run.run_id, name: run.name, status, detail: runDetail(run) };
-  if (status === "running") {
+  if (status === "running" || status === "paused") {
     summary.progress = run.total_steps > 0 ? Math.min(1, run.step / run.total_steps) : 0;
   }
   return summary;
@@ -92,7 +93,14 @@ type PlanInput = {
   family: TaskFamily;
   settings: Pick<TrainingSettings, "threads" | "max_threads">;
   choice: PlanChoice;
+  // The brain's own practice: its default steps (none for the task's recommended budget) and copies.
+  brain?: { steps?: number | null; copies: number };
 };
+
+// Mirrors the engine's RECOMMENDED_STEPS: the budget a task family needs before its results say much.
+export function recommendedSteps(family: TaskFamily): number {
+  return family === "locomotion" || family === "imitation" ? 2_000_000 : 1_000_000;
+}
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(value)));
 
@@ -107,13 +115,16 @@ function duration(seconds: number): string {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-export function startPlan({ runs, family, settings, choice }: PlanInput): StartPlan {
-  const steps = clamp(choice.steps ?? (family === "locomotion" ? 2_000_000 : 1_000_000), MIN_STEPS, MAX_STEPS);
-  const copies = clamp(choice.copies ?? 16, 1, MAX_COPIES);
+export function startPlan({ runs, family, settings, choice, brain }: PlanInput): StartPlan {
+  const steps = clamp(choice.steps ?? brain?.steps ?? recommendedSteps(family), MIN_STEPS, MAX_STEPS);
+  const copies = clamp(choice.copies ?? brain?.copies ?? 16, 1, MAX_COPIES);
   const seconds = (steps / STEPS_PER_SECOND_ON_16) * Math.max(1, 16 / copies);
   const time = duration(seconds);
   // Walking bodies have not been measured yet, so their estimate says it is rough.
-  const estimate = time === "under a minute" ? time : `${family === "locomotion" ? "roughly" : "about"} ${time}`;
+  const estimate =
+    time === "under a minute"
+      ? time
+      : `${family === "locomotion" || family === "imitation" ? "roughly" : "about"} ${time}`;
   return {
     run: `run ${runs + 1}`,
     intro: [
@@ -125,7 +136,8 @@ export function startPlan({ runs, family, settings, choice }: PlanInput): StartP
     copies,
     estimate,
     threads: `${settings.threads} of ${settings.max_threads} CPU threads`,
-    coach: choice.coach ?? false,
+    // The copilot coaches every run unless the person turns it off.
+    coach: choice.coach ?? true,
   };
 }
 
@@ -159,8 +171,8 @@ export function liveView(run: RunStatus, checkpoints: readonly CheckpointInfo[],
   };
   const first = rollout?.frames[0]?.time;
   const last = rollout?.frames.at(-1)?.time;
-  if (first !== undefined && last !== undefined) {
-    view.episode = { at: episodeClock(0), length: episodeClock(last - first), played: 0 };
+  if (rollout && first !== undefined && last !== undefined) {
+    view.episode = { step: rollout.step, at: episodeClock(0), length: episodeClock(last - first), played: 0 };
   }
   return view;
 }
@@ -189,7 +201,8 @@ export function stopSummary(run: RunStatus, checkpoints: readonly CheckpointInfo
     keeps.push(`Keep the best checkpoint (${compactNumber(best.step)})`);
   }
   keeps.push("Keep the metrics and replays");
-  return { run: lower(run.name), intro: `${where} ${result}`, keeps };
+  const held = run.paused ? " It is paused, holding its brain and copies where they were." : "";
+  return { run: lower(run.name), intro: `${where} ${result}${held}`, keeps, paused: Boolean(run.paused) };
 }
 
 // Only a best checkpoint past step 0 holds a trained brain worth promising.

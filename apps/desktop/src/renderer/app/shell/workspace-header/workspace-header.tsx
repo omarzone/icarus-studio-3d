@@ -10,6 +10,7 @@ import { useRuntimeMode } from "../../runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 import { GuideButton } from "./guide-button.tsx";
 import { PLAY_PURPOSE, primaryPurpose, WORKSPACE_PURPOSES } from "./header-purposes.ts";
+import { SavedIndicator } from "./saved-indicator.tsx";
 import { TasksIndicator } from "./tasks-indicator.tsx";
 
 export type Workspace = "World" | "Body" | "Motion" | "Brain" | "Train" | "Results" | "Build";
@@ -44,6 +45,8 @@ export type WorkspaceHeaderProps = {
   primary: { label: string; to: RouteId; disabled?: boolean };
   // Panels menu of workspaces whose panels can be rearranged.
   layoutMenu?: ReactNode;
+  // Why the other workspace tabs cannot open yet (no project exists); omitted when they can.
+  workspacesLocked?: string;
 };
 
 export function WorkspaceHeader({
@@ -57,6 +60,7 @@ export function WorkspaceHeader({
   routes = {},
   primary,
   layoutMenu,
+  workspacesLocked,
 }: WorkspaceHeaderProps) {
   useTitleBarHeight(tokens.size.headerWorkspace);
   const mode = useRuntimeMode();
@@ -64,7 +68,7 @@ export function WorkspaceHeader({
   return (
     <header data-ui-id="HDR-WORKSPACE" className="title-bar col-span-full flex h-13 items-center gap-3.5 pr-3.5 pl-4.5">
       {/* A fixed-width project area: the workspace tabs start at the same place in every workspace. */}
-      <div className="flex w-76 shrink-0 items-center">
+      <div className="flex w-76 min-w-0 shrink items-center max-[1360px]:w-52">
         <WindowControlsSpace side="start" />
         <GoTo
           to="POP-PROJECT-MENU"
@@ -83,6 +87,19 @@ export function WorkspaceHeader({
               ? "rounded-control bg-selected px-3.5 py-1.5 text-ui font-semibold text-on-selected"
               : "rounded-control px-3.5 py-1.5 text-ui text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80";
             const to = isActive ? activeGoesTo : (routes[name] ?? WORKSPACE_ROUTES[name]);
+            if (!isActive && workspacesLocked) {
+              return (
+                <Act
+                  key={name}
+                  cta={name}
+                  disabled
+                  title={workspacesLocked}
+                  className={`${className} disabled:pointer-events-none disabled:opacity-50`}
+                >
+                  <TabLabel name={name} />
+                </Act>
+              );
+            }
             return to ? (
               <GoTo
                 key={name}
@@ -115,6 +132,7 @@ export function WorkspaceHeader({
       <div className="ml-auto flex shrink-0 items-center gap-3.5">
         {layoutMenu}
         {mode === "app" && openProject ? <TasksIndicator project={openProject} /> : null}
+        {mode === "app" && openProject ? <SavedIndicator project={openProject} /> : null}
         {mode === "app" && openProject ? (
           <GuideButton project={openProject} label={guide} />
         ) : (

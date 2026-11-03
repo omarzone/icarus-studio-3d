@@ -27,13 +27,28 @@ describe("idea set view", () => {
     };
     const view = ideaSetView(set);
     expect(view.id).toBe("set-1");
-    expect(view.mix).toBeNull();
+    expect(view.mix).toEqual({ worldFrom: "Idea b", bodyFrom: "Idea a", worldIdea: "b", bodyIdea: "a" });
+    expect(ideaSetView({ ...set, ideas: [idea("a")] }).mix).toBeNull();
     expect(view.ideas.map((item) => [item.id, item.recommended])).toEqual([
       ["a", true],
       ["b", false],
     ]);
     expect(view.ideas[0]?.scene).toBe(scene);
     expect(view.ideas[0]?.estimate).toBe("about 40 min");
+  });
+
+  it("says what was asked and where each idea came from", () => {
+    const set: IdeaSet = {
+      id: "set-2",
+      prompt: "a robot dog",
+      ideas: [idea("a", { template: "empty_world" }), idea("b")],
+    };
+    const view = ideaSetView(set);
+    expect(view.prompt).toBe("a robot dog");
+    expect(view.ideas.map((item) => item.source)).toEqual([
+      "Designed from scratch",
+      "Built on the Parking car template",
+    ]);
   });
 });
 

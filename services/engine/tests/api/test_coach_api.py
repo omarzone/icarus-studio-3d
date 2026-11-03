@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from icarus.api.app import create_app
 from icarus.contracts.training import StartRun
+from icarus.copilot.film_strips import FilmStrips
 from icarus.training.progress import RunProgress
 from icarus.training.run_store import RunFolder
 from tests.copilot.agent_script import answering, script, tool_step
@@ -156,3 +157,77 @@ def test_two_runs_compare_on_their_evaluation_seeds(app, client):
     assert body["same_seeds"] is True and body["seeds_note"]
     assert {row["metric"] for row in body["rows"]} >= {"success_rate", "episode_return", "steps"}
     assert client.get(f"/runs/compare?a={first.run_id}&b=run-20990101T000000Z-0000").status_code == 404
+
+
+HEAVIER = {
+    "op": "set_property",
+    "object": "car",
+    "component": "physics_body",
+    "property": "mass",
+    "value": {"type": "number", "value": 900},
+}
+GAIT = [
+    {
+        "area": "reward",
+        "behavior": "The car circles without heading for the spot.",
+        "change": "Pay less for time.",
+        "try_id": "t1",
+    },
+    {
+        "area": "body",
+        "behavior": "It skids through every turn.",
+        "change": "Make the car heavier so its wheels grip.",
+        "try_id": "t2",
+    },
+]
+
+
+@pytest.mark.needs_gl
+def test_the_coach_watches_a_film_strip_and_points_each_finding_to_a_design_area_with_its_own_fix(
+    app, client, monkeypatch, tmp_path
+):
+    folder = evaluated_run(app, client, steps=(0, 5_000))
+    script(
+        monkeypatch,
+        tmp_path,
+        coach=[
+            {"match": ["diagnose"], **tool_step("film_strip")},
+            tool_step("compare_strips", first=0),
+            tool_step("try", operations=[TIME_PENALTY], look=None),
+            tool_step("try", operations=[HEAVIER], look=None),
+            tool_step("propose", try_id="t1", summary="Softer time penalty", explanation="Less pressure.", warnings=[]),
+            findings(next_step="stop_and_fix", evidence=[], findings=GAIT),
+            answering("It circles and skids; I propose two fixes."),
+        ],
+    )
+
+    diagnosis = client.post(f"/runs/{folder.run_id}/diagnosis").json()
+
+    reward, body = diagnosis["findings"]
+    assert (reward["area"], body["area"]) == ("reward", "body")
+    assert reward["proposal_id"] == diagnosis["proposal_id"]
+    assert body["proposal_id"] not in (None, reward["proposal_id"])
+    conversation = client.get(f"/projects/{diagnosis['project_id']}/conversation").json()
+    message = conversation["messages"][-1]
+    assert [step["ok"] for step in message["steps"]][:2] == [True, True]
+    strip = message["film_strip"]
+    assert strip["step"] == 5_000 and len(strip["frames"]) >= 20 and strip["interval"] > 0
+    times = [frame["time"] for frame in strip["frames"]]
+    assert times == sorted(times)
+    assert client.get(f"/attachments/{strip['frames'][0]['attachment_id']}/content").status_code == 200
+    assert message["findings"] == diagnosis["findings"]
+    assert {proposal["id"] for proposal in conversation["proposals"]} >= {reward["proposal_id"], body["proposal_id"]}
+    assert client.post(f"/proposals/{body['proposal_id']}/apply").status_code == 200
+
+
+@pytest.mark.needs_gl
+def test_a_strip_is_rendered_once_and_read_back_from_its_attachments(app, client):
+    folder = evaluated_run(app, client)
+    strips = FilmStrips(app.state.copilot.services.views, app.state.attachments)
+
+    first = strips.strip(folder, 0)
+    again = strips.strip(folder, 0)
+
+    assert first is not None and again is not None and first.strip == again.strip
+    assert again.sheet[:8] == b"\x89PNG\r\n\x1a\n"
+    assert strips.strip(folder, 25_000) is None

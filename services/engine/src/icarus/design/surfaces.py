@@ -7,4 +7,10 @@ SURFACE_FRICTION: dict[str, float] = {
     "rubber": 1.2,
     "wood": 0.7,
     "metal": 0.5,
+    "plastic": 0.6,
+    "sand": 0.45,
+    "dirt": 0.75,
+    "fabric": 0.8,
+    "stone": 0.85,
+    "glass": 0.4,
 }

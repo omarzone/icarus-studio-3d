@@ -47,13 +47,15 @@ export function SummaryTab({ summary }: { summary: ResultSummary }) {
           <span className="font-semibold">{summary.title}</span>
           <span className="text-title-1 font-bold">{summary.value}</span>
           <p className="text-ui leading-normal text-fg-tertiary">{summary.detail}</p>
-          <GoTo
-            to="STA-BRAIN-CONNECTOME"
-            cta={`Run ${summary.nextTest}`}
-            className={buttonClass("primary", "h-8.5! justify-start px-4! text-body!")}
-          >
-            Run {summary.nextTest}
-          </GoTo>
+          {summary.nextTest ? (
+            <GoTo
+              to="STA-BRAIN-CONNECTOME"
+              cta={`Run ${summary.nextTest}`}
+              className={buttonClass("primary", "h-8.5! justify-start px-4! text-body!")}
+            >
+              Run {summary.nextTest}
+            </GoTo>
+          ) : null}
         </div>
       );
     case "empty":

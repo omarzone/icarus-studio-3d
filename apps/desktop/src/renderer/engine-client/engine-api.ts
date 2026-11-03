@@ -2,11 +2,14 @@ import type {
   BuildIdea,
   BuildStatus,
   CheckpointInfo,
+  ContextRequest,
+  ContextUsage,
   Conversation,
   EditOperation,
   IdeaSet,
   LibraryCatalog,
   MetricPoint,
+  MixIdeas,
   ModelSettings,
   ModelSettingsPatch,
   ProjectState,
@@ -20,7 +23,10 @@ import type {
   StartRun,
   TrainingSettings,
   TrainingSettingsPatch,
+  TweakIdea,
+  UnpackBundle,
 } from "@icarus/contracts";
+import { isContextUsage } from "./context-usage-checks.ts";
 import { isBuildStatus, isConversation, isIdeaSet, isModelSettings } from "./copilot-checks.ts";
 import { request } from "./request.ts";
 import {
@@ -56,6 +62,8 @@ export const engineApi = {
   library: (): Promise<LibraryCatalog> => request("/library", {}, isLibraryCatalog),
   templateScene: (templateId: string): Promise<SceneDescription> =>
     request(`/library/templates/${encodeURIComponent(templateId)}/scene`, {}, isSceneDescription),
+  vaultBodyScene: (bodyId: string): Promise<SceneDescription> =>
+    request(`/library/bodies/${encodeURIComponent(bodyId)}/scene`, {}, isSceneDescription),
   listProjects: (): Promise<ProjectSummary[]> => request("/projects", {}, isProjectSummaries),
   createProject: (name: string, template: string): Promise<ProjectState> =>
     request("/projects", post({ name, template }), isProjectState),
@@ -71,10 +79,14 @@ export const engineApi = {
     request(`${at(id)}/duplicate`, post({ name }), isProjectState),
   restoreRevision: (id: string, revision: number): Promise<ProjectState> =>
     request(`${at(id)}/revisions/${revision}/restore`, post(), isProjectState),
+  // A community bundle becomes a new project; the engine checks it is data, in a known version, and passes its tests.
+  unpackBundle: (body: UnpackBundle): Promise<ProjectState> => request("/bundles/unpack", post(body), isProjectState),
   startRun: (id: string, body: StartRun): Promise<RunStatus> => request(`${at(id)}/runs`, post(body), isRunStatus),
   runs: (id: string): Promise<RunStatus[]> => request(`${at(id)}/runs`, {}, isRunStatuses),
   run: (runId: string): Promise<RunStatus> => request(run(runId), {}, isRunStatus),
   stopRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/stop`, post(), isRunStatus),
+  pauseRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/pause`, post(), isRunStatus),
+  resumeRun: (runId: string): Promise<RunStatus> => request(`${run(runId)}/resume`, post(), isRunStatus),
   metrics: (runId: string): Promise<MetricPoint[]> => request(`${run(runId)}/metrics`, {}, isMetricPoints),
   checkpoints: (runId: string): Promise<CheckpointInfo[]> => request(`${run(runId)}/checkpoints`, {}, isCheckpoints),
   runScene: (runId: string): Promise<SceneDescription> => request(`${run(runId)}/scene`, {}, isSceneDescription),
@@ -85,6 +97,9 @@ export const engineApi = {
   conversation: (id: string): Promise<Conversation> => request(`${at(id)}/conversation`, {}, isConversation),
   sendMessage: (id: string, body: SendMessage): Promise<Conversation> =>
     request(`${at(id)}/conversation/messages`, post(body), isConversation),
+  // What the next message would send to the model, measured piece by piece; nothing is sent.
+  contextUsage: (id: string, body: ContextRequest): Promise<ContextUsage> =>
+    request(`${at(id)}/conversation/context`, post(body), isContextUsage),
   setAutonomy: (id: string, body: SetAutonomy): Promise<Conversation> =>
     request(`${at(id)}/conversation/autonomy`, post(body), isConversation),
   applyProposal: (id: string): Promise<Conversation> => request(`${proposal(id)}/apply`, post(), isConversation),
@@ -93,6 +108,10 @@ export const engineApi = {
   createIdeas: (prompt: string): Promise<IdeaSet> => request("/ideas", post({ prompt }), isIdeaSet),
   ideas: (id: string): Promise<IdeaSet> => request(`/ideas/${encodeURIComponent(id)}`, {}, isIdeaSet),
   startBuild: (body: BuildIdea): Promise<BuildStatus> => request("/builds", post(body), isBuildStatus),
+  tweakIdea: (set: string, idea: string, body: TweakIdea): Promise<IdeaSet> =>
+    request(`/ideas/${encodeURIComponent(set)}/ideas/${encodeURIComponent(idea)}/tweak`, post(body), isIdeaSet),
+  mixIdeas: (set: string, body: MixIdeas): Promise<BuildStatus> =>
+    request(`/ideas/${encodeURIComponent(set)}/mix`, post(body), isBuildStatus),
   build: (id: string): Promise<BuildStatus> => request(`/builds/${encodeURIComponent(id)}`, {}, isBuildStatus),
   modelSettings: (): Promise<ModelSettings> => request("/settings/models", {}, isModelSettings),
   saveModelSettings: (patch: ModelSettingsPatch): Promise<ModelSettings> =>

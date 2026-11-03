@@ -15,6 +15,7 @@ from icarus.api.app import create_app
 from icarus.contracts.training import LogLine, MetricPoint, Rollout, StartRun, TrainingSnapshot
 from icarus.training.run_store import RunFolder
 from icarus.training.supervisor import Supervisor
+from tests.api.test_play_api import opened
 
 FAKE_WORKER = Path(__file__).parents[1] / "training" / "fake_worker.py"
 START = {"total_steps": 10_000, "copies": 1}
@@ -70,9 +71,14 @@ def test_a_run_starts_lists_stops_and_serves_its_timeline(tmp_path):
     assert busy.status_code == 409 and busy.json()["code"] == "conflict" and "Run 1" in busy.json()["message"]
     assert [item["run_id"] for item in client.get(f"/projects/{project_id}/runs").json()] == [run_id]
     wait_for(lambda: client.get(f"/runs/{run_id}").json()["state"] == "running")
+    assert client.post(f"/runs/{run_id}/pause").json()["paused"] is True
+    assert client.get(f"/runs/{run_id}").json()["paused"] is True
+    assert client.post(f"/runs/{run_id}/resume").json()["paused"] is False
 
     assert client.post(f"/runs/{run_id}/stop").json()["state"] == "stopping"
     wait_for(lambda: client.get(f"/runs/{run_id}").json()["state"] == "stopped")
+    refused = client.post(f"/runs/{run_id}/pause")
+    assert refused.status_code == 409 and "not training" in refused.json()["message"]
     assert [point["kind"] for point in client.get(f"/runs/{run_id}/metrics").json()] == ["eval"]
     assert client.get(f"/runs/{run_id}/checkpoints").json() == [
         {"step": 0, "episode_return": 0.0, "success_rate": None, "failure_rate": None, "has_rollout": True}
@@ -92,7 +98,7 @@ def test_unknown_runs_and_projects_answer_404(tmp_path):
 def test_a_project_that_cannot_train_or_a_bad_request_is_rejected(tmp_path):
     client = TestClient(make_app(tmp_path))
     empty = client.post(f"/projects/{new_project(client, 'empty_world')}/runs", json=START)
-    assert empty.status_code == 422 and "navigation and locomotion" in empty.json()["message"]
+    assert empty.status_code == 422 and "can be trained" in empty.json()["message"]
     bad = client.post(f"/projects/{new_project(client)}/runs", json={"total_steps": 10, "copies": 0})
     assert bad.status_code == 422 and set(bad.json()["details"]) == {"body.total_steps", "body.copies"}
 
@@ -167,7 +173,54 @@ def test_play_drives_the_body_with_the_best_checkpoint_of_the_current_revision(t
     folder.write_status(folder.status().model_copy(update={"state": state, "best_step": 25_000}))
 
     with client.websocket_connect(f"/projects/{folder.project().id}/play") as socket:
-        ready = socket.receive_json()["message"]
+        ready = opened(socket)
+    assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
+
+
+def edit(target: str, component: str, prop: str, value: dict) -> dict:
+    return {
+        "summary": f"Set {prop}",
+        "operations": [
+            {"op": "set_property", "object": target, "component": component, "property": prop, "value": value}
+        ],
+    }
+
+
+LOOK_EDITS = {
+    "time of day": [
+        edit("sky", "sky", "use_clock", {"type": "switch", "value": True}),
+        edit("sky", "sky", "clock_time", {"type": "slider", "value": 18.5}),
+    ],
+    "car color": [edit("car", "material", "color", {"type": "color", "value": "#d23b3b"})],
+    "sun light": [edit("sun", "light", "intensity", {"type": "slider", "value": 2})],
+    "ray name": [edit("car", "distance_ray", "name", {"type": "text", "value": "Nose"})],
+    "practice settings": [
+        {
+            "operations": [{"op": "set_brain", "training_steps": 200_000, "ppo": {"learning_rate": 0.001}}],
+            "summary": "Practice",
+        }
+    ],
+    "project name": [{"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}],
+}
+
+
+@pytest.mark.parametrize("look", LOOK_EDITS)
+def test_play_keeps_the_trained_brain_after_a_change_that_only_alters_the_look(tmp_path, look):
+    from stable_baselines3 import PPO
+
+    from icarus.sim.env import ProjectEnv
+
+    app = make_app(tmp_path)
+    client = TestClient(app)
+    folder = stored_run(app, client)
+    project_id = folder.project().id
+    PPO("MlpPolicy", ProjectEnv(folder.project()), seed=0, device="cpu").save(folder.checkpoint_path(25_000))
+    folder.write_status(folder.status().model_copy(update={"state": "done", "best_step": 25_000}))
+    for batch in LOOK_EDITS[look]:
+        assert client.post(f"/projects/{project_id}/operations", json=batch).status_code == 200, batch
+
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        ready = opened(socket)
     assert ready["session"]["brain"] == "Trained brain: Run 1 at 25,000 steps"
 
 
@@ -189,10 +242,10 @@ def test_play_keeps_the_untrained_brain_without_a_usable_finished_run(tmp_path, 
     state = "running" if change == "still training" else "done"
     folder.write_status(folder.status().model_copy(update={"state": state, "best_step": best}))
     if change == "newer revision":
-        rename = {"operations": [{"op": "rename_project", "name": "Renamed"}], "summary": "Rename"}
-        assert client.post(f"/projects/{project_id}/operations", json=rename).status_code == 200
+        heavier = edit("car", "physics_body", "mass", {"type": "number", "value": 3})
+        assert client.post(f"/projects/{project_id}/operations", json=heavier).status_code == 200
     with client.websocket_connect(f"/projects/{project_id}/play") as socket:
-        brain = socket.receive_json()["message"]["session"]["brain"]
+        brain = opened(socket)["session"]["brain"]
     if change == "never trained":
         assert brain == "Untrained brain: Run 1 did not beat random actions yet"
     else:

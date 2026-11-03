@@ -1,3 +1,4 @@
+from icarus.contracts.project import Project
 from icarus.contracts.specs import TaskFamily
 
 FIRST_MARK = 25_000
@@ -6,7 +7,17 @@ _DECADE = (1, 2, 4)
 # Steps per second measured for PPO on CPU with 16 copies (ADR 001).
 STEPS_PER_SECOND = 2000
 # The training budget a task family needs before its results say much.
-RECOMMENDED_STEPS: dict[TaskFamily, int] = {"navigation": 1_000_000, "locomotion": 2_000_000, "none": 0}
+RECOMMENDED_STEPS: dict[TaskFamily, int] = {
+    "navigation": 1_000_000,
+    "locomotion": 2_000_000,
+    "imitation": 2_000_000,
+    "none": 0,
+}
+
+
+def planned_steps(project: Project) -> int:
+    """Steps a run practices when its request names none: the brain's own budget, else the task's recommended one."""
+    return project.brain.training_steps or RECOMMENDED_STEPS[project.task.family]
 
 
 def checkpoint_steps(total: int) -> list[int]:

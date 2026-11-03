@@ -7,7 +7,7 @@ from collections.abc import Callable
 from icarus.api.runs import _EventCursor
 from icarus.contracts.events import RunEventWrapper
 from icarus.contracts.project import ProjectState
-from icarus.contracts.training import CheckpointEvent, RunStatus, StartRun
+from icarus.contracts.training import CheckpointEvent, RunGroup, RunStatus, StartRun
 from icarus.tasks import Publisher
 from icarus.training.run_store import RunStore, UnknownRun
 from icarus.training.supervisor import Supervisor
@@ -23,12 +23,12 @@ class RunRelay:
     def __init__(
         self,
         runs: RunStore,
-        active_run: Callable[[], str | None],
+        active_runs: Callable[[], list[str]],
         publish: Publisher,
         on_checkpoint: Callable[[str, int], None] | None = None,
     ) -> None:
         self._runs = runs
-        self._active_run = active_run
+        self._active_runs = active_runs
         self._publish = publish
         self._on_checkpoint = on_checkpoint
         self._cursors: dict[str, _EventCursor] = {}
@@ -50,12 +50,13 @@ class RunRelay:
             self._thread.join()
 
     def poll(self) -> None:
-        active = self._active_run()
-        if active is not None and active not in self._cursors:
+        for active in self._active_runs():
+            if active in self._cursors:
+                continue
             try:
                 self._cursors[active] = _EventCursor(self._runs.folder(active))
             except UnknownRun:
-                return
+                continue
         for run_id, cursor in list(self._cursors.items()):
             events, finished = cursor.poll()
             project_id = cursor.folder.config().project_id
@@ -86,3 +87,10 @@ class CoachedSupervisor(Supervisor):
         if start.coach and self.relay is not None:
             self.relay.coach(status.run_id)
         return status
+
+    def start_group(self, state: ProjectState, start: StartRun, threads: int, use_graphics_card: bool) -> RunGroup:
+        group = super().start_group(state, start, threads, use_graphics_card)
+        if start.coach and self.relay is not None:
+            for status in group.runs:
+                self.relay.coach(status.run_id)
+        return group

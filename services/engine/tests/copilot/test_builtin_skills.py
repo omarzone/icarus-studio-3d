@@ -6,21 +6,38 @@ import pytest
 from icarus.copilot.agent.tools.inspect import RunSection
 from icarus.copilot.agent.tools.look import View
 from icarus.copilot.skill_tool import builtin_skills, known_tool_names
+from icarus.library.body_vault import VAULT_BODIES
 from icarus.library.components import COMPONENTS, SKY_PRESETS, SURFACES
+from icarus.library.layouts import RECIPES
 from icarus.library.pieces import PIECES
 from icarus.library.rewards import REWARD_TERMS
 from icarus.library.templates import TEMPLATES
 from icarus.sim.start_pose import START_ACROSS, START_HEADING_DEG
 
 EXPECTED = {
-    "parking-and-navigation",
+    "reach-a-target",
     "walking-robot",
-    "race-and-obstacle-course",
+    "avoid-obstacles",
     "reward-design",
     "diagnose-a-brain",
     "curriculum-and-warm-start",
     "environment-look",
     "sensors-for-a-task",
+    "about-icarus-studio",
+    "watch-a-training",
+    "balance-and-stand",
+    "push-an-object",
+    "jump-and-climb",
+    "move-a-joint",
+    "build-a-scene",
+    "build-an-environment",
+    "build-with-parts",
+    "clone-from-a-reference",
+    "drive-a-vehicle",
+    "park-a-vehicle",
+    "plates-and-counters",
+    "pick-a-body",
+    "several-agents",
 }
 _CODE = re.compile(r"`([^`]+)`")
 # A value the skill gives to a reward weight or a property: `term` = 1 or `kind.property` = -20–-10.
@@ -32,6 +49,9 @@ _WORDS = (
     | set(SURFACES)
     | set(TEMPLATES)
     | set(PIECES)
+    | set(RECIPES)
+    | set(VAULT_BODIES)
+    | {"humanoid_body"}
 )
 # A step budget next to a percentage reads as a promised result: "300k steps parked 40%".
 _PROMISED_RESULT = re.compile(r"\d+(?:k|M)\b[^.]*?\d+%")
@@ -46,7 +66,7 @@ def _range(name: str) -> tuple[float, float] | None:
     return None if schema.min is None or schema.max is None else (schema.min, schema.max)
 
 
-def test_the_eight_builtin_skills_load_without_problems():
+def test_the_builtin_skills_load_without_problems():
     assert builtin_skills().skipped == []
     assert set(builtin_skills().skills) == EXPECTED
 

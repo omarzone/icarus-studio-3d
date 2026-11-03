@@ -1460,7 +1460,7 @@
             "id": "density",
             "label": "Density",
             "type": "number",
-            "unit": "kg/m\u00b3",
+            "unit": "kg/m³",
             "min": 1.0,
             "max": 20000.0,
             "step": null,
@@ -1619,7 +1619,7 @@
             "id": "damping",
             "label": "Damping",
             "type": "number",
-            "unit": "N\u00b7s/m",
+            "unit": "N·s/m",
             "min": 0.0,
             "max": 100.0,
             "step": null,
@@ -1724,7 +1724,7 @@
             "id": "gear",
             "label": "Gear",
             "type": "number",
-            "unit": "\u00d7",
+            "unit": "×",
             "min": 0.01,
             "max": 1000.0,
             "step": null,
@@ -2605,6 +2605,218 @@
             }
           ]
         }
+      }
+    ],
+    "brain_settings": [
+      {
+        "id": "training_steps",
+        "label": "Steps",
+        "type": "number",
+        "unit": "steps",
+        "min": 10000.0,
+        "max": 50000000.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 1000000.0
+        },
+        "expert": false,
+        "randomizable": false,
+        "hint": "Moments of practice in each run; left on auto, the task decides"
+      },
+      {
+        "id": "copies",
+        "label": "Parallel copies",
+        "type": "slider",
+        "unit": null,
+        "min": 1.0,
+        "max": 64.0,
+        "step": 1.0,
+        "options": null,
+        "default": {
+          "type": "slider",
+          "value": 16.0
+        },
+        "expert": false,
+        "randomizable": false,
+        "hint": "Copies of the world that practice at once; more finish sooner and use more of the computer"
+      },
+      {
+        "id": "algorithm",
+        "label": "Method",
+        "type": "list",
+        "unit": null,
+        "min": null,
+        "max": null,
+        "step": null,
+        "options": [
+          {
+            "value": "ppo",
+            "label": "PPO",
+            "icon": null
+          }
+        ],
+        "default": {
+          "type": "list",
+          "value": "ppo"
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "How the brain learns from its rewards"
+      },
+      {
+        "id": "layers",
+        "label": "Hidden layers",
+        "type": "count",
+        "unit": null,
+        "min": 1.0,
+        "max": 4.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "count",
+          "value": 2
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Layers of neurons between what it senses and what it does"
+      },
+      {
+        "id": "neurons",
+        "label": "Neurons per layer",
+        "type": "slider",
+        "unit": null,
+        "min": 8.0,
+        "max": 1024.0,
+        "step": 8.0,
+        "options": null,
+        "default": {
+          "type": "slider",
+          "value": 256.0
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Bigger brains can learn more and train slower"
+      },
+      {
+        "id": "ppo.learning_rate",
+        "label": "Learning rate",
+        "type": "number",
+        "unit": "",
+        "min": 1e-6,
+        "max": 0.01,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 0.0003
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "How far each update moves the brain; too high and learning jumps around"
+      },
+      {
+        "id": "ppo.n_steps",
+        "label": "Steps per update",
+        "type": "number",
+        "unit": "steps",
+        "min": 64.0,
+        "max": 8192.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 1024.0
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Steps each copy practices before the brain updates"
+      },
+      {
+        "id": "ppo.batch_size",
+        "label": "Batch size",
+        "type": "number",
+        "unit": "steps",
+        "min": 32.0,
+        "max": 65536.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 2048.0
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Steps looked at together in each update; capped at what the copies collect"
+      },
+      {
+        "id": "ppo.n_epochs",
+        "label": "Passes per update",
+        "type": "count",
+        "unit": null,
+        "min": 1.0,
+        "max": 50.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "count",
+          "value": 10
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Times each update goes over what was collected"
+      },
+      {
+        "id": "ppo.gamma",
+        "label": "Future discount",
+        "type": "number",
+        "unit": "",
+        "min": 0.8,
+        "max": 0.9999,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 0.99
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "How much later rewards count; closer to 1 plans further ahead"
+      },
+      {
+        "id": "ppo.gae_lambda",
+        "label": "Advantage smoothing",
+        "type": "number",
+        "unit": "",
+        "min": 0.8,
+        "max": 1.0,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 0.95
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Trades steadier updates for less biased ones"
+      },
+      {
+        "id": "ppo.ent_coef",
+        "label": "Exploration bonus",
+        "type": "number",
+        "unit": "",
+        "min": 0.0,
+        "max": 0.1,
+        "step": null,
+        "options": null,
+        "default": {
+          "type": "number",
+          "value": 0.0
+        },
+        "expert": true,
+        "randomizable": false,
+        "hint": "Rewards trying varied actions; raise it when the brain settles too early"
       }
     ]
   }

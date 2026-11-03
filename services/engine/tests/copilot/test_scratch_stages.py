@@ -8,7 +8,7 @@ import pytest
 from icarus.copilot.client import Connection, ModelClient
 from icarus.copilot.fixture_provider import fixture_transport, fixtures_root
 from icarus.copilot.scratch_design import scratch_system
-from icarus.copilot.scratch_plan import PlanPart, ScratchPlan
+from icarus.copilot.scratch_plan import PlanJoint, PlanPart, PlanReward, ScratchPlan
 from icarus.copilot.scratch_stages import (
     StageFailed,
     assemble,
@@ -141,3 +141,50 @@ def test_the_plan_offers_exactly_the_library_surfaces():
     from icarus.library.components import SURFACES
 
     assert set(get_args(Surface)) == set(SURFACES) == set(SURFACE_FRICTION)
+
+
+def component_values(project, obj_id: str) -> dict[str, dict]:
+    obj = next(obj for obj in project.world.objects if obj.id == obj_id)
+    return {c.kind: {k: v.model_dump().get("value") for k, v in c.properties.items()} for c in obj.components}
+
+
+def test_painted_markings_are_decorative_and_have_no_collider():
+    values = component_values(built(fixture_plan()), "lane_left")
+    assert "collider" not in values and values["physics_body"]["mode"] == "static"
+    assert "collider" in component_values(built(fixture_plan()), "shelf_left")
+
+
+def test_a_caster_can_turn_freely_on_a_ball_joint():
+    caster = PlanJoint.model_validate(
+        {"kind": "ball", "axis": (0, 0, 1), "limits": (-180, 180), "anchor": (0, 0, 0), "damping": 0.05}
+    )
+    project = built(with_part(fixture_plan(), "caster", joint=caster))
+    caster_spec = next(obj for obj in project.bodies[0].objects if obj.id == "caster")
+    joint = next(c for c in caster_spec.components if c.kind == "joint")
+    assert joint.properties["kind"].model_dump()["value"] == "ball"
+    assert design_report(project)[0].ok
+
+
+def test_a_push_task_brings_a_chosen_object_to_the_goal():
+    plan = fixture_plan()
+    rewards = [*plan.task.rewards, PlanReward(term="object_to_goal", weight=1, object="crate")]
+    plan = plan.model_copy(update={"task": plan.task.model_copy(update={"rewards": rewards})})
+    project = built(plan)
+    term = next(term for term in project.task.rewards if term.term == "object_to_goal")
+    assert term.params["object"].model_dump() == {"type": "asset", "value": "crate"}
+    assert design_report(project)[0].ok
+
+
+def test_a_cleaning_task_counts_ground_cells_of_the_planned_size():
+    plan = fixture_plan()
+    rewards = [*plan.task.rewards, PlanReward(term="coverage", weight=1, cell_size=0.8)]
+    plan = plan.model_copy(update={"task": plan.task.model_copy(update={"rewards": rewards})})
+    term = next(term for term in built(plan).task.rewards if term.term == "coverage")
+    assert term.params["cell_size"].model_dump() == {"type": "number", "value": 0.8}
+
+
+def test_the_plan_is_told_the_new_tasks_and_that_markings_never_collide():
+    system = " ".join(scratch_system().split())
+    assert "nothing rewards moving another object" not in system
+    for phrase in ("object_to_goal", "coverage", "height_gain", "ball joint", "markings never collide"):
+        assert phrase in system

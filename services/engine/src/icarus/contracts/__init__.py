@@ -1,7 +1,33 @@
 from pydantic import BaseModel
 
-from icarus.contracts.brain_network import BrainActivations, BrainNetwork
+from icarus.contracts.behavior import (
+    BehaviorComparison,
+    BehaviorTest,
+    BehaviorTestDraft,
+    BehaviorTestResult,
+    CheckpointEpisode,
+    EpisodeActivations,
+)
+from icarus.contracts.brain_network import (
+    BrainActivations,
+    BrainBehaviors,
+    BrainNetwork,
+    BrainReadings,
+    BrainSizes,
+    BrainSources,
+)
+from icarus.contracts.build import (
+    BuildTarget,
+    ExportChoice,
+    ExportPlan,
+    ExportRequest,
+    ExportResult,
+    HardwareCheck,
+    HardwareCheckRequest,
+)
+from icarus.contracts.bundles import UnpackBundle
 from icarus.contracts.coach import AutopilotStart, AutopilotStatus, Diagnosis
+from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
     AttachmentInfo,
     AttachmentUpload,
@@ -10,26 +36,50 @@ from icarus.contracts.copilot import (
     Conversation,
     IdeaRequest,
     IdeaSet,
+    MixIdeas,
     ModelSettings,
     ModelSettingsPatch,
     SendMessage,
     SetAutonomy,
+    TweakIdea,
 )
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ApiError, ValidationErrorBody
 from icarus.contracts.events import EngineEventEnvelope, TaskInfo
 from icarus.contracts.health import HealthStatus
 from icarus.contracts.library import LibraryCatalog
+from icarus.contracts.motion import (
+    MotionChoice,
+    MotionExportFile,
+    MotionExportRequest,
+    MotionTracking,
+    MotionTrain,
+    MotionVideoUpload,
+    MotionWorkspace,
+    PoseEstimate,
+)
 from icarus.contracts.operations import OperationBatch
-from icarus.contracts.play import PlayCommandEnvelope, PlayMessageEnvelope
+from icarus.contracts.play import PlayBrainOption, PlayCommandEnvelope, PlayMessageEnvelope
 from icarus.contracts.project import CreateProject, DuplicateProject, Project, ProjectState, ProjectSummary, Revision
+from icarus.contracts.rig import (
+    AutoRigStart,
+    AutoRigStatus,
+    PoseRequest,
+    PoseResult,
+    RigCheck,
+    RigFixResult,
+    SkinWeights,
+)
 from icarus.contracts.scene import SceneDescription
+from icarus.contracts.skins import SkinImport, SkinImported, SkinInfo
+from icarus.contracts.storage import ChangeDataFolder, DataFolderCheck, DataFolderChoice, DataFolderMove, StorageInfo
 from icarus.contracts.training import (
     CheckpointInfo,
     MetricPoint,
     Rollout,
     RunConfig,
     RunEventEnvelope,
+    RunGroup,
     RunStatus,
     StartRun,
     TrainingSettings,
@@ -52,9 +102,11 @@ MODELS: tuple[type[BaseModel], ...] = (
     LibraryCatalog,
     PlayCommandEnvelope,
     PlayMessageEnvelope,
+    PlayBrainOption,
     StartRun,
     RunConfig,
     RunStatus,
+    RunGroup,
     MetricPoint,
     CheckpointInfo,
     Rollout,
@@ -64,8 +116,12 @@ MODELS: tuple[type[BaseModel], ...] = (
     Conversation,
     SendMessage,
     SetAutonomy,
+    ContextRequest,
+    ContextUsage,
     IdeaRequest,
     IdeaSet,
+    TweakIdea,
+    MixIdeas,
     BuildIdea,
     BuildStatus,
     ModelSettings,
@@ -79,6 +135,47 @@ MODELS: tuple[type[BaseModel], ...] = (
     TaskInfo,
     BrainNetwork,
     BrainActivations,
+    EpisodeActivations,
+    BehaviorTest,
+    BehaviorTestDraft,
+    BehaviorTestResult,
+    BehaviorComparison,
+    CheckpointEpisode,
+    BrainReadings,
+    BrainBehaviors,
+    BrainSizes,
+    BrainSources,
+    StorageInfo,
+    DataFolderMove,
+    DataFolderChoice,
+    DataFolderCheck,
+    ChangeDataFolder,
+    SkinInfo,
+    SkinImport,
+    SkinImported,
+    BuildTarget,
+    ExportChoice,
+    ExportPlan,
+    ExportRequest,
+    ExportResult,
+    HardwareCheck,
+    HardwareCheckRequest,
+    AutoRigStart,
+    AutoRigStatus,
+    RigCheck,
+    RigFixResult,
+    PoseRequest,
+    PoseResult,
+    SkinWeights,
+    PoseEstimate,
+    MotionVideoUpload,
+    MotionChoice,
+    MotionTracking,
+    MotionWorkspace,
+    MotionTrain,
+    MotionExportRequest,
+    MotionExportFile,
+    UnpackBundle,
 )
 
 __all__ = ["MODELS", "ApiError", "HealthStatus"]

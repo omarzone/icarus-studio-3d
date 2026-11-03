@@ -12,10 +12,12 @@ type Props = {
   onPick: (kind: string) => void;
   // Highlighted kind (keyboard or pointer focus from the search).
   highlighted?: string;
+  // Component ids the object already has; a unique kind among them cannot be added again.
+  taken?: readonly string[];
 };
 
 // The Add component picker: search or describe, then components grouped by what they do.
-export function AddComponentMenu({ onPick, highlighted }: Props) {
+export function AddComponentMenu({ onPick, highlighted, taken = [] }: Props) {
   const port = usePort(scenePort);
   const groups = useQuery({ queryKey: sceneKeys.componentKinds, queryFn: () => port.listComponentKinds() });
   const [search, setSearch] = useState("");
@@ -39,12 +41,15 @@ export function AddComponentMenu({ onPick, highlighted }: Props) {
               <span className="px-2.5 pt-1.5 pb-0.5 text-meta text-fg-tertiary">{group.label}</span>
               {group.kinds.map((kind) => {
                 const Icon = SCENE_ICONS[kind.icon];
+                const had = kind.unique === true && taken.includes(kind.id);
                 return (
                   <Act
                     key={kind.id}
                     cta={kind.label}
+                    disabled={had}
+                    title={had ? `This object already has a ${kind.label}; it can have only one` : undefined}
                     onClick={() => onPick(kind.id)}
-                    className={`flex items-center gap-2.25 rounded-control px-2.5 py-1.5 text-left text-ui leading-tight ${
+                    className={`flex items-center gap-2.25 rounded-control px-2.5 py-1.5 text-left text-ui leading-tight disabled:opacity-40 ${
                       kind.id === highlighted ? "bg-control hover:bg-control-raised" : "hover:bg-fill-hover"
                     }`}
                   >

@@ -21,3 +21,7 @@ export function toThreeQuaternion([w, x, y, z]: readonly [number, number, number
 ] {
   return [x, z, -y, w];
 }
+
+export function fromThreeQuaternion([x, y, z, w]: ThreeQuaternion): [number, number, number, number] {
+  return [w, x, -z, y];
+}

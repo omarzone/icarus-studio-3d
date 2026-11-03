@@ -3,6 +3,7 @@ import type {
   CopyPoses,
   LogLine,
   MetricPoint,
+  MotionSegment,
   Rollout,
   RolloutFrame,
   RunEvent,
@@ -11,12 +12,13 @@ import type {
   TrainingSettings,
   TrainingSnapshot,
 } from "@icarus/contracts";
-import { has, isListOf, isRecord, isTriple } from "./response-checks.ts";
+import { has, isListOf, isOptionalRays, isOptionalSignals, isRecord, isTriple } from "./response-checks.ts";
 
 // Structural checks of training answers and run events: the fields the app reads, not the whole schema.
 
 const RUN_STATES: readonly string[] = ["starting", "running", "stopping", "done", "stopped", "failed"];
 const LOG_LEVELS: readonly string[] = ["info", "warn", "error"];
+const PHASES: readonly unknown[] = [undefined, null, "practicing", "updating", "testing"];
 
 function isOptionalNumber(value: Record<string, unknown>, key: string): boolean {
   const field = value[key];
@@ -51,6 +53,8 @@ export function isRunStatus(value: unknown): value is RunStatus {
     has(value, "started_at", "string") &&
     isOptionalNumber(value, "best_step") &&
     isOptionalNumber(value, "success_rate") &&
+    PHASES.includes(value.phase) &&
+    isOptionalNumber(value, "testing_step") &&
     isFailure(value.failure)
   );
 }
@@ -110,12 +114,35 @@ function isPoses(value: Record<string, unknown>, count: number): boolean {
   );
 }
 
+const LIVE_VIEWS: readonly unknown[] = [undefined, null, "classic", "realtime", "fast"];
+
+function isCopyPoses(count: number) {
+  return (copy: unknown): copy is CopyPoses =>
+    isRecord(copy) && isPoses(copy, count) && isOptionalRays(copy.rays) && isOptionalSignals(copy.signals);
+}
+
+// Recorded motion: per copy, episode segments with one time per frame.
+function isMotion(value: unknown, count: number): boolean {
+  if (value === undefined || value === null) {
+    return true;
+  }
+  const isSegment = (segment: unknown): segment is MotionSegment =>
+    isRecord(segment) &&
+    has(segment, "episode", "number") &&
+    isListOf(segment.times, (time): time is number => typeof time === "number") &&
+    isListOf(segment.frames, isCopyPoses(count)) &&
+    segment.times.length === segment.frames.length;
+  return isListOf(value, (segments): segments is MotionSegment[] => isListOf(segments, isSegment));
+}
+
 export function isTrainingSnapshot(value: unknown): value is TrainingSnapshot {
   if (!isRecord(value) || !has(value, "step", "number") || !isListOf(value.geoms, isString)) {
     return false;
   }
   const count = value.geoms.length;
-  return isListOf(value.copies, (copy): copy is CopyPoses => isRecord(copy) && isPoses(copy, count));
+  return (
+    isListOf(value.copies, isCopyPoses(count)) && LIVE_VIEWS.includes(value.live_view) && isMotion(value.motion, count)
+  );
 }
 
 export function isRollout(value: unknown): value is Rollout {
@@ -133,7 +160,11 @@ export function isRollout(value: unknown): value is Rollout {
   return isListOf(
     value.frames,
     (frame): frame is RolloutFrame =>
-      isRecord(frame) && has(frame, "time", "number") && has(frame, "reward", "number") && isPoses(frame, count),
+      isRecord(frame) &&
+      has(frame, "time", "number") &&
+      has(frame, "reward", "number") &&
+      isPoses(frame, count) &&
+      isOptionalSignals(frame.signals),
   );
 }
 

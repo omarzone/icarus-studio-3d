@@ -79,7 +79,7 @@ def read_run(scope: TurnScope, args: ReadRunArgs) -> Observation:
     if "status" in args.sections:
         keys = ("state", "revision", "step", "total_steps", "recommended_steps", "far_below_recommended", "copies")
         keys += ("control_rate_hz",)
-        picked |= {key: facts[key] for key in (*keys, "best_step", "success_rate")}
+        picked |= {key: facts[key] for key in (*keys, "best_step", "success_rate", "success_measured_at_step")}
     if "evaluations" in args.sections:
         picked |= {"evaluations": facts["evaluations"], "latest_evaluation": facts["latest_evaluation"]}
     if "reward_terms" in args.sections:

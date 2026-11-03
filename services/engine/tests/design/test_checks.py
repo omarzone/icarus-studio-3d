@@ -54,7 +54,8 @@ def test_a_body_buried_under_the_ground_fails_settling_readably():
     report, compiled = design_report(apply_operations(template("walker_robot"), [operation]))
     settles = next(check for check in report.checks if check.id == "settles")
     assert settles.status == "fail"
-    assert "Torso" in settles.detail
+    # Under a slab nothing holds the body up, so its lowest part, a foot, is the one named.
+    assert settles.detail == "Left foot fell off the ground or through it; move it over the ground or widen the ground"
     assert compiled is None
 
 
@@ -64,6 +65,7 @@ def test_an_invalid_structure_skips_every_physics_check():
     assert statuses(report) == {
         "structure": "fail",
         "compiles": "skip",
+        "reachable": "skip",
         "settles": "skip",
         "actuators": "skip",
         "sensors": "skip",

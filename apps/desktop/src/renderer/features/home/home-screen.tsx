@@ -13,6 +13,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { CommunityStrip, CommunityStripHeader } from "./community-strip.tsx";
 import { HomeHero } from "./home-hero.tsx";
+import { RecentProjects } from "./recent-projects.tsx";
 import { TemplateCards } from "./template-cards.tsx";
 
 export function HomeScreen() {
@@ -22,10 +23,13 @@ export function HomeScreen() {
   const firstLaunch = screen === "STA-HOME-EMPTY" || noProjectsYet;
   // The bare front door is drawn for a signed-out visitor, as in its reference; dialogs over it show the account.
   const signedOut = screen === "SCR-HOME" && overlay === null && !noProjectsYet;
+  // Only the app has projects of its own to return to; the prototype keeps its design.
+  const app = useRuntimeMode() === "app";
   return (
     <LauncherPage active="Home" activeGoesTo="SCR-HOME" signedOut={signedOut}>
       <div className="flex flex-col gap-4.5">
         <HomeHero showIdeasHint={!firstLaunch} />
+        {app && !firstLaunch ? <RecentProjects /> : null}
         <section className="flex flex-col gap-2.5">
           <h2 className="m-0 text-title-3 leading-tight font-semibold">Start from</h2>
           <Templates />

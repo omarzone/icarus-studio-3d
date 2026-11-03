@@ -1,4 +1,6 @@
-from icarus.training.progress_watch import CheckpointResult, watch
+from icarus.copilot.settings import settings_dir
+from icarus.training.experiment_switches import EXPERIMENTS_FILE
+from icarus.training.progress_watch import CheckpointResult, patience_steps, trend, watch
 
 
 def results(*rows: tuple[int, float | None, float]) -> list[CheckpointResult]:
@@ -19,6 +21,23 @@ def test_a_run_that_stopped_improving_is_stalled():
 
     assert rules(found) == {"stalled"}
     assert "3 checkpoints" in found[0].reason
+
+
+def test_a_flat_run_before_its_patience_step_is_still_learning_not_stalled():
+    rows = results((0, 0.0, -10), (25_000, 0.1, -4), (50_000, 0.1, -4.1), (100_000, 0.1, -4.2), (250_000, 0.1, -4))
+
+    assert watch(rows, 0.8, patience=500_000) == []
+    assert rules(watch(rows, 0.8, patience=250_000)) == {"stalled"}
+    assert trend(rows, patience=500_000).call == "early"
+    assert trend(rows, patience=250_000).call == "flat"
+
+
+def test_patience_is_a_share_of_the_recommended_budget_less_what_the_brain_already_trained():
+    assert patience_steps("navigation") == 500_000
+    assert patience_steps("locomotion", inherited=300_000) == 700_000
+    (settings_dir() / EXPERIMENTS_FILE).write_text('{"coach_patience": 0.2}', encoding="utf-8")
+    assert patience_steps("navigation") == 200_000
+    assert patience_steps("navigation", inherited=900_000) == 0
 
 
 def test_a_run_still_improving_is_not_stalled():

@@ -1,4 +1,4 @@
-import { ChevronDown, Eye, FileText, ImageOff } from "lucide-react";
+import { Box, ChevronDown, Eye, FileText, ImageOff } from "lucide-react";
 import { useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { ChatAttachment } from "../../ports/copilot-port.ts";
@@ -13,6 +13,7 @@ export function MessageAttachments({ attachments }: { attachments: readonly Chat
   const pictures = attachments.filter((item) => item.kind === "image");
   const videos = attachments.filter((item) => item.kind === "video");
   const documents = attachments.filter((item) => item.kind === "document");
+  const models = attachments.filter((item) => item.kind === "model");
   return (
     <div className="flex max-w-[calc(82%+28px)] flex-col items-end gap-1.5 self-end">
       {pictures.length > 0 ? (
@@ -57,6 +58,19 @@ export function MessageAttachments({ attachments }: { attachments: readonly Chat
             <span className="text-meta text-fg-tertiary">{formatBytes(document.size)}</span>
           </span>
         </Act>
+      ))}
+      {models.map((model) => (
+        <span
+          key={model.id}
+          title={model.name}
+          className="flex h-12 max-w-60 items-center gap-2.5 rounded-card-sm bg-control px-3 text-left"
+        >
+          <Box size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-fg-tertiary" />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-ui text-fg">{model.name}</span>
+            <span className="text-meta text-fg-tertiary">3D model · {formatBytes(model.size)}</span>
+          </span>
+        </span>
       ))}
       {opened?.as === "image" ? <ImageViewer attachment={opened.attachment} onClose={() => setOpened(null)} /> : null}
       {opened?.as === "document" ? (

@@ -1,6 +1,8 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import { engineApi } from "../engine-client/engine-api.ts";
+import { motionApi } from "../engine-client/motion-api.ts";
 import { createMotionFixture } from "./motion.fixture.ts";
+import { createEngineMotionPort } from "./motion-engine.ts";
 import type { ProgressStep } from "./progress-step.ts";
 
 // View types of the motion workspace: a reference video, its tracked pose, the physics copy and its export.
@@ -15,11 +17,16 @@ export type Pose = {
   feet: readonly [Point, Point];
 };
 
+// Stick figures to play side by side: the tracked reference and the physics result, at the clip's rate.
+export type MotionPlayback = { fps: number; reference: readonly Pose[]; result: readonly Pose[] };
+
 export type MotionCompare = {
   reference: string;
   character: string;
   speeds: readonly string[];
   speed: string;
+  // None until the clip is tracked (and in the prototype, which draws plain surfaces).
+  playback?: MotionPlayback;
 };
 
 export type ClipTimeline = {
@@ -31,6 +38,8 @@ export type ClipTimeline = {
   match: readonly number[];
   // Playhead position as a share of the clip.
   playhead: number;
+  // Whether the weakest moment can be practiced again: a trained copy exists.
+  practice?: boolean;
 };
 
 export type PartMatch = { id: string; name: string; match: number };
@@ -52,9 +61,29 @@ export type VideoSource = {
   targets: readonly Option[];
   target: string;
   privacy: string;
+  // The connected pose model, null when none is connected; the prototype assumes one.
+  poseModel: string | null;
+  hasVideo: boolean;
 };
 
-export type TrackingProgress = { file: string; frame: string; percent: number; steps: readonly ProgressStep[] };
+// A video the app sampled into still frames at an even rate, base64 JPEG.
+export type SampledVideo = {
+  name: string;
+  duration: number;
+  fps: number;
+  width: number;
+  height: number;
+  frames: readonly string[];
+};
+
+export type TrackingProgress = {
+  file: string;
+  frame: string;
+  percent: number;
+  steps: readonly ProgressStep[];
+  state: "idle" | "running" | "done" | "failed" | "stopped";
+  message?: string;
+};
 
 export type MotionTrainingPlan = {
   title: string;
@@ -75,6 +104,8 @@ export type MotionTrainingStatus = {
   hardResult: string;
 };
 
+export type AnimationFile = { name: string; mediaType: string; content: string };
+
 export type AnimationExport = {
   formats: readonly string[];
   format: string;
@@ -90,127 +121,22 @@ export type MotionPort = {
   selectFrame: (input: { clip: string; index: number }) => Promise<ClipTimeline>;
   getPartMatch: (clip: string) => Promise<PartMatch[]>;
   getVideoSource: (clip: string) => Promise<VideoSource>;
+  addVideo: (input: { clip: string; video: SampledVideo }) => Promise<VideoSource>;
   setVideoChoice: (input: { clip: string; field: "source" | "person" | "target"; id: string }) => Promise<VideoSource>;
   trackMotion: (clip: string) => Promise<void>;
   getTracking: (clip: string) => Promise<TrackingProgress>;
   getTrainingPlan: (clip: string) => Promise<MotionTrainingPlan>;
   setTrainingFocus: (input: { clip: string; focus: string }) => Promise<MotionTrainingPlan>;
-  startTraining: (clip: string) => Promise<void>;
+  startTraining: (input: { clip: string; steps: string; copies: string }) => Promise<void>;
   getTrainingStatus: (clip: string) => Promise<MotionTrainingStatus>;
   trainWeakestMoment: (clip: string) => Promise<void>;
   getExport: (clip: string) => Promise<AnimationExport>;
   setExportFormat: (input: { clip: string; format: string }) => Promise<AnimationExport>;
   toggleExportOption: (input: { clip: string; id: string }) => Promise<AnimationExport>;
-  downloadAnimation: (clip: string) => Promise<void>;
+  downloadAnimation: (clip: string) => Promise<AnimationFile>;
 };
 
-const workspace = ["SCR-MOTION", "STA-MOTION-TRAINING"] as const;
-
 export const motionPort = definePort<MotionPort>({
-  app: {
-    getCompare: pending({
-      key: "motion.compare",
-      summary: "The reference and the physics copy side by side",
-      sprint: 10,
-      ids: [...workspace],
-    }),
-    setSpeed: pending({
-      key: "motion.setSpeed",
-      summary: "Changing the playback speed",
-      sprint: 10,
-      ids: [...workspace],
-    }),
-    getClip: pending({
-      key: "motion.clip",
-      summary: "The clip frames and match curve",
-      sprint: 10,
-      ids: [...workspace],
-    }),
-    selectFrame: pending({ key: "motion.selectFrame", summary: "Moving to a frame", sprint: 10, ids: [...workspace] }),
-    getPartMatch: pending({
-      key: "motion.partMatch",
-      summary: "Match per body part",
-      sprint: 10,
-      ids: ["SCR-MOTION"],
-    }),
-    getVideoSource: pending({
-      key: "motion.videoSource",
-      summary: "Reading the reference video",
-      sprint: 10,
-      ids: ["MOD-MOTION-VIDEO"],
-    }),
-    setVideoChoice: pending({
-      key: "motion.setVideoChoice",
-      summary: "Choosing who to copy and onto what",
-      sprint: 10,
-      ids: ["MOD-MOTION-VIDEO"],
-    }),
-    trackMotion: pending({
-      key: "motion.track",
-      summary: "Tracking the motion in the video",
-      sprint: 10,
-      ids: ["MOD-MOTION-VIDEO"],
-    }),
-    getTracking: pending({
-      key: "motion.tracking",
-      summary: "Pose tracking progress",
-      sprint: 10,
-      ids: ["MOD-MOTION-TRACKING"],
-    }),
-    getTrainingPlan: pending({
-      key: "motion.trainingPlan",
-      summary: "The training plan for the copy",
-      sprint: 10,
-      ids: ["MOD-MOTION-TRAIN"],
-    }),
-    setTrainingFocus: pending({
-      key: "motion.setTrainingFocus",
-      summary: "Choosing what the copy practices",
-      sprint: 10,
-      ids: ["MOD-MOTION-TRAIN"],
-    }),
-    startTraining: pending({
-      key: "motion.startTraining",
-      summary: "Training the copy",
-      sprint: 10,
-      ids: ["MOD-MOTION-TRAIN"],
-    }),
-    getTrainingStatus: pending({
-      key: "motion.trainingStatus",
-      summary: "How the copy is training",
-      sprint: 10,
-      ids: ["STA-MOTION-TRAINING"],
-    }),
-    trainWeakestMoment: pending({
-      key: "motion.trainWeakest",
-      summary: "Training the weakest moment",
-      sprint: 10,
-      ids: ["SCR-MOTION"],
-    }),
-    getExport: pending({
-      key: "motion.export",
-      summary: "The animation export settings",
-      sprint: 10,
-      ids: ["MOD-EXPORT-ANIMATION"],
-    }),
-    setExportFormat: pending({
-      key: "motion.setExportFormat",
-      summary: "Choosing the animation format",
-      sprint: 10,
-      ids: ["MOD-EXPORT-ANIMATION"],
-    }),
-    toggleExportOption: pending({
-      key: "motion.toggleExportOption",
-      summary: "Changing an export option",
-      sprint: 10,
-      ids: ["MOD-EXPORT-ANIMATION"],
-    }),
-    downloadAnimation: pending({
-      key: "motion.download",
-      summary: "Downloading the animation",
-      sprint: 10,
-      ids: ["MOD-EXPORT-ANIMATION"],
-    }),
-  },
+  app: createEngineMotionPort(engineApi, motionApi),
   prototype: createMotionFixture,
 });

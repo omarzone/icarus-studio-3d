@@ -1,4 +1,5 @@
-import type { CheckpointInfo, Rollout, RunStatus, TrainingSnapshot } from "@icarus/contracts";
+import type { CheckpointInfo, Rollout, RunStatus, SceneRay, SceneSignals, TrainingSnapshot } from "@icarus/contracts";
+import type { RecordedFrame } from "../scene/motion-player.ts";
 import { compactNumber } from "../ui/compact-number.ts";
 import type { CheckpointMark, CopyPose, CopyPoses, ReplayFrame } from "./training-port.ts";
 import { checkpointResult } from "./training-views.ts";
@@ -35,9 +36,45 @@ export function replayFrames(rollout: Rollout): ReplayFrame[] {
   return rollout.frames.map((frame) => ({
     time: frame.time,
     poses: posesOf(rollout.geoms, frame.positions, frame.quaternions),
+    signals: frame.signals ?? null,
   }));
 }
 
 export function snapshotCopies(snapshot: TrainingSnapshot): CopyPoses[] {
   return snapshot.copies.map((copy) => posesOf(snapshot.geoms, copy.positions, copy.quaternions));
+}
+
+// Each copy's distance sensors, in the order of the copies.
+export function snapshotRays(snapshot: TrainingSnapshot): SceneRay[][] {
+  return snapshot.copies.map((copy) => copy.rays ?? []);
+}
+
+// Each copy's goal and light states, in the order of the copies.
+export function snapshotSignals(snapshot: TrainingSnapshot): (SceneSignals | null)[] {
+  return snapshot.copies.map((copy) => copy.signals ?? null);
+}
+
+// Each copy's recorded frames in the snapshot, or null for a snapshot with one pose per copy (classic).
+export function snapshotMotion(snapshot: TrainingSnapshot): RecordedFrame[][] | null {
+  if (!snapshot.motion || snapshot.live_view === "classic") {
+    return null;
+  }
+  return snapshot.motion.map((segments) =>
+    segments.flatMap((segment) =>
+      segment.frames.flatMap((frame, index) => {
+        const time = segment.times[index];
+        return time === undefined
+          ? []
+          : [
+              {
+                episode: segment.episode,
+                time,
+                poses: posesOf(snapshot.geoms, frame.positions, frame.quaternions),
+                rays: frame.rays ?? [],
+                signals: frame.signals ?? null,
+              },
+            ];
+      }),
+    ),
+  );
 }

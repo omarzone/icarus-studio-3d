@@ -153,11 +153,11 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-PUBLISH | Guideline agreement gating Publish | pending | planned | `publish.guidelines` |
 | MOD-PUBLISH | Publish sends for review | pending | planned | `publish.send` |
 | MOD-PUBLISHED | "Sent for review" confirmation | pending | planned | `publish.review` |
-| MOD-IMPORT | Kind switch: model, environment, robot | pending | planned | Importers (Sprint 9) |
-| MOD-IMPORT | Choosing or dropping the file | missing | planned | A file picker or drop zone through the main process; the dialog has no control to choose a file |
+| MOD-IMPORT | Kind switch: model, environment, robot | partial | planned | Model and environment import a glTF or GLB as a skin over a collider (ADR 008); robots wait for URDF and MJCF import (Sprint 9) |
+| MOD-IMPORT | Choosing or dropping the file | partial | planned | *Choose file* picks a .glb or .gltf in the renderer; FBX, OBJ and USD say they are not supported yet; no drop zone |
 | MOD-IMPORT | 3D preview with triangles, height, detected kind | pending | planned | Model reading and shape detection; preview box is empty even in the prototype |
 | MOD-IMPORT | Steps auto-rig will run | pending | planned | Auto-rig pipeline |
-| MOD-IMPORT | Import as static mesh, Import and auto-rig | pending | planned | `body.importStatic`, `body.importAndRig` |
+| MOD-IMPORT | Import as static mesh, Import and auto-rig | partial | planned | *Import as static mesh* adds an object with a fitted collider wearing the model; `body.importAndRig` is pending |
 | MOD-IMPORT | Opening Import with no project open | pending | not in spec | Decide whether import from the launcher creates a project first |
 | SCR-SETTINGS | Side navigation | works | built | Nothing |
 | SCR-SETTINGS-MODELS | One row per capability with status | works | built | Nothing |
@@ -417,11 +417,11 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-BRAIN-CONNECTOME | Behaviors tab | pending | planned | Behavior detection |
 | STA-BRAIN-CONNECTOME | Wiring tab | pending | planned | Mapping report |
 | STA-BRAIN-CONNECTOME | Run test and chat | pending | planned | Behavior tests, connectome copilot tools |
-| MOD-EXPORT-BRAIN | ONNX, TorchScript, Unity Sentis | pending | planned | Export route (Sprint 12) |
-| MOD-EXPORT-BRAIN | Include layout, example, history | pending | planned | Named observation layout, example runtime |
-| MOD-EXPORT-BRAIN | File summary | pending | planned | Best checkpoint and sizes |
-| MOD-EXPORT-BRAIN | Download | pending | planned | Export job and save dialog |
-| MOD-EXPORT-BRAIN | Export from the conversation | missing | planned | Copilot export tool |
+| MOD-EXPORT-BRAIN | ONNX, URDF, MuJoCo, runtime package | works | planned | TorchScript and Sentis dropped: Sentis reads ONNX |
+| MOD-EXPORT-BRAIN | Include spec, README and script, parts, history | works | planned | |
+| MOD-EXPORT-BRAIN | File summary | works | planned | Every file with its real size |
+| MOD-EXPORT-BRAIN | Download | works | planned | Save dialog checked in main, zip written by the engine |
+| MOD-EXPORT-BRAIN | Export from the conversation | works | planned | `export_robot` and `check_hardware` tools |
 | PNL-LEARNED | Checkpoint cards with thumbnails | partial | planned | Cards are real on the working tree; thumbnails are empty boxes |
 | PNL-LEARNED | Caption per checkpoint ("hits a car") | partial | planned | Scores are real; behavior words need the coach on frames |
 | PNL-LEARNED | Future checkpoints with ETA | missing | planned | ETA from scheduled checkpoints and measured speed |
@@ -660,7 +660,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | PNL-PLAY-SENSES | Hover for meaning | missing | built | Per-sensor explanation |
 | PNL-PLAY-DECISIONS | Live outputs | works | built | Raw values, not "14° R" |
 | PNL-PLAY-DECISIONS | Which brain is playing | works | built | Nothing |
-| PNL-PLAY-DECISIONS | "Use another brain" | pending | planned | Brain selection on the Play socket |
+| PNL-PLAY-DECISIONS | "Use another brain" | works | built | Nothing |
 | PNL-PLAY-DECISIONS | No learned brain state | works | built | Nothing |
 | PNL-PLAY-VISION | What each eye or camera sees | fixture-only | planned | Vision field in `PlayFrame` (Sprint 11) |
 | PNL-BRAIN-ACTIVITY | Activity strip in Play | fixture-only | planned | Connectome simulator |
@@ -673,7 +673,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-PLAY | Chips that drive Play tools ("Make it night", "Record this") | partial | not in spec | Copilot Play tools |
 | SCR-PLAY | Chat "⋯" options | pending | built | (corrected) `chat-panel.tsx` gives the undocked ⋯ the not-yet props, so it says "Chat options is not available yet"; `app-flows.md` is stale here. Needs the clear and export routes |
 | SCR-BUILD | Header with Publish | pending | planned | Sprint 13 |
-| PNL-BUILD-TARGETS | Targets with live facts | pending | planned | `build.targets` (Sprint 12) |
+| PNL-BUILD-TARGETS | Targets with live facts | works | planned | ONNX size, parts total from the best-fitting kit |
 | PNL-BUILD-TARGETS | Each target opens its view | partial | planned | Rows never render until targets exist |
 | TAB-SHARE-TO-COMMUNITY | Title and description | pending | planned | `publish.page` |
 | TAB-SHARE-TO-COMMUNITY | Permission toggles | pending | planned | `publish.page-edit` |
@@ -681,21 +681,21 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-SHARE-TO-COMMUNITY | Preview card | pending | planned | Thumbnails |
 | TAB-SHARE-TO-COMMUNITY | Save draft | pending | planned | `publish.save-draft` |
 | TAB-SHARE-TO-COMMUNITY | Publish to community | pending | planned | `publish.send` |
-| SCR-BUILD | Export brain | pending | planned | Export module (Sprint 12) |
+| SCR-BUILD | Export brain | works | planned | Opens the export dialog |
 | SCR-BUILD | Use in a game | pending | planned | Game-engine format |
-| SCR-BUILD | URDF and MJCF export | missing | planned | No target kind for it |
+| SCR-BUILD | URDF and MJCF export | works | planned | Formats of the export dialog |
 | SCR-BUILD | Chat explains what it prepared | fixture-only | planned | Builder role and tools |
-| STA-BUILD-HARDWARE | Guided steps | pending | planned | `build.hardware` |
-| STA-BUILD-HARDWARE | Connected device line | pending | planned | Device discovery |
-| STA-BUILD-HARDWARE | Live calibration | pending | planned | Runtime streaming |
-| STA-BUILD-HARDWARE | Problem card | pending | planned | Diagnosis from readings |
-| STA-BUILD-HARDWARE | Recheck | pending | planned | `build.hardware-recheck` |
-| STA-BUILD-HARDWARE | Skip this sensor | pending | planned | Input masking |
+| STA-BUILD-HARDWARE | Guided steps | partial | planned | Pick, check, export are real; running on the device is the README's job |
+| STA-BUILD-HARDWARE | Connected device line | partial | planned | Shows the kit checked against; no device discovery |
+| STA-BUILD-HARDWARE | Live calibration | partial | planned | Replaced by the joint and sensor check against the kit's rated limits |
+| STA-BUILD-HARDWARE | Problem card | works | planned | First failing or warning part with its gap and fix |
+| STA-BUILD-HARDWARE | Recheck | works | planned | Checks the current revision again |
+| STA-BUILD-HARDWARE | Skip this part | works | planned | Accepts the gap and leaves it out of the verdict |
 | STA-BUILD-HARDWARE | Test drive | missing | planned | Remote drive with limits |
 | STA-BUILD-HARDWARE | Load the brain | missing | planned | Runtime and ONNX deploy |
 | STA-BUILD-HARDWARE | 3D preview | missing | planned | Empty placeholder today |
-| STA-BUILD-HARDWARE | Safety rules | pending | planned | Runtime limits |
-| STA-BUILD-HARDWARE | Parts list with total | pending | planned | `HardwareProfile` and priced components |
+| STA-BUILD-HARDWARE | Safety rules | works | planned | From the body's top speed and what was measured |
+| STA-BUILD-HARDWARE | Parts list with total | works | planned | Kit parts the body uses, approximate prices |
 | STA-BUILD-HARDWARE | Chat helps with hardware | fixture-only | planned | Builder role |
 | SCR-BUILD | Export animation target | pending | planned | Sprint 10 |
 

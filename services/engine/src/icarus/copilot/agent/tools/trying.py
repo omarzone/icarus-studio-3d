@@ -24,6 +24,9 @@ from icarus.library.rewards import CORE_TERMS, term_fits
 from icarus.projects.operations import OperationError, apply_operations
 
 PLACEMENT = "placement of "
+# The OperationBatch limit, so any change that passes a try can be applied as one revision.
+MAX_OPERATIONS = 500
+CHANGES_LISTED = 40
 _TASK_OPS = (AddBody, RemoveBody, SetTaskFamily, SetRewardTerm, RemoveRewardTerm)
 
 
@@ -34,8 +37,29 @@ class LookSpec(ToolArgs):
 
 
 class TryArgs(ToolArgs):
-    operations: list[EditOperation] = Field(min_length=1, max_length=50)
+    operations: list[EditOperation] = Field(min_length=1, max_length=MAX_OPERATIONS)
     look: LookSpec | None = Field(default=None, description="Also render the candidate from this camera.")
+    base_try: str | None = Field(
+        default=None, description="A passing try id: its operations come first, so this try builds on it."
+    )
+
+
+def base_of(scope: TurnScope, base_try: str | None) -> tuple[list[EditOperation], Project, CompiledModel | None] | str:
+    """The operations, document and compiled model a try builds on: a passing try's, or the project's own."""
+    if base_try is None:
+        return [], scope.state.project, scope.head_compiled
+    tried = scope.tries.get(base_try)
+    if tried is None:
+        return f"There is no try `{base_try}` in this turn (tries: {', '.join(scope.tries) or 'none yet'})."
+    if not tried.passed:
+        return f"Try {base_try} did not pass, so nothing can build on it: {'; '.join(tried.problems)}"
+    return list(tried.operations), apply_operations(scope.state.project, tried.operations), tried.compiled
+
+
+def too_many(count: int) -> str | None:
+    if count <= MAX_OPERATIONS:
+        return None
+    return f"That is {count} operations with the base try; one change holds at most {MAX_OPERATIONS}."
 
 
 def _body_ids(project: Project) -> dict[str, str]:
@@ -126,19 +150,36 @@ def reward_fix(project: Project) -> dict | None:
 
 
 def try_change(scope: TurnScope, args: TryArgs) -> Observation:
+    base = base_of(scope, args.base_try)
+    if isinstance(base, str):
+        return Observation(base, ok=False, summary=step_said("try_no_base", scope.language))
+    operations = [*base[0], *args.operations]
+    if problem := too_many(len(operations)):
+        return Observation(problem, ok=False, summary=step_said("try_no_base", scope.language))
+    return run_try(scope, operations, args.look)
+
+
+def run_try(scope: TurnScope, operations: list[EditOperation], look_spec: LookSpec | None) -> Observation:
+    """Validate, compile and check operations on a copy of the project, keeping the result as a new try."""
+    result, summary = tried(scope, operations)
+    return observed(scope, result, summary, look_spec)
+
+
+def tried(scope: TurnScope, operations: list[EditOperation]) -> tuple[dict, str]:
+    """Runs a try of the operations and stores it on the turn: the result the model reads and the step line."""
     try_id = scope.next_try_id()
-    project, count, language = scope.state.project, len(args.operations), scope.language
+    project, count, language = scope.state.project, len(operations), scope.language
     changes = step_said("changes_one" if count == 1 else "changes_many", language, count=count)
     try:
-        candidate = apply_operations(project, args.operations)
+        candidate = apply_operations(project, operations)
     except OperationError as error:
-        scope.tries[try_id] = TryResult(try_id, args.operations, scope.state.revision.number, [str(error)], None)
+        scope.tries[try_id] = TryResult(try_id, operations, scope.state.revision.number, [str(error)], None)
         result = {
             "try_id": try_id,
             "passed": False,
             "checks": [{"check": "operations", "ok": False, "detail": str(error)}],
         }
-        return Observation(compact(result), ok=False, summary=step_said("tried_invalid", language, changes=changes))
+        return result, step_said("tried_invalid", language, changes=changes)
     report, compiled = design_report(candidate)
     checks = [
         {"check": check.label, "ok": check.status != "fail", "detail": check.detail if check.status == "fail" else None}
@@ -147,7 +188,7 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     names = [step_said(f"check_{check.id}", language) for check in report.checks]
     problems = [f"{check.label}: {check.detail}" for check in report.checks if check.status == "fail"]
     if compiled is not None and not problems:
-        more, problems = _checks(scope, candidate, args.operations)
+        more, problems = _checks(scope, candidate, operations)
         checks += more
         names += [_check_name(check["check"], language) for check in more]
     if compiled is None and not problems:
@@ -164,9 +205,12 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
         result_extra = {"warnings": warnings, "warnings_already_there": [text for text in found if text in before]}
         result_extra["rays_see"] = seen
     base = scope.state.revision.number
-    scope.tries[try_id] = TryResult(try_id, args.operations, base, problems, compiled, tuple(warnings))
-    listed = [change.model_dump(exclude_none=True) for change in proposal_changes(project, args.operations)]
-    result = {"try_id": try_id, "passed": not problems, "changes": listed, "checks": checks, **result_extra}
+    scope.tries[try_id] = TryResult(try_id, operations, base, problems, compiled, tuple(warnings))
+    listed = [change.model_dump(exclude_none=True) for change in proposal_changes(project, operations)]
+    result = {"try_id": try_id, "passed": not problems, "changes": listed[:CHANGES_LISTED], "checks": checks}
+    if len(listed) > CHANGES_LISTED:
+        result["more_changes"] = len(listed) - CHANGES_LISTED
+    result |= result_extra
     if problems and (fix := reward_fix(candidate)):
         result["fix_rewards"] = fix
     failed = next((name for check, name in zip(checks, names, strict=True) if not check["ok"]), None)
@@ -177,11 +221,16 @@ def try_change(scope: TurnScope, args: TryArgs) -> Observation:
     )
     if warnings:
         summary += step_said("warnings_one" if len(warnings) == 1 else "warnings_many", language, count=len(warnings))
-    observation = Observation(compact(result), ok=not problems, summary=summary)
-    if problems or args.look is None:
+    return result, summary
+
+
+def observed(scope: TurnScope, result: dict, summary: str, spec: LookSpec | None) -> Observation:
+    """A try's result as the model reads it, with the candidate rendered when it passed and a camera was asked."""
+    observation = Observation(compact(result), ok=bool(result["passed"]), summary=summary)
+    if not result["passed"] or spec is None:
         return observation
     seen = look(
-        scope, LookArgs(target=args.look.target, view=args.look.view, distance_m=args.look.distance_m, on_try=try_id)
+        scope, LookArgs(target=spec.target, view=spec.view, distance_m=spec.distance_m, on_try=result["try_id"])
     )
     return Observation(
         f"{observation.text}\n{seen.text}", image=seen.image, image_label=seen.image_label, summary=summary
@@ -194,7 +243,9 @@ TRY = Tool(
         "Try edit operations on a copy of the project, never on the project itself: it validates them, compiles, "
         "runs the design tests, checks that every body starts resting on the ground clear of everything, and "
         "that the task can still be learned when a body or the task changes. Returns a try_id, what changes and "
-        "each check. Every change must pass a try before propose or apply. Add look to see the candidate."
+        "each check. Every change must pass a try before propose or apply. Add look to see the candidate. "
+        "base_try builds on an earlier passing try (such as one from pattern or edit_group), so the new try holds "
+        f"both; up to {MAX_OPERATIONS} operations in all."
     ),
     args=TryArgs,
     step="try",

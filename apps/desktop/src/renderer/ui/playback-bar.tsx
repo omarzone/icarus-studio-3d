@@ -13,15 +13,18 @@ type Props = {
   // Chip at the end (speed, which test run).
   chip?: ReactNode;
   onPlay?: () => void;
+  // What pressing play does, on hover.
+  playTitle?: string;
 };
 
 // Replay controls: round play button, time, scrub track with an optional failure mark, and a chip.
-export function PlaybackBar({ at, length, played, marker, chip, onPlay }: Props) {
+export function PlaybackBar({ at, length, played, marker, chip, onPlay, playTitle }: Props) {
   return (
     <div className="flex items-center gap-3">
       <Act
         cta="Play replay"
         aria-label="Play"
+        title={playTitle}
         onClick={onPlay}
         className="grid size-8 shrink-0 place-items-center rounded-full bg-selected text-on-selected hover:opacity-90"
       >

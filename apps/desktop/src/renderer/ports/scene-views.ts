@@ -1,12 +1,15 @@
 import type {
   ComponentKindSpec,
+  CopilotProposal,
   PropertyValue as EngineValue,
   LibraryCatalog,
   ObjectSpec,
   Project,
   PropertySchema,
 } from "@icarus/contracts";
+import { isPlaneFloor } from "./part-insert.ts";
 import { formatPropertyValue } from "./property-format.ts";
+import { proposedProperty } from "./proposed-values.ts";
 import type {
   ComponentGroup,
   Inspection,
@@ -163,6 +166,8 @@ export function toViewValue(schema: PropertySchema, value: EngineValue): Propert
       return { type: "readonly", value: value.value };
     case "readonly":
       return { type: "readonly", value: value.value };
+    case "text":
+      return { type: "text", value: value.value };
   }
 }
 
@@ -186,6 +191,8 @@ export function toContractValue(view: PropertyValue): EngineValue {
       return { type: "asset", value: view.value };
     case "readonly":
       return { type: "readonly", value: view.value };
+    case "text":
+      return { type: "text", value: view.value };
     case "range":
       return { type: "range", low: view.low, high: view.high };
     case "vector":
@@ -199,9 +206,19 @@ function same(a: EngineValue, b: EngineValue): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function property(schema: PropertySchema, stored: EngineValue | undefined): Property {
+function property(schema: PropertySchema, stored: EngineValue | undefined, proposed?: EngineValue): Property {
   const value = stored ?? schema.default;
   const view = toViewValue(schema, value);
+  if (proposed && !same(proposed, value)) {
+    return {
+      id: schema.id,
+      label: schema.label,
+      hint: schema.hint ?? undefined,
+      state: "proposed",
+      proposed: toViewValue(schema, proposed),
+      ...view,
+    };
+  }
   const changed = !same(value, schema.default);
   return {
     id: schema.id,
@@ -217,7 +234,13 @@ function kindOf(catalog: LibraryCatalog, kind: string): ComponentKindSpec | unde
   return catalog.components.find((item) => item.kind === kind);
 }
 
-export function inspection(project: Project, catalog: LibraryCatalog, selected: string | null): Inspection {
+// `proposal` is the copilot's open proposal; the values it would set show as proposed until accepted.
+export function inspection(
+  project: Project,
+  catalog: LibraryCatalog,
+  selected: string | null,
+  proposal: CopilotProposal | null = null,
+): Inspection {
   const obj = findObject(project, selected);
   if (!obj) {
     return { kind: "nothing" };
@@ -229,7 +252,10 @@ export function inspection(project: Project, catalog: LibraryCatalog, selected: 
       id: component.id,
       title: kind?.label ?? component.kind,
       icon: sceneIcon(kind?.icon ?? "box"),
-      properties: (kind?.properties ?? []).map((schema) => property(schema, component.properties[schema.id])),
+      properties: (kind?.properties ?? []).map((schema) => {
+        const target = { object: obj.id, component: component.id, property: schema.id };
+        return property(schema, component.properties[schema.id], proposedProperty(proposal, target)?.value);
+      }),
     };
   });
   const count = obj.components.length;
@@ -240,6 +266,7 @@ export function inspection(project: Project, catalog: LibraryCatalog, selected: 
     icon: objectIcon(obj, body !== undefined),
     sections,
     components: true,
+    ...(isPlaneFloor(obj) ? { planeFloor: true } : {}),
   };
 }
 
@@ -247,7 +274,7 @@ export function componentGroups(catalog: LibraryCatalog): ComponentGroup[] {
   const groups = new Map<string, ComponentGroup["kinds"][number][]>();
   for (const kind of catalog.components) {
     const kinds = groups.get(kind.group) ?? [];
-    kinds.push({ id: kind.kind, label: kind.label, icon: sceneIcon(kind.icon) });
+    kinds.push({ id: kind.kind, label: kind.label, icon: sceneIcon(kind.icon), unique: kind.unique });
     groups.set(kind.group, kinds);
   }
   return [...groups].map(([label, kinds]) => ({ label, kinds }));

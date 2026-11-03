@@ -64,7 +64,7 @@ describe("start plan", () => {
       copies: 16,
       estimate: "about 8 min",
       threads: "10 of 12 CPU threads",
-      coach: false,
+      coach: true,
     });
   });
 
@@ -83,15 +83,28 @@ describe("start plan", () => {
     );
   });
 
+  it("starts from the brain's own steps and copies until the person picks others", () => {
+    const brain = { steps: 400_000, copies: 8 };
+    expect(startPlan({ runs: 0, family: "navigation", settings, choice: {}, brain })).toMatchObject({
+      steps: 400_000,
+      copies: 8,
+    });
+    const recommended = { steps: null, copies: 8 };
+    expect(startPlan({ runs: 0, family: "locomotion", settings, choice: {}, brain: recommended }).steps).toBe(
+      2_000_000,
+    );
+    expect(startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 50_000 }, brain }).steps).toBe(50_000);
+  });
+
   it("keeps the steps and copies within what the engine accepts", () => {
     const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { steps: 10, copies: 500 } });
     expect(plan).toMatchObject({ steps: 10_000, copies: 64 });
-    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64, coach: false });
+    expect(startRequest(plan)).toEqual({ total_steps: 10_000, copies: 64, coach: true });
   });
 
-  it("asks the engine to coach the run when the copilot coach switch is on", () => {
-    const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { coach: true } });
-    expect(startRequest(plan).coach).toBe(true);
+  it("leaves the run uncoached when the person turns the copilot coach switch off", () => {
+    const plan = startPlan({ runs: 0, family: "navigation", settings, choice: { coach: false } });
+    expect(startRequest(plan).coach).toBe(false);
   });
 });
 
@@ -125,6 +138,7 @@ describe("live view and console", () => {
       frames: [frame(0.2), frame(1.8)],
     };
     expect(liveView(status(), [checkpoint(250_000, 0.714)], rollout).episode).toEqual({
+      step: 250_000,
       at: "0:00.0",
       length: "0:01.6",
       played: 0,
@@ -155,7 +169,17 @@ describe("stop and failure", () => {
         "Keep the best checkpoint (250k)",
         "Keep the metrics and replays",
       ],
+      paused: false,
     });
+  });
+
+  it("says a paused run holds where it was, and lists it as paused", () => {
+    const run = status({ best_step: 250_000, paused: true });
+    expect(stopSummary(run, [checkpoint(250_000, 0.714)])).toMatchObject({
+      paused: true,
+      intro: expect.stringContaining("It is paused"),
+    });
+    expect(runSummary(run)).toMatchObject({ status: "paused", detail: expect.stringContaining("paused ·") });
   });
 
   it("explains a stop before the first checkpoint and without a goal", () => {

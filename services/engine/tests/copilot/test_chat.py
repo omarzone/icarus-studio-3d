@@ -170,7 +170,7 @@ def test_a_change_that_fails_its_try_is_never_proposed(copilot, store, project_i
 
 def test_asking_about_the_selection_explains_it_from_its_values(copilot, project_id):
     answer = say(copilot, project_id, "what does this do?", selection="steer_left").messages[-1]
-    assert "35" in answer.text and "2000" in answer.text and answer.proposal_id is None
+    assert "35" in answer.text and "vehicle" in answer.text and answer.proposal_id is None
 
 
 def test_the_proposal_scene_shows_the_change_before_it_is_applied(copilot, project_id):
@@ -302,3 +302,32 @@ def test_a_proposal_carries_the_copilots_clearance_warnings(copilot, project_id,
     script(monkeypatch, tmp_path, default=[TRY_NIGHT, warned, answering("Here it is.")])
     proposal = only_proposal(say(copilot, project_id, "make it night"))
     assert "The car is wider than the gap between the parked cars." in proposal.warnings
+
+
+def test_a_coach_message_posted_while_the_copilot_answers_follows_the_persons_message_in_their_language(
+    copilot, project_id, monkeypatch, tmp_path
+):
+    script(monkeypatch, tmp_path, default=[answering("Listo, lo detuve.")])
+    real_turn = chat.run_turn
+    heard: list[str] = []
+
+    def coach_speaks_meanwhile(*args, **kwargs):
+        heard.append(copilot.language(project_id))
+        copilot.post(project_id, chat.new_message("copilot", "Checkpoint 25k"), [])
+        return real_turn(*args, **kwargs)
+
+    monkeypatch.setattr(chat, "run_turn", coach_speaks_meanwhile)
+    texts = [message.text for message in say(copilot, project_id, "detén el entrenamiento").messages]
+    assert texts[-3:] == ["detén el entrenamiento", "Checkpoint 25k", "Listo, lo detuve."]
+    assert heard == ["es"]
+
+
+def test_a_turn_that_fails_leaves_no_unanswered_message(copilot, project_id, monkeypatch):
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("model away")
+
+    monkeypatch.setattr(chat, "run_turn", broken)
+    before = len(copilot.conversation(project_id).messages)
+    with pytest.raises(RuntimeError):
+        say(copilot, project_id, "make it night")
+    assert len(copilot.conversation(project_id).messages) == before

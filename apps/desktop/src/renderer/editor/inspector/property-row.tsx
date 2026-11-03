@@ -1,7 +1,7 @@
 import { Act } from "../../app/navigation/go-to.tsx";
 import { formatPropertyValue } from "../../ports/property-format.ts";
 import type { Property, PropertyValue } from "../../ports/scene-port.ts";
-import { type PanelRoutes, PropertyControl } from "./controls/property-control.tsx";
+import { type ColorCompanion, type PanelRoutes, PropertyControl } from "./controls/property-control.tsx";
 import { useScrub } from "./use-scrub.ts";
 
 export type PropertyRowProps = {
@@ -10,6 +10,7 @@ export type PropertyRowProps = {
   onReset: () => void;
   onAccept: () => void;
   panelRoutes?: PanelRoutes;
+  companion?: ColorCompanion;
 };
 
 const DOT: Partial<Record<Property["state"], string>> = {
@@ -19,7 +20,7 @@ const DOT: Partial<Record<Property["state"], string>> = {
 };
 
 // One property: label (drag it to scrub numbers), its control and the line its state adds underneath.
-export function PropertyRow({ property, onChange, onReset, onAccept, panelRoutes }: PropertyRowProps) {
+export function PropertyRow({ property, onChange, onReset, onAccept, panelRoutes, companion }: PropertyRowProps) {
   const scrub = useScrub(property, onChange);
   const dot = DOT[property.state];
   return (
@@ -34,7 +35,7 @@ export function PropertyRow({ property, onChange, onReset, onAccept, panelRoutes
         {dot ? <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${dot}`} /> : null}
         <span className="truncate">{property.label}</span>
       </span>
-      <PropertyControl property={property} onChange={onChange} panelRoutes={panelRoutes} />
+      <PropertyControl property={property} onChange={onChange} panelRoutes={panelRoutes} companion={companion} />
       <StateLine property={property} onReset={onReset} onAccept={onAccept} />
     </div>
   );

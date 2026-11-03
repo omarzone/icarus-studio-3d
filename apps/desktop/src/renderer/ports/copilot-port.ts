@@ -8,6 +8,25 @@ export type RichText = readonly { text: string; strong?: boolean }[];
 
 export type CheckItem = { text: string; tone: "ok" | "warn" };
 
+// The part of a design a coach finding points to.
+export type DesignArea = "reward" | "sensors" | "body" | "world" | "brain";
+
+// What the coach saw the body do, the area to change and the tested fix for it when there is one.
+export type CoachFinding = {
+  area: DesignArea;
+  behavior: string;
+  change: string;
+  proposal: { id: string; status: ProposalStatus } | null;
+};
+
+// Pictures of one episode at a fixed interval, in time order.
+export type FilmStripView = {
+  step: number;
+  episode: number;
+  interval: number;
+  frames: readonly { picture: ChatAttachment; time: number; failure: boolean }[];
+};
+
 export type ProposalChange = { kind: "diff"; label: string; from: string; to: string } | { kind: "add"; text: string };
 
 // "outdated" when the project moved on before the proposal was answered.
@@ -26,7 +45,7 @@ export type Proposal = {
   status: ProposalStatus;
 };
 
-export type AttachmentKind = "image" | "video" | "document" | "view";
+export type AttachmentKind = "image" | "video" | "document" | "view" | "model";
 
 // A file sent with a message, or a render of the scene the app took for the copilot ("view").
 export type ChatAttachment = {
@@ -68,7 +87,7 @@ export type AnswerActionKind =
 // to send.
 export type AnswerAction = { label: string; kind: AnswerActionKind; target: string | null };
 
-export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library";
+export type AgentTool = "inspect" | "look" | "try" | "propose" | "train" | "library" | "export";
 
 // One thing the copilot did before answering ("Looked at the lot from above").
 export type AgentStep = { tool: AgentTool; summary: string; ok: boolean };
@@ -102,6 +121,9 @@ export type ChatMessage =
       views?: readonly ChatAttachment[];
       // The proposal this answer made, so Apply and Discard act on it.
       proposal?: { id: string; open: boolean };
+      // The coach's frame-by-frame look at an episode.
+      filmStrip?: FilmStripView;
+      findings?: readonly CoachFinding[];
     }
   | { id: string; role: "proposal"; proposal: Proposal }
   // Live progress of the project the copilot is building.
@@ -185,6 +207,52 @@ export type MessageInput = {
   views?: readonly string[];
 };
 
+// What fills the copilot's context window on the next turn, in the order the engine sends it.
+export type ContextPart =
+  | "system"
+  | "tools"
+  | "skills"
+  | "memory"
+  | "project"
+  | "summary"
+  | "history"
+  | "message"
+  | "attachments";
+
+export type ContextCategoryView = {
+  part: ContextPart;
+  tokens: number;
+  // Its pieces (each tool, skill, note or file), adding up to its tokens.
+  items: readonly { label: string; tokens: number }[];
+};
+
+// How full the context window is for the next message, as the engine counts it before sending.
+export type ContextUsageView = {
+  // The model the next message goes to; null when no model is connected.
+  model: string | null;
+  window: number;
+  // False when the model's window is not set and the engine assumes a conservative one.
+  windowKnown: boolean;
+  // Set in AI models, learned from a request the service refused as too long, or assumed.
+  windowSource?: "assumed" | "set" | "learned";
+  used: number;
+  // Kept for the answer and its reasoning.
+  reserve: number;
+  free: number;
+  categories: readonly ContextCategoryView[];
+  compaction: { historyTokens: number; foldAt: number; folding: boolean; foldsNextTurn: boolean; pruneAt: number };
+};
+
+export type ContextInput = {
+  key: string;
+  // Files waiting in the composer, uploaded and not sent yet.
+  attachments?: readonly string[];
+  // Renders of the scene the app takes when the message goes.
+  sceneViews?: number;
+  workspace?: string;
+  selection?: string | null;
+};
+
 // The key is the project id in the app and a sample conversation in the prototype.
 export type CopilotPort = {
   getConversation: (key: string) => Promise<Conversation>;
@@ -197,6 +265,7 @@ export type CopilotPort = {
   readAttachmentText: (id: string) => Promise<string>;
   // The proposal waiting for an answer, or null when there is none.
   getPreview: (key: string) => Promise<ProposalPreview | null>;
+  getContextUsage: (input: ContextInput) => Promise<ContextUsageView>;
 };
 
 export const copilotPort = definePort<CopilotPort>({

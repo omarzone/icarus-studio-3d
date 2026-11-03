@@ -2,9 +2,21 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from icarus.contracts.motion import MotionReference
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.properties import PropertyValue
-from icarus.contracts.specs import BodySpec, RewardTermSpec, TaskFamily
+from icarus.contracts.specs import (
+    AgentSpec,
+    BodySpec,
+    BrainAlgorithm,
+    BrainStart,
+    DecisionsPerSecond,
+    EpisodeSeconds,
+    LayerSize,
+    RewardTermSpec,
+    TaskFamily,
+    TrainingSteps,
+)
 
 
 class _Operation(BaseModel):
@@ -74,23 +86,106 @@ class RenameProject(_Operation):
 class SetTaskFamily(_Operation):
     op: Literal["set_task_family"]
     family: TaskFamily
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
 
 
 class SetRewardTerm(_Operation):
     op: Literal["set_reward_term"]
     term: RewardTermSpec
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
 
 
 class RemoveRewardTerm(_Operation):
     op: Literal["remove_reward_term"]
     term: str
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
+
+
+class SetMotionReference(_Operation):
+    """Sets or clears (None) the motion an imitation task tracks."""
+
+    op: Literal["set_motion_reference"]
+    reference: MotionReference | None
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
+
+
+class PpoPatch(BaseModel):
+    """PPO knobs to change; the ones left out keep their value."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    learning_rate: float | None = Field(default=None, ge=1e-6, le=1e-2)
+    n_steps: int | None = Field(default=None, ge=64, le=8192)
+    batch_size: int | None = Field(default=None, ge=32, le=65_536)
+    n_epochs: int | None = Field(default=None, ge=1, le=50)
+    gamma: float | None = Field(default=None, ge=0.8, le=0.9999)
+    gae_lambda: float | None = Field(default=None, ge=0.8, le=1.0)
+    ent_coef: float | None = Field(default=None, ge=0.0, le=0.1)
 
 
 class SetBrain(_Operation):
+    """Changes the brain and how it practices; fields left out keep their value."""
+
     op: Literal["set_brain"]
     template: str | None = None
     copies: int | None = Field(default=None, ge=1, le=256)
     seed: int | None = Field(default=None, ge=0)
+    algorithm: BrainAlgorithm | None = None
+    # "recommended" goes back to the task's recommended budget.
+    training_steps: TrainingSteps | Literal["recommended"] | None = None
+    # Neurons in each hidden layer, input side first.
+    layers: list[LayerSize] | None = None
+    ppo: PpoPatch | None = None
+    decisions_per_second: DecisionsPerSecond | None = None
+    # The whole list of senses and motors left out, as "object/component"; an empty list turns them all back on.
+    muted_senses: list[str] | None = Field(default=None, max_length=64)
+    muted_motors: list[str] | None = Field(default=None, max_length=64)
+    # A trained checkpoint new runs start from; "none" trains from zero again.
+    start_from: BrainStart | Literal["none"] | None = None
+    # The agent whose brain this changes, in a project with several; None changes the project's own brain.
+    agent: str | None = None
+
+
+class SetEpisode(_Operation):
+    """Changes how each try of the task ends; fields left out keep their value."""
+
+    op: Literal["set_episode"]
+    seconds: EpisodeSeconds | None = None
+    end_on_fall: bool | None = None
+    end_on_success: bool | None = None
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
+
+
+class AddAgent(_Operation):
+    """Adds a learner; with `body` the body is added too. The first agent added to a one-agent project also makes
+    its first body an agent, so the agent it had keeps its task and brain."""
+
+    op: Literal["add_agent"]
+    agent: AgentSpec
+    body: BodySpec | None = None
+
+
+class RemoveAgent(_Operation):
+    """Removes an agent with its body and the world objects only it used; one agent left is the project's again."""
+
+    op: Literal["remove_agent"]
+    agent: str
+
+
+class SetAgent(_Operation):
+    """Renames an agent or changes its lane; fields left out keep their value and an empty id clears spawn or goal."""
+
+    op: Literal["set_agent"]
+    agent: str
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    spawn: str | None = None
+    goal: str | None = None
+    objects: list[str] | None = None
 
 
 EditOperation = Annotated[
@@ -107,7 +202,12 @@ EditOperation = Annotated[
     | SetTaskFamily
     | SetRewardTerm
     | RemoveRewardTerm
-    | SetBrain,
+    | SetMotionReference
+    | SetBrain
+    | SetEpisode
+    | AddAgent
+    | RemoveAgent
+    | SetAgent,
     Field(discriminator="op"),
 ]
 

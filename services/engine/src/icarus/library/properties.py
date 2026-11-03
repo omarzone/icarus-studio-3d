@@ -11,6 +11,7 @@ from icarus.contracts.properties import (
     RangeValue,
     SliderValue,
     SwitchValue,
+    TextValue,
     VectorValue,
 )
 
@@ -20,7 +21,7 @@ Vector3 = tuple[float, float, float]
 def number(
     id: str,
     label: str,
-    unit: str,
+    unit: str | None,
     lo: float,
     hi: float,
     default: float,
@@ -52,6 +53,7 @@ def slider(
     expert: bool = False,
     randomizable: bool = False,
     unit: str | None = None,
+    hint: str | None = None,
 ) -> PropertySchema:
     return PropertySchema(
         id=id,
@@ -64,6 +66,7 @@ def slider(
         default=SliderValue(type="slider", value=default),
         expert=expert,
         randomizable=randomizable,
+        hint=hint,
     )
 
 
@@ -79,12 +82,21 @@ def span(id: str, label: str, unit: str, lo: float, hi: float, default: tuple[fl
     )
 
 
-def choice(id: str, label: str, options: list[str], default: str, *, hint: str | None = None) -> PropertySchema:
+def choice(
+    id: str,
+    label: str,
+    options: list[str],
+    default: str,
+    *,
+    hint: str | None = None,
+    labels: dict[str, str] | None = None,
+) -> PropertySchema:
+    named = labels or {}
     return PropertySchema(
         id=id,
         label=label,
         type="choice",
-        options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
+        options=[PropertyOption(value=option, label=named.get(option, option.capitalize())) for option in options],
         default=ChoiceValue(type="choice", value=default),
         hint=hint,
     )
@@ -95,7 +107,7 @@ def listing(id: str, label: str, options: list[str], default: str, *, hint: str 
         id=id,
         label=label,
         type="list",
-        options=[PropertyOption(value=option, label=option.capitalize()) for option in options],
+        options=[PropertyOption(value=option, label=option.replace("_", " ").capitalize()) for option in options],
         default=ListValue(type="list", value=default),
         hint=hint,
     )
@@ -126,10 +138,15 @@ def vector(
     )
 
 
-def count(id: str, label: str, lo: int, hi: int, default: int) -> PropertySchema:
+def count(id: str, label: str, lo: int, hi: int, default: int, *, hint: str | None = None) -> PropertySchema:
     return PropertySchema(
-        id=id, label=label, type="count", min=lo, max=hi, default=CountValue(type="count", value=default)
+        id=id, label=label, type="count", min=lo, max=hi, default=CountValue(type="count", value=default), hint=hint
     )
+
+
+def text(id: str, label: str, *, hint: str | None = None) -> PropertySchema:
+    """A short name the person types; empty means the default name."""
+    return PropertySchema(id=id, label=label, type="text", default=TextValue(type="text", value=""), hint=hint)
 
 
 def reference(id: str, label: str, hint: str) -> PropertySchema:
@@ -162,6 +179,9 @@ def check_value(schema: PropertySchema, value: PropertyValue) -> str | None:
         case VectorValue():
             if any(_outside(schema, item) for item in value.value):
                 return f"Every axis of {schema.label} must be {_bounds(schema)}"
+        case TextValue():
+            if any(not character.isprintable() for character in value.value):
+                return f"{schema.label} must be plain text on one line"
         case ChoiceValue() | ListValue():
             if schema.options is not None and value.value not in {option.value for option in schema.options}:
                 return f"{schema.label} has no option {value.value!r}"

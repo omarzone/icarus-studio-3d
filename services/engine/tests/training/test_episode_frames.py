@@ -93,4 +93,7 @@ class _RandomModel:
         path.write_bytes(b"checkpoint")
 
     def predict(self, observation, state=None, episode_start=None, deterministic=False):
+        # Like Stable-Baselines3, a batch of observations gets one action per row.
+        if observation.ndim == 2:
+            return np.stack([self._policy.act(row) for row in observation]), None
         return self._policy.act(observation), None

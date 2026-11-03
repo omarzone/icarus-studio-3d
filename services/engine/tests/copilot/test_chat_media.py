@@ -14,10 +14,12 @@ from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.grounding import UNSUPPORTED_ANSWER
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.copilot.turn_media import MAX_TURN_IMAGES
+from icarus.projects.skins import skin_id
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunStore
 from icarus.training.settings import TrainingSettingsStore
 from icarus.training.supervisor import Supervisor
+from tests.model_files import glb
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 16
@@ -140,6 +142,17 @@ def test_a_long_document_is_cut_and_the_prompt_says_so(copilot, attachments, pro
     copilot.send(project_id, SendMessage(text="hello", attachments=[document]))
     content = user_content(requests[-1])
     assert isinstance(content, str) and "truncated" in content and len(content) < len(text)
+
+
+def test_an_attached_3d_model_reaches_the_prompt_with_its_skin_id_and_size(copilot, attachments, project_id, requests):
+    model = glb()
+    attached = add(
+        attachments, project_id, name="van.glb", media_type="model/gltf-binary", kind="model", data=encoded(model)
+    )
+    copilot.send(project_id, SendMessage(text="use this model for the car body", attachments=[attached]))
+    content = user_content(requests[-1])
+    assert isinstance(content, str)
+    assert f"van.glb: stored with the project as skin {skin_id(model)}, 2 × 0.5 × 1" in content
 
 
 def test_a_model_that_cannot_read_pictures_is_answered_in_words(copilot, attachments, project_id, monkeypatch):

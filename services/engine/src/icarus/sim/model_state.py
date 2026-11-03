@@ -1,6 +1,5 @@
 import math
 from dataclasses import dataclass, field
-from typing import Literal
 
 import mujoco
 import numpy as np
@@ -8,43 +7,29 @@ import numpy as np
 from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue, NumberValue
 from icarus.contracts.specs import TaskFamily
-from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch
+from icarus.design.compiler import CompiledModel, compile_project, is_floor_patch, is_ground
 from icarus.design.components import view
+from icarus.design.sensors import component_sensors
 from icarus.projects.document import all_objects
+from icarus.sim.gait import at_limits, feet_down, foot_bodies, landings
+from icarus.sim.goal import GoalRules, check_goal, footprint, goal_rules
+from icarus.sim.motion_tracking import MotionTracker
+from icarus.sim.plates import Plate, PlateMode, PlateState, measure_plates, plate_mode, plates_of
 from icarus.sim.rewards import RewardState
-
-SensorKind = Literal["ray", "accel", "gyro", "touch"]
+from icarus.sim.sensor_info import GOAL_DISTANCE_SCALE, SensorInfo, sensor_infos
+from icarus.sim.spawn_plan import SpawnPlan, spawn_plan
+from icarus.sim.tally import Tally
+from icarus.sim.vehicle import VehicleDrive, drive_vehicle, vehicle_drive
 
 CONTROL_PERIOD = 0.05
-GRAVITY = 9.81
-# Display ranges for magnitudes that have no physical limit: about 3 g and 10 rad/s.
-ACCEL_RANGE = 30.0
-GYRO_RANGE = 10.0
 # A legged body has fallen once its root drops below this fraction of its start height.
 FALL_HEIGHT = 0.4
-# Goal distances are observed in tens of metres so they sit near the -1..1 range the policy expects.
-GOAL_DISTANCE_SCALE = 10.0
 # Coverage grid side in metres when the term does not set one; matches the library default.
 COVERAGE_CELL = 0.5
-
-_KINDS: dict[int, SensorKind] = {
-    int(mujoco.mjtSensor.mjSENS_RANGEFINDER): "ray",
-    int(mujoco.mjtSensor.mjSENS_ACCELEROMETER): "accel",
-    int(mujoco.mjtSensor.mjSENS_GYRO): "gyro",
-    int(mujoco.mjtSensor.mjSENS_TOUCH): "touch",
-}
-
-
-@dataclass(frozen=True)
-class SensorInfo:
-    id: str
-    label: str
-    kind: SensorKind
-    address: int
-    dim: int
-    low: float
-    high: float
-    unit: str
+# A vehicle has rolled over once its up axis leans past about 60° (its z component below this).
+VEHICLE_TIPPED = 0.5
+# Any agent has fallen once its root drops this far below the top of the lowest ground, off an edge.
+FALL_BELOW_GROUND = 1.0
 
 
 @dataclass(frozen=True)
@@ -54,6 +39,8 @@ class ActuatorInfo:
     low: float
     high: float
     unit: str | None
+    # The MuJoCo actuator this action sets; None for a vehicle's throttle, brake and steering.
+    index: int | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +48,7 @@ class GoalInfo:
     object: str
     site: int
     radius: float
+    rules: GoalRules | None = None
 
 
 @dataclass
@@ -94,46 +82,74 @@ class LiveWorld:
     # Side of the ground grid the coverage term counts, and the cells entered since the last reset.
     cell_size: float | None = None
     visited: set[tuple[int, int]] = field(default_factory=set)
+    # Body ids of the feet by the foot rule in sim/gait.py, and when each left the ground (None while down).
+    feet: tuple[int, ...] = ()
+    lifted_at: list[float | None] = field(default_factory=list)
+    # The root height body_height aims for when the term sets one; otherwise the start height.
+    target_height: float | None = None
+    # The agent as a vehicle, when its root carries one, and its footprint corners for "fully inside" goals.
+    vehicle: VehicleDrive | None = None
+    footprint: np.ndarray = field(default_factory=lambda: np.zeros((4, 2)))
+    # Height of the top of the lowest ground, None in a world without one.
+    floor: float | None = None
+    # How tries start, and the next spawn point a cycling start uses (None until the first draw).
+    spawn: SpawnPlan | None = None
+    spawn_next: int | None = None
+    # Floor plates, which this try has reached, their states at the last step and how they complete the goal.
+    plates: list[Plate] = field(default_factory=list)
+    plate_reached: list[bool] = field(default_factory=list)
+    plate_states: list[PlateState] = field(default_factory=list)
+    plate_mode: PlateMode = "all"
+    plate_goal: bool = False
+    tally: Tally = field(default_factory=Tally)
+    # Seconds between the brain's decisions, from its decisions per second.
+    control_period: float = CONTROL_PERIOD
+    # Sensors the brain reads as zero and actions it leaves at rest, from its muted senses and motors.
+    muted_sensors: frozenset[str] = frozenset()
+    muted_actions: frozenset[int] = frozenset()
+    # The motion an imitation task copies, and where in the clip this try started, in seconds.
+    motion: MotionTracker | None = None
+    motion_start: float = 0.0
+
+    def motion_time(self) -> float:
+        return self.motion_start + float(self.data.time)
+
+
+def control_period(project: Project) -> float:
+    """Seconds between the brain's decisions."""
+    return 1.0 / project.brain.decisions_per_second
+
+
+def _muted(project: Project, actuators: list[ActuatorInfo]) -> tuple[frozenset[str], frozenset[int]]:
+    objects = {obj.id: obj for body in project.bodies for obj in body.objects}
+    sensors: set[str] = set()
+    for item in project.brain.muted_senses:
+        object_id, _, component_id = item.partition("/")
+        if object_id in objects:
+            sensors |= component_sensors(objects[object_id], component_id)
+    motors = {f"{item.partition('/')[0]}:motor" for item in project.brain.muted_motors}
+    return frozenset(sensors), frozenset(index for index, item in enumerate(actuators) if item.id in motors)
 
 
 def _name_id(model: mujoco.MjModel, kind, name: str) -> int:
     return int(mujoco.mj_name2id(model, kind, name))
 
 
-def _sensors(model: mujoco.MjModel, names: dict[str, str], agent_mass: float) -> list[SensorInfo]:
-    sensors: list[SensorInfo] = []
-    for index in range(model.nsensor):
-        kind = _KINDS.get(int(model.sensor_type[index]))
-        if kind is None:
-            continue
-        name = model.sensor(index).name
-        owner = names.get(name.split(":")[0], name.split(":")[0])
-        address, dim = int(model.sensor_adr[index]), int(model.sensor_dim[index])
-        match kind:
-            case "ray":
-                number = int(name.rsplit("ray", 1)[1]) + 1
-                info = (f"{owner} distance {number}", 0.0, float(model.sensor_cutoff[index]), "m")
-            case "accel":
-                info = (f"{owner} acceleration", 0.0, ACCEL_RANGE, "m/s²")
-            case "gyro":
-                info = (f"{owner} turn rate", 0.0, GYRO_RANGE, "rad/s")
-            case "touch":
-                info = (f"{owner} touch", 0.0, round(2 * agent_mass * GRAVITY), "N")
-        label, low, high, unit = info
-        sensors.append(SensorInfo(name, label, kind, address, dim, low, high, unit))
-    return sensors
-
-
-def _actuators(model: mujoco.MjModel, names: dict[str, str]) -> list[ActuatorInfo]:
-    actuators: list[ActuatorInfo] = []
+def _actuators(model: mujoco.MjModel, names: dict[str, str], vehicle: VehicleDrive | None) -> list[ActuatorInfo]:
+    """The brain's actions: a vehicle's throttle, brake and steering first, then every other actuator."""
+    actions = vehicle.actions() if vehicle else []
+    actuators = [ActuatorInfo(item.id, item.label, item.low, item.high, None) for item in actions]
+    owned = vehicle.actuator_indices if vehicle else frozenset()
     for index in range(model.nu):
+        if index in owned:
+            continue
         name: str = model.actuator(index).name
         unit: str | None = None
         if int(model.actuator_biastype[index]) == int(mujoco.mjtBias.mjBIAS_AFFINE):
             joint_type = int(model.jnt_type[int(model.actuator_trnid[index, 0])])
             unit = "m" if joint_type == int(mujoco.mjtJoint.mjJNT_SLIDE) else "rad"
         low, high = (float(value) for value in model.actuator_ctrlrange[index])
-        actuators.append(ActuatorInfo(name, names.get(name.split(":")[0], name), low, high, unit))
+        actuators.append(ActuatorInfo(name, names.get(name.split(":")[0], name), low, high, unit, index))
     return actuators
 
 
@@ -161,7 +177,7 @@ def _goal(project: Project, model: mujoco.MjModel) -> GoalInfo | None:
     for obj in all_objects(project):
         if view(obj, "goal_zone"):
             site = _name_id(model, mujoco.mjtObj.mjOBJ_SITE, f"{obj.id}:goal_zone")
-            return GoalInfo(obj.id, site, float(model.site_size[site, 0]))
+            return GoalInfo(obj.id, site, float(model.site_size[site, 0]), goal_rules(obj))
     return None
 
 
@@ -182,6 +198,12 @@ def _cell_size(project: Project) -> float | None:
     return float(size.value) if isinstance(size, NumberValue) else COVERAGE_CELL
 
 
+def _target_height(project: Project) -> float | None:
+    term = next((item for item in project.task.rewards if item.term == "body_height"), None)
+    height = term.params.get("height") if term else None
+    return float(height.value) if isinstance(height, NumberValue) else None
+
+
 def build_world(project: Project) -> LiveWorld:
     compiled = compile_project(project)
     model = compiled.model
@@ -196,11 +218,11 @@ def build_world(project: Project) -> LiveWorld:
         index for index in range(model.ngeom) if model.body(int(model.geom_bodyid[index])).name in body_objects
     )
     ground = frozenset(
-        index
-        for index in range(model.ngeom)
-        if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or is_floor_patch(model, index)
+        index for index in range(model.ngeom) if is_ground(compiled, index) or is_floor_patch(model, index)
     )
     agent_mass = float(model.body_subtreemass[agent]) if agent is not None else 10.0
+    layout = compiled.vehicles.get(agent_object) if agent_object else None
+    vehicle = vehicle_drive(model, layout) if layout else None
     world = LiveWorld(
         project=project,
         compiled=compiled,
@@ -212,8 +234,8 @@ def build_world(project: Project) -> LiveWorld:
         agent_geoms=agent_geoms,
         ground_geoms=ground,
         goal=_goal(project, model),
-        sensors=_sensors(model, names, agent_mass),
-        actuators=_actuators(model, names),
+        sensors=sensor_infos(compiled, names, agent_mass),
+        actuators=_actuators(model, names, vehicle),
         geom_objects={
             model.geom(i).name: model.geom(i).name for i in range(model.ngeom) if model.geom(i).name in names
         },
@@ -224,20 +246,51 @@ def build_world(project: Project) -> LiveWorld:
         legged=bool(project.bodies) and any(view(obj, "balance") for obj in project.bodies[0].objects),
         carried=_carried(project, model),
         cell_size=_cell_size(project),
+        target_height=_target_height(project),
+        vehicle=vehicle,
+        spawn=spawn_plan(project, compiled),
+        motion=MotionTracker(project.task.motion, model) if project.task.motion else None,
     )
+    world.control_period = control_period(project)
+    world.muted_sensors, world.muted_actions = _muted(project, world.actuators)
+    agent_bodies = frozenset(index for index in range(model.nbody) if model.body(index).name in body_objects)
+    world.plates = plates_of(project, model, agent, agent_bodies)
+    world.plate_mode, world.plate_goal = plate_mode(project)
     reset_world(world)
+    world.floor = _floor(model, data, frozenset(index for index in range(model.ngeom) if is_ground(compiled, index)))
     world.start_height = float(data.xpos[agent, 2]) if agent is not None else 0.0
+    if agent is not None:
+        bodies = {index for index in range(model.nbody) if model.body(index).name in body_objects}
+        world.feet = foot_bodies(model, data, agent, bodies)
+        world.lifted_at = [None] * len(world.feet)
+        world.footprint = footprint(model, data, agent, agent_geoms)
     return world
+
+
+def _floor(model: mujoco.MjModel, data: mujoco.MjData, ground: frozenset[int]) -> float | None:
+    """The top of the lowest ground geom: a plane's height, or a slab's highest point."""
+    tops = [
+        float(data.geom_xpos[index, 2])
+        if int(model.geom_type[index]) == int(mujoco.mjtGeom.mjGEOM_PLANE)
+        else float(data.geom_xpos[index, 2] + np.abs(data.geom_xmat[index].reshape(3, 3)[2]) @ model.geom_size[index])
+        for index in ground
+    ]
+    return min(tops) if tops else None
 
 
 def reset_world(world: LiveWorld) -> None:
     mujoco.mj_resetData(world.model, world.data)
     mujoco.mj_forward(world.model, world.data)
     world.visited.clear()
+    world.lifted_at = [None] * len(world.feet)
+    world.plate_reached = [False] * len(world.plates)
+    world.plate_states = []
+    if world.vehicle is not None:
+        world.vehicle.reset()
 
 
 def control_substeps(world: LiveWorld) -> int:
-    return max(1, round(CONTROL_PERIOD / float(world.model.opt.timestep)))
+    return max(1, round(world.control_period / float(world.model.opt.timestep)))
 
 
 def sensor_value(world: LiveWorld, sensor: SensorInfo) -> np.ndarray:
@@ -299,35 +352,76 @@ def _navigation_state(world: LiveWorld) -> list[np.ndarray]:
     ]
 
 
+def observed_value(world: LiveWorld, sensor: SensorInfo) -> np.ndarray:
+    """What the brain reads from one sensor: rays and speeds as a share of their range, the target as distance and
+    bearing, the spot's heading as cosine and sine; other sensors as they read."""
+    raw = sensor_value(world, sensor)
+    match sensor.kind:
+        case "ray":
+            return raw / sensor.high
+        case "speed":
+            return raw[:2] / sensor.scale
+        case "yaw":
+            return raw[2:3]
+        case "target":
+            distance = float(np.hypot(raw[0], raw[1]))
+            bearing = float(np.arctan2(raw[1], raw[0])) if distance > 1e-9 else 0.0
+            return np.array([distance / sensor.scale, np.cos(bearing), np.sin(bearing)])
+        case "heading":
+            norm = float(np.hypot(raw[0], raw[1]))
+            return raw[:2] / norm if norm > 1e-9 else np.array([1.0, 0.0])
+        case _:
+            return raw
+
+
 def observation(world: LiveWorld) -> np.ndarray:
     parts = [
-        sensor_value(world, sensor) / sensor.high if sensor.kind == "ray" else sensor_value(world, sensor)
-        for sensor in world.sensors
+        observed_value(world, sensor) * (0.0 if sensor.id in world.muted_sensors else 1.0) for sensor in world.sensors
     ]
     if world.family == "navigation":
         parts += _navigation_state(world)
         if world.legged:
             parts.append(np.array([world.data.qvel[address] for _, address in world.joint_addresses], dtype=float))
-    if world.family == "locomotion":
+    if world.family in ("locomotion", "imitation"):
         data = world.data
         parts.append(np.array([data.qpos[address] for address, _ in world.joint_addresses], dtype=float))
         parts.append(np.array([data.qvel[address] for _, address in world.joint_addresses], dtype=float))
+    if world.family == "imitation":
+        # Where in the clip it is, so the brain knows which moment to copy.
+        parts.append(np.array([world.motion.phase(world.motion_time()) if world.motion else 0.0]))
     return np.concatenate(parts).astype(np.float32) if parts else np.zeros(0, dtype=np.float32)
 
 
 def apply_action(world: LiveWorld, action: np.ndarray) -> None:
-    """Scale a -1..1 action to each actuator's control range."""
+    """Scale a -1..1 action to each actuator's control range; a vehicle turns its three into its wheels' controls."""
     clipped = np.clip(np.asarray(action, dtype=float), -1.0, 1.0)
+    commands: dict[str, float] = {}
     for index, actuator in enumerate(world.actuators):
-        world.data.ctrl[index] = actuator.low + (clipped[index] + 1) / 2 * (actuator.high - actuator.low)
+        value = actuator.low + (clipped[index] + 1) / 2 * (actuator.high - actuator.low)
+        if index in world.muted_actions:
+            # A motor the brain does not drive rests at zero, or at the end of its range nearest zero.
+            value = min(max(0.0, actuator.low), actuator.high)
+        if actuator.index is None:
+            commands[actuator.id] = value
+        else:
+            world.data.ctrl[actuator.index] = value
+    if world.vehicle is not None:
+        drive_vehicle(world.vehicle, world.data, commands, float(agent_velocity(world)[3]), world.control_period)
+
+
+def command_value(world: LiveWorld, actuator: ActuatorInfo) -> float:
+    """What an action is set to right now, in its own range."""
+    if actuator.index is not None:
+        return float(world.data.ctrl[actuator.index])
+    return world.vehicle.command(actuator.id) if world.vehicle is not None else 0.0
 
 
 def normalized_controls(world: LiveWorld) -> np.ndarray:
     values = [
-        2 * (world.data.ctrl[index] - actuator.low) / (actuator.high - actuator.low) - 1
+        2 * (command_value(world, actuator) - actuator.low) / (actuator.high - actuator.low) - 1
         if actuator.high > actuator.low
         else 0.0
-        for index, actuator in enumerate(world.actuators)
+        for actuator in world.actuators
     ]
     return np.array(values, dtype=float)
 
@@ -351,15 +445,21 @@ def reward_state(world: LiveWorld) -> RewardState:
         position, rotation = data.xpos[world.agent], data.xmat[world.agent].reshape(3, 3)
     up = float(rotation[2, 2])
     dropped = world.agent is not None and float(position[2]) < FALL_HEIGHT * world.start_height
+    off_ground = (
+        world.agent is not None and world.floor is not None and float(position[2]) < world.floor - FALL_BELOW_GROUND
+    )
     match world.family:
-        case "locomotion":
-            fallen = dropped
+        case "locomotion" | "imitation":
+            fallen = dropped or off_ground
         case "navigation":
-            fallen = up < 0 or (world.legged and dropped)
+            fallen = up < (VEHICLE_TIPPED if world.vehicle else 0) or (world.legged and dropped) or off_ground
         case "none":
-            fallen = False
+            fallen = off_ground
     goal = data.site_xpos[world.goal.site] if world.goal else None
     carried = data.xpos[world.carried] if world.carried is not None else None
+    controls = normalized_controls(world)
+    down = feet_down(data, world.model, world.feet, world.agent_geoms)
+    velocity = body_velocity(world, world.agent) if world.agent is not None else np.zeros(6)
     if world.cell_size is not None:
         world.visited.add((math.floor(position[0] / world.cell_size), math.floor(position[1] / world.cell_size)))
     return RewardState(
@@ -370,10 +470,43 @@ def reward_state(world: LiveWorld) -> RewardState:
         goal_radius=world.goal.radius if world.goal else 0.0,
         colliding=bool(touching(world)),
         fallen=fallen,
-        effort=float(np.sum(normalized_controls(world) ** 2)),
+        effort=float(np.sum(controls**2)),
         speed=float(np.hypot(*agent_velocity(world)[3:5])),
         object_position=(float(carried[0]), float(carried[1]), float(carried[2])) if carried is not None else None,
         object_speed=float(np.hypot(*body_velocity(world, world.carried)[3:5])) if world.carried is not None else 0.0,
         start_height=world.start_height,
         visited=len(world.visited),
+        controls=tuple(controls.tolist()),
+        velocity=(float(velocity[3]), float(velocity[4])),
+        feet_down=down,
+        landed_air=landings(world.lifted_at, down, float(data.time)),
+        at_limits=at_limits(data, world.limited_joints),
+        target_height=world.target_height or world.start_height,
+        motion_match=world.motion.match(data, world.motion_time())[0] if world.motion else 0.0,
+        **_goal_fields(world),
+        **_plate_fields(world),
     )
+
+
+def _plate_fields(world: LiveWorld) -> dict:
+    if not world.plates:
+        return {}
+    reading = measure_plates(
+        world.model, world.data, world.plates, world.plate_reached, world.plate_mode, world.plate_goal
+    )
+    world.plate_states = reading.states
+    return {"plates_on": reading.on, "plates_reached": reading.reached, "plates_needed": reading.needed}
+
+
+def _goal_fields(world: LiveWorld) -> dict:
+    """The goal rules' state; a classic circle keeps measuring the agent's center against its radius."""
+    goal = world.goal
+    if goal is None or goal.rules is None or world.agent is None:
+        return {}
+    check = check_goal(world.data, goal.site, goal.radius, goal.rules, world.agent, world.footprint)
+    return {
+        "goal_inside": None if goal.rules.classic else check.inside,
+        "goal_aligned": check.aligned,
+        "goal_alignment": check.alignment,
+        "stop_speed": goal.rules.stop_speed,
+    }

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useEngineAction } from "../../../app/runtime/engine-query.tsx";
 import { usePort } from "../../../app/runtime/port.tsx";
 import { type ClipTimeline, motionPort } from "../../../ports/motion-port.ts";
+import { ActionButton } from "../../../ui/action-button.tsx";
+import { buttonClass } from "../../../ui/button-styles.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { ClipTab } from "./clip-tab.tsx";
@@ -29,7 +31,24 @@ export function ClipTimelinePanel({ clip }: { clip: string }) {
           <PanelTab label="Match score" active={tab === "match"} onSelect={() => setTab("match")} />
         </>
       }
-      options={timeline ? <span className="pr-1 text-ui text-warn">{timeline.weakest}</span> : null}
+      options={
+        timeline ? (
+          <span className="flex items-center gap-2 pr-1 text-ui text-warn">
+            {timeline.weakest}
+            {timeline.practice ? (
+              <ActionButton
+                cta="Practice it"
+                to="STA-MOTION-TRAINING"
+                run={() => port.trainWeakestMoment(clip)}
+                title="Train again from the latest brain, starting more tries at this moment"
+                className={buttonClass("secondary")}
+              >
+                Practice it
+              </ActionButton>
+            ) : null}
+          </span>
+        ) : null
+      }
     >
       {tab === "clip" ? (
         <QueryView query={query}>

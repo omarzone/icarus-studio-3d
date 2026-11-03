@@ -1,4 +1,5 @@
 import type { PlayCommand, PlayFrame, PlaySessionInfo } from "@icarus/contracts";
+import { type PlayBrainsApi, playBrainsApi } from "../engine-client/play-brains-api.ts";
 import { type OpenPlay, openPlay, type PlayConnection } from "../engine-client/play-socket.ts";
 import {
   actsAtOnce,
@@ -15,6 +16,7 @@ import {
   formatSpeed,
   type PlayControls,
   parseSpeed,
+  playBrains,
   playCommand,
   playSession,
   playTools,
@@ -68,12 +70,14 @@ function liveOf(info: PlaySessionInfo | null, frame: PlayFrame | null): PlayLive
   return {
     scene: info?.scene ?? null,
     poses: new Map(frame?.geoms.map((geom) => [geom.name, { position: geom.position, quaternion: geom.quaternion }])),
+    rays: frame?.rays ?? [],
+    signals: frame?.signals ?? null,
     paused: frame?.paused ?? false,
     speed: frame?.speed ?? 1,
   };
 }
 
-export function createEnginePlayPort(open: OpenPlay = openPlay): PlayPort {
+export function createEnginePlayPort(open: OpenPlay = openPlay, api: PlayBrainsApi = playBrainsApi): PlayPort {
   const channels = new Map<string, Channel>();
   const channelOf = (project: string): Channel => {
     const existing = channels.get(project);
@@ -135,7 +139,8 @@ export function createEnginePlayPort(open: OpenPlay = openPlay): PlayPort {
     send: async ({ project, action }) => {
       command(project, playCommand(action, running(project).channel.controls));
     },
-    connect: (project, listener) => {
+    brains: async (project) => playBrains(await api.playBrains(project)),
+    connect: (project, listener, brain) => {
       const previous = channels.get(project);
       previous?.connection?.close();
       const channel = fresh(previous?.waiters);
@@ -144,50 +149,59 @@ export function createEnginePlayPort(open: OpenPlay = openPlay): PlayPort {
       channel.token = token;
       channel.listener = listener;
       const current = () => channel.token === token;
-      channel.connection = open(project, {
-        onReady: (info) => {
-          if (current()) {
-            channel.info = info;
-            channel.live = liveOf(info, channel.frame);
-            publish(channel);
-          }
-        },
-        onFrame: (frame) => {
-          if (current()) {
-            channel.frame = frame;
-            channel.controls = { ...channel.controls, speed: frame.speed };
-            channel.live = liveOf(channel.info, frame);
-            publish(channel);
-          }
-        },
-        onEvent: (event) => {
-          if (current()) {
-            channel.events = [{ time: eventTime(event.time), text: event.text }, ...channel.events].slice(
-              0,
-              MAX_EVENTS,
-            );
-            publish(channel);
-          }
-        },
-        onError: (message) => {
-          if (current()) {
-            listener.onError(message);
-          }
-        },
-        onClosed: (reason) => {
-          if (!current()) {
-            return;
-          }
-          channel.connection = null;
-          if (!sessionOf(channel)) {
-            channel.failure = new Error(reason);
-            for (const waiter of channel.waiters.splice(0)) {
-              waiter.reject(channel.failure);
+      channel.connection = open(
+        project,
+        {
+          onReady: (info) => {
+            if (current()) {
+              channel.info = info;
+              channel.live = liveOf(info, channel.frame);
+              publish(channel);
             }
-          }
-          listener.onClosed(reason);
+          },
+          onFrame: (frame) => {
+            if (current()) {
+              channel.frame = frame;
+              channel.controls = { ...channel.controls, speed: frame.speed };
+              channel.live = liveOf(channel.info, frame);
+              publish(channel);
+            }
+          },
+          onEvent: (event) => {
+            if (current()) {
+              channel.events = [{ time: eventTime(event.time), text: event.text }, ...channel.events].slice(
+                0,
+                MAX_EVENTS,
+              );
+              publish(channel);
+            }
+          },
+          onError: (message) => {
+            if (current()) {
+              listener.onError(message);
+            }
+          },
+          onProgress: (stage) => {
+            if (current()) {
+              listener.onProgress?.(stage);
+            }
+          },
+          onClosed: (reason) => {
+            if (!current()) {
+              return;
+            }
+            channel.connection = null;
+            if (!sessionOf(channel)) {
+              channel.failure = new Error(reason);
+              for (const waiter of channel.waiters.splice(0)) {
+                waiter.reject(channel.failure);
+              }
+            }
+            listener.onClosed(reason);
+          },
         },
-      });
+        { brain },
+      );
       return () => {
         if (current()) {
           channel.token = null;

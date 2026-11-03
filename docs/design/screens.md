@@ -52,6 +52,7 @@ Top bar of every project workspace. Always visible while a project is open. Fold
 - **Play** button: enters `SCR-PLAY` for the current project (tooltip: try it live, nothing changes the project). Disabled (35% opacity, tooltip *Available once the project exists*) until a design exists.
 - **Guide** pill: shows *Getting started n/N* while the guide is active, or *Guide* when hidden; opens the guide (`STA-WORLD-EMPTY`). In the app it opens the getting-started checklist in place instead (has a body, a goal, rewards, a trained brain), each open step with a one-click action and a *Next* button; see [`app-flows.md`](./app-flows.md).
 - Every workspace tab, Play, Share and the primary action explain themselves on hover in one line.
+- In the app a quiet **Saved** pill (*Saved 14:32*) says every change is already saved as a revision, with the time of the newest one; it opens `MOD-HISTORY`. There is no manual save.
 - **Share** opens `MOD-SHARE`. The **primary action** is always the next step of the project: *Train* → `MOD-START-TRAINING`, *Stop* while training → `MOD-STOP-RUN`, *Publish* in Build → `MOD-PUBLISH`, *Train copy* in Motion → `MOD-MOTION-TRAIN`, *Run test* for reference brains. Disabled before a design exists.
 
 ### `HDR-LAUNCHER` Launcher header
@@ -60,6 +61,7 @@ Top bar of the pages outside a project: Home, Projects, Community, Profile, Sett
 
 - Logo, nav links **Home** (`SCR-HOME`), **Projects** (`SCR-PROJECTS`), **Community** (`SCR-COMMUNITY`); the active one is underlined.
 - **Search creations** field → `SCR-COMMUNITY` with results. **Bell** with an unread dot → `POP-NOTIFICATIONS`. **Avatar** → `SCR-PROFILE` (signed out: `MOD-SIGN-IN`).
+- In the app a **way back** before the logo, with Escape doing the same: on every Settings page *Back to project* (or *Back to Home*, *Back to Projects*… for the page Settings was opened from; *Back to Home* when there is none), and on Home, Projects, Community, Creation and Profile *Back to project* when they were opened from a project. It returns to the exact project and workspace, and a reload keeps it.
 
 ### `HDR-PLAY` Play header
 
@@ -75,9 +77,10 @@ Left column, top. The project's scene tree. Folder: `editor/explorer/`. Used in:
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag to reparent, right-click for rename, duplicate, delete and *Ask the copilot*. `+` in the tab bar adds an object (in the app: a menu of library pieces). |
+| `TAB-EXPLORER` | Explorer · Rig · Clip | `explorer-tab.tsx` | Tree of everything in the project, grouped in sections (Workspace, World, Agents; Skeleton, Physics; Clip, Character, Exports; Body, Brain). Each row: component icon, name, short meta (count, kind, state). Proposed items show in blue. The label adapts to the workspace: *Explorer* in World and Brain, *Rig* in Body, *Clip* in Motion. | Select (fills `PNL-INSPECTOR` and highlights in the viewport), multi-select, drag a row onto another to nest it there (onto a section title: back to the top; it keeps its place in the world), right-click for `POP-EXPLORER-OBJECT` (rename, duplicate, delete and *Ask the copilot*), F2 renames and Delete deletes. `+` in the tab bar adds an object (in the app: a menu of library pieces). |
 
 - One tab only: imported files live in the Library (`PNL-LIBRARY` › My files).
+- `POP-EXPLORER-OBJECT` Object menu (`object-menu.tsx`): opens under the right-clicked row. *Rename* turns the row's name into a field (Enter or leaving it keeps the name, Escape cancels); *Duplicate* copies the object and what is nested in it one metre along its parent's X and selects the copy; *Delete* removes it and what is nested in it; *Ask the copilot about it* sends a question about the object to the chat. Each is one batch of edit operations; Escape or a click outside closes the menu.
 
 ### `PNL-INSPECTOR` Inspector
 
@@ -88,6 +91,8 @@ Left column, bottom. Edits whatever is selected. Folder: `editor/inspector/`. Us
 | `TAB-PROPERTIES` | Properties | `properties-tab.tsx` | Selected item's title and subtitle, a filter field, then one collapsible section per component (Transform, Physics body, Joint, Motor, Sensor, Randomize per copy…) or per settings group (Practice, Expert settings). Every row uses one of the 12 property types (see `REF-PROPERTY-TYPES`). | Edit values with the control of their type, drag names to scrub, right-click to reset or ask the copilot, `···` for component actions (*Remove ‹component›*), **+ Add component** (objects only) → `POP-ADD-COMPONENT`. |
 
 - Expert settings (algorithm, learning rate, network) are a collapsed section, never a separate screen.
+- `POP-MATERIAL-PALETTE` Material palette (`controls/material-palette.tsx`): the Material property of a part opens a grid of swatches (Plastic, Smooth plastic, Wood, Wood planks, Brick, Cobblestone, Concrete, Metal, Diamond plate, Corroded metal, Grass, Sand, Ground, Ice, Glass, Neon, Marble, Granite, Fabric, Foil and Custom), each drawn with its pattern in the part's color, and the color picker that tints them. Picking one is one edit that also sets the part's surface and friction. Escape or a click outside closes it.
+- An older project's endless floor plane shows *Make it a slab* under the title: one edit adds a ground component of the plane's size, 1 m thick, so the floor gets edges. It is offered, never done on its own.
 - Runs, brains and motion settings use the inspector without *Add component*: only scene objects have components.
 
 ### `PNL-VIEWPORT` Viewport
@@ -96,7 +101,7 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-SCENE` | Scene | `scene-tab.tsx` | Editable 3D view of the world with gizmo, orientation cube, selection outlines, sensor rays and copilot ghosts (blue). | Orbit, select, move/rotate/scale, use the toolbar tools. |
+| `TAB-SCENE` | Scene | `scene-tab.tsx` | Editable 3D view of the world with gizmo, orientation cube, selection outlines, sensor rays and copilot ghosts (blue). | Orbit, select, move/rotate/scale the selected object with the gizmo (W, E, R pick the mode), use the toolbar tools. |
 | `TAB-GAME-VIEW` | Game view | `game-view-tab.tsx` | The world through the project camera, without editing chrome. | Look only. |
 | `TAB-RIG-VIEW` | Rig | `rig-tab.tsx` | Body workspace: see-through mesh with bones, joints and colliders. | Select bones and joints, drag joint limits. |
 | `TAB-MESH-VIEW` | Mesh | `mesh-tab.tsx` | Body workspace: the shaded mesh only. | Look, paint weights. |
@@ -112,13 +117,18 @@ Center column. The 3D view with a workspace toolbar on top. Folder: `editor/view
 
 Strip above the viewport. Icon + label buttons in groups. The selected tool is white. Every tool's tooltip is its name and one line on what it is for. In the app, a tool with nothing behind it yet is dimmed and says *not available yet* on hover and click; Terrain, Sky and Light select the ground, sky and sun so the Inspector shows them, and Agent and Goal ask the copilot to add one. Folder: `editor/viewport/toolbar/`.
 
-- **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`).
+- **Gizmo** (app, every editable World state): Move, Rotate, Scale lead the tools and pick what dragging the selected object does; the one in use is white and follows W, E and R in the view. Rotate and scale work along the object's own axes.
+- **World**: Terrain, Paint, Props · Sky, Light, Camera · Copies, Randomize (→ `POP-TRAINING-COPIES`) · Import world (→ `MOD-IMPORT`). In the app the building menus follow (`build-menus.tsx`):
+  - `POP-INSERT-PART` **Part**: Block, Sphere, Cylinder, Wedge, Corner wedge, Capsule. Each inserts a static plastic part (one create-object edit) resting on the ground at the middle of the view, on the move snap, and selects it. *Place where I click* (remembered) makes the next click in the view place it instead, on the ground or on top of the part clicked; the button reads *Placing…* until then, and Esc or *Cancel placing* stops it.
+  - `POP-SNAP` **Snap**: Move off, 0.25, 0.5, 1 or 2 m and Rotate off, 15°, 45° or 90°, applied by the Move, Rotate and Scale gizmos (Scale lands the part's sides on the move step). Holding Ctrl (Cmd on macOS) while dragging moves freely. The button shows both steps.
+  - `POP-GRID` **Grid**: the helper grid automatic (hidden where a ground slab already shows the floor), always or hidden, and its cell size (0.25 to 5 m).
+  - Snaps, grid and *Place where I click* are remembered on this computer.
 - **New project**: Terrain, Sky, Light · Part, Agent (→ `SCR-IDEAS`), Goal · Import.
 - **Body**: Import, Auto-rig · Bone, Joint, Motor, Sensor · Mirror, Collider, Weights · Test pose.
 - **Brain**: Senses (rays overlay), Network (→ `STA-BRAIN-NETWORK`). Connectome brains: Neurons, Connections, Regions · Senses map, Motor map.
 - **Train**: Train, Pause (→ `MOD-STOP-RUN`), Stop · Timelapse · Autopilot (→ `MOD-AUTOPILOT`).
 - **Motion**: Video (→ `MOD-MOTION-VIDEO`), Detect pose (→ `MOD-MOTION-TRACKING`), Retarget · Trim · Export (→ `MOD-EXPORT-ANIMATION`).
-- **Play** (floating bar): core tools *Move, Push, Add object, Light, Wind, Slow, Reset* for every project, plus tools derived from the body's senses (*Shadow* for vision, *Scent* for smell, *Shuffle* for randomized worlds).
+- **Play** (floating bar): core tools *Move, Push, Add object, Light, Wind, Slow, Reset* for every project, plus tools derived from the body's senses (*Shadow* for vision, *Scent* for smell, *Shuffle* for randomized worlds). Picking *Add object* in a live session opens its options over the view: the library piece, Place, Drop or Throw (height, throw speed), size, weight in kg or kg/m³, friction, bounciness, color and copies (every so many seconds, spread around the click); a fixed piece can only be placed. While a session opens the view shows its steps as the engine reports them: preparing the world, loading the brain, starting.
 
 ### `PNL-LIBRARY` Library
 
@@ -126,7 +136,7 @@ Center column, bottom strip in World. Ready-made pieces to drag into the world. 
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-LIBRARY` | Library | `library-tab.tsx` | Built-in environments, props, agents and bodies as cards with a 3D thumbnail. Last card: dashed *Import a model or environment*. | Drag into the viewport, click to preview, Import → `MOD-IMPORT`. |
+| `TAB-LIBRARY` | Library | `library-tab.tsx` | Built-in environments, props, agents and bodies as cards with a 3D thumbnail; library pieces switch by category (Basics, Street, Buildings, Furniture, Nature, Props, Bodies) and a search looks through all of them. Body cards (the body vault) carry an *Add* mark: clicking one makes it the agent in place of the current body. Last card: dashed *Import a model or environment*. | Drag into the viewport, click to preview, Import → `MOD-IMPORT`. |
 | `TAB-LIBRARY-COMMUNITY` | Community | `community-tab.tsx` | Pieces published by others (worlds, bodies, brains), safe data only. | Drag in (creates a remix link), open its page → `SCR-CREATION`. |
 | `TAB-MY-FILES` | My files | `my-files-tab.tsx` | Files this user imported: models, environments, videos. | Drag in, rename, delete. |
 
@@ -138,10 +148,11 @@ Right column, always present in workspaces. Folder: `features/copilot/`. Used in
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-CHAT` | Chat | `chat-tab.tsx` | The conversation: user bubbles (white, right), copilot bubbles (grey, left) with check lists, inline actions and proposal cards. Suggestion chips above the composer. Composer with attach (+), autonomy mode (*Ask before changes* / Autopilot) and send. | Type, send, click chips (they send that message), click inline actions (Apply, Discard, Train the spin…). |
+| `TAB-CHAT` | Chat | `chat-tab.tsx` | The conversation: user bubbles (white, right), copilot bubbles (grey, left) with check lists, inline actions and proposal cards. Suggestion chips above the composer. Composer with attach (+), autonomy mode (*Ask before changes* / Autopilot), the context gauge (→ `POP-CHAT-CONTEXT`) and send. | Type, send, click chips (they send that message), click inline actions (Apply, Discard, Train the spin…). Paste a picture or files, or drop files anywhere on the chat (it shows a dashed drop target while dragging): they wait in the composer as removable previews, checked like the attach button; refused files say why. Plain text pastes as text. |
 | `TAB-HISTORY` | History | `history-tab.tsx` | Every revision of the project, by the user or the copilot, with what changed. Opens as `MOD-HISTORY`. | Restore any revision (creates a new one). |
 
 - Copilot proposals never change the project until applied; they are previewed in blue in the viewport (`STA-WORLD-PROPOSAL`).
+- `POP-CHAT-CONTEXT` Context usage (`context-popover.tsx`): opens above the composer's context gauge, a small ring that fills as the next message's context fills the model's window (amber once a turn would start shortening its own results, red once it reaches the room kept for the answer). Shows used and total tokens with the percent, the model and its window (marked as assumed when the connection does not say), a stacked bar and a legend of everything the next message sends: system prompt, tool definitions, skills, memory notes, project and run facts, conversation summary, conversation, the message and its attachments (scene renders included), then the room reserved for the answer and the free room. Parts with pieces expand to list each tool, skill, note or file with its tokens. A line says when older messages fold into the summary. Re-counted after every answer, when files are added or removed and when opened; loading, error (*Try again*) and no-model (*Open AI models* → `SCR-SETTINGS-MODELS`) states. Escape or a click outside closes it.
 
 ### `PNL-IDEAS` Ideas
 
@@ -181,7 +192,7 @@ Center, bottom panel in Brain. Folder: `features/brain-studio/learning/`. Used i
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-REWARD` | Reward | `reward-tab.tsx` | One card per reward term: name, plain description, signed weight and slider. Penalties in red or amber. | Drag weights; the copilot's proposed changes show in blue (*1 change proposed*). |
+| `TAB-REWARD` | Reward | `reward-tab.tsx` | One card per reward term: name, plain description, signed weight and slider. Penalties in red or amber. | Drag weights; remove a term with its ×; *+* in the tab bar adds a library term that fits the task and is not in the reward yet. The copilot's proposed changes show in blue (*1 change proposed*). |
 | `TAB-GOAL` | Goal | `goal-tab.tsx` | What success means and when an episode ends. | Edit success condition and time limit. |
 | `TAB-CURRICULUM` | Curriculum | `curriculum-tab.tsx` | Stages that make the task harder as the brain improves. | Add, reorder and edit stages. |
 
@@ -247,7 +258,7 @@ Left column, bottom, in Results. Folder: `features/results/summary/`. Used in: `
 
 ### `PNL-RESULTS-VIEW` Results view
 
-Center panel in Results. Folder: `features/results/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`.
+Center panel in Results. Folder: `features/results/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`. In the app a fourth tab, *Behavior tests*, opens `STA-RESULTS-REFERENCE`, so behavior tests are reachable from any project.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
@@ -272,7 +283,7 @@ Left column, top, in `STA-RESULTS-FAILURES`. Folder: `features/results/failures/
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
 | `TAB-FAILURES` | Failures | `failures-tab.tsx` | Failure groups found by the copilot, each with a thumbnail and how many test runs it covers. | Select a group to replay it. |
-| `TAB-ALL-TEST-RUNS` | All test runs | `all-test-runs-tab.tsx` | Every evaluation episode with pass or fail. | Replay any episode. |
+| `TAB-ALL-TEST-RUNS` | All test runs | `all-test-runs-tab.tsx` | Every evaluation episode with pass or fail. | Replay any episode (in the app each row says how the episode ended; only the first episode of a checkpoint is recorded, and it plays in `SCR-TIMELAPSE`). |
 
 
 ### `PNL-MOTION-COMPARE` Motion compare
@@ -330,7 +341,7 @@ Left column in Play (learned brains). Folder: `features/play/decisions/`. Used i
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS` (in the app: dimmed, *not available yet*; Play runs the best brain of the revision). |
+| `TAB-WHAT-IT-DECIDES` | What it decides | `what-it-decides-tab.tsx` | Live outputs of the brain and which brain is playing. | Use another brain → `SCR-RESULTS` (in the app: a menu of every finished run's best brain, *Run 3 · 500k steps · revision 12 · 80% success*; the one playing is checked, one that no longer fits the body is dimmed with the reason, *The body changed: 41 senses now, 37 then*; picking one restarts this Play session with it). |
 
 
 ### `PNL-PLAY-VISION` Vision
@@ -357,8 +368,8 @@ Left column in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-test
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-BEHAVIOR-TESTS` | Behavior tests | `behavior-tests-tab.tsx` | Tests against recorded real behavior, with pass, warning or *not run*. | Select a test; `+` adds one. |
-| `TAB-RECORDINGS` | Recordings | `recordings-tab.tsx` | Reference recordings imported for comparison. | Import, remove. |
+| `TAB-BEHAVIOR-TESTS` | Behavior tests | `behavior-tests-tab.tsx` | Tests against recorded real behavior, with pass, warning or *not run*. In the app a behavior test is a fixed scenario (the same starts, objects moved) judged on the compared checkpoints by the engine. | Select a test; `+` adds one; ▶ runs the selected test. |
+| `TAB-RECORDINGS` | Recordings | `recordings-tab.tsx` | Reference recordings imported for comparison. In the app: the recorded evaluation episode of every checkpoint. | Import, remove (in the app: play one in `SCR-TIMELAPSE`, export it as an animated picture). |
 
 
 ### `PNL-REFERENCE-VIEW` Reference view
@@ -367,7 +378,7 @@ Center panel in `STA-RESULTS-REFERENCE`. One tab per behavior test. Folder: `fea
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-REFERENCE-TEST` | ‹test name› | `reference-test-tab.tsx` | Recorded behavior and the simulated one side by side, for example walking paths in an arena. | Play, switch test. |
+| `TAB-REFERENCE-TEST` | ‹test name› | `reference-test-tab.tsx` | Recorded behavior and the simulated one side by side, for example walking paths in an arena (in the app: the paths of both checkpoints from the test's starts, on one scale). | Play, switch test. |
 
 
 ### `PNL-REFERENCE-MATCH` Behavior match
@@ -376,8 +387,8 @@ Center, bottom, in `STA-RESULTS-REFERENCE`. Folder: `features/results/reference-
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
-| `TAB-BEHAVIOR-MATCH` | Behavior match | `behavior-match-tab.tsx` | Table: behavior, recorded value, simulated value, *close* or *off*. | Sort, open a test. |
-| `TAB-NEURONS` | Neurons | `neurons-tab.tsx` | Which neurons drive each behavior. | Select neurons. |
+| `TAB-BEHAVIOR-MATCH` | Behavior match | `behavior-match-tab.tsx` | Table: behavior, recorded value, simulated value, *close* or *off* (in the app: both checkpoints' measured values on the selected test and how alike their paths are). | Sort, open a test. |
+| `TAB-NEURONS` | Neurons | `neurons-tab.tsx` | Which neurons drive each behavior (in the app: each layer's most active neurons over the checkpoint's recorded episode). | Select neurons. |
 
 
 ## Use cases
@@ -491,8 +502,8 @@ Get the creation to other people.
 
 Use the brain or motion elsewhere.
 
-1. `MOD-EXPORT-BRAIN` Export brain — ONNX, TorchScript or game engine format
-2. `STA-BUILD-HARDWARE` Build · real hardware — Parts list, connect, calibrate, test drive and load the brain on a real device
+1. `MOD-EXPORT-BRAIN` Export brain — ONNX brain, URDF robot, MuJoCo model or a runtime package
+2. `STA-BUILD-HARDWARE` Build · real hardware — Check the body against a real kit, parts list and safety rules
 3. `MOD-EXPORT-ANIMATION` Export animation — Animation files for game engines
 
 ### `UC-14` Manage projects
@@ -546,6 +557,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
   - Hero with a live 3D scene behind it, the headline, a subtitle and a prompt field with a send button. Under the field: *Press enter to see 3 ideas →*.
   - **Start from**: template cards (empty world, examples from the library) and a dashed *Import your own* card.
   - **From the community**: Featured / Recent / Most voted switch, four creation cards with thumbnail, votes, author and a *Remix* pill, and *View all*.
+  - In the app, between the hero and *Start from*: **Recent projects**, up to four cards of the projects opened or edited last (thumbnail, name, status line) that open the project in its last workspace, and *All projects* → `SCR-PROJECTS`. Hidden while there are no projects (`STA-HOME-EMPTY`).
 - **Note:** Template cards open the template as a new project. The prototype opens the same example project for every vehicle and robot template.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Page:** no tabbed panels
@@ -681,11 +693,11 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Decide what the agent perceives, what it can do and what it is rewarded for. Beginners stay at the top; expert settings are collapsed.
 - **Content:**
   - Left: What it sees / What it can do with switches; copilot proposals in blue.
-  - Inspector: Practice (steps, parallel copies) and Expert settings (method, network, learning rate). A copilot-proposed value shows in blue with Accept.
+  - Inspector: Practice (steps, parallel copies) and Expert settings, collapsed (method, hidden layers, neurons per layer, learning rate and the other PPO settings). Steps show *auto* while the task's recommended budget applies; the method lists only what really trains. A copilot-proposed value shows in blue with Accept.
   - Viewport with the sensor rays and a *What the brain sees now* card with live readings and the resulting decision.
   - Bottom: Reward / Goal / Curriculum. *1 change proposed* in blue.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Brain**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
-- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Network, Learning rate
+- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Hidden layers, Neurons per layer, Learning rate
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LEARNING` (**Reward**, Goal, Curriculum) · toolbar: Senses, Network
 - **Chat column:** `PNL-CHAT` (**Chat**, History)
 
@@ -761,7 +773,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Content:**
   - Plain explanation of what will happen, practice steps and parallel copies, estimated time and CPU threads used, and the *Let the copilot coach* switch.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Brain**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
-- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Network, Learning rate
+- **Left column:** `PNL-SENSES-ACTIONS` (**What it sees**, What it can do); `PNL-INSPECTOR` (**Properties**) · inspector rows: Steps, Parallel copies, Method, Hidden layers, Neurons per layer, Learning rate
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LEARNING` (**Reward**, Goal, Curriculum) · toolbar: Senses, Network
 - **Chat column:** `PNL-CHAT` (**Chat**, History)
 - **Dialog · Start training:** no tabbed panels
@@ -1463,6 +1475,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Content:**
   - Rename, Duplicate, History (with current revision), Open project…, Project settings, Delete project…, Back to Home.
   - In the app *Project settings* opens `SCR-SETTINGS-TRAINING`, whose training and hardware settings are shared by every project; its tooltip says so.
+  - In the app *Back to Home* reads **Close project**: it returns to `SCR-HOME` with no project open. Every change is already saved, so nothing asks to save first.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → `SCR-PLAY` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Copies, Layout, Randomize, Material, Friction
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Paint, Props, Sky, Light, Camera, Copies, Randomize, Import world
@@ -1742,6 +1755,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Presentation mode: show how it learned, full screen, with real metrics.
 - **Content:**
   - Full-screen replay, title with checkpoint and score, checkpoint strip, play bar, Export video, Exit presentation.
+  - In the app the replay plays each checkpoint's recorded episode in the run's scene, going on to the next checkpoint when one ends; Export video saves the playing checkpoint's episode as an animated picture.
 - **Header:** none, full-screen presentation
 - **Overlay:** no tabbed panels
 - **Overlay:** no tabbed panels
@@ -1761,7 +1775,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
 - **Purpose:** Export the trained brain as a file.
 - **Content:**
-  - Format switch, options (sensor layout, runnable example, training history), file summary with inputs, outputs and rate.
+  - Format switch (ONNX brain, URDF robot, MuJoCo, runtime package), options (inputs and outputs, README and reference script, parts list, training history), every file with its size, inputs, outputs and rate, and what is left out. Download saves one zip where the person chooses.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Build**) · Play → `SCR-PLAY` · primary *Publish* → `MOD-PUBLISH`
 - **Left column:** `PNL-BUILD-TARGETS` (**Build**)
 - **Center column:** `PNL-BUILD-TARGET-VIEW` (**Share to community**)
@@ -1790,10 +1804,10 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Kind:** State of a screen of `SCR-BUILD` Build workspace
 - **Mockup:** *Run on real hardware* (`Hardware`)
 - **Reached from:** `MOD-EXPORT-BRAIN`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-BUILD`
-- **Purpose:** Run the brain on a real device, step by step and safely.
+- **Purpose:** Check the body against real hardware and get it ready to build, step by step and safely.
 - **Content:**
-  - Steps: get the parts, connect, calibrate sensors, test drive, load the brain.
-  - Live sensor readings from the device with ok or check, a problem card with the fix, Recheck and Skip.
+  - Steps: pick the hardware, check joints and sensors, export robot and brain, run it on the device.
+  - Every joint and sensor against the kit's part for it (need, rating, pass, warn, fail or skipped), measured with the trained brain when there is one; a problem card with the gap and the fix, Recheck and Skip this part.
   - Preview, safety rules and parts list with total. Chat helps with the hardware.
 - **Header:** `HDR-WORKSPACE` · project **Park Pilot** · workspaces World · Body · Brain · Train · Results · Build (active: **Build**) · Play → `SCR-PLAY` · primary *Publish* → `MOD-PUBLISH`
 - **Side navigation:** no tabbed panels
@@ -1803,7 +1817,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Region | Control | Type | Result |
 |---|---|---|---|
 | Page | Recheck | Button or link | Acts in place |
-| Page | Skip this sensor | Button or link | Acts in place |
+| Page | Skip this part | Button or link | Acts in place |
 | Chat column | History | Tab | → `MOD-HISTORY` History |
 | Chat column | Explain calibration | Chat suggestion | Acts in place |
 | Chat column | Order the parts | Chat suggestion | Acts in place |
@@ -1872,6 +1886,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Sign in only when needed (sharing, remixing).
 - **Content:**
   - Why an account is needed, Continue with Google, GitHub or email, terms.
+  - In the app Google and GitHub open in the system browser and the profile fills in once the browser comes back. With a Supabase project, *Continue with email* opens an *Email* field and *Send sign-in link*, then says where the link went. Against a community server in development mode a line says so and every button signs in to its local test account.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Page:** no tabbed panels
 - **Dialog · Sign in to Icarus:** no tabbed panels
@@ -2060,7 +2075,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `SCR-PROFILE`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Connect AI models per capability.
 - **Content:**
-  - Reasoning, Vision, Images, Pose with model and status; endpoint and key stored on this computer; Test connection, Save.
+  - Reasoning, Vision, Images, Pose with model, status and an optional context window in tokens (empty means assumed; 4,000 to 10,000,000, and Save waits while one is out of range); endpoint and key stored on this computer; Test connection, Save.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels
@@ -2072,6 +2087,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Test connection | Button or link | Acts in place |
 | Page | Save | Button or link | → `SCR-HOME` Home |
@@ -2082,6 +2098,9 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Mockup:** *Settings · profile* (`SettingsProfile`)
 - **Reached from:** `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-TRAINING`
 - **Purpose:** Edit the public profile and signature.
+- **Content:**
+  - *Change photo* picks a PNG, JPEG or WebP picture; *Remove* goes back to the initials.
+  - Below the profile, **Community server**: the server address (default `http://127.0.0.1:8790`), the Supabase URL and anon key, a line saying how people sign in (Supabase, with the redirect URL to allow, or the server's development sign-in), *Save server* and *Sign out*. It shows even when signed out or when the server does not answer.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels
@@ -2093,6 +2112,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Change photo | Button or link | Acts in place |
 | Page | Remove | Button or link | Acts in place |
@@ -2117,6 +2137,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | Acts in place |
 | Side navigation | Blocked people | Button or link | Acts in place |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Unblock | Button or link | Acts in place |
 | Page | Download my data | Button or link | Acts in place |
@@ -2129,7 +2150,8 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `POP-PROJECT-MENU`, `SCR-SETTINGS-MODELS`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-PROFILE`
 - **Purpose:** Control how training uses this computer.
 - **Content:**
-  - CPU threads, graphics card, projects folder, checkpoints kept, engine status with Restart engine.
+  - CPU threads, graphics card, checkpoints kept, engine status with Restart engine.
+  - In the app, **Storage**: the data folder holding projects and runs, the space they use and what the drive has free, and *Change folder…*, which opens the system folder picker. A folder that is not writable, is inside the app or inside the current data folder is refused with the reason. Otherwise it offers *Move projects and runs* (copy, verify byte for byte, then remove each original, with progress and a list of what moved and what stayed), *Start empty there* or *Cancel*; nothing can train while it moves, and the engine restarts on its own to use the new folder. Locked when `ICARUS_PROJECTS_DIR` or `ICARUS_RUNS_DIR` sets the folders.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels
@@ -2141,6 +2163,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | Acts in place |
+| Side navigation | Storage | Button or link | Acts in place |
 | Side navigation | Notifications | Button or link | → `SCR-SETTINGS-NOTIFICATIONS` Settings · notifications |
 | Page | Restart engine | Button or link | → `SYS-ENGINE-DOWN` Engine stopped (in the app: restarts the engine in place) |
 
@@ -2161,6 +2184,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | Side navigation | Privacy and safety | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Blocked people | Button or link | → `SCR-SETTINGS-PRIVACY` Settings · privacy and safety |
 | Side navigation | Training and hardware | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
+| Side navigation | Storage | Button or link | → `SCR-SETTINGS-TRAINING` Settings · training and hardware |
 | Side navigation | Notifications | Button or link | Acts in place |
 
 ### System and team
@@ -2225,6 +2249,8 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 | `MOD-START-TRAINING` | Start training | Modal dialog | `StartTraining` |
 | `MOD-STOP-RUN` | Stop run | Modal dialog | `StopRun` |
 | `POP-ADD-COMPONENT` | Components and Add component | Popover or menu | `Components` |
+| `POP-CHAT-CONTEXT` | Context usage | Popover or menu | — |
+| `POP-EXPLORER-OBJECT` | Object menu | Popover or menu | — |
 | `POP-NOTIFICATIONS` | Notifications | Popover or menu | `Notifications` |
 | `POP-PROJECT-MENU` | Project menu | Popover or menu | `ProjectMenu` |
 | `POP-TRAINING-COPIES` | Training copies | Popover or menu | `Randomize` |

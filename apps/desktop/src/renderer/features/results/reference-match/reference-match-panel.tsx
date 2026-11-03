@@ -5,7 +5,7 @@ import { usePort } from "../../../app/runtime/port.tsx";
 import { resultsPort } from "../../../ports/results-port.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
-import { EmptyState } from "../../../ui/states.tsx";
+import { EmptyState, LoadingState } from "../../../ui/states.tsx";
 import { resultsKeys } from "../use-results.ts";
 import { BehaviorMatchTab } from "./behavior-match-tab.tsx";
 import { NeuronsTab } from "./neurons-tab.tsx";
@@ -21,10 +21,13 @@ export function ReferenceMatchPanel({ project, className = "flex-none" }: { proj
   });
   const neurons = useQuery({
     queryKey: resultsKeys.neurons(project),
-    queryFn: () => port.getNeuronLinks(project),
+    queryFn: () => port.getNeurons(project),
     enabled: tab === "neurons",
   });
-  const none = <EmptyState title="Nothing measured yet" body="Run a behavior test to fill this table." />;
+  const none = (
+    <EmptyState title="Nothing measured yet" body="Run a behavior test on both checkpoints to fill this table." />
+  );
+  const noNeurons = <EmptyState title="No checkpoint yet" body="Train a run to see what its neurons do." />;
   return (
     <Panel
       id="PNL-REFERENCE-MATCH"
@@ -37,12 +40,17 @@ export function ReferenceMatchPanel({ project, className = "flex-none" }: { proj
       }
     >
       {tab === "match" ? (
-        <QueryView query={match} isEmpty={(data) => data.length === 0} empty={none}>
-          {(data) => <BehaviorMatchTab rows={data} />}
+        <QueryView query={match} isEmpty={(data) => data.rows.length === 0} empty={none}>
+          {(data) => <BehaviorMatchTab table={data} />}
         </QueryView>
       ) : (
-        <QueryView query={neurons} isEmpty={(data) => data.length === 0} empty={none}>
-          {(data) => <NeuronsTab links={data} />}
+        <QueryView
+          query={neurons}
+          isEmpty={(data) => data.length === 0}
+          empty={noNeurons}
+          loading={<LoadingState label="Replaying the recorded episode" />}
+        >
+          {(data) => <NeuronsTab layers={data} />}
         </QueryView>
       )}
     </Panel>

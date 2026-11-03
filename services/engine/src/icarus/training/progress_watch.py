@@ -1,11 +1,15 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from icarus.sim.model_state import CONTROL_PERIOD
+from icarus.contracts.specs import TaskFamily
+from icarus.sim.model_state import control_period
 from icarus.training.episodes import INSTANT_SECONDS, instant_share, success_share
-from icarus.training.run_store import RunFolder
+from icarus.training.experiment_switches import read_experiments
+from icarus.training.run_store import RunFolder, RunStore, UnknownRun
+from icarus.training.schedule import RECOMMENDED_STEPS
 
-type WatchRule = Literal["stalled", "reward_hacking", "instant_failures", "goal_held"]
+# design_blocker: the coach's early look found something in the design that keeps the brain from the task.
+type WatchRule = Literal["stalled", "reward_hacking", "instant_failures", "goal_held", "design_blocker"]
 
 # Checkpoints a run gets to improve before it counts as stalled, and the evaluations that hold a goal.
 WINDOW = 3
@@ -40,16 +44,40 @@ class WatchFinding:
     reason: str
 
 
+def inherited_steps(runs: RunStore, folder: RunFolder) -> int:
+    """Steps the brain a run starts from already trained, along every run it continues from; 0 from zero."""
+    total, seen, warm = 0, {folder.run_id}, folder.config().warm_start
+    while warm is not None and warm.run_id not in seen:
+        seen.add(warm.run_id)
+        total += warm.step
+        try:
+            warm = runs.folder(warm.run_id).config().warm_start
+        except UnknownRun:
+            break
+    return total
+
+
+def patience_steps(family: TaskFamily, inherited: int = 0) -> int:
+    """The step a run must reach before slow progress may stop it or change its design: a share of the task's
+    recommended budget, less what its brain already trained before this run."""
+    return max(0, round(RECOMMENDED_STEPS[family] * read_experiments().coach_patience) - inherited)
+
+
+def run_patience(runs: RunStore, folder: RunFolder) -> int:
+    return patience_steps(folder.project().task.family, inherited_steps(runs, folder))
+
+
 def checkpoint_results(folder: RunFolder) -> list[CheckpointResult]:
     """Evaluations of a run in step order, with locomotion success and instant endings from its episode records."""
     results = []
+    period = control_period(folder.project())
     for point in (point for point in folder.metrics() if point.kind == "eval"):
         episodes = folder.episodes(point.step)
         if episodes is not None and episodes.episodes:
             success, instant = success_share(episodes), instant_share(episodes)
         else:
             success = point.success_rate
-            instant = 1.0 if point.episode_length * CONTROL_PERIOD < INSTANT_SECONDS else 0.0
+            instant = 1.0 if point.episode_length * period < INSTANT_SECONDS else 0.0
         results.append(CheckpointResult(point.step, success, point.episode_return, instant))
     return results
 
@@ -58,8 +86,8 @@ def _gain(before: float) -> float:
     return max(RETURN_GAIN_SHARE * abs(before), RETURN_GAIN_FLOOR)
 
 
-def _stalled(results: list[CheckpointResult], goal: float) -> WatchFinding | None:
-    if len(results) < WINDOW + 1:
+def _stalled(results: list[CheckpointResult], goal: float, patience: int) -> WatchFinding | None:
+    if len(results) < WINDOW + 1 or results[-1].step < patience:
         return None
     before, window = results[:-WINDOW], results[-WINDOW:]
     best_success = max(result.success or 0.0 for result in before)
@@ -118,12 +146,64 @@ def _held(results: list[CheckpointResult], goal: float) -> WatchFinding | None:
     )
 
 
-def watch(results: list[CheckpointResult], goal_success: float) -> list[WatchFinding]:
-    """What the evaluations so far say about a run: a goal held ends it well; the other rules flag a run to fix."""
+def watch(results: list[CheckpointResult], goal_success: float, patience: int = 0) -> list[WatchFinding]:
+    """What the evaluations so far say about a run: a goal held ends it well; the other rules flag a run to fix.
+    Before the patience step slow progress is ordinary learning, so only rules that show a broken design fire."""
     if not results:
         return []
     held = _held(results, goal_success)
     if held is not None:
         return [held]
-    found = [_stalled(results, goal_success), _hacking(results), _instant(results)]
+    found = [_stalled(results, goal_success, patience), _hacking(results), _instant(results)]
     return [finding for finding in found if finding is not None]
+
+
+type TrendCall = Literal["early", "improving", "flat"]
+
+# Success gained per 100k steps that still counts as learning worth more steps.
+SUCCESS_SLOPE = 0.02
+
+
+@dataclass(frozen=True)
+class Trend:
+    call: TrendCall
+    # One sentence with the run's numbers: what the curve says about more steps against a fix.
+    reason: str
+
+
+def trend(results: list[CheckpointResult], patience: int = 0) -> Trend:
+    """Whether more steps should help, from the slope of the last evaluations; a flat curve needs a fix instead,
+    once the run has passed its patience step."""
+    trained = [result for result in results if result.step > 0]
+    if len(trained) < 3:
+        return Trend("early", "Too few trained checkpoints yet to read the learning curve.")
+    first, last = trained[-min(len(trained), WINDOW)], trained[-1]
+    span = (last.step - first.step) / 100_000
+    success_slope = ((last.success or 0.0) - (first.success or 0.0)) / span if span > 0 else 0.0
+    best_before = max(result.episode_return for result in results if result.step < last.step)
+    steps = f"steps {first.step:,} to {last.step:,}"
+    if success_slope >= SUCCESS_SLOPE:
+        return Trend(
+            "improving",
+            f"Success rose {success_slope:.2f} per 100k steps between {steps}: more steps should help.",
+        )
+    if last.episode_return >= best_before + _gain(best_before) and (
+        (last.success or 0.0) > 0 or last.step < HACKING_MIN_STEP
+    ):
+        return Trend(
+            "improving",
+            f"Return reached {last.episode_return:.2f} at step {last.step:,}, above {best_before:.2f} before: the "
+            "brain is still learning.",
+        )
+    if last.step < patience:
+        return Trend(
+            "early",
+            f"Success moved {success_slope:.2f} per 100k steps between {steps}, but the brain has not reached "
+            f"{patience:,} steps of this run yet, the share of the task's recommended budget it gets before slow "
+            "progress counts as flat: keep training.",
+        )
+    return Trend(
+        "flat",
+        f"Success moved {success_slope:.2f} per 100k steps between {steps} (return {first.episode_return:.2f} to "
+        f"{last.episode_return:.2f}): more steps alone are unlikely to help; a fix should.",
+    )

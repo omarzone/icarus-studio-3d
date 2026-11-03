@@ -21,8 +21,20 @@ export function SensesActionsPanel({ brain }: { brain: string }) {
   const query = useQuery({ queryKey: key, queryFn: () => port.getSensesActions(brain) });
   const [tab, setTab] = useState<Tab>("sees");
   const update = { onSuccess: (next: SensesActions) => client.setQueryData(key, next) };
+  // A sensor change is a new revision of the body: the viewport, inspector and the rest read it again.
+  const changed = {
+    onSuccess: (next: SensesActions) => {
+      client.setQueryData(key, next);
+      void client.invalidateQueries({
+        predicate: (cached) => !(cached.queryKey[0] === "brain" && cached.queryKey[2] === "senses"),
+      });
+    },
+  };
   const toggleInput = useEngineAction(port.toggleInput);
   const toggleOutput = useEngineAction(port.toggleOutput);
+  const addInput = useEngineAction(port.addInput);
+  const removeInput = useEngineAction(port.removeInput);
+  const renameInput = useEngineAction(port.renameInput);
   return (
     <Panel
       id="PNL-SENSES-ACTIONS"
@@ -37,8 +49,10 @@ export function SensesActionsPanel({ brain }: { brain: string }) {
         <Act
           cta="Add a sensor input"
           aria-label="Add a sensor input"
-          title="Add a sensor input"
-          className="grid h-6 w-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80"
+          title="Add a distance ray to the body and feed its reading to the brain"
+          disabled={addInput.isPending}
+          onClick={() => addInput.mutate(brain, changed)}
+          className="grid h-6 w-5 place-items-center rounded-control text-fg-tertiary hover:bg-fill-hover hover:text-fg active:opacity-80 disabled:opacity-35"
         >
           <Plus size={14} strokeWidth={1.75} aria-hidden />
         </Act>
@@ -51,7 +65,12 @@ export function SensesActionsPanel({ brain }: { brain: string }) {
       >
         {(data) =>
           tab === "sees" ? (
-            <WhatItSeesTab inputs={data.inputs} onToggle={(id) => toggleInput.mutate({ brain, id }, update)} />
+            <WhatItSeesTab
+              inputs={data.inputs}
+              onToggle={(id) => toggleInput.mutate({ brain, id }, update)}
+              onRename={(id, name) => renameInput.mutate({ brain, id, name }, changed)}
+              onRemove={(id) => removeInput.mutate({ brain, id }, changed)}
+            />
           ) : (
             <WhatItCanDoTab outputs={data.outputs} onToggle={(id) => toggleOutput.mutate({ brain, id }, update)} />
           )

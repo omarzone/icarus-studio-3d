@@ -9,7 +9,8 @@ export type Poses = ReadonlyMap<string, Pose>;
 export type PoseTrack = { from: Poses; to: Poses; arrivedAt: number; span: number };
 
 const MIN_SPAN_MS = 1000 / 120;
-const MAX_SPAN_MS = 250;
+// Live training snapshots come a few times per second; a longer gap is a pause, not motion to ease through.
+const MAX_SPAN_MS = 1000;
 
 export function nextTrack(track: PoseTrack | null, poses: Poses, now: number): PoseTrack {
   if (!track) {
@@ -17,6 +18,11 @@ export function nextTrack(track: PoseTrack | null, poses: Poses, now: number): P
   }
   const span = Math.min(MAX_SPAN_MS, Math.max(MIN_SPAN_MS, now - track.arrivedAt));
   return { from: track.to, to: poses, arrivedAt: now, span };
+}
+
+// A track that stays on these poses, for a frame a player already placed.
+export function heldTrack(poses: Poses): PoseTrack {
+  return { from: poses, to: poses, arrivedAt: Number.NEGATIVE_INFINITY, span: MIN_SPAN_MS };
 }
 
 // How far rendering is from the previous frame to the newest one, from 0 to 1.

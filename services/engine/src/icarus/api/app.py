@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -12,7 +11,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from icarus import __version__
 from icarus.api import (
     attachments,
+    behavior,
     brain,
+    build,
+    bundles,
     coach,
     copilot,
     events,
@@ -20,13 +22,18 @@ from icarus.api import (
     ideas,
     library,
     model_settings,
+    motion,
     notes,
     play,
     project_runs,
     projects,
+    rig,
     runs,
+    skins,
+    storage,
     tasks,
 )
+from icarus.bundles.unpack import BundleRejected
 from icarus.contracts import ApiError
 from icarus.contracts.errors import ValidationErrorBody, ValidationIssue
 from icarus.contracts.events import EngineEvent, RevisionCreatedEvent
@@ -45,6 +52,9 @@ from icarus.copilot.checkpoint_coach import CheckpointCoach
 from icarus.copilot.client import CopilotError, NotConnected
 from icarus.copilot.coach import Coach, NothingToDiagnose
 from icarus.copilot.conversation_store import ConversationStore
+from icarus.copilot.early_look import EarlyLook, default_client
+from icarus.copilot.film_strips import FilmStrips
+from icarus.copilot.idea_revisions import MixRefused
 from icarus.copilot.memory import CopilotMemory, memory_prompt
 from icarus.copilot.run_frames import RunFrames
 from icarus.copilot.settings import ModelSettingsStore, settings_dir
@@ -52,7 +62,11 @@ from icarus.copilot.subagents import Subagents
 from icarus.event_log import EventLog
 from icarus.events import EventBus
 from icarus.library.templates import UnknownTemplate
+from icarus.motion.clip_store import ClipStore
+from icarus.motion.service import MotionService, MotionServices
+from icarus.projects.auto_rig import AutoRigBoard
 from icarus.projects.operations import OperationError
+from icarus.projects.skins import SkinRejected, SkinStore, UnknownSkin
 from icarus.projects.store import (
     NothingToRedo,
     NothingToUndo,
@@ -63,12 +77,15 @@ from icarus.projects.store import (
 )
 from icarus.run_relay import CoachedSupervisor, RunRelay
 from icarus.sim.views import ViewRenderer
+from icarus.storage.data_folder import projects_dir, runs_dir
+from icarus.storage.data_folder_move import DataFolderMover, MoveRefused
 from icarus.tasks import TaskContext, TaskRegistry
-from icarus.training.run_store import RunStore, UnknownRun, runs_dir
+from icarus.training.behavior_match import NotComparable
+from icarus.training.behavior_tests import BehaviorTestStore, TestRefused, UnknownTest
+from icarus.training.recording_export import RecordingMissing
+from icarus.training.run_store import TERMINAL_STATES, RunStore, UnknownRun
 from icarus.training.settings import SettingsRejected, TrainingSettingsStore
-from icarus.training.supervisor import NotTrainable, RunInProgress, WarmStartRefused
-
-PROJECTS_DIR_ENV = "ICARUS_PROJECTS_DIR"
+from icarus.training.supervisor import NotPausable, NotTrainable, RunInProgress, WarmStartRefused
 
 _CODES = {
     400: "bad_request",
@@ -145,6 +162,10 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(422, ApiError(code="invalid", message=f"This project cannot be trained: {exc}"))
         case WarmStartRefused():
             return _error(422, ApiError(code="invalid", message=str(exc)))
+        case NotPausable():
+            return _error(409, ApiError(code="conflict", message=str(exc)))
+        case MixRefused():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
         case NothingToDiagnose() | AutopilotBusy():
             return _error(409, ApiError(code="conflict", message=str(exc)))
         case NoAutopilot():
@@ -168,20 +189,27 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
             return _error(404, ApiError(code="not_found", message=f"There are no ideas {exc.args[0]!r}"))
         case UnknownAttachment():
             return _error(404, ApiError(code="not_found", message="There is no such attachment"))
-        case AttachmentRejected():
+        case UnknownSkin():
+            return _error(404, ApiError(code="not_found", message="There is no such model"))
+        case AttachmentRejected() | SkinRejected() | BundleRejected():
             return _error(422, ApiError(code="invalid", message=str(exc)))
         case UnknownBuild():
             return _error(404, ApiError(code="not_found", message=f"There is no build {exc.args[0]!r}"))
+        case MoveRefused():
+            return _error(
+                409 if exc.conflict else 422, ApiError(code="conflict" if exc.conflict else "invalid", message=str(exc))
+            )
+        case UnknownTest():
+            return _error(404, ApiError(code="not_found", message=f"There is no behavior test {exc.args[0]!r}"))
+        case RecordingMissing():
+            return _error(404, ApiError(code="not_found", message=str(exc)))
+        case TestRefused() | NotComparable():
+            return _error(422, ApiError(code="invalid", message=str(exc)))
         case SettingsRejected():
             details = {exc.field: exc.message}
             return _error(422, ApiError(code="invalid", message=exc.message, details=details))
         case _:
             raise exc
-
-
-def projects_dir() -> Path:
-    configured = os.environ.get(PROJECTS_DIR_ENV)
-    return Path(configured) if configured else Path.home() / "Icarus Studio" / "projects"
 
 
 @asynccontextmanager
@@ -218,16 +246,32 @@ def _memory(projects_folder: Path, data_folder: Path):
 def _diagnosis_starter(registry: TaskRegistry, coach_: Coach, runs_: RunStore):
     """A watch rule fired at a coached checkpoint: the coach diagnoses it as a task."""
 
-    def start(run_id: str, step: int) -> None:
+    def start(run_id: str, step: int, notes: list[str]) -> None:
         status = runs_.folder(run_id).status()
 
         def work(context: TaskContext) -> None:
             context.progress(0.1, f"Diagnosing {status.name} at step {step:,}")
-            coach_.diagnose(run_id, step)
+            coach_.diagnose(run_id, step, notes=notes)
 
         registry.start("diagnosis", f"Diagnose {status.name} at step {step:,}", work, status.project_id)
 
     return start
+
+
+def _training_now(runs_: RunStore, supervisor: CoachedSupervisor, autopilot: Autopilot):
+    """Why the data folder cannot move now: a run is training or the autopilot drives a project."""
+
+    def reason() -> str | None:
+        run_id = supervisor.active_run()
+        if run_id is not None:
+            status = runs_.folder(run_id).status()
+            if status.state not in TERMINAL_STATES:
+                return f"{status.name} is training. Stop it before moving the data folder."
+        if autopilot.driving():
+            return "The autopilot is training a project. Stop it before moving the data folder."
+        return None
+
+    return reason
 
 
 def create_app(
@@ -253,6 +297,22 @@ def create_app(
     app.state.model_settings = ModelSettingsStore(data_folder)
     trainer = ChatTrainer(app.state.store, app.state.runs, app.state.supervisor, app.state.training_settings)
     app.state.attachments = AttachmentStore(projects_folder)
+    app.state.skins = SkinStore(projects_folder)
+    app.state.auto_rigs = AutoRigBoard()
+    app.state.motion = MotionService(
+        MotionServices(
+            app.state.store,
+            app.state.runs,
+            app.state.supervisor,
+            app.state.training_settings,
+            app.state.model_settings,
+            app.state.tasks,
+            ClipStore(projects_folder),
+        )
+    )
+    views = ViewRenderer()
+    app.state.views = views
+    app.state.behavior_tests = BehaviorTestStore(runs_folder)
     conversations = ConversationStore(projects_folder)
     app.state.copilot = Copilot(
         app.state.store,
@@ -261,7 +321,7 @@ def create_app(
         app.state.model_settings,
         trainer,
         app.state.attachments,
-        ViewRenderer(),
+        views,
     )
     app.state.run_frames = RunFrames(app.state.attachments)
     app.state.coach = Coach(app.state.copilot, app.state.run_frames)
@@ -275,15 +335,33 @@ def create_app(
         conversations.folder,
     )
     app.state.copilot.attach_coaching(Coaching(app.state.coach, app.state.autopilot))
+    app.state.copilot.attach_stores(app.state.skins, app.state.motion.services.clips)
     app.state.coach.attach_publisher(publish)
     hub = Subagents(app.state.tasks, app.state.copilot.subagent_loop, frozenset(worker_tools()))
     app.state.subagents = hub
     harness = Harness(publish, default_registry(), _memory(projects_folder, data_folder), hub, welcome=True)
     app.state.copilot.attach_harness(harness)
     starter = _diagnosis_starter(app.state.tasks, app.state.coach, app.state.runs)
-    checkpoints = CheckpointCoach(app.state.copilot, app.state.runs, starter)
-    app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_run, publish, checkpoints.comment)
+    checkpoints = CheckpointCoach(
+        app.state.copilot,
+        app.state.runs,
+        starter,
+        look=EarlyLook(default_client(app.state.model_settings), FilmStrips(views, app.state.attachments)),
+        frames=app.state.run_frames,
+        piloted=app.state.autopilot.drives,
+        background=True,
+    )
+    app.state.autopilot.attach_watcher(checkpoints)
+    app.state.checkpoint_coach = checkpoints
+    app.state.run_relay = RunRelay(app.state.runs, app.state.supervisor.active_runs, publish, checkpoints.comment)
     app.state.supervisor.relay = app.state.run_relay
+    app.state.data_folder = DataFolderMover(
+        projects_folder,
+        runs_folder,
+        _training_now(app.state.runs, app.state.supervisor, app.state.autopilot),
+        app.state.supervisor.hold,
+        data_folder,
+    )
     app.state.ideas = IdeaBook()
     app.state.builds = BuildBoard(app.state.store, app.state.ideas)
     # The app window loads from files when packaged ("null") and from the local dev server in development.
@@ -301,16 +379,24 @@ def create_app(
     app.include_router(runs.router)
     app.include_router(copilot.router)
     app.include_router(attachments.router)
+    app.include_router(skins.router)
+    app.include_router(rig.router)
+    app.include_router(motion.router)
     app.include_router(coach.router)
     app.include_router(ideas.router)
     app.include_router(model_settings.router)
     app.include_router(events.router)
     app.include_router(tasks.router)
     app.include_router(brain.router)
+    app.include_router(behavior.router)
+    app.include_router(build.router)
     app.include_router(notes.router)
     app.include_router(project_runs.router)
+    app.include_router(storage.router)
+    app.include_router(bundles.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
+    motion.add_motion_errors(app)
     for error in (
         UnknownProject,
         UnknownRevision,
@@ -332,10 +418,20 @@ def create_app(
         UnknownBuild,
         UnknownAttachment,
         AttachmentRejected,
+        SkinRejected,
+        UnknownSkin,
         WarmStartRefused,
+        NotPausable,
+        MixRefused,
         NothingToDiagnose,
         AutopilotBusy,
         NoAutopilot,
+        MoveRefused,
+        UnknownTest,
+        TestRefused,
+        NotComparable,
+        RecordingMissing,
+        BundleRejected,
     ):
         app.add_exception_handler(error, _domain_error)
     return app

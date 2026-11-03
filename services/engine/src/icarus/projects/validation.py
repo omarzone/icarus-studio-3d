@@ -2,11 +2,15 @@ from icarus.contracts.errors import ValidationIssue
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.project import Project
 from icarus.contracts.properties import AssetValue, ChoiceValue
-from icarus.contracts.specs import RewardTermSpec
+from icarus.contracts.specs import MAX_LAYERS, RewardTermSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.properties import check_value
 from icarus.library.rewards import REWARD_TERMS, TERM_SETTINGS, term_families, term_fits
+from icarus.library.skin_objects import SKIN_ID
+from icarus.projects.agents import agent_issues, agent_project
 from icarus.projects.document import all_objects, containers
+
+WORLD_ONLY = frozenset({"sky", "ground"})
 
 
 def _reference(component: ComponentSpec, prop: str) -> str:
@@ -28,6 +32,11 @@ def _reference_issues(
         if link and link not in ids:
             message = f"Joint on {obj.name} connects to {link!r}, which does not exist"
             return [ValidationIssue(path=f"{base}.connects_to", message=message)]
+    if component.kind == "skin":
+        asset = _reference(component, "asset")
+        if asset and not SKIN_ID.fullmatch(asset):
+            message = f"Skin on {obj.name} names {asset!r}, which is not a stored model's id"
+            return [ValidationIssue(path=f"{base}.asset", message=message)]
     return []
 
 
@@ -140,21 +149,57 @@ def _randomize_issues(project: Project) -> list[ValidationIssue]:
     ]
 
 
-def _sky_issues(project: Project) -> list[ValidationIssue]:
-    """A world has one sky at most, and a body never carries one."""
-    issues = [
+def _world_only_issues(project: Project) -> list[ValidationIssue]:
+    """A sky and a ground slab belong to the world, never to a body."""
+    return [
         ValidationIssue(
             path=f"objects.{obj.id}.components.{component.id}",
-            message=f"{obj.name} is part of a body; a sky belongs to the world",
+            message=f"{obj.name} is part of a body; a {COMPONENTS[component.kind].label.lower()} belongs to the world",
         )
         for body in project.bodies
         for obj in body.objects
         for component in obj.components
-        if component.kind == "sky"
+        if component.kind in WORLD_ONLY
     ]
+
+
+def _sky_issues(project: Project) -> list[ValidationIssue]:
+    """A world has one sky at most."""
+    issues = _world_only_issues(project)
     skies = [obj for obj in project.world.objects if any(item.kind == "sky" for item in obj.components)]
     if len(skies) > 1:
         issues.append(ValidationIssue(path="objects", message="A world can have only one sky"))
+    return issues
+
+
+def _brain_issues(project: Project) -> list[ValidationIssue]:
+    layers = len(project.brain.layers)
+    if 1 <= layers <= MAX_LAYERS:
+        return []
+    message = f"The brain needs between 1 and {MAX_LAYERS} hidden layers, and has {layers}"
+    return [ValidationIssue(path="brain.layers", message=message)]
+
+
+def _motion_issues(project: Project) -> list[ValidationIssue]:
+    """An imitation task tracks a motion with parts of the body it drives; other families carry none."""
+    motion = project.task.motion
+    if project.task.family != "imitation":
+        if motion is None:
+            return []
+        return [ValidationIssue(path="task.motion", message="Only an imitation task tracks a motion")]
+    if motion is None:
+        return [ValidationIssue(path="task.motion", message="An imitation task needs a tracked motion to copy")]
+    parts = {obj.id for obj in project.bodies[0].objects} if project.bodies else set()
+    lengths = {len(track.angles) for track in motion.tracks}
+    issues = [
+        ValidationIssue(path=f"task.motion.{track.segment}", message=f"{track.part!r} is not a part of the body")
+        for track in motion.tracks
+        if track.part not in parts
+    ]
+    if len(lengths) != 1 or min(lengths) < 2:
+        issues.append(
+            ValidationIssue(path="task.motion", message="Every tracked segment needs the same 2 or more frames")
+        )
     return issues
 
 
@@ -170,7 +215,21 @@ def validate_project(project: Project) -> list[ValidationIssue]:
         issues += _hierarchy_issues(objects)
     for obj in all_objects(project):
         issues += _component_issues(obj, ids)
-    spawns = [obj for obj in project.world.objects if any(item.kind == "spawn_point" for item in obj.components)]
-    if len(spawns) > 1:
-        issues.append(ValidationIssue(path="objects", message="A world can have only one spawn point"))
-    return issues + _randomize_issues(project) + _sky_issues(project) + _reward_issues(project)
+    issues += _randomize_issues(project) + _sky_issues(project) + _reward_issues(project) + _brain_issues(project)
+    if not project.agents:
+        issues += _motion_issues(project)
+    return issues + _agents_issues(project)
+
+
+def _agents_issues(project: Project) -> list[ValidationIssue]:
+    """Each agent's references, then its own task and brain checked as the one-agent project it trains."""
+    issues = agent_issues(project)
+    if issues:
+        return issues
+    for agent in project.agents:
+        if agent.task is None and agent.brain is None:
+            continue
+        alone = agent_project(project, agent.id)
+        for issue in _reward_issues(alone) + _brain_issues(alone) + _motion_issues(alone):
+            issues.append(issue.model_copy(update={"path": f"agents.{agent.id}.{issue.path}"}))
+    return issues

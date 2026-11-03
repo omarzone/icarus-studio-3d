@@ -1,10 +1,17 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneAnchor, SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
+import { isGround } from "./ground-geom.ts";
+import type { MotionPlayer, PosePlayer } from "./motion-player.ts";
 import type { Pose, Poses } from "./pose-track.ts";
 
 // The parallel copies of a training run side by side: each copy's geoms shifted by its place in a square grid.
 
 // Space between neighbouring copies, in metres.
 const MARGIN = 2;
+// The drawn borders between copies: walls this tall and thick, see-through, never part of any copy's physics.
+const BORDER_HEIGHT = 1;
+const BORDER_THICKNESS = 0.06;
+const BORDER_COLOR = "#9aa3ad";
+const BORDER_TRANSPARENCY = 0.65;
 
 export type CopyGrid = {
   // Every copy's geoms in their place; it only changes with the scene or the number of copies.
@@ -13,19 +20,27 @@ export type CopyGrid = {
   extent: number;
   // The copies' poses shifted to their places, by grid geom name.
   place: (copies: readonly Poses[]) => Poses;
+  // The copies' distance sensors shifted to their places, sensors named "<copy>:<sensor>"; only one copy's when given.
+  placeRays: (copies: readonly (readonly SceneRay[])[], only?: number) => SceneRay[];
 };
 
 type Vec3 = [number, number, number];
 
 // Width and depth the geoms cover, in metres.
 function footprint(geoms: readonly SceneGeom[]): [number, number] {
+  const [width, depth] = bounds(geoms);
+  return [width, depth];
+}
+
+// Width, depth and the middle of what the geoms cover.
+function bounds(geoms: readonly SceneGeom[]): [number, number, number, number] {
   if (geoms.length === 0) {
-    return [0, 0];
+    return [0, 0, 0, 0];
   }
   const xs = geoms.flatMap((geom) => [geom.position[0] - geom.size[0] / 2, geom.position[0] + geom.size[0] / 2]);
   const ys = geoms.flatMap((geom) => [geom.position[1] - geom.size[1] / 2, geom.position[1] + geom.size[1] / 2]);
   const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  return [maxX - minX, maxY - minY];
+  return [maxX - minX, maxY - minY, (minX + maxX) / 2, (minY + maxY) / 2];
 }
 
 const shifted = ([x, y, z]: readonly number[], [dx, dy]: readonly number[]): Vec3 => [
@@ -41,7 +56,7 @@ export const isFirstCopy = (geom: SceneGeom): boolean => geom.name.startsWith("0
 function gridOffsets(
   count: number,
   spacing: readonly [number, number],
-): { offsets: [number, number][]; extent: number } {
+): { offsets: [number, number][]; extent: number; columns: number; rows: number } {
   const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.max(1, Math.ceil(count / columns));
   const offsets = Array.from({ length: count }, (_, index): [number, number] =>
@@ -52,23 +67,94 @@ function gridOffsets(
         ]
       : [0, 0],
   );
-  return { offsets, extent: Math.max(columns * spacing[0], rows * spacing[1]) };
+  return { offsets, extent: Math.max(columns * spacing[0], rows * spacing[1]), columns, rows };
 }
 
-const solid = (geoms: readonly SceneGeom[]) => geoms.filter((geom) => geom.shape !== "plane");
+const solid = (geoms: readonly SceneGeom[]) => geoms.filter((geom) => !isGround(geom));
 
 function placeGeoms(geoms: readonly SceneGeom[], index: number, offset: readonly number[]): SceneGeom[] {
   return geoms.map((geom) => ({ ...geom, name: `${index}:${geom.name}`, position: shifted(geom.position, offset) }));
 }
 
-// Floors are left out when there are several copies, the grid is the ground.
-export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
-  const geoms = count > 1 ? solid(scene.geoms) : scene.geoms;
-  const [width, depth] = footprint(solid(scene.geoms));
-  const { offsets, extent } = gridOffsets(count, [width + MARGIN, depth + MARGIN]);
-  const placed = offsets.flatMap((offset, index) => placeGeoms(geoms, index, offset));
+function placeAnchor(anchor: SceneAnchor, index: number, offset: readonly number[]): SceneAnchor {
   return {
-    description: { ...scene, geoms: placed },
+    ...anchor,
+    object: `${index}:${anchor.object}`,
+    geom: anchor.geom ? `${index}:${anchor.geom}` : null,
+    position: shifted(anchor.position, offset),
+  };
+}
+
+// A copy's plates, displays and eyes named like its geoms, "<copy>:<name>", and shifted to its place.
+function placeDecor(scene: SceneDescription, index: number, offset: readonly number[]): Decor {
+  return {
+    plates: (scene.plates ?? []).map((plate) => ({
+      ...plate,
+      name: `${index}:${plate.name}`,
+      object: `${index}:${plate.object}`,
+      position: shifted(plate.position, offset),
+    })),
+    displays: (scene.displays ?? []).map((item) => ({ ...item, anchor: placeAnchor(item.anchor, index, offset) })),
+    eyes: (scene.eyes ?? []).map((item) => ({ ...item, anchor: placeAnchor(item.anchor, index, offset) })),
+  };
+}
+
+type Decor = Required<Pick<SceneDescription, "plates" | "displays" | "eyes">>;
+
+function mergeDecor(parts: readonly Decor[]): Decor {
+  return {
+    plates: parts.flatMap((part) => part.plates),
+    displays: parts.flatMap((part) => part.displays),
+    eyes: parts.flatMap((part) => part.eyes),
+  };
+}
+
+function borderGeom(name: string, position: Vec3, size: Vec3): SceneGeom {
+  return {
+    name,
+    body: "world",
+    shape: "box",
+    size,
+    position,
+    quaternion: [1, 0, 0, 0],
+    color: BORDER_COLOR,
+    transparency: BORDER_TRANSPARENCY,
+    cast_shadow: false,
+  };
+}
+
+// See-through walls along every cell edge of the grid, so each copy's space reads at a glance; drawing only.
+export function copyBorders(
+  columns: number,
+  rows: number,
+  spacing: readonly [number, number],
+  middle: readonly [number, number] = [0, 0],
+): SceneGeom[] {
+  const [width, depth] = [columns * spacing[0], rows * spacing[1]];
+  const [cx, cy] = middle;
+  const z = BORDER_HEIGHT / 2;
+  const across = Array.from({ length: columns + 1 }, (_, i) =>
+    borderGeom(`border:x${i}`, [cx + i * spacing[0] - width / 2, cy, z], [BORDER_THICKNESS, depth, BORDER_HEIGHT]),
+  );
+  const along = Array.from({ length: rows + 1 }, (_, j) =>
+    borderGeom(`border:y${j}`, [cx, cy + j * spacing[1] - depth / 2, z], [width, BORDER_THICKNESS, BORDER_HEIGHT]),
+  );
+  return [...across, ...along];
+}
+
+// Floors are left out when there are several copies, the grid is the ground; `borders` draws the cells' edges.
+export function copyGrid(scene: SceneDescription, count: number, borders = false): CopyGrid {
+  const geoms = count > 1 ? solid(scene.geoms) : scene.geoms;
+  const [width, depth, cx, cy] = bounds(solid(scene.geoms));
+  const spacing: [number, number] = [width + MARGIN, depth + MARGIN];
+  const { offsets, extent, columns, rows } = gridOffsets(count, spacing);
+  const placed = [
+    ...offsets.flatMap((offset, index) => placeGeoms(geoms, index, offset)),
+    ...(borders && count > 1 ? copyBorders(columns, rows, spacing, [cx, cy]) : []),
+  ];
+  const decor = mergeDecor(offsets.map((offset, index) => placeDecor(scene, index, offset)));
+  return {
+    description: { ...scene, geoms: placed, ...decor },
     extent,
     place: (copies) => {
       const poses = new Map<string, Pose>();
@@ -83,12 +169,20 @@ export function copyGrid(scene: SceneDescription, count: number): CopyGrid {
       });
       return poses;
     },
+    placeRays: (copies, only) =>
+      copies.flatMap((rays, index) => {
+        const offset = offsets[index];
+        if (!offset || (only !== undefined && only !== index)) {
+          return [];
+        }
+        return rays.map((ray) => ({ ...ray, sensor: `${index}:${ray.sensor}`, origin: shifted(ray.origin, offset) }));
+      }),
   };
 }
 
 // Training copies that each start differently (their own scene), side by side with their task zones, spaced by
 // the widest copy; the first copy's lights and sky light them all.
-export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, "place"> {
+export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, "place" | "placeRays"> {
   const sizes = scenes.map((scene) => footprint(solid(scene.geoms)));
   const width = Math.max(0, ...sizes.map(([x]) => x));
   const depth = Math.max(0, ...sizes.map(([, y]) => y));
@@ -113,7 +207,27 @@ export function scenesGrid(scenes: readonly SceneDescription[]): Omit<CopyGrid, 
       sky: first?.sky ?? null,
       geoms,
       zones,
+      ...mergeDecor(scenes.map((scene, index) => placeDecor(scene, index, offsets[index] ?? [0, 0]))),
     },
     extent,
+  };
+}
+
+// Every view of a frame (geoms, camera, rays) asks within the same few milliseconds; one sample serves them all.
+const SAME_FRAME_MS = 4;
+
+// The player's copies placed in the grid; rays of one copy (`rays` its index), of all (`"all"`) or none.
+export function gridPlayer(player: MotionPlayer, grid: CopyGrid, rays: number | "all" | null): PosePlayer {
+  let last: { now: number; frame: ReturnType<PosePlayer["at"]> } | null = null;
+  return {
+    at: (now) => {
+      if (last && Math.abs(now - last.now) < SAME_FRAME_MS) {
+        return last.frame;
+      }
+      const played = player.sample(now);
+      const shown = rays === null ? [] : grid.placeRays(played.rays, rays === "all" ? undefined : rays);
+      last = { now, frame: { poses: grid.place(played.copies), rays: shown, signals: played.signals } };
+      return last.frame;
+    },
   };
 }

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class DesignCheck(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    id: Literal["structure", "compiles", "settles", "actuators", "sensors"]
+    id: Literal["structure", "compiles", "reachable", "settles", "actuators", "sensors"]
     label: str
     status: Literal["pass", "fail", "skip"]
     detail: str

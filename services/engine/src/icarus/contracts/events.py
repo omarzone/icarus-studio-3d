@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from icarus.contracts.copilot import AgentStep
 from icarus.contracts.training import RunEvent
 
-TaskKind = Literal["training_run", "autopilot", "diagnosis", "ideas", "build", "agent_turn"]
+TaskKind = Literal[
+    "training_run", "autopilot", "diagnosis", "ideas", "build", "agent_turn", "auto_rig", "pose_tracking"
+]
 TaskState = Literal["running", "done", "stopped", "failed"]
 HookPoint = Literal[
     "turn_start",
@@ -113,6 +115,14 @@ class RevisionCreatedEvent(_Model):
     summary: str
 
 
+class MessagePostedEvent(_Model):
+    """A copilot message added to a conversation outside a turn, such as a coach comment or an autopilot step."""
+
+    type: Literal["message_posted"]
+    message_id: str
+    role: Literal["user", "copilot"]
+
+
 class HookDecisionEvent(_Model):
     type: Literal["hook_decision"]
     point: HookPoint
@@ -133,7 +143,8 @@ EngineEvent = Annotated[
     | RunEventWrapper
     | DiagnosisCreatedEvent
     | RevisionCreatedEvent
-    | HookDecisionEvent,
+    | HookDecisionEvent
+    | MessagePostedEvent,
     Field(discriminator="type"),
 ]
 

@@ -1,0 +1,7 @@
+# 008 · Mesh skins over colliders
+
+**Context.** Styles ([ADR 007](./007-visual-styles-inside-colliders.md)) make primitives look like cars and walls, but an imported or cloned object (a particular car, a building, a creature) needs its real model. Model files can be large, reference other files and differ from the shape physics needs.
+
+**Decision.** A look-only `skin` component points to a glTF or GLB model stored as project data in the project's `skins/` folder under a content id. Storing validates it: at most 15 MB, glTF 2.0 structure, every buffer and image embedded (no external or network URIs), no extensions that need a decoder, positions with bounds. Importing a model (Library Import, a chat attachment or the copilot) creates an object with a box or capsule collider fitted to the model's bounds and mass from density, plus the skin, all as edit operations. The scene exports `SceneGeom.skin`, the desktop fetches the model from `GET /projects/{id}/skins/{asset}` and draws it scaled uniformly to fit inside the collider's box (fill, offset and rotation never take it outside), falling back to the style or primitive while it loads or when it fails.
+
+**Consequences.** Physics, senses and training never read a skin (`LOOK_COMPONENTS`), so swapping one keeps a trained brain. A model drawn in a capsule's box can poke past its rounded ends. Bundles, when they land, carry `skins/` as validated data, never code. FBX and USD need a converter and stay out until one is decided.

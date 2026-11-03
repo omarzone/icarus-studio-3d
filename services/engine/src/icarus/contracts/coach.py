@@ -8,6 +8,40 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
+# The part of a design a coach finding points to.
+DesignArea = Literal["reward", "sensors", "body", "world", "brain"]
+
+
+class CoachFinding(_Model):
+    """How the body moves in an episode and the part of the design to change for it."""
+
+    area: DesignArea
+    # What the body does, in words ("Crawls on its knees instead of standing").
+    behavior: str = Field(max_length=160)
+    # What to change in that area, in words ("Pay body_height so it keeps the torso up").
+    change: str = Field(max_length=300)
+    # The tested fix for this finding, as an ordinary copilot proposal.
+    proposal_id: str | None = None
+
+
+class FilmStripFrame(_Model):
+    attachment_id: str
+    # Seconds since the episode started.
+    time: float = Field(ge=0)
+    # The moment it touched something or fell.
+    failure: bool = False
+
+
+class FilmStrip(_Model):
+    """Pictures of one recorded evaluation episode at a fixed interval, rendered from its MuJoCo states."""
+
+    step: int = Field(ge=0)
+    episode: int = Field(ge=0)
+    # Seconds between consecutive frames.
+    interval: float = Field(ge=0)
+    frames: list[FilmStripFrame] = Field(max_length=32)
+
+
 class DiagnosisEvidence(_Model):
     kind: Literal["metric", "reward_term", "episode", "frame"]
     # What it is, in words ("Falls in 92% of episodes").
@@ -45,6 +79,8 @@ class Diagnosis(_Model):
     next_step: Literal["keep_training", "stop_and_fix", "done"]
     # The fix it proposes, as an ordinary copilot proposal.
     proposal_id: str | None = None
+    # How the body moves and the design area each behavior points to.
+    findings: list[CoachFinding] = Field(default=[], max_length=8)
 
 
 AutopilotMode = Literal["ask", "fix"]

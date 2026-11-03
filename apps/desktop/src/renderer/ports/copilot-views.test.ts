@@ -272,6 +272,54 @@ describe("copilot conversation views", () => {
     ]);
   });
 
+  it("carries the coach's film strip served by the engine and each finding with the state of its fix", () => {
+    const links = {
+      content: (id: string) => `http://engine/attachments/${id}/content`,
+      frame: (id: string, n: number) => `http://engine/attachments/${id}/frames/${n}`,
+    };
+    const engine: Conversation = {
+      ...conversation([night]),
+      messages: [
+        {
+          id: "m1",
+          role: "copilot",
+          text: "It crawls.",
+          created_at: "2026-11-01T10:00:00Z",
+          film_strip: {
+            step: 50_000,
+            episode: 1,
+            interval: 1.5,
+            frames: [
+              { attachment_id: "f0", time: 0 },
+              { attachment_id: "f1", time: 1.5, failure: true },
+            ],
+          },
+          findings: [
+            { area: "reward", behavior: "Crawls on its knees", change: "Pay body_height", proposal_id: "p1" },
+            { area: "body", behavior: "Drags a leg", change: "Widen the knee range" },
+          ],
+        },
+      ],
+    };
+    const [message] = conversationView(engine, links).messages;
+    if (message?.role !== "copilot") {
+      throw new Error("expected a copilot answer");
+    }
+    expect(message.filmStrip?.frames.map((frame) => [frame.picture.url, frame.time, frame.failure])).toEqual([
+      ["http://engine/attachments/f0/content", 0, false],
+      ["http://engine/attachments/f1/content", 1.5, true],
+    ]);
+    expect(message.findings).toEqual([
+      {
+        area: "reward",
+        behavior: "Crawls on its knees",
+        change: "Pay body_height",
+        proposal: { id: "p1", status: "open" },
+      },
+      { area: "body", behavior: "Drags a leg", change: "Widen the knee range", proposal: null },
+    ]);
+  });
+
   it("leaves out a proposal the conversation no longer has", () => {
     const view = conversationView(conversation([]));
     expect(view.messages.map((message) => message.role)).toEqual(["user", "copilot"]);

@@ -1,6 +1,6 @@
 import type { BuildStatus, DesignIdea, IdeaSet as EngineIdeaSet } from "@icarus/contracts";
 import type { BuildProgress } from "./build-progress-port.ts";
-import type { Idea, IdeaSet } from "./ideas-port.ts";
+import type { Idea, IdeaMix, IdeaSet } from "./ideas-port.ts";
 
 // Pure mappings from the copilot's ideas and builds onto the views that show them.
 
@@ -18,6 +18,14 @@ export function estimateText(minutes: number): string {
   return rest === 0 ? `about ${hours} h` : `about ${hours} h ${rest} min`;
 }
 
+export function ideaSource(template: string): string {
+  if (template === "empty_world") {
+    return "Designed from scratch";
+  }
+  const name = template.replaceAll("_", " ");
+  return `Built on the ${name.charAt(0).toUpperCase()}${name.slice(1)} template`;
+}
+
 function ideaView(idea: DesignIdea): Idea {
   return {
     id: idea.id,
@@ -28,12 +36,21 @@ function ideaView(idea: DesignIdea): Idea {
     estimate: estimateText(idea.estimate_minutes),
     recommended: idea.recommended,
     scene: idea.scene,
+    source: ideaSource(idea.template),
   };
 }
 
+// The bar proposes the world of the second idea with the body of the recommended one; the engine tests the mix.
+function proposedMix(ideas: readonly DesignIdea[]): IdeaMix | null {
+  const [body, world] = ideas;
+  if (!body || !world) {
+    return null;
+  }
+  return { worldFrom: world.title, bodyFrom: body.title, worldIdea: world.id, bodyIdea: body.id };
+}
+
 export function ideaSetView(set: EngineIdeaSet): IdeaSet {
-  // Mixing parts of two ideas is not built yet, so the engine's sets never propose a mix.
-  return { id: set.id, ideas: set.ideas.map(ideaView), mix: null };
+  return { id: set.id, ideas: set.ideas.map(ideaView), mix: proposedMix(set.ideas), prompt: set.prompt };
 }
 
 export function buildProgressView(status: BuildStatus): BuildProgress {

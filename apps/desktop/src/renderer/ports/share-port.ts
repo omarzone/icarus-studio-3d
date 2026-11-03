@@ -1,5 +1,7 @@
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
+import type { CommunityApi } from "../community-client/community-api.ts";
+import { communityApi } from "../community-client/community-api.ts";
+import { serverVisibility, shareView } from "./community-views.ts";
 import { createShareFixture } from "./share.fixture.ts";
 
 export type ShareVisibility = "private" | "invited" | "link";
@@ -28,22 +30,28 @@ export type SharePort = {
   setRole: (input: { projectId: string; personId: string; role: CollaboratorRole }) => Promise<ShareSettings>;
 };
 
+// Sharing a project's community page: who can open it and who is invited, kept by the community service. The
+// published creation follows these settings; before it is published they wait on its page.
+export function createCommunityShare(
+  api: Pick<CommunityApi, "share" | "setVisibility" | "invite" | "setRole"> = communityApi,
+): SharePort {
+  return {
+    getShare: async (projectId) => shareView(await api.share(projectId)),
+    setVisibility: async ({ projectId, visibility }) => {
+      const current = await api.share(projectId);
+      return shareView(await api.setVisibility(projectId, serverVisibility(visibility, current.visibility)));
+    },
+    invite: async ({ projectId, email }) => shareView(await api.invite(projectId, email.trim())),
+    setRole: async ({ projectId, personId, role }) => {
+      if (role === "owner") {
+        throw new Error("A project keeps its one owner");
+      }
+      return shareView(await api.setRole(projectId, personId, role));
+    },
+  };
+}
+
 export const sharePort = definePort<SharePort>({
-  app: {
-    getShare: pending({ key: "share.get", summary: "Sharing a project", sprint: 13, ids: ["MOD-SHARE"] }),
-    setVisibility: pending({
-      key: "share.visibility",
-      summary: "Changing who can open a project",
-      sprint: 13,
-      ids: ["MOD-SHARE"],
-    }),
-    invite: pending({ key: "share.invite", summary: "Inviting people to a project", sprint: 13, ids: ["MOD-SHARE"] }),
-    setRole: pending({
-      key: "share.role",
-      summary: "Changing what a collaborator can do",
-      sprint: 13,
-      ids: ["MOD-SHARE"],
-    }),
-  },
+  app: createCommunityShare(),
   prototype: createShareFixture,
 });

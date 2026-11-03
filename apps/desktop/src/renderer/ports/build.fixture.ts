@@ -4,9 +4,10 @@ import type {
   ExportFormat,
   ExportOptionId,
   ExportPlan,
+  HardwareCheckRow,
   HardwareSession,
-  SensorReading,
 } from "./build-port.ts";
+import { EXPORT_FORMATS, EXPORT_OPTIONS, rowNeedingAttention } from "./build-views.ts";
 
 // Sample data from the design, used only by the prototype, the design gallery and tests.
 const TARGETS: readonly BuildTarget[] = [
@@ -17,101 +18,131 @@ const TARGETS: readonly BuildTarget[] = [
   { kind: "animation", detail: "glTF · FBX (for dancers)" },
 ];
 
-const FORMATS: ExportPlan["formats"] = [
-  { format: "onnx", label: "ONNX" },
-  { format: "torchscript", label: "TorchScript" },
-  { format: "unity-sentis", label: "Unity Sentis" },
-];
-
-const EXTENSIONS: Readonly<Record<ExportFormat, string>> = {
-  onnx: "onnx",
-  torchscript: "pt",
-  "unity-sentis": "sentis",
-};
-
-const EXPORT_PLAN: ExportPlan = {
-  formats: FORMATS,
-  format: "onnx",
-  options: [
-    { id: "sensor-layout", label: "Include sensor layout and units", on: true },
-    { id: "runnable-example", label: "Include a runnable example", on: true },
-    { id: "training-history", label: "Include training history", on: false },
+const FILES: Readonly<Record<ExportFormat, ExportPlan["files"]>> = {
+  onnx: [{ path: "brain.onnx", bytes: 1_200_000, description: "The trained brain as an ONNX graph" }],
+  urdf: [{ path: "robot.urdf", bytes: 14_200, description: "The body as a URDF robot" }],
+  mjcf: [{ path: "scene.xml", bytes: 48_600, description: "The body and its world as a MuJoCo model" }],
+  package: [
+    { path: "brain.onnx", bytes: 1_200_000, description: "The trained brain as an ONNX graph" },
+    { path: "robot.urdf", bytes: 14_200, description: "The body as a URDF robot" },
+    { path: "scene.xml", bytes: 48_600, description: "The body and its world as a MuJoCo model" },
   ],
-  file: { name: "park-pilot-r3-312k.onnx", bytes: 1_200_000, inputs: 11, outputs: 3, rateHz: 25 },
 };
 
-const READINGS: readonly SensorReading[] = [
-  { name: "Front L", meters: 1.21, fraction: 0.4, ok: true },
-  { name: "Front", meters: 2.08, fraction: 0.7, ok: true },
-  { name: "Front R", meters: 1.97, fraction: 0.66, ok: true },
-  { name: "Side L", meters: 0.36, fraction: 0.12, ok: true },
-  { name: "Side R", meters: null, fraction: 0, ok: false },
-  { name: "Rear L", meters: 1.55, fraction: 0.52, ok: true },
-];
+const OPTION_FILES: Readonly<Record<ExportOptionId, ExportPlan["files"][number]>> = {
+  spec: { path: "brain.json", bytes: 3_400, description: "Every input and output of the brain" },
+  runtime: { path: "README.md", bytes: 5_100, description: "How to run the export" },
+  parts: { path: "parts.csv", bytes: 300, description: "Parts with approximate prices" },
+  history: { path: "training.csv", bytes: 42_000, description: "Training and evaluation points" },
+};
+
+const ROWS: readonly HardwareCheckRow[] = [
+  { name: "Front L", meters: "1.21 / 4.00 m", fraction: 0.3 },
+  { name: "Front", meters: "2.08 / 4.00 m", fraction: 0.52 },
+  { name: "Front R", meters: "1.97 / 4.00 m", fraction: 0.49 },
+  { name: "Side L", meters: "0.36 / 4.00 m", fraction: 0.09 },
+  { name: "Side R", meters: "6.00 / 4.00 m", fraction: 1 },
+  { name: "Rear L", meters: "1.55 / 4.00 m", fraction: 0.39 },
+].map(
+  ({ name, meters, fraction }): HardwareCheckRow => ({
+    id: name,
+    name,
+    hardware: "Time-of-flight distance sensor",
+    reading: meters,
+    fraction,
+    status: fraction < 1 ? "pass" : "warn",
+    gap: fraction < 1 ? "Inside its range." : "Objects beyond its range read as nothing.",
+  }),
+);
+
+const PROBLEM = {
+  title: "Side R needs attention.",
+  fix: "Its ray reaches past the sensor's range: shorten it or skip it.",
+};
 
 const HARDWARE: HardwareSession = {
-  device: "RC car",
-  connection: { host: "pi-parkpilot.local", board: "Raspberry Pi 5", sensorsFound: 8 },
+  kit: { id: "rc_car", name: "RC car", board: "Raspberry Pi 5" },
+  verdict: "warn",
   steps: [
-    { label: "Get the parts", status: "done" },
-    { label: "Connect", status: "done" },
-    { label: "Calibrate sensors", status: "current" },
-    { label: "Test drive", status: "todo" },
-    { label: "Load the brain", status: "todo" },
+    { label: "Pick the hardware", status: "done" },
+    { label: "Check joints and sensors", status: "current" },
+    { label: "Export robot and brain", status: "todo" },
+    { label: "Run it on the device", status: "todo" },
   ],
-  calibration: {
-    instructions: "Put the car on the floor with nothing in front. Live readings from the real car:",
-    readings: READINGS,
-    problem: { title: "Side R gives no data.", fix: "Check its cable on port 5, then press Recheck." },
+  check: {
+    instructions: "Measured with Run 3 at step 312,000. Every joint and sensor against the kit's rated limits:",
+    rows: ROWS,
+    problem: PROBLEM,
   },
   safety: [
-    "Top speed limited to 0.5 m/s for the first drive",
-    "Stop button on screen and on the car",
-    "Brain runs on the Pi, no internet needed",
+    "Limit top speed to 0.5 m/s for the first runs",
+    "Start at half torque: the simulation has no backlash, battery sag or motor heat",
+    "Keep a stop switch in reach; Icarus does not drive the device itself",
   ],
   parts: [
-    { name: "Raspberry Pi 5", usd: 60 },
-    { name: "8 × distance sensors", usd: 72 },
-    { name: "RC chassis 1:16", usd: 45 },
-    { name: "Steering servo", usd: 12 },
+    { name: "Raspberry Pi 5", count: 1, usd: 60 },
+    { name: "Distance sensors", count: 8, usd: 9 },
+    { name: "RC chassis 1:16", count: 1, usd: 45 },
+    { name: "Steering servo", count: 1, usd: 12 },
   ],
 };
 
-// In-memory build state that behaves: formats and options change the file, a recheck finds the reseated sensor.
+function planFor(format: ExportFormat, options: ReadonlySet<ExportOptionId>): ExportPlan {
+  const files = [
+    ...FILES[format],
+    ...EXPORT_OPTIONS.filter(({ id }) => options.has(id)).map(({ id }) => OPTION_FILES[id]),
+  ];
+  return {
+    formats: EXPORT_FORMATS,
+    format,
+    options: EXPORT_OPTIONS.map((option) => ({ ...option, on: options.has(option.id) })),
+    name: "park-pilot-r3.zip",
+    files,
+    totalBytes: files.reduce((sum, file) => sum + file.bytes, 0),
+    brain: { name: "Run 3 · step 312,000", inputs: 11, outputs: 3, rateHz: 20 },
+    notes: [],
+  };
+}
+
+// In-memory build state that behaves: formats and options change the files, skipping a part clears its problem.
 export function createBuildFixture(): BuildPort {
-  let plan = EXPORT_PLAN;
+  let format: ExportFormat = "onnx";
+  let options = new Set<ExportOptionId>(["spec", "runtime"]);
   let hardware = HARDWARE;
-  const fileFor = (format: ExportFormat) => ({
-    ...plan.file,
-    name: plan.file.name.replace(/\.[a-z]+$/, `.${EXTENSIONS[format]}`),
-  });
-  const settle = (sensor: string, change: (reading: SensorReading) => SensorReading | null) => {
-    const readings = hardware.calibration.readings.flatMap((reading) => {
-      if (reading.name !== sensor) {
-        return [reading];
-      }
-      const next = change(reading);
-      return next ? [next] : [];
-    });
-    const problem = readings.every((reading) => reading.ok) ? null : hardware.calibration.problem;
-    hardware = { ...hardware, calibration: { ...hardware.calibration, readings, problem } };
+  const settle = (rows: readonly HardwareCheckRow[]) => {
+    const open = rowNeedingAttention(rows);
+    hardware = {
+      ...hardware,
+      verdict: open ? hardware.verdict : "pass",
+      check: { ...hardware.check, rows, problem: open ? PROBLEM : null },
+    };
     return hardware;
   };
   return {
     listTargets: async () => [...TARGETS],
-    getExportPlan: async () => plan,
-    setExportFormat: async ({ format }) => {
-      plan = { ...plan, format, file: fileFor(format) };
-      return plan;
+    getExportPlan: async () => planFor(format, options),
+    setExportFormat: async ({ format: next }) => {
+      format = next;
+      return planFor(format, options);
     },
-    setExportOption: async ({ id, on }: { id: ExportOptionId; on: boolean }) => {
-      plan = { ...plan, options: plan.options.map((option) => (option.id === id ? { ...option, on } : option)) };
-      return plan;
+    setExportOption: async ({ id, on }) => {
+      options = new Set(options);
+      if (on) {
+        options.add(id);
+      } else {
+        options.delete(id);
+      }
+      return planFor(format, options);
     },
-    downloadExport: async () => undefined,
+    downloadExport: async () => {
+      const plan = planFor(format, options);
+      return { kind: "saved", path: plan.name, bytes: plan.totalBytes };
+    },
     getHardware: async () => hardware,
-    recheckSensor: async ({ sensor }) =>
-      settle(sensor, (reading) => ({ ...reading, meters: 0.42, fraction: 0.14, ok: true })),
-    skipSensor: async ({ sensor }) => settle(sensor, () => null),
+    recheckPart: async () => hardware,
+    skipPart: async ({ part }) =>
+      settle(
+        hardware.check.rows.map((row) => (row.id === part ? { ...row, status: "skipped", reading: "skipped" } : row)),
+      ),
   };
 }

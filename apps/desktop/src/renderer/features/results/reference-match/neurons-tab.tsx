@@ -1,15 +1,28 @@
 // TAB-NEURONS
-import type { NeuronLink } from "../../../ports/results-port.ts";
+import type { NeuronLayer } from "../../../ports/results-port.ts";
 
-// Which neurons drive each behavior.
-export function NeuronsTab({ links }: { links: readonly NeuronLink[] }) {
+// What the brain's neurons did, layer by layer, with the most active ones first.
+export function NeuronsTab({ layers }: { layers: readonly NeuronLayer[] }) {
   return (
-    <div className="flex flex-col gap-0.5 px-2.5 py-2 text-ui">
-      {links.map((link) => (
-        <div key={link.behavior} className="grid grid-cols-[1.6fr_2fr] gap-2.5 rounded-button px-2.5 py-2">
-          <span>{link.behavior}</span>
-          <span className="text-fg-secondary">{link.neurons}</span>
-        </div>
+    <div className="flex flex-col gap-3 px-2.5 py-2 text-ui">
+      {layers.map((layer) => (
+        <section key={layer.layer} className="flex flex-col gap-1 px-2.5">
+          <span className="font-semibold">{layer.layer}</span>
+          <span className="text-meta text-fg-tertiary">{layer.detail}</span>
+          <div className="grid grid-cols-[minmax(0,1fr)_96px] items-center gap-x-2.5 gap-y-1 pt-1">
+            {layer.neurons.map((neuron) => (
+              <div key={neuron.id} className="contents">
+                <span className="truncate text-fg-secondary">{neuron.label}</span>
+                <span className="h-1 rounded-bar bg-fill-track-off" role="img" aria-label={`${neuron.label}`}>
+                  <span
+                    className="block h-1 rounded-bar bg-fg"
+                    style={{ width: `${Math.round(neuron.activity * 100)}%` }}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

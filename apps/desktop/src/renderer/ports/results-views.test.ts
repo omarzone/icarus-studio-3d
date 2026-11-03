@@ -105,6 +105,7 @@ describe("learning history", () => {
   it("shows every checkpoint with its success and return, marking the best", () => {
     expect(learningHistory(run3)).toEqual({
       training: true,
+      run: "run-3",
       checkpoints: [
         { id: "100000", reached: true, step: "100k", label: "12%", detail: "return 4.0", current: false },
         { id: "250000", reached: true, step: "250k", label: "71%", detail: "return 8.4", current: true },

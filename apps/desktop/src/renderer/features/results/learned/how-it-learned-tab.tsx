@@ -3,7 +3,9 @@ import { GoTo } from "../../../app/navigation/go-to.tsx";
 import type { Checkpoint } from "../../../ports/results-port.ts";
 
 // Checkpoint cards with their thumbnail and score; future checkpoints are greyed with an estimate.
-export function HowItLearnedTab({ checkpoints }: { checkpoints: readonly Checkpoint[] }) {
+type Props = { checkpoints: readonly Checkpoint[]; onOpen: (checkpoint: string) => void };
+
+export function HowItLearnedTab({ checkpoints, onOpen }: Props) {
   return (
     <div
       className="grid h-full gap-2 px-3 pt-2.5 pb-3"
@@ -16,6 +18,7 @@ export function HowItLearnedTab({ checkpoints }: { checkpoints: readonly Checkpo
             to="SCR-TIMELAPSE"
             cta={`${checkpoint.step}\n${checkpoint.label}`}
             title="Open the timelapse at this checkpoint"
+            onClick={() => onOpen(checkpoint.id)}
             className={`flex min-h-0 flex-col overflow-hidden rounded-card-sm text-left ${
               checkpoint.current ? "bg-control-raised hover:bg-fill-hover" : "bg-control hover:bg-control-raised"
             }`}

@@ -1,17 +1,18 @@
 // PNL-IDEAS
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useNavigationStore } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { CopilotNotConnected } from "../../ports/copilot-connection.ts";
-import { type IdeaFilter, type IdeaSet, ideasPort } from "../../ports/ideas-port.ts";
+import { type IdeaFilter, type IdeaMix, type IdeaSet, ideasPort } from "../../ports/ideas-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { CopilotNotConnectedState } from "../../ui/copilot-not-connected.tsx";
 import { Panel, PanelTab } from "../../ui/panel.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
-import { EmptyState, ErrorState, LoadingState } from "../../ui/states.tsx";
+import { EmptyState, ErrorState } from "../../ui/states.tsx";
+import { GeneratingIdeas } from "./generating-ideas.tsx";
 import { IdeasSceneTab } from "./ideas-scene-tab.tsx";
 import { IdeasTab } from "./ideas-tab.tsx";
 import { useIdeaSet } from "./use-idea-set.ts";
@@ -35,7 +36,7 @@ export function IdeasPanel({ className = "flex-1" }: IdeasPanelProps) {
       {state.kind === "ready" ? (
         <Ideas set={state.set} tab={tab} />
       ) : state.kind === "generating" ? (
-        <LoadingState label="Thinking of three ideas" />
+        <GeneratingIdeas />
       ) : state.error instanceof CopilotNotConnected ? (
         <CopilotNotConnectedState detail={state.error.message} />
       ) : (
@@ -57,14 +58,14 @@ function Ideas({ set, tab }: { set: string | null; tab: "ideas" | "scene" }) {
   const port = usePort(ideasPort);
   const store = useNavigationStore();
   const [filter, setFilter] = useState<IdeaFilter>("whole");
+  const client = useQueryClient();
   const ideas = useQuery({ queryKey: ["ideas", set, filter], queryFn: () => port.getIdeas({ set, filter }) });
   const use = useEngineAction(port.useIdea);
   const tweak = useEngineAction(port.tweakIdea);
   const mix = useEngineAction(port.mixAndBuild);
-  // "Use this" opens the building state at once; the build it started is followed there once the engine answers.
-  const startBuild = (data: IdeaSet, id: string) => {
-    const title = data.ideas.find((idea) => idea.id === id)?.title;
-    void use.mutateAsync({ set: data.id, idea: id }).then(
+  // The building state follows the build once the engine answers; if it never starts, the screen goes back.
+  const follow = (started: Promise<{ build: string }>, title: string | undefined) => {
+    void started.then(
       ({ build }) => {
         const navigation = store.getState();
         if (navigation.screen === "STA-WORLD-BUILDING") {
@@ -78,6 +79,16 @@ function Ideas({ set, tab }: { set: string | null; tab: "ideas" | "scene" }) {
         }
       },
     );
+  };
+  // "Use this" opens the building state at once.
+  const startBuild = (data: IdeaSet, id: string) =>
+    follow(use.mutateAsync({ set: data.id, idea: id }), data.ideas.find((idea) => idea.id === id)?.title);
+  const startMix = (data: IdeaSet, chosen: IdeaMix) =>
+    follow(mix.mutateAsync({ set: data.id, mix: chosen }), `${chosen.worldFrom} + ${chosen.bodyFrom}`);
+  // The card changes once the copilot's revision passed its tests; the set is kept as the engine answered it.
+  const tweakIdea = async (data: IdeaSet, id: string, words: string) => {
+    const next = await tweak.mutateAsync({ set: data.id, idea: id, words });
+    client.setQueryData(["ideas", set, filter], next);
   };
   return (
     <QueryView
@@ -97,10 +108,10 @@ function Ideas({ set, tab }: { set: string | null; tab: "ideas" | "scene" }) {
             filter={filter}
             onFilter={setFilter}
             onUse={(id) => startBuild(data, id)}
-            onTweak={(id) => tweak.mutate(id)}
+            onTweak={(id, words) => tweakIdea(data, id, words)}
             onMix={() => {
               if (data.mix) {
-                mix.mutate(data.mix);
+                startMix(data, data.mix);
               }
             }}
           />

@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.copilot import ChatAction, ChatSuggestion, CheckItem, PlanItem, SuggestionIntent
+from icarus.copilot.agent.ending import button_label
 from icarus.copilot.agent.tools.base import TurnScope
 from icarus.copilot.grounding import unsupported_numbers, without_unbacked
 from icarus.copilot.language import claims_change, points_to_apply, say
@@ -185,8 +186,11 @@ def chat_actions(scope: TurnScope, drafts: list[ActionDraft], options: list[tupl
         ]
     if scope.train_offered and _trainable(scope):
         actions.append(ChatAction(label=say("train_now", language), kind="train"))
-    actions += [ChatAction(label=label, kind="send", target=message) for label, message in options]
-    actions += [ChatAction(label=draft.label, kind=draft.kind, target=draft.target) for draft in drafts]
+    actions += [ChatAction(label=button_label(label), kind="send", target=message) for label, message in options]
+    actions += [
+        ChatAction(label=button_label(draft.label) or draft.label, kind=draft.kind, target=draft.target)
+        for draft in drafts
+    ]
     unique: list[ChatAction] = []
     for action in actions:
         if not any((item.kind, item.target) == (action.kind, action.target) for item in unique):

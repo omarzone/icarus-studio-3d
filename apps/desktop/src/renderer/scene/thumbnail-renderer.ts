@@ -1,26 +1,23 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription } from "@icarus/contracts";
 import {
   ACESFilmicToneMapping,
-  AmbientLight,
-  BoxGeometry,
-  type BufferGeometry,
-  CapsuleGeometry,
   Color,
-  CylinderGeometry,
-  DirectionalLight,
   FogExp2,
-  Mesh,
-  MeshStandardMaterial,
+  HemisphereLight,
+  PCFShadowMap,
   PerspectiveCamera,
   Scene,
-  SphereGeometry,
   WebGLRenderer,
 } from "three";
-import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
-import { geomShape } from "./geom-shape.ts";
-import { AMBIENT_INTENSITY, floorDepth, GEOM_ROUGHNESS, sceneColors, sceneLight } from "./scene-materials.ts";
+import { domeExtras } from "./atmosphere.ts";
+import { geomObject } from "./geom-object.ts";
+import { type ImageGrade, imageGrade } from "./image-grade.ts";
+import { groundColor, hemisphereLook, shadowCaster, shadowRadius, sunFrame } from "./scene-lighting.ts";
+import { AMBIENT_INTENSITY, sceneColors } from "./scene-materials.ts";
 import { skyLook } from "./scene-sky.ts";
 import { createSkyDome } from "./sky-dome.ts";
+import { createSkyEnvironment, needsEnvironment } from "./sky-environment.ts";
+import { sunLight } from "./sun-light.ts";
 import { sceneBounds, thumbnailCamera, topCamera } from "./thumbnail-framing.ts";
 import { zoneMesh } from "./zone-mesh.ts";
 
@@ -44,24 +41,12 @@ function renderer(): WebGLRenderer {
   });
   // The same output as the editor viewport, which React Three Fiber renders with this tone mapping.
   created.toneMapping = ACESFilmicToneMapping;
+  created.shadowMap.enabled = true;
+  created.shadowMap.type = PCFShadowMap;
   created.setPixelRatio(1);
   created.setSize(WIDTH, HEIGHT, false);
   shared = created;
   return created;
-}
-
-function geometry(geom: SceneGeom): BufferGeometry {
-  const shape = geomShape(geom);
-  switch (shape.kind) {
-    case "box":
-      return new BoxGeometry(...shape.args);
-    case "sphere":
-      return new SphereGeometry(...shape.args);
-    case "cylinder":
-      return new CylinderGeometry(...shape.args);
-    case "capsule":
-      return new CapsuleGeometry(...shape.args);
-  }
 }
 
 // Draws the engine's compiled scene at its initial pose from a fixed three-quarter view, as a PNG data URL.
@@ -80,13 +65,22 @@ export type SceneViewOptions = {
 export function renderSceneView(description: SceneDescription, options: SceneViewOptions): string {
   const { width, height } = options;
   const colors = sceneColors();
-  const look = skyLook(description.sky);
+  const { sky } = description;
+  const look = skyLook(sky);
+  const grade = imageGrade(sky);
   const scene = new Scene();
   scene.background = new Color(look?.horizon ?? colors.background);
-  scene.add(new AmbientLight(0xffffff, look?.ambient ?? AMBIENT_INTENSITY));
+  const ground = groundColor(description.geoms, colors.background);
+  const hemisphere = hemisphereLook(look, ground, AMBIENT_INTENSITY, sky?.ambient_color);
+  scene.add(new HemisphereLight(hemisphere.sky, hemisphere.ground, hemisphere.intensity));
   const frame = options.view === "top" ? topCamera : thumbnailCamera;
-  const framing = frame(sceneBounds(description.geoms), width / height);
-  const dome = look ? createSkyDome(look, framing.far * DOME_REACH) : null;
+  const bounds = sceneBounds(description.geoms);
+  const framing = frame(bounds, width / height);
+  const dome = look ? createSkyDome(look, framing.far * DOME_REACH, domeExtras(sky, description.lights[0])) : null;
+  const environment = needsEnvironment(description.geoms)
+    ? createSkyEnvironment(look?.top ?? colors.background, look?.horizon ?? colors.background, ground)
+    : null;
+  scene.environment = environment;
   if (dome) {
     dome.position.set(...framing.target);
     scene.add(dome);
@@ -94,24 +88,18 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   if (look?.fog) {
     scene.fog = new FogExp2(look.fog.color, look.fog.density);
   }
-  for (const light of description.lights) {
-    const { position, intensity } = sceneLight(light);
-    const directional = new DirectionalLight(0xffffff, intensity);
-    directional.position.set(...position);
-    scene.add(directional);
-  }
-  const meshes = description.geoms.map((geom) => {
-    const mesh = new Mesh(
-      geometry(geom),
-      new MeshStandardMaterial({ color: geom.color, roughness: GEOM_ROUGHNESS, ...floorDepth(geom.shape) }),
-    );
-    mesh.position.set(...toThreePosition(geom.position));
-    mesh.quaternion.set(...toThreeQuaternion(geom.quaternion));
-    scene.add(mesh);
-    return mesh;
+  const caster = shadowCaster(description.lights, sky?.shadows ?? true);
+  const suns = description.lights.map((light, index) => {
+    const sun = sunLight(sunFrame(light, bounds), index === caster, shadowRadius(sky?.shadow_softness));
+    scene.add(sun, sun.target);
+    return sun;
   });
+  // The same objects the viewport draws, styles included; their geometries and materials are shared, never disposed.
+  for (const geom of description.geoms) {
+    scene.add(geomObject(geom));
+  }
   // Where the task starts and ends, as the viewport paints it, so a parking card shows where it parks.
-  const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal };
+  const zoneColors = { goal: colors.goal, spawn: colors.spawn, area: colors.goal, spot: colors.spot };
   const zones = (description.zones ?? []).map((zone) => {
     const mesh = zoneMesh(zone, zoneColors);
     scene.add(mesh);
@@ -123,14 +111,42 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   try {
     const gl = renderer();
     gl.setSize(width, height, false);
+    gl.toneMappingExposure = grade.exposure;
     gl.render(scene, camera);
-    return gl.domElement.toDataURL(options.type, 0.85);
+    return graded(gl.domElement, grade).toDataURL(options.type, 0.85);
   } finally {
     dome?.geometry.dispose();
     dome?.material.dispose();
-    for (const mesh of [...meshes, ...zones]) {
+    environment?.dispose();
+    for (const sun of suns) {
+      sun.dispose();
+    }
+    for (const mesh of zones) {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
   }
+}
+
+// The viewport grades with CSS over its canvas; a still picture bakes the same filter and tint into its pixels.
+function graded(source: HTMLCanvasElement, grade: ImageGrade): HTMLCanvasElement {
+  if (!grade.filter && !grade.tint) {
+    return source;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return source;
+  }
+  context.filter = grade.filter ?? "none";
+  context.drawImage(source, 0, 0);
+  if (grade.tint) {
+    context.filter = "none";
+    context.globalCompositeOperation = "multiply";
+    context.fillStyle = grade.tint;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  return canvas;
 }

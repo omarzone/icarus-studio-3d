@@ -65,8 +65,15 @@ describe("openEngineEvents", () => {
         },
       }),
     );
-    expect(spy.onEvent.mock.calls.map(([event]) => event.type)).toEqual(["step", "task_progress", "task_started"]);
-    expect(spy.onError).not.toHaveBeenCalled();
+    source.receive(envelope({ type: "message_posted", message_id: "m1", role: "copilot" }));
+    source.receive(envelope({ type: "message_posted", message_id: "m2", role: "robot" }));
+    expect(spy.onEvent.mock.calls.map(([event]) => event.type)).toEqual([
+      "step",
+      "task_progress",
+      "task_started",
+      "message_posted",
+    ]);
+    expect(spy.onError).toHaveBeenCalledTimes(1);
   });
 
   it("reports events it cannot read and keeps listening", async () => {

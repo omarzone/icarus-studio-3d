@@ -79,6 +79,11 @@ def _describe(kind: EndingKind, records: list[EpisodeRecord], total: int) -> tup
             return "Stayed up but barely moved", f"{counted} stayed up but moved {ahead:.1f} m forward on average."
 
 
+def ending_label(record: EpisodeRecord, episodes: CheckpointEpisodes) -> str:
+    """How one episode ended, in the words its failure group would use."""
+    return _describe(ending(record, episodes), [record], 1)[0]
+
+
 def _telling(record: EpisodeRecord) -> list[str]:
     moment = next((name for name in reversed(record.frames) if name.endswith(("-failure.png", "-end.png"))), None)
     start = next((name for name in record.frames if name.endswith("-start.png")), None)

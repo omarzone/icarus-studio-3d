@@ -57,6 +57,20 @@ def test_ideas_build_a_project_and_make_it_night_is_applied(client):
     assert again.status_code == 409 and again.json()["code"] == "conflict"
 
 
+def test_an_idea_is_tweaked_in_place_and_two_ideas_mix_into_a_build(client):
+    idea_set = client.post("/ideas", json={"prompt": PARKING_PROMPT}).json()
+    first, second = idea_set["ideas"][0]["id"], idea_set["ideas"][1]["id"]
+    tweaked = client.post(f"/ideas/{idea_set['id']}/ideas/{second}/tweak", json={"words": "add a trailer"})
+    assert tweaked.status_code == 200
+    assert [idea["id"] for idea in tweaked.json()["ideas"]] == [idea["id"] for idea in idea_set["ideas"]]
+    assert tweaked.json()["ideas"][1]["title"] == "Heavier car"
+    same = client.post(f"/ideas/{idea_set['id']}/mix", json={"world_from": first, "body_from": first})
+    assert same.status_code == 422 and "two different" in same.json()["message"]
+    mixed = client.post(f"/ideas/{idea_set['id']}/mix", json={"world_from": first, "body_from": second})
+    assert mixed.status_code == 202 and mixed.json()["build_id"]
+    assert len(client.get(f"/ideas/{idea_set['id']}").json()["ideas"]) == 4
+
+
 def test_an_outdated_proposal_is_refused_with_409(client, project_id):
     proposal = client.post(f"/projects/{project_id}/conversation/messages", json={"text": "make it night"})
     proposal_id = proposal.json()["proposals"][0]["id"]
@@ -70,6 +84,16 @@ def test_an_outdated_proposal_is_refused_with_409(client, project_id):
     refused = client.post(f"/proposals/{proposal_id}/apply")
     assert refused.status_code == 409 and refused.json()["code"] == "outdated"
     assert client.get(f"/projects/{project_id}/conversation").json()["proposals"][0]["status"] == "outdated"
+
+
+def test_the_context_meter_answers_without_a_model_and_names_none(client, project_id, monkeypatch):
+    monkeypatch.delenv("ICARUS_COPILOT_PROVIDER")
+    meter = client.post(f"/projects/{project_id}/conversation/context", json={"scene_views": 2})
+    assert meter.status_code == 200
+    body = meter.json()
+    assert body["model"] is None and body["used"] == sum(category["tokens"] for category in body["categories"])
+    unknown = client.post(f"/projects/{project_id}/conversation/context", json={"attachments": ["nope"]})
+    assert unknown.status_code == 404
 
 
 def test_discard_and_autonomy(client, project_id):

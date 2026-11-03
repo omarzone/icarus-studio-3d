@@ -1,8 +1,14 @@
 import json
 
+from icarus.contracts.objects import ObjectSpec
+from icarus.contracts.operations import CreateObject
 from icarus.contracts.training import MetricPoint, StartRun
 from icarus.copilot.context import design_reference, project_context
 from icarus.copilot.language import plain_words
+from icarus.design.compiler import to_mjcf
+from icarus.library.pieces import PIECES
+from icarus.library.templates import template_operations
+from icarus.projects.operations import apply_operations, empty_project
 from icarus.training.run_store import RunStore
 from tests.training.conftest import state_of
 
@@ -18,7 +24,8 @@ def test_the_context_summarizes_the_project_and_its_library_entries(tmp_path):
     assert {term["term"] for term in context["project"]["task"]["rewards"]} >= {"reach_goal", "time_penalty"}
     light = context["library"]["components"]["light"]["properties"]["intensity"]
     assert light["min"] == 0 and light["max"] == 5
-    assert "box" in context["library"]["pieces"] and "parking_car" in context["library"]["templates"]
+    assert "box" in context["library"]["pieces"]["basics"] and "parking_car" in context["library"]["templates"]
+    assert "lamp_post" in context["library"]["pieces"]["street"]
     assert context["workspace"] == "World" and context["selection"] is None
     assert context["latest_run"] == "No training has run for this project yet"
 
@@ -51,6 +58,8 @@ def test_the_latest_run_brings_its_status_and_evaluations(tmp_path):
     run = json.loads(project_context(state, runs, None, None))["latest_run"]
     assert run["name"] == "Run 1" and run["total_steps"] == 300_000
     assert run["evaluations"] == [{"step": 100_000, "episode_return": 3.5, "success_rate": 0.35, "failure_rate": 0.4}]
+    # The run goes on past its last evaluation; the success it reports says where it was measured.
+    assert run["success_measured_at_step"] == 100_000
 
 
 def test_the_design_reference_says_where_each_template_object_lives_and_how_to_add_one():
@@ -63,10 +72,20 @@ def test_the_design_reference_says_where_each_template_object_lives_and_how_to_a
     assert '"world"' in rule and '"bodies"' in rule and "object.id" in rule
 
 
+def test_a_piece_copied_from_the_design_reference_builds_the_same_model_as_the_library_piece():
+    reference = json.loads(design_reference())
+    world = apply_operations(empty_project("0123456789ab", "T"), template_operations("empty_world"))
+    for piece_id, entry in reference["pieces"].items():
+        copied = CreateObject(op="create_object", target="world", object=ObjectSpec.model_validate(entry["object"]))
+        full = CreateObject(op="create_object", target="world", object=PIECES[piece_id].object)
+        assert to_mjcf(apply_operations(world, [copied])) == to_mjcf(apply_operations(world, [full])), piece_id
+    assert reference["pieces"]["parked_car"]["category"] == "street"
+
+
 def test_the_design_reference_says_what_each_body_can_do_and_what_the_library_cannot():
     reference = json.loads(design_reference())
     car = reference["templates"]["parking_car"]["abilities"]["car_body"]
-    assert car["motors"] == 4 and "distance_ray" in car["sensors"]
+    assert car["motors"] == 0 and car["vehicle"] and {"distance_ray", "speed", "target"} <= set(car["sensors"])
     assert reference["templates"]["humanoid"]["abilities"]["humanoid_body"]["motors"] == 12
     movement = reference["rules"]["movement"]
     assert "hinge" in movement and "fly" in movement and "thruster" in movement

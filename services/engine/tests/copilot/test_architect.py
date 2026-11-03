@@ -223,3 +223,13 @@ def test_training_estimates_depend_on_the_task_the_body_and_the_copies():
     assert car == pytest.approx(1_000_000 / 2000 / 60)
     assert car < walker < humanoid
     assert estimate_minutes(*_built("walker_robot", copies=4)) > walker
+
+
+def test_the_architect_knows_it_can_reward_pushing_cleaning_and_jumping():
+    systems: list[str] = []
+    propose_ideas(answering([draft("Lot", "parking_car")], draft("Lot", "parking_car"), systems), "park")
+    system = " ".join(systems[0].split())
+    assert "nothing rewards moving another object" not in system
+    assert "delivering an object to a zone" not in system
+    for term in ("object_to_goal", "coverage", "height_gain"):
+        assert term in system

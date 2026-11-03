@@ -5,23 +5,26 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.training import MAX_COPIES, MAX_STEPS, StartRun, WarmStart
 from icarus.copilot.language import Language, count, say
+from icarus.projects.agents import agent_project
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import TERMINAL_STATES, RunStore
-from icarus.training.schedule import RECOMMENDED_STEPS
+from icarus.training.schedule import planned_steps
 from icarus.training.settings import TrainingSettingsStore
-from icarus.training.supervisor import NotTrainable, RunInProgress, Supervisor, WarmStartRefused
+from icarus.training.supervisor import NotPausable, NotTrainable, RunInProgress, Supervisor, WarmStartRefused
 
 
 class TrainingRequest(BaseModel):
-    """Start or stop training, asked for by the person in the chat."""
+    """Start, stop, pause or resume training, asked for by the person in the chat."""
 
     model_config = ConfigDict(extra="forbid")
 
-    action: Literal["start", "stop"]
+    action: Literal["start", "stop", "pause", "resume"]
     total_steps: int | None = Field(default=None, ge=10_000, le=MAX_STEPS)
     copies: int | None = Field(default=None, ge=1, le=MAX_COPIES)
     # Continue from the best brain of the latest run that has one, when the body still senses and acts the same way.
     continue_from_best: bool = False
+    # The copilot watches the run, looks at its first checkpoints and fixes what blocks learning; on unless asked off.
+    coach: bool = True
 
 
 @dataclass(frozen=True)
@@ -50,13 +53,17 @@ class ChatTrainer:
                 return self._start(project_id, request, language)
             case "stop":
                 return self._stop(project_id, language)
+            case "pause" | "resume":
+                return self._hold(project_id, request.action == "pause", language)
 
     def _start(self, project_id: str, request: TrainingRequest, language: Language) -> TrainerReply:
         state = self._projects.state(project_id)
         project = state.project
-        if project.task.family == "none":
+        # With several agents each trains its own task; the group practices as long as the longest one needs.
+        learners = [agent_project(project, agent.id) for agent in project.agents] or [project]
+        if all(item.task.family == "none" for item in learners):
             return TrainerReply(say("train_no_task", language), False)
-        steps = request.total_steps or RECOMMENDED_STEPS[project.task.family]
+        steps = request.total_steps or max(planned_steps(item) for item in learners)
         copies = request.copies or min(project.brain.copies, MAX_COPIES)
         settings = self._settings.get()
         warm = self._best_brain(project_id) if request.continue_from_best else None
@@ -65,7 +72,7 @@ class ChatTrainer:
         try:
             status = self._supervisor.start(
                 state,
-                StartRun(total_steps=steps, copies=copies, warm_start=warm),
+                StartRun(total_steps=steps, copies=copies, warm_start=warm, coach=request.coach),
                 settings.threads,
                 settings.use_graphics_card,
             )
@@ -75,9 +82,10 @@ class ChatTrainer:
         except (NotTrainable, WarmStartRefused) as error:
             return TrainerReply(say("train_refused", language, reason=str(error).rstrip(".")), False)
         steps_text = count(status.total_steps, language)
-        return TrainerReply(
-            say("train_started", language, name=status.name, steps=steps_text, copies=status.copies), True
-        )
+        runs = self._runs.group(status.group).runs if status.group else [status]
+        name = ", ".join(run.name for run in runs)
+        copies = sum(run.copies for run in runs)
+        return TrainerReply(say("train_started", language, name=name, steps=steps_text, copies=copies), True)
 
     def _best_brain(self, project_id: str) -> WarmStart | None:
         """The best checkpoint of the newest ended run that trained one; a run's untrained step 0 does not count."""
@@ -88,6 +96,19 @@ class ChatTrainer:
             if status.best_step > 0 or warm is not None:
                 return WarmStart(run_id=status.run_id, step=status.best_step)
         return None
+
+    def _hold(self, project_id: str, paused: bool, language: Language) -> TrainerReply:
+        self._projects.state(project_id)
+        training = [status for status in self._runs.list_runs(project_id) if status.state in ("starting", "running")]
+        if not training:
+            return TrainerReply(say("train_not_held", language), False)
+        for status in training:
+            try:
+                self._supervisor.pause(status.run_id) if paused else self._supervisor.resume(status.run_id)
+            except NotPausable as error:
+                return TrainerReply(say("train_refused", language, reason=str(error).rstrip(".")), False)
+        names = ", ".join(status.name for status in training)
+        return TrainerReply(say("train_paused" if paused else "train_resumed", language, names=names), True)
 
     def _stop(self, project_id: str, language: Language) -> TrainerReply:
         self._projects.state(project_id)

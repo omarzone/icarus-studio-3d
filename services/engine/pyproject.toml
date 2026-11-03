@@ -8,6 +8,7 @@ dependencies = [
     "gymnasium>=1.4.0",
     "httpx>=0.28.1",
     "mujoco>=3.17.0",
+    "onnx>=1.23.2",
     "pydantic>=2.14.2",
     "stable-baselines3>=2.9.2",
     "uvicorn>=0.54.0",

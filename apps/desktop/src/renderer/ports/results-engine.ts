@@ -1,9 +1,12 @@
 import type { CheckpointInfo, CopilotProposal, Diagnosis, FailureGroup, RunStatus } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
 import { attachmentApi } from "../engine-client/attachment-api.ts";
+import { type BehaviorApi, behaviorApi } from "../engine-client/behavior-api.ts";
 import { type CoachApi, coachApi } from "../engine-client/coach-api.ts";
 import { type EngineApi, engineApi } from "../engine-client/engine-api.ts";
 import { compactNumber } from "../ui/compact-number.ts";
+import { agentComparison } from "./agent-comparison.ts";
+import { createBehaviorResults } from "./behavior-engine.ts";
+import { testRunsView } from "./behavior-views.ts";
 import { diagnosisView, failureReplay, failuresView, latestDiagnosis } from "./coach-views.ts";
 import type { DiagnosisView, ResultsPort } from "./results-port.ts";
 import {
@@ -22,7 +25,7 @@ import { isFinal } from "./training-views.ts";
 
 // Results on the engine: runs and checkpoints over HTTP, failure groups and diagnoses from the coach.
 
-type ResultsApi = Pick<EngineApi, "runs" | "checkpoints" | "rollout" | "conversation"> &
+type ResultsApi = Pick<EngineApi, "runs" | "checkpoints" | "rollout" | "runScene" | "conversation"> &
   Pick<CoachApi, "diagnose" | "diagnoses" | "checkpointFailures">;
 
 export type FrameLinks = () => Promise<(attachmentId: string) => string>;
@@ -30,22 +33,7 @@ export type FrameLinks = () => Promise<(attachmentId: string) => string>;
 // Notes stay on this computer, per project.
 export type NotesStore = { read: (project: string) => string; write: (project: string, text: string) => void };
 
-export type EngineResultsPort = Pick<
-  ResultsPort,
-  | "listRuns"
-  | "toggleCompare"
-  | "listBestBrains"
-  | "getSummary"
-  | "getNotes"
-  | "saveNotes"
-  | "getComparison"
-  | "getLearningHistory"
-  | "getFailures"
-  | "selectFailure"
-  | "getFailureReplay"
-  | "listDiagnoses"
-  | "diagnose"
->;
+export type EngineResultsPort = ResultsPort;
 
 type FailureSource = { record: RunRecord | undefined; step: number | undefined; groups: FailureGroup[]; label: string };
 
@@ -70,17 +58,11 @@ export const localNotes: NotesStore = {
 
 const frameLinks: FrameLinks = async () => (await attachmentApi.attachmentLinks()).content;
 
-const referenceSummary = pending<[], never>({
-  key: "results.referenceSummary",
-  summary: "The overall match against recordings",
-  sprint: 11,
-  ids: ["STA-RESULTS-REFERENCE"],
-});
-
 export function createEngineResultsPort(
   api: ResultsApi = { ...engineApi, ...coachApi },
   links: FrameLinks = frameLinks,
   notes: NotesStore = localNotes,
+  behavior: BehaviorApi = behaviorApi,
 ): EngineResultsPort {
   const compared = new Map<string, string[]>();
   const selectedGroup = new Map<string, string>();
@@ -147,7 +129,22 @@ export function createEngineResultsPort(
     return failuresView(source.groups, source.label, selectedGroup.get(project), url);
   };
 
+  const { referenceSummary, ...behaviorResults } = createBehaviorResults(
+    { records, compared: comparedOf },
+    api,
+    behavior,
+  );
+
   return {
+    ...behaviorResults,
+    listTestRuns: async (project) => {
+      const source = await failureSource(project);
+      if (!source.record || source.step === undefined) {
+        return [];
+      }
+      const episodes = await behavior.episodes(source.record.run.run_id, source.step);
+      return testRunsView(source.record.run.run_id, source.step, episodes);
+    },
     listRuns: async (project) => {
       const list = await records(project);
       return resultRuns(list, comparedOf(project, list));
@@ -168,7 +165,7 @@ export function createEngineResultsPort(
           return scoreSummary(source.record, source.step);
         }
         case "reference":
-          return referenceSummary();
+          return referenceSummary(project);
       }
     },
     getNotes: async (project) => notes.read(project),
@@ -178,6 +175,7 @@ export function createEngineResultsPort(
     },
     getComparison: async (project) => {
       const list = await records(project);
+      const agents = agentComparison(list) ?? undefined;
       const ids = comparedOf(project, list);
       const sides = list
         .filter((record) => ids.includes(record.run.run_id))
@@ -192,7 +190,7 @@ export function createEngineResultsPort(
           return { ...record, seeds: rollout?.seed ?? null };
         }),
       );
-      return runComparison(withSeeds);
+      return { ...runComparison(withSeeds), agents };
     },
     getLearningHistory: async (project) => learningHistory((await records(project))[0]),
     getFailures: failures,

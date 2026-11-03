@@ -1,5 +1,24 @@
-import type { DesignReport, LibraryCatalog, ObjectSpec, Project, PropertyValue } from "@icarus/contracts";
-import type { BodyJoint, BodyParts, BodySensor, RigCheck } from "./body-port.ts";
+import type {
+  AutoRigStatus,
+  DesignReport,
+  RigCheck as EngineRigCheck,
+  LibraryCatalog,
+  ObjectSpec,
+  PoseResult,
+  Project,
+  PropertyValue,
+  SkinWeights,
+} from "@icarus/contracts";
+import type {
+  AutoRigProgress,
+  BodyJoint,
+  BodyParts,
+  BodySensor,
+  BoneWeights,
+  PosePreview,
+  RigCheck,
+} from "./body-port.ts";
+import type { CheckFact } from "./progress-step.ts";
 
 function propertyOf(obj: ObjectSpec, kind: string, id: string): PropertyValue | undefined {
   return obj.components.find((component) => component.kind === kind)?.properties[id];
@@ -66,18 +85,63 @@ export function bodyParts(project: Project, catalog: LibraryCatalog): BodyParts[
 }
 
 // The design tests the engine ran on the latest revision; a skipped test is not run, never a pass.
-export function rigCheckFromReport(report: DesignReport): RigCheck {
+export function reportFacts(report: DesignReport): CheckFact[] {
+  return report.checks.map((check) => {
+    if (check.status === "skip") {
+      return { text: `${check.label}: not run`, tone: "warn" };
+    }
+    return {
+      text: check.detail ? `${check.label}: ${check.detail}` : check.label,
+      tone: check.status === "pass" ? "ok" : "warn",
+    };
+  });
+}
+
+const POSE_HINT = "Each pose sets the joints in the physics engine, then the body's own motors hold it for a second.";
+
+// The design tests run again now, then each problem the rig audit found, and the poses the body can take.
+export function rigCheckFromEngine(check: EngineRigCheck): RigCheck {
+  const findings: CheckFact[] = check.findings.map((finding) => ({ text: finding.text, tone: "warn" }));
   return {
-    checks: report.checks.map((check) => {
-      if (check.status === "skip") {
-        return { text: `${check.label}: not run`, tone: "warn" };
-      }
-      return {
-        text: check.detail ? `${check.label}: ${check.detail}` : check.label,
-        tone: check.status === "pass" ? "ok" : "warn",
-      };
-    }),
-    poseHint: "Test poses are not available yet.",
-    poses: [],
+    checks: [...reportFacts(check.report), ...findings],
+    problems: check.report.checks.filter((item) => item.status === "fail").length + check.findings.length,
+    poseHint: check.poses.length > 0 ? POSE_HINT : "Add a body to try poses.",
+    poses: check.poses,
   };
+}
+
+// What MuJoCo found after the motors held the pose.
+export function posePreview(result: PoseResult): PosePreview {
+  const held: CheckFact = result.holds
+    ? { text: `Holds the pose for ${result.seconds} s with its own motors`, tone: "ok" }
+    : { text: `Cannot hold the pose for ${result.seconds} s: it falls or tips over`, tone: "warn" };
+  const sag: CheckFact = {
+    text: `Joints end ${result.sag_degrees}° from the pose on average`,
+    tone: result.sag_degrees <= 10 ? "ok" : "warn",
+  };
+  const overlaps: CheckFact[] = result.overlaps.map((text) => ({ text, tone: "warn" }));
+  return { label: result.label, facts: [held, sag, ...overlaps], scene: result.scene };
+}
+
+export function boneWeights(weights: SkinWeights): BoneWeights {
+  return {
+    bones: weights.bones.map((bone) => {
+      const row = { id: bone.part, name: bone.name, coverage: bone.coverage };
+      return bone.problem ? { ...row, problem: bone.problem } : row;
+    }),
+  };
+}
+
+export function autoRigProgress(status: AutoRigStatus): AutoRigProgress {
+  const progress: AutoRigProgress = {
+    file: status.file,
+    percent: status.percent,
+    state: status.state,
+    // A failed or stopped auto-rig shows the step it stopped at as still to do.
+    steps: status.steps.map((step) => ({
+      text: step.text,
+      state: status.state !== "running" && step.state === "running" ? "todo" : step.state,
+    })),
+  };
+  return status.message ? { ...progress, message: status.message } : progress;
 }

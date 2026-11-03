@@ -1,22 +1,32 @@
 import math
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import mujoco
 import numpy as np
 
 from icarus.contracts.objects import ObjectSpec
 from icarus.contracts.project import Project
-from icarus.contracts.scene import SceneSky
+from icarus.contracts.scene import GeomShape, SceneAgent, SceneSky
 from icarus.design.compile_error import CompileError
 from icarus.design.components import ComponentView, view
-from icarus.design.sensors import add_actuator, add_sensors
+from icarus.design.decor import WorldDecor, world_decor
+from icarus.design.looks import GeomLook, geom_looks
+from icarus.design.plates import add_plate, is_plate_name
+from icarus.design.sensors import add_actuator, add_sensors, goal_object, ray_labels, sensor_scales
 from icarus.design.sky import add_sky, world_sky
+from icarus.design.sun_path import SunPath, world_sun
 from icarus.design.surfaces import SURFACE_FRICTION
+from icarus.design.vehicle import VehicleLayout, add_vehicle_actuators, vehicle_layouts
+from icarus.design.wedges import MESH_SHAPES, add_wedge_mesh
+from icarus.library.materials import SLIPPERY
+from icarus.projects.agents import lane_objects
 from icarus.projects.document import all_objects, containers
 
 TIMESTEP = 0.002
+# A rectangular goal is a flat box on the ground; only its footprint counts.
+GOAL_HALF_HEIGHT = 0.01
 # A zone effect is a thin static floor patch whose contact settings win over whatever touches it (priority).
 PATCH_THICKNESS = 0.004
 PATCH_SUFFIX = ":patch"
@@ -35,6 +45,22 @@ class CompiledModel:
     objects: dict[str, str]
     # How the world looks around it; None when the world has no sky object.
     sky: SceneSky | None = None
+    # Object id → how its geom is drawn; never part of the physics.
+    looks: dict[str, GeomLook] = field(default_factory=dict)
+    # Rangefinder name → the name its rays carry in the brain, Play and the view.
+    ray_labels: dict[str, str] = field(default_factory=dict)
+    # Body root id → the vehicle it is, for bodies with a vehicle component.
+    vehicles: dict[str, VehicleLayout] = field(default_factory=dict)
+    # Speed and target sensor name → the reading the brain sees as 1.
+    sensor_scales: dict[str, float] = field(default_factory=dict)
+    # Object ids whose geom is a ground slab (a ground component).
+    grounds: frozenset[str] = frozenset()
+    # Floor plates, displays and eyes as the project sets them; their poses come from the model.
+    decor: WorldDecor = field(default_factory=WorldDecor)
+    # Geom name → shape and full size of parts the engine builds as meshes (wedges), which MuJoCo re-centers.
+    meshes: dict[str, tuple[GeomShape, tuple[float, float, float]]] = field(default_factory=dict)
+    # Each agent of a project with several, with its parts and lane.
+    agents: list[SceneAgent] = field(default_factory=list)
 
 
 def _fmt(values) -> str:
@@ -83,24 +109,59 @@ def _friction(obj: ObjectSpec) -> float | None:
     return SURFACE_FRICTION[material.text("surface")] if material else None
 
 
-def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, float]) -> None:
+def _contact(attributes: dict[str, str], obj: ObjectSpec) -> None:
+    """Color, friction and, for a slippery palette material, contact settings that win over what touches it."""
+    material = view(obj, "material")
+    if material:
+        attributes["rgba"] = _rgba(material.text("color"))
+        if material.text("preset") in SLIPPERY:
+            attributes["priority"] = "1"
+    friction = _friction(obj)
+    if friction is not None:
+        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+
+
+def _add_ground(body: ET.Element, obj: ObjectSpec, ground: ComponentView) -> None:
+    """A static slab whose top is the object's height, so the drawn floor and the one bodies stand on agree."""
+    if _is_dynamic(obj):
+        raise CompileError(f"{obj.name} is the ground, and the ground can only be static")
+    width, depth, thickness = ground.vector("size")
+    attributes = {
+        "name": obj.id,
+        "type": "box",
+        "size": _fmt([width / 2, depth / 2, thickness / 2]),
+        "pos": _fmt([0, 0, -thickness / 2]),
+        "mass": "0",
+    }
+    _contact(attributes, obj)
+    ET.SubElement(body, "geom", attributes)
+
+
+def _shape_attributes(root: ET.Element, obj: ObjectSpec, shape: str, size: tuple[float, float, float]):
+    if shape in MESH_SHAPES:
+        if min(size) <= 0:
+            raise CompileError(f"{obj.name} has a zero size")
+        return {"type": "mesh", "mesh": add_wedge_mesh(root, obj.id, shape, size)}
+    return {"type": shape, "size": _fmt(_geom_size(obj, shape, size))}
+
+
+def _add_geom(body: ET.Element, obj: ObjectSpec, scale: tuple[float, float, float], root: ET.Element) -> None:
+    ground = view(obj, "ground")
+    if ground is not None:
+        _add_ground(body, obj, ground)
+        return
     mesh = view(obj, "mesh")
     if mesh is None:
         return
     shape = mesh.text("shape")
     size = mesh.vector("size")
     scaled = (size[0] * scale[0], size[1] * scale[1], size[2] * scale[2])
-    attributes = {"name": obj.id, "type": shape, "size": _fmt(_geom_size(obj, shape, scaled))}
+    attributes = {"name": obj.id, **_shape_attributes(root, obj, shape, scaled)}
     physics = view(obj, "physics_body")
     attributes["mass"] = _fmt([physics.number("mass")]) if physics and _is_dynamic(obj) else "0"
     if shape == "plane" and _is_dynamic(obj):
         raise CompileError(f"{obj.name} is a plane, and planes can only be static")
-    material = view(obj, "material")
-    if material:
-        attributes["rgba"] = _rgba(material.text("color"))
-    friction = _friction(obj)
-    if friction is not None:
-        attributes["friction"] = _fmt([friction, 0.005, 0.0001])
+    _contact(attributes, obj)
     collider = view(obj, "collider")
     if collider:
         attributes["solref"] = _fmt([0.02, 1 - 0.9 * collider.number("restitution")])
@@ -138,23 +199,24 @@ def _add_joint(body: ET.Element, obj: ObjectSpec, joint: ComponentView) -> None:
     ET.SubElement(body, "joint", attributes)
 
 
-def _add_light(body: ET.Element, obj: ObjectSpec) -> None:
+def _add_light(body: ET.Element, obj: ObjectSpec, root: ET.Element, sun: SunPath | None) -> None:
     light = view(obj, "light")
     if light is None:
         return
     color = light.text("color")
     strength = min(light.number("intensity"), 1.0)
     diffuse = [int(color[index : index + 2], 16) / 255 * strength for index in (1, 3, 5)]
-    ET.SubElement(
-        body,
-        "light",
-        {
-            "name": obj.id,
-            "directional": "true" if light.text("kind") == "sun" else "false",
-            "dir": "0.3 0.2 -1",
-            "diffuse": _fmt(diffuse),
-        },
-    )
+    is_sun = light.text("kind") == "sun"
+    attributes = {"name": obj.id, "directional": "true" if is_sun else "false", "dir": "0.3 0.2 -1"}
+    if not light.switch("shadows"):
+        attributes["castshadow"] = "false"
+    if is_sun and sun is not None:
+        # On the clock the sun shines from the sky's hour, whatever the object's rotation, so it lives in the world.
+        world = root.find("worldbody")
+        body = body if world is None else world
+        attributes["dir"] = _fmt(sun.direction)
+        diffuse = [channel * tint for channel, tint in zip(diffuse, sun.tint, strict=True)]
+    ET.SubElement(body, "light", attributes | {"diffuse": _fmt(diffuse)})
 
 
 def _add_markers(body: ET.Element, obj: ObjectSpec) -> None:
@@ -163,7 +225,10 @@ def _add_markers(body: ET.Element, obj: ObjectSpec) -> None:
         if marker is None:
             continue
         attributes = {"name": f"{obj.id}:{kind}", "group": "4", "rgba": "0 0 0 0"}
-        if size == "size":
+        if kind == "goal_zone" and marker.text("shape") == "rectangle":
+            half = [marker.number("length") / 2, marker.number("width") / 2, GOAL_HALF_HEIGHT]
+            attributes |= {"type": "box", "size": _fmt(half)}
+        elif size == "size":
             attributes |= {"type": "box", "size": _fmt([value / 2 for value in marker.vector("size")])}
         else:
             attributes |= {"type": "sphere", "size": _fmt([marker.number(size) if size else 0.1])}
@@ -188,10 +253,24 @@ def _add_zone_patch(body: ET.Element, obj: ObjectSpec) -> None:
 
 
 def is_floor_patch(model: mujoco.MjModel, geom: int) -> bool:
-    return model.geom(geom).name.endswith(PATCH_SUFFIX)
+    name = model.geom(geom).name
+    return name.endswith(PATCH_SUFFIX) or is_plate_name(name)
 
 
-def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, list[ObjectSpec]], root: ET.Element):
+def is_ground(compiled: "CompiledModel", geom: int) -> bool:
+    """The world's floor: an endless plane or a ground slab."""
+    model = compiled.model
+    return int(model.geom_type[geom]) == int(mujoco.mjtGeom.mjGEOM_PLANE) or model.geom(geom).name in compiled.grounds
+
+
+def _add_body(
+    parent: ET.Element,
+    obj: ObjectSpec,
+    children: dict[str | None, list[ObjectSpec]],
+    root: ET.Element,
+    sun: SunPath | None,
+    goal: str | None = None,
+):
     transform = view(obj, "transform")
     position = transform.vector("position") if transform else (0.0, 0.0, 0.0)
     rotation = transform.vector("rotation") if transform else (0.0, 0.0, 0.0)
@@ -202,17 +281,18 @@ def _add_body(parent: ET.Element, obj: ObjectSpec, children: dict[str | None, li
         _add_joint(body, obj, joint)
     elif obj.parent is None and _is_dynamic(obj):
         ET.SubElement(body, "freejoint", {"name": f"{obj.id}:free"})
-    _add_geom(body, obj, scale)
+    _add_geom(body, obj, scale, root)
     if _is_dynamic(obj) and view(obj, "mesh") is None:
         physics = view(obj, "physics_body")
         mass = physics.number("mass") if physics else 1.0
         ET.SubElement(body, "inertial", {"pos": "0 0 0", "mass": _fmt([mass]), "diaginertia": "0.001 0.001 0.001"})
-    _add_light(body, obj)
+    _add_light(body, obj, root, sun)
     _add_markers(body, obj)
     _add_zone_patch(body, obj)
-    add_sensors(body, root, obj)
+    add_plate(body, obj, _is_dynamic(obj))
+    add_sensors(body, root, obj, goal)
     for child in children.get(obj.id, []):
-        _add_body(body, child, children, root)
+        _add_body(body, child, children, root, sun, goal)
 
 
 def _readable(message: str, project: Project) -> str:
@@ -233,15 +313,34 @@ def to_mjcf(project: Project) -> str:
     if sky:
         add_sky(root, sky)
     world = ET.SubElement(root, "worldbody")
+    sun = world_sun(project)
+    goal = goal_object(project)
     for objects in containers(project):
         children: dict[str | None, list[ObjectSpec]] = {}
         for obj in objects:
             children.setdefault(obj.parent, []).append(obj)
         for obj in children.get(None, []):
-            _add_body(world, obj, children, root)
+            _add_body(world, obj, children, root, sun, goal)
+    vehicles = vehicle_layouts(project)
+    owned = frozenset(item for layout in vehicles.values() for item in layout.owned)
     for obj in all_objects(project):
-        add_actuator(root, obj, project)
+        add_actuator(root, obj, project, owned)
+    for layout in vehicles.values():
+        actuators = root.find("actuator")
+        add_vehicle_actuators(actuators if actuators is not None else ET.SubElement(root, "actuator"), layout)
     return ET.tostring(root, encoding="unicode")
+
+
+def _meshes(project: Project) -> dict[str, tuple[GeomShape, tuple[float, float, float]]]:
+    meshes: dict[str, tuple[GeomShape, tuple[float, float, float]]] = {}
+    for obj in all_objects(project):
+        mesh, transform = view(obj, "mesh"), view(obj, "transform")
+        if mesh is None or view(obj, "ground") is not None or mesh.text("shape") not in MESH_SHAPES:
+            continue
+        size, scale = mesh.vector("size"), transform.vector("scale") if transform else (1.0, 1.0, 1.0)
+        shape = "wedge" if mesh.text("shape") == "wedge" else "corner_wedge"
+        meshes[obj.id] = (shape, (size[0] * scale[0], size[1] * scale[1], size[2] * scale[2]))
+    return meshes
 
 
 def compile_project(project: Project) -> CompiledModel:
@@ -252,7 +351,34 @@ def compile_project(project: Project) -> CompiledModel:
     except ValueError as error:
         raise CompileError(_readable(str(error), project)) from error
     objects = {obj.id: obj.id for obj in all_objects(project)}
-    return CompiledModel(mjcf=mjcf, model=model, objects=objects, sky=world_sky(project))
+    return CompiledModel(
+        mjcf=mjcf,
+        model=model,
+        objects=objects,
+        sky=world_sky(project),
+        looks=geom_looks(project),
+        ray_labels=ray_labels(project),
+        vehicles=vehicle_layouts(project),
+        sensor_scales=sensor_scales(project),
+        grounds=frozenset(obj.id for obj in project.world.objects if view(obj, "ground")),
+        decor=world_decor(project),
+        meshes=_meshes(project),
+        agents=_agents(project),
+    )
 
 
-__all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "to_mjcf"]
+def _agents(project: Project) -> list[SceneAgent]:
+    parts = {body.id: [obj.id for obj in body.objects] for body in project.bodies}
+    return [
+        SceneAgent(
+            id=agent.id,
+            name=agent.name,
+            body=agent.body,
+            parts=parts.get(agent.body, []),
+            lane=sorted(lane_objects(agent)),
+        )
+        for agent in project.agents
+    ]
+
+
+__all__ = ["CompileError", "CompiledModel", "compile_project", "is_floor_patch", "is_ground", "to_mjcf"]

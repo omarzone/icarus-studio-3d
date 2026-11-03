@@ -40,6 +40,7 @@ export function ResultsViewPanel({ project, tab, className = "flex-1" }: Props) 
           <ViewTab label="Compare" active={tab === "compare"} to="SCR-RESULTS" />
           <ViewTab label="Where it fails" active={tab === "where-it-fails"} to="STA-RESULTS-FAILURES" />
           <TimelapseTab />
+          {app ? <ViewTab label="Behavior tests" active={false} to="STA-RESULTS-REFERENCE" /> : null}
         </>
       }
       options={
@@ -81,7 +82,7 @@ function ViewTab({
 }: {
   label: string;
   active: boolean;
-  to: "SCR-RESULTS" | "STA-RESULTS-FAILURES";
+  to: "SCR-RESULTS" | "STA-RESULTS-FAILURES" | "STA-RESULTS-REFERENCE";
 }) {
   if (active) {
     return <PanelTab label={label} active />;

@@ -4,6 +4,7 @@ from icarus.contracts.events import EngineEvent
 from icarus.contracts.project import ProjectState
 from icarus.contracts.training import StartRun
 from icarus.copilot.agent.harness import worker_tools
+from icarus.copilot.agent.turn import new_message
 from icarus.copilot.builtin_hooks import default_registry
 from icarus.copilot.chat import Harness
 from icarus.copilot.checkpoint_coach import CheckpointCoach
@@ -16,7 +17,7 @@ from icarus.tasks import TaskRegistry
 from icarus.training.progress_watch import WINDOW
 from tests.copilot.agent_script import answer_call, call
 from tests.copilot.test_agent_loop import NIGHT_OPS, make_copilot, model, say
-from tests.copilot.test_autopilot import ScriptedTrainer
+from tests.copilot.test_autopilot import ScriptedTrainer, set_patience
 
 
 @pytest.fixture(scope="module")
@@ -162,6 +163,8 @@ def test_the_store_tells_observers_about_each_new_revision(store, project_id):
 def test_a_coached_checkpoint_posts_a_grounded_comment_and_diagnoses_only_when_a_rule_fires(
     tmp_path, store, settings, views, project_id
 ):
+    # The flat run stalls at 100k steps, which counts once a tenth of navigation's budget is patience enough.
+    set_patience(0.1)
     copilot = make_copilot(tmp_path, store, settings, views)
     runs = copilot.services.runs
     trainer = ScriptedTrainer(runs, [[0.1] * (WINDOW + 1)])
@@ -169,7 +172,7 @@ def test_a_coached_checkpoint_posts_a_grounded_comment_and_diagnoses_only_when_a
     run_id = trainer.start(state, StartRun(total_steps=1_000_000, copies=1), 1, False).run_id
     steps = runs.folder(run_id).config().checkpoint_steps[: WINDOW + 1]
     diagnosed: list[tuple[str, int]] = []
-    coach = CheckpointCoach(copilot, runs, lambda run, step: diagnosed.append((run, step)))
+    coach = CheckpointCoach(copilot, runs, lambda run, step, _notes: diagnosed.append((run, step)))
     coach.comment(run_id, steps[0])
     first = copilot.conversation(project_id).messages[-1]
     assert first.run is not None and first.run.milestone_step == steps[0] and first.title
@@ -177,3 +180,15 @@ def test_a_coached_checkpoint_posts_a_grounded_comment_and_diagnoses_only_when_a
     for step in steps[1:]:
         coach.comment(run_id, step)
     assert len(diagnosed) == 1
+
+
+def test_a_message_the_copilot_posts_on_its_own_is_published_for_the_open_chat(harnessed, project_id):
+    copilot, events, _ = harnessed
+    message = new_message("copilot", "The checkpoint reached the slot twice.")
+    copilot.post(project_id, message, [])
+    posted = [(event, project) for event, project in events.events if event.type == "message_posted"]
+    assert len(posted) == 1
+    event, project = posted[0]
+    assert project == project_id
+    assert event.message_id == message.id
+    assert event.role == "copilot"

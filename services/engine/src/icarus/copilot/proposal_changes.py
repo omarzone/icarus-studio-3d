@@ -2,26 +2,33 @@ from collections.abc import Sequence
 
 from icarus.contracts.copilot import ProposalChange
 from icarus.contracts.operations import (
+    AddAgent,
     AddBody,
     AddComponent,
     CreateObject,
     DeleteObject,
     EditOperation,
+    RemoveAgent,
     RemoveBody,
     RemoveComponent,
     RemoveRewardTerm,
     RenameObject,
     RenameProject,
     ReparentObject,
+    SetAgent,
     SetBrain,
+    SetEpisode,
+    SetMotionReference,
     SetProperty,
     SetRewardTerm,
     SetTaskFamily,
 )
 from icarus.contracts.project import Project
 from icarus.contracts.properties import PropertyValue, RangeValue, SwitchValue, VectorValue
+from icarus.contracts.specs import BrainSpec, TaskSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.rewards import REWARD_TERMS
+from icarus.projects.agents import agent_project
 from icarus.projects.document import find_object
 from icarus.projects.operations import apply_operations
 
@@ -62,13 +69,60 @@ def _property(project: Project, op: SetProperty) -> ProposalChange:
     return ProposalChange(label=label, before=shown(old, unit) if old else None, after=shown(op.value, unit))
 
 
-def _brain(template: str | None, copies: int | None, seed: int | None) -> str:
-    parts = [
-        f"template {template}" if template else "",
-        f"{copies} copies" if copies else "",
-        f"seed {seed}" if seed is not None else "",
+def _brain_facts(brain: BrainSpec) -> list[str]:
+    ppo = brain.ppo
+    return [
+        f"template {brain.template}" if brain.template else "no template",
+        f"{brain.copies} copies",
+        f"seed {brain.seed}",
+        brain.algorithm.upper(),
+        f"{brain.training_steps:,} steps" if brain.training_steps else "recommended steps",
+        f"layers {' x '.join(str(size) for size in brain.layers)}",
+        f"learning rate {_number(ppo.learning_rate)}",
+        f"{ppo.n_steps:,} steps per update",
+        f"batch {ppo.batch_size:,}",
+        f"{ppo.n_epochs} passes per update",
+        f"discount {_number(ppo.gamma)}",
+        f"advantage smoothing {_number(ppo.gae_lambda)}",
+        f"exploration bonus {_number(ppo.ent_coef)}",
+        f"{brain.decisions_per_second} decisions a second",
+        f"senses off: {', '.join(brain.muted_senses)}" if brain.muted_senses else "every sense on",
+        f"motors off: {', '.join(brain.muted_motors)}" if brain.muted_motors else "every motor on",
+        f"starts from {brain.start_from.run_id} at {brain.start_from.step:,}"
+        if brain.start_from
+        else "starts from zero",
     ]
-    return ", ".join(part for part in parts if part)
+
+
+def _episode_facts(task: TaskSpec) -> str:
+    ends = [f"{_number(task.episode_seconds)} s per try"]
+    ends += ["ends on a fall"] if task.end_on_fall else ["keeps going after a fall"]
+    ends += ["ends on success"] if task.end_on_success else ["keeps going after success"]
+    return ", ".join(ends)
+
+
+def _seen_by(project: Project, agent: str | None) -> Project:
+    """The project as the agent an operation is for trains it; the project itself without one."""
+    if agent is None or not any(item.id == agent for item in project.agents):
+        return project
+    return agent_project(project, agent)
+
+
+def _agent_name(project: Project, agent_id: str) -> str:
+    return next((item.name for item in project.agents if item.id == agent_id), agent_id)
+
+
+def _brain_change(project: Project, op: SetBrain) -> ProposalChange:
+    before = _brain_facts(_seen_by(project, op.agent).brain)
+    after = _brain_facts(_seen_by(apply_operations(project, [op]), op.agent).brain)
+    changed = [index for index, (old, new) in enumerate(zip(before, after, strict=True)) if old != new]
+    if not changed:
+        return ProposalChange(label="Brain", after="Unchanged")
+    return ProposalChange(
+        label="Brain",
+        before=", ".join(before[index] for index in changed),
+        after=", ".join(after[index] for index in changed),
+    )
 
 
 def _change(project: Project, op: EditOperation) -> ProposalChange:
@@ -97,21 +151,32 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             return ProposalChange(label=body.name if body else body_id, after="Removed")
         case RenameProject(name=name):
             return ProposalChange(label="Project name", before=project.name, after=name)
-        case SetTaskFamily(family=family):
-            return ProposalChange(label="Task", before=project.task.family, after=family)
-        case SetRewardTerm(term=term):
+        case SetTaskFamily(family=family, agent=agent):
+            return ProposalChange(label="Task", before=_seen_by(project, agent).task.family, after=family)
+        case SetRewardTerm(term=term, agent=agent):
             info = REWARD_TERMS.get(term.term)
-            old = next((item for item in project.task.rewards if item.term == term.term), None)
+            rewards = _seen_by(project, agent).task.rewards
+            old = next((item for item in rewards if item.term == term.term), None)
             label = f"Reward: {info.label if info else term.term}"
             return ProposalChange(label=label, before=_number(old.weight) if old else None, after=_number(term.weight))
         case RemoveRewardTerm(term=term_id):
             info = REWARD_TERMS.get(term_id)
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
-        case SetBrain(template=template, copies=copies, seed=seed):
-            brain = project.brain
-            before = _brain(template and brain.template, copies and brain.copies, None if seed is None else brain.seed)
+        case SetMotionReference(reference=reference):
+            return ProposalChange(label="Motion to copy", after=reference.name if reference else "Removed")
+        case SetBrain():
+            return _brain_change(project, op)
+        case SetEpisode(agent=agent):
+            before = _episode_facts(_seen_by(project, agent).task)
+            after = _episode_facts(_seen_by(apply_operations(project, [op]), agent).task)
+            return ProposalChange(label="Each try", before=before, after=after)
+        case AddAgent(agent=agent):
+            return ProposalChange(label=f"Agent {agent.name}", after="Added")
+        case RemoveAgent(agent=agent_id):
+            return ProposalChange(label=f"Agent {_agent_name(project, agent_id)}", after="Removed")
+        case SetAgent(agent=agent_id, name=name):
             return ProposalChange(
-                label="Brain", before=before or None, after=_brain(template, copies, seed) or "Unchanged"
+                label=f"Agent {_agent_name(project, agent_id)}", after=f"Renamed {name}" if name else "Lane changed"
             )
 
 

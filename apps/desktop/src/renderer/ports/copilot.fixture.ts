@@ -1,4 +1,5 @@
 import { BUILD_CONVERSATIONS } from "./build-conversations.fixture.ts";
+import { sampleContextUsage } from "./copilot-context.fixture.ts";
 import type { ChatAttachment, ChatMessage, Conversation, CopilotPort, ProposalStatus } from "./copilot-port.ts";
 import { STUDIO_CONVERSATIONS } from "./copilot-studios.fixture.ts";
 import { TRAINING_CONVERSATIONS } from "./training-conversations.fixture.ts";
@@ -216,6 +217,12 @@ export function createCopilotFixture(): CopilotPort {
       return attachment;
     },
     readAttachmentText: async (id) => files.get(id)?.text ?? "",
+    getContextUsage: async ({ key, attachments = [], sceneViews = 0 }) =>
+      sampleContextUsage(
+        find(key).messages,
+        attachments.flatMap((id) => files.get(id)?.attachment ?? []),
+        sceneViews,
+      ),
     // Sample proposals have no compiled scene, so the preview draws no geoms.
     getPreview: async (key) => {
       const open = find(key).messages.find(

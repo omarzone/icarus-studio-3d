@@ -1,5 +1,5 @@
 // PNL-LEARNED
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 import { GoTo } from "../../../app/navigation/go-to.tsx";
 import { usePort } from "../../../app/runtime/port.tsx";
@@ -12,7 +12,16 @@ import { HowItLearnedTab } from "./how-it-learned-tab.tsx";
 
 export function LearnedPanel({ project, className = "h-42 flex-none" }: { project: string; className?: string }) {
   const port = usePort(resultsPort);
+  const client = useQueryClient();
   const history = useQuery({ queryKey: resultsKeys.history(project), queryFn: () => port.getLearningHistory(project) });
+  // The timelapse opens at the clicked checkpoint of this run.
+  const openAt = (checkpoint: string) => {
+    const run = history.data?.run;
+    if (run !== undefined) {
+      void port.selectTimelapseFrame({ project, id: `${run}:${checkpoint}` });
+      client.removeQueries({ queryKey: resultsKeys.timelapse(project) });
+    }
+  };
   return (
     <Panel
       id="PNL-LEARNED"
@@ -37,7 +46,7 @@ export function LearnedPanel({ project, className = "h-42 flex-none" }: { projec
         isEmpty={(data) => data.checkpoints.length === 0}
         empty={<EmptyState title="No checkpoints yet" body="Checkpoints appear here as the run learns." />}
       >
-        {(data) => <HowItLearnedTab checkpoints={data.checkpoints} />}
+        {(data) => <HowItLearnedTab checkpoints={data.checkpoints} onOpen={openAt} />}
       </QueryView>
     </Panel>
   );

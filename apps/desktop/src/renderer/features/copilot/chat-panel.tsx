@@ -23,6 +23,7 @@ import { copilotKey, previewKey, useConversationKey } from "./conversation-key.t
 import { HistoryTab } from "./history-tab.tsx";
 import type { ProposalRoutes } from "./proposal-card.tsx";
 import { useSceneLook } from "./scene-look.ts";
+import { SCENE_VIEW_COUNT } from "./scene-views.ts";
 import type { SuggestionRoutes } from "./suggestion-chips.tsx";
 
 export type ChatPanelProps = {
@@ -36,10 +37,17 @@ export type ChatPanelProps = {
   proposalRoutes?: ProposalRoutes;
   // Tabs after Chat in the tab bar; History (→ MOD-HISTORY) by default.
   tabs?: ReactNode;
+  // What the app shows while no project is open, when this workspace explains it its own way.
+  noProject?: { title: string; body: string };
   className?: string;
 };
 
 export { copilotKey };
+
+const NO_PROJECT = {
+  title: "No project open yet",
+  body: "The copilot works on a project. Pick an idea or open a project to talk to it.",
+};
 
 export function ChatPanel({
   conversation: sample,
@@ -48,6 +56,7 @@ export function ChatPanel({
   proposalRoutes,
   tabs = <HistoryTab />,
   className = "flex-1",
+  noProject = NO_PROJECT,
 }: ChatPanelProps) {
   const conversation = useConversationKey(sample);
   const docked = useDockedPanel();
@@ -78,10 +87,7 @@ export function ChatPanel({
       }
     >
       {conversation === null ? (
-        <EmptyState
-          title="No project open yet"
-          body="The copilot works on a project. Pick an idea or open a project to talk to it."
-        />
+        <EmptyState title={noProject.title} body={noProject.body} />
       ) : (
         <ProjectChat
           conversation={conversation}
@@ -169,6 +175,28 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
       ? tree.selected
       : null;
   };
+  // The renders that go with a message count too: none when the scene is known to be empty.
+  const sceneViews = () => {
+    const description = client.getQueryData(sceneKeys.description(conversation));
+    const empty =
+      typeof description === "object" &&
+      description !== null &&
+      "geoms" in description &&
+      Array.isArray(description.geoms) &&
+      description.geoms.length === 0;
+    return empty ? 0 : SCENE_VIEW_COUNT;
+  };
+  const context = {
+    conversation,
+    load: (attachments: readonly string[]) =>
+      port.getContextUsage({
+        key: conversation,
+        attachments,
+        sceneViews: sceneViews(),
+        workspace: workspaceOf(screen),
+        selection: selection(),
+      }),
+  };
   return (
     <QueryView query={query}>
       {(data) => (
@@ -192,6 +220,7 @@ function ProjectChat({ conversation, placeholder, suggestionRoutes, proposalRout
           }
           onUpload={upload}
           onAutonomy={(mode) => run(autonomy, { key: conversation, mode })}
+          context={context}
         />
       )}
     </QueryView>

@@ -44,8 +44,14 @@ function once(video: HTMLVideoElement, event: "loadeddata" | "seeked"): Promise<
   });
 }
 
-// Up to eight evenly spaced stills, drawn into a canvas and kept as base64 JPEG.
-export async function videoFrames(file: Blob): Promise<{ frames: string[]; duration: number }> {
+export type VideoStills = { frames: string[]; duration: number; width: number; height: number };
+
+// Stills at the given times (up to eight evenly spaced by default), kept as base64 JPEG.
+export async function videoFrames(
+  file: Blob,
+  times: (duration: number) => number[] = frameTimes,
+  side = FRAME_SIDE,
+): Promise<VideoStills> {
   const url = URL.createObjectURL(file);
   const video = document.createElement("video");
   video.muted = true;
@@ -53,7 +59,7 @@ export async function videoFrames(file: Blob): Promise<{ frames: string[]; durat
   video.src = url;
   try {
     await once(video, "loadeddata");
-    const size = fitWithin(video.videoWidth || FRAME_SIDE, video.videoHeight || FRAME_SIDE, FRAME_SIDE);
+    const size = fitWithin(video.videoWidth || side, video.videoHeight || side, side);
     const canvas = document.createElement("canvas");
     canvas.width = size.width;
     canvas.height = size.height;
@@ -62,14 +68,14 @@ export async function videoFrames(file: Blob): Promise<{ frames: string[]; durat
       throw new Error("The video could not be drawn");
     }
     const frames: string[] = [];
-    for (const time of frameTimes(video.duration)) {
+    for (const time of times(video.duration)) {
       const seeked = once(video, "seeked");
       video.currentTime = time;
       await seeked;
       context.drawImage(video, 0, 0, size.width, size.height);
       frames.push(base64OfDataUrl(canvas.toDataURL("image/jpeg", FRAME_QUALITY)));
     }
-    return { frames, duration: video.duration };
+    return { frames, duration: video.duration, width: size.width, height: size.height };
   } finally {
     video.removeAttribute("src");
     video.load();

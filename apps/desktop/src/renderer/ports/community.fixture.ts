@@ -13,7 +13,7 @@ function creation(
   votes: number,
   remixes: number,
 ): CreationSummary {
-  return { id, name, author, category, votes, remixes, opensIn: "page" };
+  return { id, name, author, category, votes, remixes, opensIn: "page", picture: null };
 }
 
 const CREATIONS: readonly CreationSummary[] = [
@@ -115,7 +115,8 @@ export function createCommunityFixture(): CommunityPort {
       details = new Map(details).set(voted.id, voted);
       return voted;
     },
-    remix: async () => undefined,
+    remix: async (id) => ({ projectId: `remix-${id}`, name: find(id).name }),
     report: async () => undefined,
+    getPicture: async () => null,
   };
 }

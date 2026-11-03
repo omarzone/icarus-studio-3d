@@ -4,6 +4,7 @@ import { ArrowBigUp } from "lucide-react";
 import { useState } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { usePort } from "../../app/runtime/port.tsx";
 import { type CreationSort, type CreationSummary, communityPort } from "../../ports/community-port.ts";
 import { Avatar } from "../../ui/avatar.tsx";
@@ -98,6 +99,7 @@ function CategoryChip({ label, active, onSelect }: { label: string; active: bool
 function CreationCard({ creation }: { creation: CreationSummary }) {
   const votes = compactNumber(creation.votes);
   const { author } = creation;
+  const picture = useCommunityPicture(creation.picture);
   return (
     <GoTo
       to={creation.opensIn === "brain" ? "STA-BRAIN-CONNECTOME" : "SCR-CREATION"}
@@ -105,7 +107,8 @@ function CreationCard({ creation }: { creation: CreationSummary }) {
       cta={`${votes}\n${author.initials}\n${creation.name}\n@${author.handle} · ${creation.remixes} remixes`}
       className="flex flex-col gap-2 rounded-card text-left hover:opacity-90 active:opacity-80"
     >
-      <span className="relative h-37.5 w-full rounded-card bg-control">
+      <span className="relative h-37.5 w-full overflow-hidden rounded-card bg-control">
+        {picture ? <img src={picture} alt="" aria-hidden draggable={false} className="size-full object-cover" /> : null}
         <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-overlay px-2 py-0.75 text-meta">
           <ArrowBigUp size={12} strokeWidth={1.75} aria-hidden />
           {votes}

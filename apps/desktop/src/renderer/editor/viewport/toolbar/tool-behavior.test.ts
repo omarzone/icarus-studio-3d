@@ -35,6 +35,18 @@ describe("toolBehavior", () => {
       kind: "not-yet",
     });
   });
+
+  it("dims a tool that cannot act right now in the app with its reason, and keeps the prototype's design", () => {
+    const reason = "No run is training right now";
+    expect(toolBehavior({ tool: opener, mode: "app", hasAction: false, unavailable: reason })).toEqual({
+      kind: "unavailable",
+      reason,
+    });
+    expect(toolBehavior({ tool: opener, mode: "prototype", hasAction: false, unavailable: reason })).toEqual({
+      kind: "go",
+      to: "POP-TRAINING-COPIES",
+    });
+  });
 });
 
 describe("toolTitle", () => {

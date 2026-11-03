@@ -45,6 +45,7 @@ function handlers() {
     onEvent: vi.fn<PlayHandlers["onEvent"]>(),
     onError: vi.fn<PlayHandlers["onError"]>(),
     onClosed: vi.fn<PlayHandlers["onClosed"]>(),
+    onProgress: vi.fn<NonNullable<PlayHandlers["onProgress"]>>(),
   };
 }
 
@@ -67,6 +68,14 @@ describe("openPlay", () => {
     expect(socket.url).toBe("ws://127.0.0.1:9000/projects/my%20project/play");
   });
 
+  it("asks for a chosen brain by its run and checkpoint", async () => {
+    FakeSocket.last = undefined;
+    openPlay("p", handlers(), { url, socket: FakeSocket, brain: { runId: "run-1", step: 25000 } });
+    const latest = (): FakeSocket | undefined => FakeSocket.last;
+    await vi.waitFor(() => expect(latest()).toBeDefined());
+    expect(latest()?.url).toBe("ws://127.0.0.1:9000/projects/p/play?run=run-1&step=25000");
+  });
+
   it("routes ready, frame and event messages", async () => {
     const { calls, socket } = await connected();
     socket.receive(play.ready);
@@ -78,6 +87,15 @@ describe("openPlay", () => {
     );
     expect(calls.onEvent).toHaveBeenCalledWith(expect.objectContaining({ text: "You pushed Car with 10 N·s" }));
     expect(calls.onError).not.toHaveBeenCalled();
+  });
+
+  it("routes the opening progress and refuses a stage it does not know", async () => {
+    const { calls, socket } = await connected();
+    for (const stage of ["world", "brain", "starting", "dreaming"]) {
+      socket.receive(JSON.stringify({ message: { type: "progress", stage } }));
+    }
+    expect(calls.onProgress.mock.calls).toEqual([["world"], ["brain"], ["starting"]]);
+    expect(calls.onError).toHaveBeenCalledTimes(1);
   });
 
   it("reports an engine error message without closing", async () => {
@@ -93,6 +111,18 @@ describe("openPlay", () => {
     socket.receive({ message: { type: "frame", frame: { time: "soon" } } });
     expect(calls.onError).toHaveBeenCalledTimes(2);
     expect(calls.onFrame).not.toHaveBeenCalled();
+  });
+
+  it("passes a frame's distance sensors through and reports malformed ones", async () => {
+    const { calls, socket } = await connected();
+    const ray = { sensor: "car:ray0", label: "Car distance 1", origin: [0, 0, 0.5], direction: [1, 0, 0], range: 10 };
+    const withRays = (rays: unknown) => ({
+      message: { ...play.frame.message, frame: { ...play.frame.message.frame, rays } },
+    });
+    socket.receive(withRays([{ ...ray, distance: null }]));
+    socket.receive(withRays([{ ...ray, distance: "near" }]));
+    expect(calls.onFrame).toHaveBeenCalledTimes(1);
+    expect(calls.onError).toHaveBeenCalledTimes(1);
   });
 
   it("sends a command as an envelope, waiting for the socket to open", async () => {

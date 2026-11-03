@@ -1,6 +1,6 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { copyGrid, isFirstCopy, scenesGrid } from "./copy-grid.ts";
+import { copyBorders, copyGrid, isFirstCopy, scenesGrid } from "./copy-grid.ts";
 import type { Pose } from "./pose-track.ts";
 
 const geom = (
@@ -111,5 +111,38 @@ describe("scenesGrid", () => {
 
   it("is empty without copies", () => {
     expect(scenesGrid([]).description.geoms).toEqual([]);
+  });
+});
+
+describe("copyGrid rays", () => {
+  const sensor = (x: number): SceneRay => ({
+    sensor: "car:ray0",
+    label: "Car distance 1",
+    origin: [x, 0, 0.5],
+    direction: [1, 0, 0],
+    range: 10,
+    distance: 3,
+  });
+
+  it("shifts each copy's rays to its place, for every copy or only the followed one", () => {
+    const grid = copyGrid(scene, 4);
+    const rays = [0, 1, 2, 3].map((x) => [sensor(x)]);
+    expect(grid.placeRays(rays).map((item) => [item.sensor, item.origin])).toEqual([
+      ["0:car:ray0", [-3.5, -2, 0.5]],
+      ["1:car:ray0", [4.5, -2, 0.5]],
+      ["2:car:ray0", [-1.5, 2, 0.5]],
+      ["3:car:ray0", [6.5, 2, 0.5]],
+    ]);
+    expect(grid.placeRays(rays, 2).map((item) => item.sensor)).toEqual(["2:car:ray0"]);
+  });
+});
+
+describe("copy borders", () => {
+  it("draws a see-through wall along every cell edge of the grid, around the copies' middle", () => {
+    const walls = copyBorders(2, 2, [10, 6], [5, 1]);
+    expect(walls).toHaveLength(6);
+    expect(walls.map((wall) => wall.position[0]).slice(0, 3)).toEqual([-5, 5, 15]);
+    expect(walls.map((wall) => wall.position[1]).slice(3)).toEqual([-5, 1, 7]);
+    expect(walls.every((wall) => (wall.transparency ?? 0) > 0 && wall.size[2] === 1)).toBe(true);
   });
 });

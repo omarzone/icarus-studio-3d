@@ -116,6 +116,7 @@ Exported from the same module as `scene.*`, as numbers for Three.js.
 | `scene.sky.day` | `#5F8FC4` → `#A9C6E2` → `#E4ECEF` | Outdoor day sky |
 | `scene.material.shell` | `0xF1F1F1`, roughness 0.35, clearcoat 0.6 | Default body shell for robots, characters and creatures |
 | `scene.material.joint` | `0x8B9098`, metalness 0.85 | Joints and limbs |
+| `scene.material.style` | glass `#1D2733`, trim `#1B1D21`, chrome `#D4D8DE`, metal `#5C626B`, headlight `#FFF3D6`, tail light `#D6342C`, lamp `#FFF0C8`, band `#F2F2F2`, bark `#5B4632`, roof `#4A3B36`, window light `#FFD99A`, asphalt finish `#FFFFFF` under its grain | Fixed finishes of styled parts (`scene/visual-styles/finishes.ts`, `part-look.ts`); painted pieces take the part's color |
 | `scene.axis.x/y/z` | `#FF453A` `#32D74B` `#0A84FF` | Orientation gizmo and transform handles |
 | `scene.sensor.ray` | `#E9EEF5` at 0.7 | Sensor rays |
 | `scene.sensor.hit` | `#FF5C5C` | Ray hitting something close |

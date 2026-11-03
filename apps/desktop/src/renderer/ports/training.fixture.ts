@@ -62,7 +62,7 @@ const LIVE_VIEW: LiveView = {
   caption: "Live training · 16 parking lots",
   checkpoint: "Checkpoint 312k",
   result: "Parks 71% · scrapes a car in 38%",
-  episode: { at: "0:00.9", length: "0:01.6", played: 0.58, failureAt: 0.86 },
+  episode: { step: 312_000, at: "0:00.9", length: "0:01.6", played: 0.58, failureAt: 0.86 },
   speed: "0.5×",
 };
 

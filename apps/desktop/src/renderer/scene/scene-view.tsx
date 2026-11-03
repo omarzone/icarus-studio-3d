@@ -1,25 +1,29 @@
-import type { SceneDescription, SceneGeom } from "@icarus/contracts";
+import type { SceneDescription, SceneGeom, SceneRay } from "@icarus/contracts";
 import { Edges, GizmoHelper, GizmoViewcube, Grid, OrbitControls, TransformControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { type KeyboardEvent, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { Group } from "three";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { type KeyboardEvent, type RefObject, useContext, useMemo, useRef, useState } from "react";
+import { type Group, Quaternion } from "three";
 import { type CameraView, CameraViewContext } from "./camera-mode.ts";
 import { CameraRig, VIEW_FOV } from "./camera-rig.tsx";
-import { fromThreePosition, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
+import { fromThreePosition, fromThreeQuaternion, toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { GeomShape } from "./geom-geometry.tsx";
+import { geomGeometry, geomObject } from "./geom-object.ts";
+import { type GizmoMode, gizmoForKey } from "./gizmo-mode.ts";
+import { useSnapBypass } from "./held-key.ts";
+import { helperGridShown } from "./helper-grid.ts";
+import { imageGrade } from "./image-grade.ts";
 import { LiveGeoms, type ScenePick } from "./live-geoms.tsx";
+import type { PosePlayer } from "./motion-player.ts";
 import { isDeliberateClick } from "./pick.ts";
 import type { Poses, PoseTrack } from "./pose-track.ts";
-import {
-  AMBIENT_INTENSITY,
-  floorDepth,
-  GEOM_ROUGHNESS,
-  PROPOSAL_OPACITY,
-  sceneColors,
-  sceneLight,
-} from "./scene-materials.ts";
-import { SKY_RADIUS, type SkyLook, skyLook } from "./scene-sky.ts";
-import { createSkyDome } from "./sky-dome.ts";
+import { RayOverlay } from "./ray-overlay.tsx";
+import { groundColor } from "./scene-lighting.ts";
+import { PROPOSAL_OPACITY, sceneColors } from "./scene-materials.ts";
+import { type CopySignals, signalFeed } from "./scene-signals.ts";
+import { skyLook } from "./scene-sky.ts";
+import { ViewFocusProbe } from "./view-focus-probe.ts";
+import { WorldDecor } from "./world-decor.tsx";
+import { Sky, Suns } from "./world-lighting.tsx";
 import { ZoneMarkers } from "./zone-markers.tsx";
 
 export type { ScenePick } from "./live-geoms.tsx";
@@ -30,15 +34,35 @@ type EditProps = {
   mode?: "edit";
   selected: string | null;
   onSelect: (objectId: string | null) => void;
+  // What a drag of the selected object does; W, E and R in the view ask for another mode through `onGizmo`.
+  gizmo?: GizmoMode;
+  onGizmo?: (mode: GizmoMode) => void;
   // A drag of the selected object ended; the move is in MuJoCo world axes.
   onMove: (objectId: string, delta: Vec3) => void;
+  // A turn ended: the rotation in MuJoCo world axes, quaternion wxyz.
+  onRotate?: (objectId: string, delta: [number, number, number, number]) => void;
+  // A stretch ended: the factor along each of the object's own axes, MuJoCo order.
+  onScale?: (objectId: string, factor: Vec3) => void;
+  // The helper grid: hidden when "off", its cell size in metres.
+  grid?: { mode: "auto" | "on" | "off"; cell: number };
+  // Move snap in metres and turn snap in degrees; null moves freely. Holding Ctrl or Cmd skips them.
+  snap?: { move: number | null; rotate: number | null };
+  // While a part waits to be placed, a click anywhere reports the point it hit (MuJoCo axes) instead of selecting.
+  placing?: boolean;
+  onPlace?: (point: Vec3) => void;
 };
 
 type PlayProps = {
   mode: "play";
   // Engine poses that override each geom's place; geoms without one stay where the description has them.
   poses: Poses;
+  // Recorded motion to play instead of easing between `poses` (and `rays`) as they arrive.
+  player?: PosePlayer;
   onPick: (pick: ScenePick) => void;
+  // Goal and vehicle light states per copy (one for a single world) when no `player` brings its own; `copies`
+  // worlds stand side by side and name their geoms and zones "<copy>:<name>".
+  signals?: CopySignals;
+  copies?: number;
 };
 
 // Width in metres the camera starts out framing (every copy of a training run); the default frames one world.
@@ -50,9 +74,16 @@ export type SceneViewProps = {
   framing?: number;
   ghosts?: readonly SceneGeom[];
   follows?: (geom: SceneGeom) => boolean;
+  // Distance sensors to draw (eased with the poses in a live view), with their readings when `rayValues`.
+  rays?: readonly SceneRay[];
+  rayValues?: boolean;
+  // The orientation cube is for views you work in; previews only to look at leave it out.
+  viewCube?: boolean;
 } & (EditProps | PlayProps);
 
 const CAMERA: Vec3 = [7, 6, 9];
+// Cells between the grid's stronger section lines.
+const GRID_SECTION = 10;
 const CAMERA_FRAMES = 12;
 
 type GeomProps = {
@@ -61,66 +92,148 @@ type GeomProps = {
   onSelect: (id: string) => void;
   // Three position the geom is drawn relative to (its body, while it can be dragged).
   origin?: readonly [number, number, number];
+  // Set while a part waits to be placed: a click reports where it hit instead of selecting.
+  onPlace?: (point: Vec3) => void;
 };
 
-function Geom({ geom, selected, onSelect, origin = [0, 0, 0] }: GeomProps) {
+function Geom({ geom, selected, onSelect, origin = [0, 0, 0], onPlace }: GeomProps) {
   const colors = useMemo(sceneColors, []);
+  const object = useMemo(() => geomObject(geom), [geom]);
   const [x, y, z] = toThreePosition(geom.position);
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js mesh, not a DOM element; the explorer is the accessible way to select.
-    <mesh
+    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js object, not a DOM element; the explorer is the accessible way to select.
+    <primitive
+      object={object}
       position={[x - origin[0], y - origin[1], z - origin[2]]}
-      quaternion={toThreeQuaternion(geom.quaternion)}
-      onClick={(event) => {
+      onClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation();
+        if (!isDeliberateClick(event.delta)) {
+          return;
+        }
+        if (onPlace) {
+          onPlace(fromThreePosition([event.point.x, event.point.y, event.point.z]));
+          return;
+        }
+        onSelect(geom.body);
+      }}
+    >
+      {/* The outline of a selected part is its collider, whatever style it is drawn in. */}
+      {selected ? (
+        <mesh geometry={geomGeometry(geom)} raycast={() => undefined}>
+          <meshBasicMaterial visible={false} />
+          <Edges color={colors.selected} />
+        </mesh>
+      ) : null}
+    </primitive>
+  );
+}
+
+const CONTROL_MODES = { move: "translate", rotate: "rotate", scale: "scale" } as const;
+const CHANGED = 1e-6;
+
+type Picked = { id: string; anchor: Vec3; turn: [number, number, number, number] };
+
+// Reads what the drag did to the group, puts the group back where the engine has it and reports the change;
+// the engine's answer moves the object for real.
+function reportDrag(group: Group, picked: Picked, gizmo: GizmoMode, props: EditProps) {
+  const { id, anchor, turn } = picked;
+  if (gizmo === "move") {
+    const delta = fromThreePosition([
+      group.position.x - anchor[0],
+      group.position.y - anchor[1],
+      group.position.z - anchor[2],
+    ]);
+    group.position.set(...anchor);
+    if (delta.some((value) => Math.abs(value) > CHANGED)) {
+      props.onMove(id, delta);
+    }
+    return;
+  }
+  if (gizmo === "rotate") {
+    const delta = group.quaternion.clone().multiply(new Quaternion(...turn).invert());
+    group.quaternion.set(...turn);
+    if (1 - Math.abs(delta.w) > CHANGED) {
+      props.onRotate?.(id, fromThreeQuaternion([delta.x, delta.y, delta.z, delta.w]));
+    }
+    return;
+  }
+  const factor = fromThreePosition([group.scale.x, group.scale.y, group.scale.z]).map(Math.abs);
+  group.scale.set(1, 1, 1);
+  const [x = 1, y = 1, z = 1] = factor;
+  // A drag that starts on the gizmo's very centre has no length to compare with and gives no finite factor.
+  if (factor.every(Number.isFinite) && factor.some((value) => Math.abs(value - 1) > CHANGED)) {
+    props.onScale?.(id, [x, y, z]);
+  }
+}
+
+// Catches clicks that hit no part while a part waits to be placed, on the ground level.
+function PlaceCatcher({ onPlace }: { onPlace: (point: Vec3) => void }) {
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a Three.js object, not a DOM element; Esc cancels placing from the keyboard.
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      onClick={(event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         if (isDeliberateClick(event.delta)) {
-          onSelect(geom.body);
+          onPlace(fromThreePosition([event.point.x, 0, event.point.z]));
         }
       }}
     >
-      <GeomShape geom={geom} />
-      <meshStandardMaterial color={geom.color} roughness={GEOM_ROUGHNESS} {...floorDepth(geom.shape)} />
-      {selected ? <Edges color={colors.selected} /> : null}
+      <planeGeometry args={[PLACE_REACH, PLACE_REACH]} />
+      <meshBasicMaterial visible={false} />
     </mesh>
   );
 }
 
-function EditGeoms({ description, selected, onSelect, onMove }: { description: SceneDescription } & EditProps) {
+const PLACE_REACH = 2000;
+const DEGREES = Math.PI / 180;
+
+function EditGeoms(props: { description: SceneDescription } & EditProps) {
+  const { description, selected, onSelect, gizmo = "move", snap } = props;
   const [dragged, setDragged] = useState<Group | null>(null);
+  const free = useSnapBypass();
+  const onPlace = props.placing ? props.onPlace : undefined;
   const picked = description.geoms.filter((geom) => geom.body === selected);
   const body = description.bodies.find((item) => item.name === selected);
-  const anchor = body ? toThreePosition(body.position) : null;
   const rest = description.geoms.filter((geom) => geom.body !== selected);
+  const target: Picked | null =
+    selected && body
+      ? { id: selected, anchor: toThreePosition(body.position), turn: toThreeQuaternion(body.quaternion) }
+      : null;
   return (
     <>
       {rest.map((geom) => (
-        <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} />
+        <Geom key={geom.name} geom={geom} selected={false} onSelect={onSelect} onPlace={onPlace} />
       ))}
-      {selected && anchor && picked.length > 0 ? (
+      {onPlace ? <PlaceCatcher onPlace={onPlace} /> : null}
+      <ViewFocusProbe />
+      {target && picked.length > 0 ? (
         <>
-          <group ref={setDragged} position={anchor}>
-            {picked.map((geom) => (
-              <Geom key={geom.name} geom={geom} selected onSelect={onSelect} origin={anchor} />
-            ))}
+          {/* Turned like the object, so rotate and scale work along its own axes; the inner group undoes the turn. */}
+          <group ref={setDragged} position={target.anchor} quaternion={target.turn}>
+            <group quaternion={new Quaternion(...target.turn).invert()}>
+              {picked.map((geom) => (
+                <Geom
+                  key={geom.name}
+                  geom={geom}
+                  selected
+                  onSelect={onSelect}
+                  origin={target.anchor}
+                  onPlace={onPlace}
+                />
+              ))}
+            </group>
           </group>
           {/* Attached to the group above (not a wrapper of its own), so the drag moves what is read on release. */}
           <TransformControls
             object={dragged ?? undefined}
-            mode="translate"
+            mode={CONTROL_MODES[gizmo]}
+            space={gizmo === "move" ? "world" : "local"}
+            translationSnap={free || !snap?.move ? null : snap.move}
+            rotationSnap={free || !snap?.rotate ? null : snap.rotate * DEGREES}
             onMouseUp={() => {
-              const group = dragged;
-              if (!group) {
-                return;
-              }
-              const delta = fromThreePosition([
-                group.position.x - anchor[0],
-                group.position.y - anchor[1],
-                group.position.z - anchor[2],
-              ]);
-              // Back to where the engine has it; the engine's answer moves it for real.
-              group.position.set(anchor[0], anchor[1], anchor[2]);
-              if (delta.some((value) => Math.abs(value) > 1e-6)) {
-                onMove(selected, delta);
+              if (dragged) {
+                reportDrag(dragged, target, gizmo, props);
               }
             }}
           />
@@ -143,7 +256,13 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
           renderOrder={1}
         >
           <GeomShape geom={geom} />
-          <meshStandardMaterial color={color} transparent opacity={PROPOSAL_OPACITY} depthWrite={false} />
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={PROPOSAL_OPACITY}
+            depthWrite={false}
+            envMapIntensity={0}
+          />
           <Edges color={color} />
         </mesh>
       ))}
@@ -151,43 +270,65 @@ function GhostGeoms({ geoms, color }: { geoms: readonly SceneGeom[]; color: stri
   );
 }
 
-// The world's sky: a gradient dome, its ambient light and its haze; without one, the flat panel color of the editor.
-function Sky({ look, scale, background }: { look: SkyLook | null; scale: number; background: string }) {
-  const dome = useMemo(() => (look ? createSkyDome(look, SKY_RADIUS * scale) : null), [look, scale]);
-  useEffect(
-    () => () => {
-      dome?.geometry.dispose();
-      dome?.material.dispose();
-    },
-    [dome],
-  );
-  return (
-    <>
-      <color attach="background" args={[look?.horizon ?? background]} />
-      <ambientLight intensity={look?.ambient ?? AMBIENT_INTENSITY} />
-      {dome ? <primitive object={dome} /> : null}
-      {look?.fog ? <fogExp2 attach="fog" args={[look.fog.color, look.fog.density]} /> : null}
-    </>
-  );
+function viewLabel(editing: boolean): string {
+  return editing
+    ? "3D view, press F to frame everything, W to move, E to rotate and R to scale"
+    : "3D view, press F to frame everything";
 }
 
-function frameOnKey(view: CameraView | null) {
+function viewKeys(view: CameraView | null, onGizmo: ((mode: GizmoMode) => void) | undefined) {
   return (event: KeyboardEvent<HTMLDivElement>) => {
-    if (view && (event.key === "f" || event.key === "F") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
+    if (view && (event.key === "f" || event.key === "F") && plain) {
       event.preventDefault();
       view.onFrameAll();
+      return;
+    }
+    const gizmo = onGizmo
+      ? gizmoForKey({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey })
+      : null;
+    if (gizmo) {
+      event.preventDefault();
+      onGizmo?.(gizmo);
     }
   };
 }
 
 // Draws the engine's compiled scene; it never moves anything itself, a drag or a pick only reports what was done.
+// The sky's color grade applies to the finished picture: a filter over the canvas and a multiplied tint.
 export default function SceneView(props: SceneViewProps) {
+  const grade = useMemo(() => imageGrade(props.description.sky), [props.description.sky]);
+  const labels = useRef<HTMLDivElement>(null);
+  return (
+    <div className="relative h-full w-full">
+      <div className="relative h-full w-full" style={{ filter: grade.filter }}>
+        <SceneCanvas {...props} exposure={grade.exposure} labels={labels} />
+        {grade.tint ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 mix-blend-multiply"
+            style={{ backgroundColor: grade.tint }}
+          />
+        ) : null}
+      </div>
+      {/* Labels drawn over the 3D view live outside the canvas, so they stay put when the canvas re-renders. */}
+      <div ref={labels} className="pointer-events-none absolute inset-0 overflow-hidden" />
+    </div>
+  );
+}
+
+function SceneCanvas(props: SceneViewProps & { exposure: number; labels: RefObject<HTMLDivElement | null> }) {
   const colors = useMemo(sceneColors, []);
-  const { description, framing = CAMERA_FRAMES, follows } = props;
+  const { description, framing = CAMERA_FRAMES, follows, viewCube = true } = props;
   const view = useContext(CameraViewContext);
   const scale = Math.max(1, framing / CAMERA_FRAMES);
   const track = useRef<PoseTrack | null>(null);
   const look = useMemo(() => skyLook(description.sky, scale), [description.sky, scale]);
+  const playing = props.mode === "play";
+  const signals = props.mode === "play" ? props.signals : undefined;
+  const player = props.mode === "play" ? props.player : undefined;
+  const feed = useMemo(() => (playing ? signalFeed(signals, player) : undefined), [playing, signals, player]);
+  const copies = (props.mode === "play" ? props.copies : undefined) ?? 1;
   // One object per scale, so a re-render never puts the camera back where it started.
   const start = useMemo(
     () => ({
@@ -200,32 +341,64 @@ export default function SceneView(props: SceneViewProps) {
   );
   return (
     <Canvas
+      shadows="percentage"
       camera={start}
       dpr={[1, 2]}
       tabIndex={view ? 0 : undefined}
-      aria-label={view ? "3D view, press F to frame everything" : undefined}
-      onKeyDown={frameOnKey(view)}
+      aria-label={view ? viewLabel(props.mode !== "play" && props.onGizmo !== undefined) : undefined}
+      onKeyDown={viewKeys(view, props.mode === "play" ? undefined : props.onGizmo)}
       onPointerMissed={() => (props.mode === "play" ? undefined : props.onSelect(null))}
     >
-      <Sky look={look} scale={scale} background={colors.background} />
-      {description.lights.map((light) => (
-        <directionalLight key={light.name} {...sceneLight(light)} />
-      ))}
-      <Grid
-        infiniteGrid
-        cellColor={colors.grid}
-        sectionColor={colors.gridStrong}
-        fadeDistance={60 * scale}
-        position={[0, 0.001, 0]}
+      <Sky
+        description={description}
+        look={look}
+        scale={scale}
+        background={colors.background}
+        ground={groundColor(description.geoms, colors.background)}
+        exposure={props.exposure}
       />
+      <Suns description={description} />
+      {/* The grid is an editing aid: Play, replays and training show the world as it is, and so does a world
+      with its own ground unless the grid is switched on. */}
+      {props.mode === "play" || !helperGridShown(props.grid?.mode ?? "auto", description.geoms) ? null : (
+        <Grid
+          infiniteGrid
+          cellSize={props.grid?.cell ?? 1}
+          sectionSize={(props.grid?.cell ?? 1) * GRID_SECTION}
+          cellColor={colors.grid}
+          sectionColor={colors.gridStrong}
+          fadeDistance={60 * scale}
+          position={[0, 0.001, 0]}
+        />
+      )}
       {props.mode === "play" ? (
-        <LiveGeoms geoms={description.geoms} poses={props.poses} track={track} onPick={props.onPick} />
+        <LiveGeoms
+          geoms={description.geoms}
+          poses={props.poses}
+          player={props.player}
+          track={track}
+          onPick={props.onPick}
+          feed={feed}
+          copies={copies}
+        />
       ) : (
         <EditGeoms {...props} />
       )}
+      {props.rays && props.rays.length > 0 ? (
+        <RayOverlay
+          rays={props.rays}
+          values={props.rayValues ?? false}
+          track={props.mode === "play" ? track : null}
+          player={props.mode === "play" ? props.player : undefined}
+          layer={props.labels}
+        />
+      ) : null}
+      <WorldDecor description={description} feed={feed} copies={copies} track={playing ? track : null} />
       <ZoneMarkers
         zones={description.zones ?? []}
-        colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal }}
+        colors={{ goal: colors.goal, spawn: colors.spawn, area: colors.goal, spot: colors.spot }}
+        feed={feed}
+        copies={copies}
       />
       {props.ghosts && props.ghosts.length > 0 ? <GhostGeoms geoms={props.ghosts} color={colors.proposal} /> : null}
       {view ? (
@@ -240,7 +413,7 @@ export default function SceneView(props: SceneViewProps) {
       ) : (
         <OrbitControls makeDefault />
       )}
-      {props.mode === "play" ? null : (
+      {props.mode === "play" || !viewCube ? null : (
         <GizmoHelper alignment="top-right" margin={[72, 72]}>
           <GizmoViewcube />
         </GizmoHelper>

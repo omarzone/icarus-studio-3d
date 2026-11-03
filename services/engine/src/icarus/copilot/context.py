@@ -8,13 +8,13 @@ from icarus.contracts.specs import BodySpec
 from icarus.contracts.training import MetricPoint, RunStatus
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
 from icarus.design.scene import object_extents, scene_description
-from icarus.library.components import COMPONENTS
-from icarus.library.pieces import PIECES
+from icarus.library.components import COMPONENTS, default_component
+from icarus.library.pieces import PIECES, piece_summary, pieces_by_category
 from icarus.library.rewards import REWARD_TERMS, term_families, term_fits
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
 from icarus.projects.operations import apply_operations, empty_project
-from icarus.sim.model_state import CONTROL_PERIOD
+from icarus.sim.model_state import control_period
 from icarus.training.run_store import RunStore
 from icarus.training.schedule import RECOMMENDED_STEPS
 
@@ -98,17 +98,17 @@ def _library(state: ProjectState) -> dict[str, Any]:
             for term, info in REWARD_TERMS.items()
             if term_fits(term, state.project.task.family)
         },
-        "pieces": {piece_id: piece.description for piece_id, piece in PIECES.items()},
+        "pieces": pieces_by_category(),
         "templates": {template_id: info.description for template_id, info in TEMPLATES.items()},
     }
 
 
-def _episodes(point: MetricPoint) -> dict[str, Any]:
+def _episodes(point: MetricPoint, period: float) -> dict[str, Any]:
     return {
         "step": point.step,
         "episode_return": point.episode_return,
         "episode_length": point.episode_length,
-        "episode_seconds": None if point.episode_length is None else round(point.episode_length * CONTROL_PERIOD, 2),
+        "episode_seconds": None if point.episode_length is None else round(point.episode_length * period, 2),
         "success_rate": point.success_rate,
         "failure_rate": point.failure_rate,
         "reward_terms": point.reward_terms,
@@ -126,6 +126,7 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
     evaluations = [point for point in metrics if point.kind == "eval"]
     training = [point for point in metrics if point.kind == "train"]
     recommended = RECOMMENDED_STEPS[state.project.task.family]
+    period = control_period(runs.folder(status.run_id).project())
     return {
         "name": status.name,
         "state": status.state,
@@ -136,9 +137,11 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
         "far_below_recommended": status.total_steps < recommended * FAR_BELOW,
         "copies": status.copies,
         # One step is one control decision, so steps convert to simulated seconds only through this rate.
-        "control_rate_hz": round(1 / CONTROL_PERIOD),
+        "control_rate_hz": round(1 / period),
         "best_step": status.best_step,
         "success_rate": status.success_rate,
+        # The step of the evaluation that measured success_rate; the run's own step is usually further on.
+        "success_measured_at_step": evaluations[-1].step if evaluations else None,
         "failure": status.failure.reason if status.failure else None,
         "evaluations": [
             {
@@ -149,8 +152,8 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
             }
             for point in evaluations[-RECENT_EVALUATIONS:]
         ],
-        "latest_evaluation": _episodes(evaluations[-1]) if evaluations else None,
-        "latest_training": _episodes(training[-1]) if training else None,
+        "latest_evaluation": _episodes(evaluations[-1], period) if evaluations else None,
+        "latest_training": _episodes(training[-1], period) if training else None,
     }
 
 
@@ -188,7 +191,7 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
                 "family": project.task.family,
                 "rewards": [{"term": term.term, "weight": term.weight} for term in project.task.rewards],
             },
-            "brain": project.brain.model_dump(),
+            "brain": project.brain.model_dump(exclude_defaults=True),
             "design_checks": [{"check": check.label, "status": check.status} for check in state.report.checks],
         },
         "selection": object_detail(state, selection),
@@ -199,7 +202,16 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
-RUN_HEADLINE = ("name", "state", "step", "total_steps", "recommended_steps", "far_below_recommended", "success_rate")
+RUN_HEADLINE = (
+    "name",
+    "state",
+    "step",
+    "total_steps",
+    "recommended_steps",
+    "far_below_recommended",
+    "success_rate",
+    "success_measured_at_step",
+)
 
 
 def _rounded(values: Any) -> Any:
@@ -250,7 +262,7 @@ def lean_context(
             "family": project.task.family,
             "rewards": [{"term": term.term, "weight": term.weight} for term in project.task.rewards],
         },
-        "brain": project.brain.model_dump(),
+        "brain": project.brain.model_dump(exclude_defaults=True),
         "design_checks": [{"check": check.label, "status": check.status} for check in state.report.checks],
         "latest_run": latest if isinstance(latest, str) else {key: latest[key] for key in RUN_HEADLINE},
         "selection": object_detail(state, selection),
@@ -258,7 +270,7 @@ def lean_context(
         "open_proposal": open_proposal,
         "library": {
             "component_kinds": sorted(COMPONENTS),
-            "pieces": sorted(PIECES),
+            "pieces": {category: list(pieces) for category, pieces in pieces_by_category().items()},
             "reward_terms": sorted(term for term in REWARD_TERMS if term_fits(term, project.task.family)),
             "task_families": sorted({info.family for info in REWARD_TERMS.values()}),
             "templates": {template_id: info.label for template_id, info in TEMPLATES.items()},
@@ -267,7 +279,7 @@ def lean_context(
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
-SENSOR_KINDS = ("distance_ray", "balance", "touch")
+SENSOR_KINDS = ("distance_ray", "balance", "touch", "speed", "target")
 
 
 def _choices(kind: str, prop: str) -> list[str]:
@@ -277,7 +289,12 @@ def _choices(kind: str, prop: str) -> list[str]:
 
 def _abilities(body: BodySpec) -> dict[str, Any]:
     kinds = [component.kind for obj in body.objects for component in obj.components]
-    return {"motors": kinds.count("motor"), "sensors": sorted({kind for kind in kinds if kind in SENSOR_KINDS})}
+    return {
+        "motors": kinds.count("motor"),
+        # A vehicle drives its wheels itself: the brain commands throttle, brake and steering.
+        "vehicle": "vehicle" in kinds,
+        "sensors": sorted({kind for kind in kinds if kind in SENSOR_KINDS}),
+    }
 
 
 def design_rules() -> dict[str, str]:
@@ -290,10 +307,24 @@ def design_rules() -> dict[str, str]:
         ),
         "movement": (
             f"Bodies move only through motors ({', '.join(_choices('motor', 'kind'))}) that drive their joints "
-            f"({', '.join(joints)}). The library has no thruster, propeller, wing or buoyancy: nothing can fly, "
-            "hover or swim, and a body without motors cannot learn to move."
+            f"({', '.join(joints)}), or as a vehicle: a vehicle component on the root drives its wheels with "
+            "throttle, brake and steering. The library has no thruster, propeller, wing or buoyancy: nothing can fly, "
+            "hover or swim, and a body without motors or a vehicle cannot learn to move."
         ),
     }
+
+
+def piece_reference(piece_id: str) -> dict[str, Any]:
+    """A piece as the architect copies it: its category, summary and object with only the values that differ from
+    the library defaults, which a copy gets back when it is placed."""
+    piece = PIECES[piece_id]
+    obj = piece.object.model_dump()
+    for component, spec in zip(obj["components"], piece.object.components, strict=True):
+        defaults = default_component(spec.kind, spec.id).properties
+        component["properties"] = {
+            name: value.model_dump() for name, value in spec.properties.items() if defaults.get(name) != value
+        }
+    return {"category": piece.category, "summary": piece_summary(piece), "object": obj}
 
 
 def design_reference() -> str:
@@ -315,7 +346,7 @@ def design_reference() -> str:
     reference = {
         "rules": design_rules(),
         "templates": templates,
-        "pieces": {piece_id: piece.object.model_dump() for piece_id, piece in PIECES.items()},
+        "pieces": {piece_id: piece_reference(piece_id) for piece_id in PIECES},
         "components": {
             kind: {schema.id: property_schema(schema, False) for schema in spec.properties}
             for kind, spec in COMPONENTS.items()

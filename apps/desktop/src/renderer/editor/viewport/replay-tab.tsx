@@ -1,18 +1,10 @@
 // TAB-REPLAY
 import { Pause, Play } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import type { CheckpointMark, Replay } from "../../ports/training-port.ts";
-import {
-  advance,
-  frameAt,
-  nextSpeed,
-  type PlayerState,
-  playerAt,
-  scrub,
-  startPlayer,
-  togglePlaying,
-} from "../../scene/rollout-player.ts";
+import { frameAt, nextSpeed, playerAt, scrub, togglePlaying } from "../../scene/rollout-player.ts";
+import { useRolloutPlayer } from "../../scene/use-rollout-player.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { RenderBoundary } from "../../ui/render-boundary.tsx";
 import { Select } from "../../ui/select.tsx";
@@ -28,12 +20,17 @@ const SCRUB_STEPS = 1000;
 const ignorePick = () => undefined;
 
 // Replay of any checkpoint's recorded episode, exactly as MuJoCo computed it: play, scrub and change speed.
-export function ReplayTab({ training, ...surface }: ViewportSurfaceProps & { training?: TrainingView }) {
+// `start` is a checkpoint to open on and play at once, as the live view's episode bar asks.
+export function ReplayTab({
+  training,
+  start = null,
+  ...surface
+}: ViewportSurfaceProps & { training?: TrainingView; start?: number | null }) {
   return (
     <ViewportSurface {...surface}>
       {training ? (
         <div data-ui-id="TAB-REPLAY" className="absolute inset-0 bg-panel">
-          <Checkpoints project={training.project} />
+          <Checkpoints project={training.project} start={start} />
         </div>
       ) : null}
     </ViewportSurface>
@@ -45,9 +42,9 @@ function defaultStep(marks: readonly CheckpointMark[]): number | null {
   return (replayable.find((mark) => mark.best) ?? replayable.at(-1))?.step ?? null;
 }
 
-function Checkpoints({ project }: { project: string }) {
+function Checkpoints({ project, start }: { project: string; start: number | null }) {
   const checkpoints = useCheckpoints(project);
-  const [chosen, setChosen] = useState<number | null>(null);
+  const [chosen, setChosen] = useState<number | null>(start);
   return (
     <QueryView
       query={checkpoints}
@@ -61,7 +58,9 @@ function Checkpoints({ project }: { project: string }) {
     >
       {(marks) => {
         const step = chosen !== null && marks.some((mark) => mark.step === chosen) ? chosen : defaultStep(marks);
-        return step === null ? null : <ReplayLoader project={project} marks={marks} step={step} onChoose={setChosen} />;
+        return step === null ? null : (
+          <ReplayLoader project={project} marks={marks} step={step} autoplay={step === start} onChoose={setChosen} />
+        );
       }}
     </QueryView>
   );
@@ -71,43 +70,36 @@ type LoaderProps = {
   project: string;
   marks: readonly CheckpointMark[];
   step: number;
+  autoplay: boolean;
   onChoose: (step: number) => void;
 };
 
-function ReplayLoader({ project, marks, step, onChoose }: LoaderProps) {
+function ReplayLoader({ project, marks, step, autoplay, onChoose }: LoaderProps) {
   const replay = useReplay(project, step);
   return (
     <QueryView query={replay} loading={<LoadingState label="Loading the recorded episode" />}>
-      {(data) => <ReplayPlayer key={step} replay={data} marks={marks} step={step} onChoose={onChoose} />}
+      {(data) => (
+        <ReplayPlayer key={step} replay={data} marks={marks} step={step} autoplay={autoplay} onChoose={onChoose} />
+      )}
     </QueryView>
   );
 }
 
-// Moves the player with the screen's frames while it plays.
-function usePlayer(duration: number) {
-  const [player, setPlayer] = useState<PlayerState>(() => startPlayer(duration));
-  useEffect(() => {
-    if (!player.playing) {
-      return;
-    }
-    let last = performance.now();
-    let frame = requestAnimationFrame(function tick(now) {
-      setPlayer((state) => advance(state, (now - last) / 1000));
-      last = now;
-      frame = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [player.playing]);
-  return [player, setPlayer] as const;
-}
+type PlayerProps = {
+  replay: Replay;
+  marks: readonly CheckpointMark[];
+  step: number;
+  autoplay: boolean;
+  onChoose: (step: number) => void;
+};
 
-type PlayerProps = { replay: Replay; marks: readonly CheckpointMark[]; step: number; onChoose: (step: number) => void };
-
-function ReplayPlayer({ replay, marks, step, onChoose }: PlayerProps) {
-  const [player, setPlayer] = usePlayer(replay.duration);
+function ReplayPlayer({ replay, marks, step, autoplay, onChoose }: PlayerProps) {
+  const [player, setPlayer] = useRolloutPlayer(replay.duration, autoplay);
   const times = useMemo(() => replay.frames.map((frame) => frame.time), [replay]);
   const start = times[0] ?? 0;
-  const poses = replay.frames[frameAt(times, start + player.time)]?.poses ?? new Map();
+  const shownFrame = replay.frames[frameAt(times, start + player.time)];
+  const poses = shownFrame?.poses ?? new Map();
+  const signals = useMemo(() => [shownFrame?.signals], [shownFrame]);
   const shown = playerAt(player);
   const mark = marks.find((item) => item.step === step);
   const options = marks
@@ -121,7 +113,7 @@ function ReplayPlayer({ replay, marks, step, onChoose }: PlayerProps) {
         )}
       >
         <Suspense fallback={null}>
-          <SceneView mode="play" description={replay.scene} poses={poses} onPick={ignorePick} />
+          <SceneView mode="play" description={replay.scene} poses={poses} signals={signals} onPick={ignorePick} />
         </Suspense>
       </RenderBoundary>
       <div className="absolute top-3 right-3 flex max-w-80 flex-col gap-0.5 rounded-card-sm bg-overlay px-3.25 py-2.5">
@@ -150,7 +142,11 @@ function ReplayPlayer({ replay, marks, step, onChoose }: PlayerProps) {
           min={0}
           max={SCRUB_STEPS}
           value={Math.round(shown.played * SCRUB_STEPS)}
-          onChange={(event) => setPlayer((state) => scrub(state, Number(event.currentTarget.value) / SCRUB_STEPS))}
+          onChange={(event) => {
+            // Read now: the updater runs after React has let go of the event.
+            const share = Number(event.currentTarget.value) / SCRUB_STEPS;
+            setPlayer((state) => scrub(state, share));
+          }}
           className="h-1 min-w-0 flex-1 accent-fg hover:opacity-90 active:opacity-80"
         />
         <span className="font-mono text-meta text-fg-tertiary">{shown.length}</span>

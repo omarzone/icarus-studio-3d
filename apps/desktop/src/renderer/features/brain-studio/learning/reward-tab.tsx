@@ -1,9 +1,16 @@
 // TAB-REWARD
+import { X } from "lucide-react";
+import { Act } from "../../../app/navigation/go-to.tsx";
 import type { RewardKind, RewardTerm } from "../../../ports/brain-port.ts";
+import { buttonClass } from "../../../ui/button-styles.ts";
 import { EmptyState } from "../../../ui/states.tsx";
 import { ValueSlider } from "../value-slider.tsx";
 
-type Props = { terms: readonly RewardTerm[]; onWeight: (id: string, weight: number) => void };
+type Props = {
+  terms: readonly RewardTerm[];
+  onWeight: (id: string, weight: number) => void;
+  onRemove: (id: string) => void;
+};
 
 const FILL: Record<RewardKind, string> = {
   goal: "bg-fg",
@@ -29,9 +36,14 @@ function roundWeight(value: number): number {
 }
 
 // One card per reward term: name, signed weight, plain description and a slider for its size.
-export function RewardTab({ terms, onWeight }: Props) {
+export function RewardTab({ terms, onWeight, onRemove }: Props) {
   if (terms.length === 0) {
-    return <EmptyState title="No reward yet" body="Describe what success looks like and the copilot proposes one." />;
+    return (
+      <EmptyState
+        title="No reward yet"
+        body="Add a term with + or describe what success looks like and the copilot proposes one."
+      />
+    );
   }
   return (
     <div className="grid h-full grid-cols-4 gap-2.5 px-3 pt-2.5 pb-3">
@@ -40,6 +52,15 @@ export function RewardTab({ terms, onWeight }: Props) {
           <div className="flex items-baseline gap-2">
             <span className="truncate font-semibold">{term.name}</span>
             <span className={`ml-auto font-mono text-ui ${VALUE_TONE[term.kind]}`}>{formatWeight(term.weight)}</span>
+            <Act
+              cta={`Remove ${term.name}`}
+              aria-label={`Remove ${term.name} from the reward`}
+              title="Remove from the reward"
+              onClick={() => onRemove(term.id)}
+              className={buttonClass("icon", "size-5! self-center")}
+            >
+              <X size={12} strokeWidth={1.75} aria-hidden />
+            </Act>
           </div>
           <span className="text-meta text-fg-secondary">{term.detail}</span>
           <ValueSlider

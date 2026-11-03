@@ -12,6 +12,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 
 // Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
+const POLL_MS = 700;
 
 // Pose tracking progress, honestly: the frame being tracked, the steps and which one runs now.
 export function TrackingDialog() {
@@ -24,7 +25,11 @@ export function TrackingDialog() {
 
 function Tracking({ clip }: { clip: string }) {
   const port = usePort(motionPort);
-  const query = useQuery({ queryKey: ["motion", clip, "tracking"], queryFn: () => port.getTracking(clip) });
+  const query = useQuery({
+    queryKey: ["motion", clip, "tracking"],
+    queryFn: () => port.getTracking(clip),
+    refetchInterval: (current) => (current.state.data?.state === "running" ? POLL_MS : false),
+  });
   return (
     <Dialog
       title={query.data ? `Tracking ${query.data.file}` : "Tracking the motion"}
@@ -55,6 +60,11 @@ function Tracking({ clip }: { clip: string }) {
             </div>
             <ProgressBar percent={tracking.percent} label="Tracking progress" />
             <ProgressSteps steps={tracking.steps} />
+            {tracking.message ? (
+              <p role="alert" className="text-ui text-warn">
+                {tracking.state === "stopped" ? "Stopped" : "Tracking failed"}: {tracking.message}
+              </p>
+            ) : null}
           </>
         )}
       </QueryView>

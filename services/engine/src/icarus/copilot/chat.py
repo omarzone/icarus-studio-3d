@@ -3,8 +3,9 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from icarus.contracts.context_usage import ContextRequest, ContextUsage
 from icarus.contracts.copilot import (
     Autonomy,
     Capability,
@@ -14,11 +15,12 @@ from icarus.contracts.copilot import (
     CopilotProposal,
     SendMessage,
 )
-from icarus.contracts.events import EngineEvent, ProposalAppliedEvent
+from icarus.contracts.events import EngineEvent, MessagePostedEvent, ProposalAppliedEvent
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.project import Project
 from icarus.contracts.scene import SceneDescription
 from icarus.copilot.agent.budget import AgentLimits
+from icarus.copilot.agent.context_usage import MeterSources, measure_context
 from icarus.copilot.agent.harness import SUBAGENT_NOTE, chat_tools, worker_tools
 from icarus.copilot.agent.loop import run_loop
 from icarus.copilot.agent.prompt import system_prompt
@@ -45,6 +47,10 @@ from icarus.design.scene import scene_description
 from icarus.projects.store import PROJECT_ID, ProjectStore
 from icarus.sim.views import ViewRenderer
 from icarus.training.run_store import RunStore
+
+if TYPE_CHECKING:
+    from icarus.motion.clip_store import ClipStore
+    from icarus.projects.skins import SkinStore
 
 __all__ = ["ChatReply", "Copilot", "CopilotBusy", "ProposalClosed", "ProposalOutdated", "UnknownProposal", "dry_run"]
 
@@ -141,6 +147,10 @@ class Copilot:
         """Hands the chat's tools the coach and the autopilot, which are built after the copilot they post through."""
         self._services = replace(self._services, coaching=coaching)
 
+    def attach_stores(self, skins: "SkinStore", clips: "ClipStore") -> None:
+        """Hands the rigging and motion tools where models and reference clips are kept."""
+        self._services = replace(self._services, skins=skins, clips=clips)
+
     def attach_harness(self, harness: Harness) -> None:
         """Turns on the harness extensions: their tools, the skill catalog, memory, hooks and live events."""
         self._harness = harness
@@ -157,11 +167,12 @@ class Copilot:
                 _retire_open(stored)
             stored.messages.append(message)
             stored.proposals += proposals
+        self._publish(MessagePostedEvent(type="message_posted", message_id=message.id, role=message.role), project_id)
         return self.conversation(project_id)
 
     def language(self, project_id: str) -> Language:
         """The language of the person's latest message, for what the copilot writes on its own."""
-        conversation = self.conversation(project_id)
+        conversation = self._conversations.read(project_id)
         latest = next((item for item in reversed(conversation.messages) if item.role == "user"), None)
         return detect(latest.text) if latest else "en"
 
@@ -208,6 +219,28 @@ class Copilot:
         client, capability, sees = self._client(media)
         conversation = self.conversation(project_id)
         user_message = new_message("user", message.text, attachments=media.infos)
+        # Stored at once, so messages the coach posts while the copilot works come after it and speak its language.
+        with self._conversations.editing(project_id) as stored:
+            stored.messages.append(user_message)
+        try:
+            return self._answer(project_id, message, media, client, capability, sees, conversation, user_message)
+        except BaseException:
+            # A turn that fails leaves the conversation as it was, so sending again does not repeat the message.
+            with self._conversations.editing(project_id) as stored:
+                stored.messages = [item for item in stored.messages if item.id != user_message.id]
+            raise
+
+    def _answer(
+        self,
+        project_id: str,
+        message: SendMessage,
+        media: TurnMedia,
+        client: ModelClient,
+        capability: Capability,
+        sees: bool,
+        conversation: Conversation,
+        user_message: CopilotMessage,
+    ) -> Conversation:
         if self._settings.refuses_tools(capability):
             return self._single_shot(project_id, message, media, client, sees, user_message)
         setup = self._setup(client, capability)
@@ -219,11 +252,11 @@ class Copilot:
         except InputRejected:
             if not media.pictures or sees:
                 raise
-            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
+            return self._record(project_id, new_message("copilot", CANNOT_SEE))
         with self._conversations.editing(project_id) as stored:
             if result.proposals:
                 _retire_open(stored)
-            stored.messages += [user_message, result.message]
+            stored.messages.append(result.message)
             stored.proposals += result.proposals
             stored.suggestions = result.suggestions
             stored.suggestion_items = result.suggestion_items
@@ -245,6 +278,22 @@ class Copilot:
             skills=skills,
             memory=harness.memory,
         )
+
+    def context_usage(self, project_id: str, request: ContextRequest) -> ContextUsage:
+        """How full the next turn's prompt would be, built from the same pieces a turn uses."""
+        harness = self._harness
+        skills = skill_catalog_text() if self._tools is not None else ""
+        sources = MeterSources(
+            self._services,
+            self._settings,
+            self._summaries,
+            self._attachments,
+            self._limits,
+            self._tools,
+            skills,
+            harness.memory,
+        )
+        return measure_context(sources, self.conversation(project_id), request)
 
     def subagent_loop(self, job: SubagentJob) -> SubagentOutcome:
         """A subagent's turn: the loop with the job's brief, tools, skills and budget, outside the conversation."""
@@ -294,6 +343,8 @@ class Copilot:
         state = self._projects.state(project_id)
         context = project_context(state, self._runs, message.selection, message.workspace)
         conversation = self.conversation(project_id)
+        # The person's message is already stored; the prompt carries it once, as the message itself.
+        conversation.messages = [item for item in conversation.messages if item.id != user_message.id]
         history = history_text(conversation)
         autopilot = conversation.autonomy == "autopilot"
         system = SYSTEM.format(
@@ -307,7 +358,7 @@ class Copilot:
         except InputRejected:
             if not media.pictures or sees:
                 raise
-            return self._record(project_id, user_message, new_message("copilot", CANNOT_SEE))
+            return self._record(project_id, new_message("copilot", CANNOT_SEE))
         answer, draft = reply.value.answer, reply.value.proposal
         if review.proposal_problem:
             answer = f"{answer} I could not turn this into a change that passes validation: {review.proposal_problem}"
@@ -331,7 +382,7 @@ class Copilot:
         with self._conversations.editing(project_id) as stored:
             if proposal:
                 _retire_open(stored)
-            stored.messages += [user_message, copilot_message]
+            stored.messages.append(copilot_message)
             stored.proposals += [proposal] if proposal else []
             stored.suggestions = suggestions
         if proposal and autopilot:
@@ -347,9 +398,9 @@ class Copilot:
                         item.text = f"{item.text} {outcome.text}"
         return self.conversation(project_id)
 
-    def _record(self, project_id: str, user: CopilotMessage, answer: CopilotMessage) -> Conversation:
+    def _record(self, project_id: str, answer: CopilotMessage) -> Conversation:
         with self._conversations.editing(project_id) as conversation:
-            conversation.messages += [user, answer]
+            conversation.messages.append(answer)
             conversation.suggestions = []
         return self.conversation(project_id)
 

@@ -9,7 +9,7 @@ import { EmptyState } from "../../../ui/states.tsx";
 import { resultsKeys, useReferenceTests } from "../use-results.ts";
 import { ReferenceTestTab } from "./reference-test-tab.tsx";
 
-// One tab per behavior test that has run.
+// One tab per behavior test that has run; the selected one shows both checkpoints' paths.
 export function ReferenceViewPanel({ project, className = "flex-1" }: { project: string; className?: string }) {
   const port = usePort(resultsPort);
   const client = useQueryClient();
@@ -45,10 +45,16 @@ export function ReferenceViewPanel({ project, className = "flex-1" }: { project:
     >
       {selected === "" ? (
         <QueryView query={tests}>
-          {() => <EmptyState title="No test has run yet" body="Run a behavior test to compare it with recordings." />}
+          {() => <EmptyState title="No behavior test yet" body="Add a behavior test to judge checkpoints on it." />}
         </QueryView>
       ) : (
-        <QueryView query={comparison}>{(data) => <ReferenceTestTab comparison={data} />}</QueryView>
+        <QueryView
+          query={comparison}
+          isEmpty={(data) => data.sides.length === 0}
+          empty={<EmptyState title="No checkpoint to test yet" body="Train a run, then run a behavior test on it." />}
+        >
+          {(data) => <ReferenceTestTab comparison={data} />}
+        </QueryView>
       )}
     </Panel>
   );

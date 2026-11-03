@@ -94,6 +94,21 @@ export function createBrainFixture(): BrainPort {
       const senses = find(brain).senses;
       return edit(brain, "senses", { ...senses, inputs: toggle(senses.inputs, id) });
     },
+    addInput: async (brain) => {
+      const senses = find(brain).senses;
+      const id = `ray-${senses.inputs.length + 1}`;
+      const added = { id, name: `Ray ${senses.inputs.length + 1}`, detail: "1 ray · 5 m · ahead", enabled: true };
+      return edit(brain, "senses", { ...senses, inputs: [...senses.inputs, added] });
+    },
+    removeInput: async ({ brain, id }) => {
+      const senses = find(brain).senses;
+      return edit(brain, "senses", { ...senses, inputs: senses.inputs.filter((input) => input.id !== id) });
+    },
+    renameInput: async ({ brain, id, name }) => {
+      const senses = find(brain).senses;
+      const inputs = senses.inputs.map((input) => (input.id === id ? { ...input, name: name.trim() } : input));
+      return edit(brain, "senses", { ...senses, inputs });
+    },
     toggleOutput: async ({ brain, id }) => {
       const senses = find(brain).senses;
       return edit(brain, "senses", { ...senses, outputs: toggle(senses.outputs, id) });

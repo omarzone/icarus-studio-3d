@@ -116,10 +116,10 @@ icarus-studio-3d/
 │   │   │   ├── events.py     # in-process event bus
 │   │   │   ├── tasks.py      # background tasks registry
 │   │   │   ├── motion/       # planned: pose extraction, retargeting, animation export
-│   │   │   ├── hardware/     # planned: profiles, parts lists, URDF/ONNX export, runtime package
-│   │   │   └── bundles/      # planned: pack and unpack shareable bundles
+│   │   │   ├── hardware/     # body needs, hardware checks, URDF/MJCF/ONNX export, runtime package
+│   │   │   └── bundles/      # unpack community bundles into remixed projects; packing is planned
 │   │   └── tests/
-│   └── community/            # online service: accounts, bundle storage, catalog
+│   └── community/            # online service: accounts, creations, moderation, sharing (FastAPI, Alembic)
 ├── assets/
 │   ├── library/              # meshes and textures for library parts and presets, with licenses
 │   └── presets/              # ready-made bodies and worlds (including commercial robots)
@@ -151,6 +151,7 @@ icarus-studio-3d/
 | `DesignReport` | Compilation and physics test results for a revision |
 | `SceneDescription` | Bodies and geoms (type, size, material, mesh, skin) from the compiled model |
 | `RunConfig`, `RunStatus`, `MetricPoint`, `CheckpointInfo` | Training runs and their progress |
+| `AgentSpec`, `RunGroup`, `SceneAgent` | Several agents in one project, the runs started together for them and each agent's parts and lane in a scene |
 | `Rollout` | `fps`, body names, per-frame body poses (position xyz, quaternion wxyz), episode metrics |
 | `CopilotMessage`, `CopilotProposal` | Conversation turns (with attachments, steps, scene views and action buttons) and proposed operations with explanations |
 | `Diagnosis`, `FailureGroup` | Observations, evidence (frames, metrics), failure groups, hypotheses, a recommendation and proposed operations |
@@ -158,13 +159,16 @@ icarus-studio-3d/
 | `WarmStart` | A run that continues from another run's checkpoint |
 | `EngineEventEnvelope`, `TaskInfo` | Engine events (turns, steps, views, proposals, revisions, runs, diagnoses, tasks) and background tasks |
 | `SceneZone`, `SceneSky` | Task zones (spawn, goal, marked areas) and the world sky in a `SceneDescription` |
+| `SceneSignals` | Per frame of Play, rollouts and the live view: which goal rules hold, which vehicle lights are on, each floor plate's state and each display's value, measured by the engine |
+| `ScenePlate`, `SceneDisplay`, `SceneEyes` | Floor plates, digital displays and eyes in a `SceneDescription`, with the part a display or eyes sit on |
 | `ObjectSpec`, `ComponentSpec` | Any object in a world or body as a list of typed components |
-| `PropertySchema` | A component property: one of the 12 property types, unit, range, default, expert flag, randomizable |
+| `PropertySchema` | A component property: one of the 13 property types, unit, range, default, expert flag, randomizable |
 | `DesignIdea` | One of the alternatives the copilot proposes before building, with its preview and estimates |
 | `PlayCommand`, `PlayFrame`, `PlayEvent` | Play mode: tool actions from the user, streamed states and the behavior log |
 | `BehaviorTest`, `ReferenceRecording` | Recorded real behavior and how a simulated run is measured against it |
 | `MotionClip` | Reference motion retargeted to a body, with source and frame timing |
 | `BundleManifest` | Contents, versions, lineage and checksums of a shareable bundle |
+| `UnpackBundle`, `RemixOrigin` | A community bundle to make a project of, and the creation and version a remixed project came from |
 
 `pnpm gen:contracts` exports JSON Schema from these models and generates `packages/contracts/src/generated.ts`. `pnpm check` fails if the generated file is stale. Generated files are never edited by hand.
 
@@ -175,7 +179,7 @@ icarus-studio-3d/
 ### Processes
 
 - **API** (uvicorn) answers requests, applies operations, runs fast design tests, reads project and run directories and streams events. It never imports the training stack on a request path.
-- **Training worker** (`python -m icarus.training.worker <run_dir>`) is launched by `training/supervisor.py` as a subprocess with vectorized environments (`SubprocVecEnv`). It writes everything into its run directory and saves a final checkpoint when asked to stop. The supervisor executes one training run at a time per machine by default and queues the rest.
+- **Training worker** (`python -m icarus.training.worker <run_dir>`) is launched by `training/supervisor.py` as a subprocess with vectorized environments (`SubprocVecEnv`). It writes everything into its run directory and saves a final checkpoint when asked to stop. The supervisor executes one training run at a time per machine by default and queues the rest; a project with several agents trains as one group of runs, one worker per agent.
 
 ### Library
 
@@ -184,8 +188,16 @@ icarus-studio-3d/
 - **Parts:** parametric rigid shapes (capsule, box, sphere, cylinder, wheel, gripper finger) with density or mass ranges.
 - **Joints:** hinge, slide, ball and fixed, with axis and limit ranges.
 - **Actuators:** position and torque motors with force, speed and gear ranges; hardware components map to these with real limits.
-- **Sensors:** joint state, IMU, contact, rangefinder rays, target direction and distance, simple depth camera.
-- **Surfaces and objects:** ground materials (friction, restitution), ramps, steps, obstacles, movable objects, goal zones, parking spots.
+- **Vehicles:** a `vehicle` component on a body's root turns any wheeled body (car, truck, three-wheeler, two-wheeler, tracked or skid-steer robot) into three brain actions, throttle, brake and steering, in place of its raw motors ([ADR 009](./decisions/009-vehicle-actions.md)). `design/vehicle.py` finds the wheels (hinges with no limits turning sideways) and steering joints (limited upright hinges) and compiles a torque motor per drive wheel, a damper per wheel for the brake and a position servo per steering joint; `sim/vehicle.py` maps the actions with Ackermann geometry or differential drive and a speed limit, and derives brake, reverse and head light states. Parts with a `vehicle_light` glow from those states. Bodies without the component keep one action per motor.
+- **Sensors:** joint state, IMU, contact, rangefinder rays (one fan or a 360° ring through `spread`), speed (forward and side speed, turn rate), target (distance and bearing to the goal zone and which way it faces), simple depth camera.
+- **Ground:** a `ground` component makes an object the world's floor, a static slab whose `size` (width, depth, thickness) the inspector and the copilot edit and whose top stays at the object's height; bodies that leave it fall off its edge ([ADR 010](./decisions/010-ground-slab.md)). New projects start on a 100 by 100 m slab. A ground plane stored by older projects stays endless in the physics and is drawn out to the horizon; adding the component to it turns it into a slab.
+- **Surfaces and objects:** ground materials (friction, restitution), ramps, steps, obstacles, movable objects, goal zones, parking spots. Ready-made pieces (`library/pieces.py`) come in categories (basics, street, buildings, furniture, nature, props); each is one collider with mass or fixed, a surface for friction and a style drawn inside it, and look-only ornaments drawn past it at their own size (a tree's crown over its trunk, a street light's arm, a barrier gate's boom, a sign's plate; ADR 007 amendment), and look-only finish, roughness, metalness, glow and rounded box edges (`material.bevel`, drawn inside the collider, which stays a sharp box) that never change what a brain learned. The `block` piece is a fixed 1 m cube drawn with the `blocks` finish (a tile per metre on every face); the copilot's `pattern` grid, with layers stacked up, builds floors, platforms, steps and walls from it. Spheres stand beside boxes: the `ball` (movable) and `sphere` (fixed) pieces, and Play's Add object places a box, ball, block or sphere.
+- **Layouts:** seeded, parameterized recipes (`library/layouts.py`: parking lot, room, maze or corridor, city blocks, warehouse, forest or park, obstacle course, steps, block terrain) that lay out a whole environment from library pieces as plain `create_object` and `set_property` operations, grouped by area under one root, with the spawn at the start, the goal zone at the goal and the way between them checked open on a floor plan; a world on a ground slab grows the slab to hold everything laid out. A parking lot comes with its surroundings unless asked otherwise (`library/layout_surroundings.py`): ground patches laid edge to edge around it, raised sidewalks, streets with dashed center lines and zebra crossings, barrier gates at the entry lane, seeded trees on grass strips, street lights with arms, P marks and street furniture, all kept off the lot and the lane. Which piece draws each element lives in one table (`library/layout_pieces.py`), falling back to a styled primitive when the piece is absent. The obstacle course's summary lists its lanes (start and goal of each) for several agents.
+- **Skins:** a look-only `skin` component draws a glTF or GLB model stored in the project's `skins/` folder over an object, fitted inside its collider ([ADR 008](./decisions/008-mesh-skins.md)). Models are validated when stored (`projects/skin_files.py`: size cap, embedded buffers and textures only, no decoder extensions) and an import (`projects/skin_import.py`) adds an object with a box or capsule collider fitted to the model and mass from density. OBJ and STL meshes are read by `projects/mesh_files.py` and kept as GLB.
+- **Auto-rig:** `projects/rig_fit.py` fits a humanoid skeleton to a standing mesh from horizontal slices (two separate legs, the crotch, the torso's width, where the hands reach) with body proportions where slices cannot tell; `projects/rig_parts.py` builds the vault humanoid's layout sized from it, standing with its arms down, and each part wears the triangles nearest to it (rigid binding, look only). A mesh without two separate legs becomes one rigid part. `projects/auto_rig.py` runs it as a cancellable task and replaces the project's body in one batch. `design/skin_binding.py` measures how much of each part's skin is nearest to it and rebinds it.
+- **Rig audit and test poses:** `design/rig_audit.py` finds joints without a motor, motors too weak to lift their limb, a legged body without a balance sense and feet without touch, each with the operations that fix it; `design/test_poses.py` sets a body's joints in MuJoCo (rest, toward each limit, a frame of the clip), lets its motors hold them for a second and reports overlaps and sag. Neither changes the project.
+- **Floor plates, displays and eyes:** a `plate` component lays a thin static plate on the floor (pressure, target, start pad or custom) that compiles as a floor patch, never an obstacle; `sim/plates.py` measures it pressed (contact force from what it watches above its press force) or occupied (that thing's center over it) every step, and which goal plates a try has reached, in order when asked ([ADR 011](./decisions/011-floor-plates-and-displays.md)). A look-only `display` shows an engine value as a digital panel or a bar (time, steps, tries, the brain's training steps, successes, reward, distance or progress to the goal, a sensor, plates reached, or fixed text), and look-only `eyes` blink and look on a character's face; new walkers and humanoids have eyes.
+- **Body vault:** ready-made bodies (`library/body_vault.py`: biped, humanoid, dog, spider, hexapod, snake, wheeled rover, hopper, tripod, ball crawler), each with joints, motors and senses that fit it, a color, eyes, a task family and suggested reward terms. Every one stands still with its motors at zero and passes the design tests. `body_from_vault(body_id, at, color, prefix, scale)` returns the operations that add one (recolored, its ids prefixed, scaled from 0.5 to 2 with masses by the cube and motor forces by the fourth power); `use_vault_body` makes one a project's agent in place of its bodies. The catalog lists them under `bodies`, and `GET /library/bodies/{id}/scene` draws one for its card.
 - **Reward terms:** tested, documented terms such as forward progress, reach target, stay upright, alignment, grasp, place, energy cost, collision penalty and motion tracking, each with weight ranges.
 - **Brain templates:** network sizes, observation normalization and training budgets known to train for each task family.
 - **Connectomes:** published wiring maps of real nervous systems with their neuron model and the body they belong to, plus the sensory and motor mapping onto that body.
@@ -201,8 +213,8 @@ icarus-studio-3d/
 
 Everything in a world or body is an **object made of components**, whether it comes from the library, from the copilot or from an imported file. This is what lets the same editor handle a car, a fly, a robot arm or anything a user imports.
 
-- **Components** come from the library: Transform, Mesh, Material, Light, Physics body, Collider, Joint, Motor, sensors (distance ray, camera, touch, balance, smell, sound), brains (learned, connectome, from the community), learning (goal, reward term, randomize per copy) and world pieces (spawn point, zone, wind, water).
-- Each component declares its properties with a `PropertySchema`. Every property has one of **12 types**: number, slider, range, choice, list, switch, color, vector, count, asset, panel and read-only. The type, unit, range and default are enough for the desktop to render the right control, for the copilot to know what it may change, and for validation to reject anything out of range.
+- **Components** come from the library: Transform, Mesh, Material, Skin, Light, Physics body, Collider, Joint, Motor, sensors (distance ray, camera, touch, balance, smell, sound), brains (learned, connectome, from the community), learning (goal, reward term, randomize per copy) and world pieces (spawn point, zone, wind, water).
+- Each component declares its properties with a `PropertySchema`. Every property has one of **13 types**: number, slider, range, choice, list, switch, color, vector, count, asset, panel, read-only and text. The type, unit, range and default are enough for the desktop to render the right control, for the copilot to know what it may change, and for validation to reject anything out of range.
 - Properties marked `expert` are grouped under *Expert settings*; properties marked `randomizable` can be varied per training copy.
 - Adding or removing a component, and changing a property, are edit operations like any other.
 
@@ -213,13 +225,18 @@ When a project starts from a sentence, the Architect first returns three `Design
 ### Design compilation and tests
 
 - `design/compiler.py` turns `WorldSpec` + `BodySpec` into an MJCF model, computing inertias from part geometry and mass.
-- `design/checks.py` runs fast physics checks on every candidate revision: it compiles, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
+- `design/checks.py` runs fast physics checks on every candidate revision: it compiles, the goal zone stays clear of every obstacle collider across its own and the obstacles' randomization (`design/reachable.py`, sampling a grid of each range) and the body starts outside every obstacle, it settles at rest without exploding, every actuator moves its joint, sensors return finite values, bodies fit their hardware profile when one is set.
 - Failures become a `DesignReport` with readable reasons. The copilot receives the report and repairs the design through new operations, up to a fixed number of attempts.
 
 ### Simulation
 
 - `sim/` builds a Gymnasium environment from a compiled project: observations from the body's sensors, actions from its actuators, a reward composed from the task's reward terms, terminations from the task family.
 - Task families: **locomotion** (walk, run, climb, cross obstacles), **manipulation** (reach, grasp, sort, stack), **navigation** (go to target, park, follow path, avoid obstacles) and **imitation** (track a motion clip). New families are added to the library, not invented per project.
+- **Goal rules:** a goal zone is a circle or an oriented rectangle, and a try succeeds when its rules hold together: inside (the agent's center, or its whole footprint with `fully_inside`), aligned with the spot's heading within a tolerance (either way, nose in or back in) and slower than its stop speed (`sim/goal.py`). A circle without the new rules is measured exactly as before, so stored projects train and play unchanged.
+- **Falling:** a try ends as a fall in every task family once the agent's root drops 1 m below the top of the lowest ground (off a slab's edge), besides each family's own rule (a vehicle rolled over, a legged body down).
+- **Several agents:** a project may list `agents`, each a body with its own task, brain, spawn point, goal and lane objects ([ADR 013](./decisions/013-several-agents-train-alone.md)); without them the first body is the one agent, driven by the project's task and brain. `projects/agents.py` gives each agent the one-agent project it compiles, trains, is tested and plays with: the whole world without the other agents' bodies and lanes. Edit operations `add_agent`, `remove_agent` and `set_agent` change agents, and the task and brain operations take an `agent` to change only its own. The design tests build every agent alone and check its start and goal. The `lanes_race` template and `library/agents.py` put library bodies in lanes with their own scoreboard. Agents never touch each other.
+- **Spawn:** the world's first spawn point says where tries start (`spawn_point.mode`, `sim/start_pose.py`): auto keeps the classic start (a navigation agent shifted up to ±1.5 m beside, 2 m behind and ±35° from where it stands; others exactly there), fixed starts on the spawn point, area anywhere in its `area` turned within `heading_range`, anywhere at a free place drawn evenly over the whole map (`design/free_map.py`: the layout's drawn floor, else the ground slabs, else the area around the world's objects on an endless plane; minus every collider grown by the body's half width plus a margin; at least `goal_distance` beyond the goal zone; only cells a floor-plan flood from the goal reaches; built once per compiled world) facing any direction unless `heading_range` limits the turn, an area left at 0 × 0 behaving like anywhere so a random start never silently stays put, and random_point or cycle_points at one of the world's spawn points, each with its own area and heading range. Starts draw from the copy's seeded generator, and a seeded reset restarts the cycle at the seed's spawn point, so training copies vary while evaluations on fixed seeds repeat the same starts. Play draws a new start on each reset unless the mode is auto. The reachable design check fails a revision whose anywhere start finds no free place, or very few.
+- **Plates as goals:** with `reach_plates` (mode any, all or in order) a try succeeds once its goal plates are reached, in any family; `plates_pressed` pays each newly reached plate and `on_plate` each step on one. Play's "What happened" tells each plate the first time it is reached in a try.
 - **Randomization** varies masses, friction, actuator strength and latency, and sensor noise within ranges set by the brain spec, to make policies robust and transferable.
 - **Per-copy variation:** a *Randomize per copy* component on an object varies a world object's position, rotation, color and friction within set ranges, applied by `sim/variation.py` on every try, so each training copy sees a different world; `GET /projects/{id}/copies` lets the desktop preview them.
 - `sim/views.py` renders the compiled scene offscreen with MuJoCo from named cameras (with the task's zones drawn) for the copilot's vision and for the frames stored at every checkpoint; `design/scene.py` produces the `SceneDescription` the viewport draws, including the task zones (spawn, goal, marked areas) and the world sky (`design/sky.py`).
@@ -235,24 +252,34 @@ A body is driven by one brain component:
 
 ### Play mode
 
-Play steps the physics live with the current brain and streams `PlayFrame`s to the viewport, in the engine, never in the renderer. The user acts on the running world with `PlayCommand`s: move, push, add an object, change light or wind, slow down, reset, plus stimuli derived from the body's senses (shadow for vision, scent for smell, touch for touch sensors). Play never changes the project; a `PlayEvent` log records behavior and user actions, and any session can be saved as a clip.
+Play steps the physics live with the current brain and streams `PlayFrame`s to the viewport, in the engine, never in the renderer. The user acts on the running world with `PlayCommand`s: move, push, add an object, change light or wind, slow down, reset, plus stimuli derived from the body's senses (shadow for vision, scent for smell, touch for touch sensors). Add object brings any library piece with a chosen size, mass or density, friction, bounciness and color, placed on the clicked point, dropped from a height, thrown at the agent at a chosen speed (the engine aims the arc), or as a rain of copies over simulated time (`sim/play_drops.py`); Reset removes everything added. While a session opens, the socket sends progress (world, brain, starting) before the first `ready`. Play never changes the project; a `PlayEvent` log records behavior and user actions, and any session can be saved as a clip.
 
 ### Comparison with real behavior
 
-A `BehaviorTest` replays a scripted situation and measures the simulated body against a `ReferenceRecording` (walking paths, reaction times, gait). Results report each behavior as recorded value, simulated value and whether it is within the recorded range; tests without data are reported as not run.
+A `BehaviorTest` (`contracts/behavior.py`) is a fixed scenario a checkpoint is judged on: start seeds that place the body the same way for every brain, and world objects moved along the ground. Each project has the built-in *Standard starts* plus the tests added by the person or the copilot (`behavior_test` tool), kept in `runs/behavior-tests/<project>.json`. `training/behavior_tests.py` runs a checkpoint on a test with the same deterministic evaluation as the worker, in the API process, and keeps a `BehaviorTestResult` (pass or fail, numbers, the root's ground path per episode) under the run folder; `training/behavior_match.py` compares two checkpoints on the same test row by row and by how far apart their paths ran. A test whose definition changed since a result was stored is reported as not run. Comparing against a `ReferenceRecording` of real behavior is not built yet.
 
 ### Training and the Training Timeline
 
 - PPO from Stable-Baselines3, on CPU by default, using a GPU only when available and only for speed.
 - A checkpoint schedule (log-spaced by default: 0, 25k, 50k, 100k, 250k, 500k, 1M, …) gives the timeline detail where learning changes fastest.
 - At every checkpoint the worker saves the policy, runs deterministic evaluation episodes with fixed seeds, records the first one as a `Rollout` and stores its metrics.
+- For walking bodies each evaluation episode also records gait signals measured by MuJoCo (root height, tilt, drift, each foot's ground contact and lift-offs, joints at their limits, action change), which `training/run_health.py` turns into facts the coach quotes; the locomotion gait reward terms answer them.
 - Checkpoint 0 is the untrained policy, so every run carries its own before/after baseline.
+- The live view replays what the copies really did. Copies capture a pose only on the steps the view will show; a few times a second the worker writes `live.json` with each copy's frames since the previous write, in contiguous episode segments, within about 100 KB/s. `status.json` names the worker's phase (practicing, updating the brain, testing a checkpoint), so the view always shows a run moving.
+- Pausing is a real suspend at a safe point, the same on every platform: the run folder gets a `pause.request` and the worker waits between two practice steps with the brain, its optimizer and the copies in memory until the request is cleared, so resuming carries on from exactly that state; a stop request ends the wait. The time paused does not count toward the training speed.
+- The task sets how long a try lasts and whether a fall or success ends it early (`set_episode`); the brain sets its decisions per second (the control period), the senses it leaves unread (read as zero) and the motors it leaves at rest, so the observation and action sizes never change and trained brains keep fitting; and `start_from`, a trained checkpoint of any project with the same senses, motors and layers that new runs continue from.
+
+### Experiments file
+
+Behaviors still being compared before one becomes the default are switched in `experiments.json` in the settings folder (`~/.icarus`, `ICARUS_SETTINGS_DIR` overrides it), declared in the `Experiments` model (`contracts/experiments.py`) and read by `training/experiment_switches.py`. A missing file, key or invalid value keeps the default. Switches today: `live_view` — `"realtime"` (default: recorded motion at 1x sim speed, about 3 s behind), `"fast"` (recorded motion sped up to keep pace with training) or `"classic"` (one pose per snapshot, eased). The worker reads it when a run starts and the snapshots say which mode they were recorded for. `coach_patience` — a share of the task's recommended steps from 0.1 to 1 (default `0.5`): before a brain has trained that share, counting the runs it continues from, the coach does not call a run stalled or flat, the autopilot does not change the design for slow progress and continues from the best brain instead. A design problem found by a look, by a watch rule other than the stall, or by the design tests still stops a run at once.
 
 ### Run store
 
+Runs live next to the projects in the data folder, `~/Icarus Studio` by default (`projects/` and `runs/`), so reinstalling the app never deletes a trained brain. Settings › Training and hardware › Storage chooses another data folder, saved in `storage.json` in the settings folder; the engine copies every project and run there, verifies each byte for byte before removing the original, refuses while anything trains and is restarted by the app to use it. `ICARUS_PROJECTS_DIR` and `ICARUS_RUNS_DIR` always win over the saved folder. On start the engine moves runs left in the older `services/engine/runs` folder into it, removing each original only after its copy is verified.
+
 ```text
 runs/<run_id>/
-├── run.json             # RunConfig: project id, revision, seed
+├── run.json             # RunConfig: project id, revision, seed, and its agent and group when it trains one of several agents
 ├── project.json         # frozen copy of the project revision
 ├── meta.json            # library versions, git revision, timestamps
 ├── status.json          # RunStatus, written atomically
@@ -261,7 +288,9 @@ runs/<run_id>/
 ├── rollouts/<step>.json
 ├── frames/<step>/       # rendered episode frames and episodes.json (how each episode ended)
 ├── diagnosis/<n>.json
-├── live.json            # latest poses of the parallel copies for the live view
+├── tests/<step>/<test>.json  # BehaviorTestResult of a checkpoint on a behavior test
+├── exports/step-<step>-e<n>.png  # a recorded episode as an animated PNG, rendered once
+├── live.json            # the copies' newest poses and recorded frames for the live view
 └── worker.log
 ```
 
@@ -292,8 +321,8 @@ Copilot roles, all producing typed outputs and, when they change a project, `Edi
 Rules for every role:
 
 - Roles that return one structured output request it with a JSON Schema derived from the target model, validate it with Pydantic, retry once with the validation error, and otherwise surface a readable error.
-- The chat copilot is an agent loop (`copilot/agent/`, [ADR 006](./decisions/006-copilot-agent-loop.md), [plan](./plans/copilot-agent-harness.md)): each step is one model call with native tools (`inspect_object`, `read_run`, `library`, `look`, `try`, `propose`, `apply`, `train`, `coach`) whose arguments are validated with Pydantic; a rejected call goes back to the model as the tool result. `try` applies operations to a copy and runs the design, placement and trainability checks; `look` renders the compiled scene offscreen with MuJoCo (`sim/views.py`) with the task's zones drawn. The turn ends on the `answer` tool, grounded like every other output, or on a forced answer when a budget (steps, tool calls, time, tokens) runs out. The autonomy mode, not the prompt, decides what may write: in ask mode the copilot proposes and offers a Train button; in autopilot it may apply and train. Steps, renders and buttons are stored on the copilot message. Older messages are folded into a rolling summary when the history outgrows its share of the model's context window.
-- **Attachments:** images and short videos attached in the chat are stored per project (`POST /projects/{id}/attachments`); video is sampled into frames, and both reach the `vision` capability as part of the turn.
+- The chat copilot is an agent loop (`copilot/agent/`, [ADR 006](./decisions/006-copilot-agent-loop.md), [plan](./plans/copilot-agent-harness.md)): each step is one model call with native tools (`inspect_object`, `read_run`, `library`, `look`, `try`, `layout`, `build_object`, `reference_scene`, `auto_rig`, `fix_body`, `imitate_clip`, `propose`, `apply`, `train`, `coach`) whose arguments are validated with Pydantic; a rejected call goes back to the model as the tool result. `try` applies operations to a copy and runs the design, placement and trainability checks; `look` renders the compiled scene offscreen with MuJoCo (`sim/views.py`) with the task's zones drawn. `build_object` assembles a part plan (primitives with relative transforms, a look per part, joints and motors) into a static group or a body after checking its structure, scale and mass; `reference_scene` asks a model for a scene plan from the person's words and reference picture, builds and tries it, renders it from the reference's estimated camera and lets a model that sees compare and correct it for up to three rounds, reporting what it could not place (`copilot/reference_scene.py`, `copilot/building/part_plan.py`, `scene_plan.py`). The turn ends on the `answer` tool, grounded like every other output, or on a forced answer when a budget (steps, tool calls, time, tokens) runs out. The autonomy mode, not the prompt, decides what may write: in ask mode the copilot proposes and offers a Train button; in autopilot it may apply and train. Steps, renders and buttons are stored on the copilot message. Older messages are folded into a rolling summary when the history outgrows its share of the model's context window. The window is the one set per capability in Settings › AI models (`context_tokens` in the model settings), or the smaller one a refused request revealed, else a conservative 64k assumed; the meter says which. The context meter (`POST /projects/{id}/conversation/context`, `copilot/agent/context_usage.py`) builds the next turn's first request the same way, without a model call, and measures each piece (system prompt, tools, skills, memory, project context, summary, history, message, attachments) with the budget's token counter, with the reserved answer room and when history folds next.
+- **Attachments:** images and short videos attached in the chat are stored per project (`POST /projects/{id}/attachments`); video is sampled into frames, and both reach the `vision` capability as part of the turn. A glTF or GLB model attached is also stored as a skin, and the turn tells the copilot its id and size so it can put it on an object with a `skin` component.
 - **From-scratch designs** are built by stages (world, bodies, task), each stage tested on top of the ones before, with placement and trainability checks.
 - **Harness extensions** ([plan](./plans/copilot-harness-extensions.md)): an in-process event bus (`events.py`) publishes turns, steps, views, proposals, revisions, run events, diagnoses and tasks; long work runs as background tasks (`tasks.py`) with cooperative cancelling and a final event; **skills** are Markdown procedures the copilot reads on demand (eight built in: diagnosing a brain, reward design, curriculum and warm start, sensors for a task, environment look, parking and navigation, race and obstacle course, walking robot); **memory** keeps notes scoped to a project or the person, always with their source (`remember`, `recall`); **comparison** tools compare two runs on the same evaluation seeds and two revisions. Their HTTP routes (`/events`, `/tasks`) and loop wiring are landing now; hooks, subagents and code-free extensions are planned.
 - Model reasoning is separated from the final answer in the client and can be shown as "how the copilot thought about it".
@@ -311,20 +340,33 @@ See [`plans/sprint-07-coach.md`](./plans/sprint-07-coach.md).
 
 ### Motion
 
-1. Frames are sampled from a reference video and sent to the `pose` capability, producing per-frame body keypoints.
-2. `motion/retarget.py` maps the keypoints onto the target body's joints, producing a `MotionClip`.
-3. The `imitation` task family trains a policy to track the clip under physics.
-4. `motion/export.py` bakes the resulting rollout into a skeletal animation (glTF, with FBX for engines that need it).
+How a body copies a reference video ([ADR 015](./decisions/015-motion-from-video.md)):
+
+1. The app samples the video at 8 frames per second, up to 12 s, and `motion/clip_store.py` keeps the frames as the project's clip (`POST /projects/{id}/motion/videos`); the video file never leaves the computer.
+2. Tracking (`motion/pose_tracking.py`, a background task) sends each frame to the `pose` capability through the generic connection (`copilot/pose.py`), which answers 14 keypoints per person in a fixed JSON schema (`PoseEstimate`), validated with one retry; the clip keeps the person its rule picks (largest, leftmost or rightmost). Without a pose model, tracking refuses with "connect a pose model in Settings".
+3. `motion/retarget.py` matches each limb of the person (a segment between two keypoints) to a body part by name and side and keeps its direction in the picture's plane per frame; `motion/imitation.py` freezes that reference in the task with `set_motion_reference` and sets the `imitation` family with `track_motion` and posture terms.
+4. Training uses the supervisor like any run (`POST /projects/{id}/motion/train`, optionally warm-started and practicing the weakest second more). `sim/motion_tracking.py` measures each tracked part's direction against the reference every step; the brain sees where in the clip it is and a try lasts the clip.
+5. `motion/comparison.py` reads the latest evaluation episode limb by limb the same way, for the match curve, the match per limb and the weakest moment; `motion/export.py` writes the physics result or the reference as JSON (angles per frame, root motion) or BVH (a skeleton turning in the picture's plane).
 
 ### Hardware
 
 - A `HardwareProfile` constrains design: parts map to real components, actuators inherit real torque and speed limits, dimensions follow real parts.
 - `hardware/` exports a project as URDF and MJCF, the trained policy as ONNX, a parts list, and a small runtime package that reads sensors, runs the policy and drives actuators on a single-board computer.
+- Hardware classes (servos, motors, sensors with rated torque, speed, travel and range) and kits live in `library/hardware.py`. `hardware/demands.py` reads what the body asks of each joint and sensor from the compiled model; with a trained brain it runs one evaluation episode and uses the peaks it measured. `hardware/check.py` gives pass (inside an 80% margin), warn or fail per joint and sensor with the gap in words; senses only the simulator provides (speed, goal position) always warn.
+- An export is planned before it is written (`POST /projects/{id}/export/plan` lists every file with its real size); `POST /projects/{id}/export` writes one zip to the path the person chose in the app's save dialog, checked by the main process and again by the engine. The runtime package is data and a reference script template, never a binary. The copilot's `export_robot` writes the same zip into the data folder's `exports/`.
 - Commercial robots are library presets with their published models and limits; their bodies are fixed and only their brains are trained.
 
 ### Bundles
 
 `bundles/` packs worlds, bodies, brains, motion clips or whole projects into a versioned archive with a `BundleManifest`, lineage (the bundle it was derived from) and checksums. Import validates every part against the library and contract versions. Bundles never contain executable code.
+
+Today a bundle is a whole project in the JSON envelope the desktop publishes (see "Community service"), and `bundles/unpack.py` turns one into a new local project (`POST /bundles/unpack`):
+
+- **Data only.** Unknown envelope fields, deep nesting, oversized files, values that are not JSON data and strings that carry scripts or embedded programs are refused, as the community refuses them; the project document must parse as a `Project` with no unknown fields.
+- **Known versions.** `format` must be `icarus.bundle` version 1, `kind` must be `project`, `contract_version` must be `project-<schema_version>` of a schema this engine reads, and `library_version` may not be newer than the engine's library. A project that wears an imported model is refused, since bundles carry no model files yet.
+- **Tested before it is shown.** The project store gives the document a new id and keeps it only when it is valid against the library, compiles and passes the design tests, like any revision; otherwise the answer lists the issues.
+- **Lineage.** The creation it came from (`RemixOrigin`: creation id, version, title) is kept in `lineage.json` beside the revision log, shown as `ProjectState.remix_of` and copied by duplicates. Publishing the project names that creation in the bundle's `lineage.remix_of`, which is where the community records the remix, counts it and notifies the original's author.
+- **Flow.** The desktop downloads the latest version through the community bridge, sends it to the engine with the creation it came from, then opens the new project in the World workspace. The copilot does not remix: it works inside one open project, and a remix makes a new one.
 
 ### HTTP API
 
@@ -349,19 +391,33 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `POST` · `GET` | `/proposals/{id}/apply` · `/discard` · `/scene` | Apply or discard a proposal · its preview scene |
 | `POST` | `/projects/{id}/attachments` | Attach an image or video to the chat |
 | `GET` | `/attachments/{id}/content` · `/frames/{index}` | An attachment · a sampled video frame |
+| `POST` · `GET` | `/projects/{id}/skins` · `/projects/{id}/skins/{asset}` | Import a glTF or GLB model as an object that wears it · a stored model |
 | `POST` · `GET` | `/projects/{id}/runs` | Start training the current revision (optionally warm-started) · list runs |
 | `GET` | `/runs/{id}` · `/runs/{id}/events` | Status · SSE stream of metrics, checkpoints and diagnoses |
-| `POST` | `/runs/{id}/stop` | Request stop |
+| `POST` | `/runs/{id}/stop` | Request stop; a run of a group stops its whole group |
+| `POST` · `GET` | `/projects/{id}/run-groups` · `/run-groups/{id}` | Train every agent at once, one run each with an equal share of copies and threads · the group's runs |
+| `POST` | `/run-groups/{id}/stop` | Stop every run of a group |
 | `GET` | `/runs/{id}/metrics` · `/checkpoints` · `/rollouts/{step}` · `/scene` | Run data: curves, checkpoints, replays, the run's frozen scene |
 | `POST` · `GET` | `/runs/{id}/diagnosis` · `/runs/{id}/diagnoses` | Ask the coach for a diagnosis · every diagnosis of the run |
 | `GET` | `/runs/{id}/checkpoints/{step}/failures` | Failure groups of a checkpoint with their frames |
+| `GET` | `/runs/{id}/checkpoints/{step}/episodes` · `/runs/{id}/episode-activations` | Every evaluation episode with pass or fail · each hidden neuron's activity over the recorded episode |
+| `POST` | `/runs/{id}/checkpoints/{step}/recording` | The recorded episode as an animated PNG, rendered from the kept MuJoCo states |
+| `GET` · `POST` · `DELETE` | `/projects/{id}/behavior-tests` · `/projects/{id}/behavior-tests/{test}` | Behavior tests of a project · add one · remove one |
+| `POST` · `GET` | `/runs/{id}/checkpoints/{step}/behavior-tests/{test}` · `/runs/{id}/behavior-tests` | Judge a checkpoint on a test · every stored result of the run |
+| `GET` | `/behavior-tests/compare` | Two checkpoints on the same test, row by row and by path gap |
 | `POST` · `GET` · `DELETE` | `/projects/{id}/autopilot` | Start · status · stop the autopilot loop |
 | `GET` · `PUT` | `/settings/training` | Training settings |
 | `GET` · `PUT` · `POST` | `/settings/models` · `/settings/models/test` | Model connections per capability · test a connection |
 | `GET` | `/events` | Engine events stream (router built, not yet mounted) |
 | `GET` · `DELETE` | `/tasks` · `/tasks/{id}` | Background tasks · cancel one (router built, not yet mounted) |
+| `GET` | `/projects/{id}/build/targets` | What the revision can be built into, with real facts |
+| `POST` | `/projects/{id}/export/plan` · `/projects/{id}/export` | Files and sizes of an export · write it as a zip to a chosen path |
+| `POST` | `/projects/{id}/hardware/check` | The body against a hardware kit, pass, warn or fail per joint and sensor |
+| `POST` | `/bundles/unpack` | A community bundle becomes a new project remixed from its creation, once it is data in a known version and passes its tests |
 
-Planned: `POST /motion/clips`, `POST /runs/{id}/behavior-tests`, `POST /projects/{id}/export`, `POST /bundles/pack` · `/bundles/unpack`.
+Body and motion routes: `POST` · `GET` · `DELETE /projects/{id}/auto-rig` (start, steps, cancel), `GET /projects/{id}/rig-check` and `POST .../rig-check/fix`, `POST /projects/{id}/poses`, `GET /projects/{id}/skin-weights` and `POST .../rebind`, `GET /projects/{id}/motion`, `POST /projects/{id}/motion/videos` · `/choice` · `/tracking` · `/train` · `/export`, `DELETE /projects/{id}/motion/tracking`, `GET /projects/{id}/motion/frames/{index}`.
+
+Planned: `POST /bundles/pack`.
 
 ## Desktop studio
 
@@ -380,7 +436,7 @@ Every screen, module and tab has an identifier in [`docs/design/screens.md`](./d
 Implementation:
 
 - **Main process** starts the engine with `uv run icarus-engine --port <free port>`, waits for `/health`, passes the URL through preload and restarts the engine on request if it exits. `ICARUS_ENGINE_URL` points the app at an engine already running during development.
-- **Security:** `contextIsolation: true`, `nodeIntegration: false`, no secrets in the renderer; model credentials live only in the engine's environment.
+- **Security:** `contextIsolation: true`, `nodeIntegration: false`, no secrets in the renderer; model credentials live only in the engine's environment and the community session only in the main process.
 - **Editing:** gizmos and property edits produce `EditOperation`s sent to the engine; the viewport updates from the resulting revision. Optimistic previews are allowed, but the engine's revision is the truth.
 - **Scene:** a `SceneDescription` becomes R3F meshes. `RolloutPlayer` applies rollout frames with time-based interpolation; coordinate conversion (MuJoCo Z-up, wxyz → Three.js Y-up, xyzw) lives in one module.
 - **Play mode** opens a play session in the engine, sends tool actions and draws the streamed frames; the renderer never steps physics.
@@ -393,10 +449,16 @@ Icarus ships as one installable application per platform (Windows, macOS, Linux)
 
 ## Community service
 
-`services/community` is an online service with accounts, bundle storage, a searchable catalog with previews (thumbnails, short rollouts) and lineage between creations. The desktop app talks to it through `community-client`; uploads and downloads are bundles produced and validated by the engine, and validated again by the service before they are stored. Its stack and hosting are recorded in an ADR when it is built.
+`services/community` is the online service for accounts, creations, votes, moderation and sharing ([ADR 014](./decisions/014-community-service-and-supabase-auth.md)). Setup, settings, migrations and deployment are in its [README](../services/community/README.md).
 
-- **Open source and self-hostable.** The service lives in this repository and runs with one `docker compose up`. The maintainers operate the official instance; anyone can run their own, and the app's *Community server* setting chooses which one to use.
-- **Accounts only for sharing.** Sign-in (Google, GitHub, email) is needed to publish, remix, vote and comment, never to create or train. The desktop app signs in through the system browser with OAuth PKCE and an `icarus://` deep link, and keeps the session in the operating system keychain.
+- **Stack.** FastAPI, Pydantic v2 with `extra="forbid"`, pydantic-settings, SQLAlchemy 2 and Alembic; SQLite and a local folder in development, Postgres on a server through `DATABASE_URL`. Bundles, thumbnails and photos go through a small `FileStore` (`LocalFileStore` now, an object store later). It runs locally with `pnpm community:dev` (port 8790) and on a VPS with its `Dockerfile` and `docker-compose.yml`.
+- **What it keeps.** Creations (a published project bundle, a thumbnail and page text) with numbered versions and remix lineage, categories, search and sorting (featured, recent, most voted), votes, reports, a moderation queue with keep, remove and ban decisions and appeals (moderator role from `MODERATOR_EMAILS`), profiles with photos, follows, notifications (votes, remixes, follows, invites, moderation results), each project's community page with its visibility (public, unlisted, invited, private) and invites with roles (viewer, editor), privacy settings, blocks, a data export and account deletion. The API is versioned under `/v1`.
+- **Bundles carry data, never code.** A bundle is the engine's project document in a JSON envelope (`format: "icarus.bundle"`, `format_version`, `kind: "project"`, `contract_version`, `library_version`, `lineage`). The service refuses unknown fields and kinds, strings that carry scripts or embedded programs, blobs, deep nesting and oversized files, and stores the canonical JSON with its SHA-256; pictures must be PNG, JPEG or WebP by their bytes. Remixing downloads a creation's bundle and lets the engine make a local project of it ("Bundles"); publishing that project sends its lineage, and the service checks the original allows remixes.
+- **Sign-in with Supabase Auth; no passwords in Icarus.** The desktop main process runs `@supabase/supabase-js` with PKCE: Google and GitHub open in the system browser, email sends a one-time link, and both return to a loopback callback on `http://127.0.0.1:8791/auth/callback` that exchanges the code. The session is stored encrypted with Electron `safeStorage` (the OS keychain) in the app's user data, or only in memory where no keychain exists. The service verifies each token's signature with the project's JWKS (or the legacy JWT secret), audience, issuer and expiry, and keys accounts by `sub`.
+- **Development sign-in.** With `DEV_AUTH=true` (what `pnpm community:dev` sets) the service signs one-hour tokens itself at `POST /v1/dev/token`; with `ENV=production` it refuses to start in that mode. The desktop uses it whenever no Supabase project is configured, signing in as `dev@icarus.localhost`.
+- **One setting chooses the server.** `community.json` in the settings folder holds `community_url` (default `http://127.0.0.1:8790`), `supabase_url` and `supabase_anon_key`, edited in Settings › Profile › Community server. Changing the server or the Supabase project signs out.
+- **The renderer never holds a token.** `community-client` sends each request over IPC to the main process, which only forwards `/v1/` paths to the configured server with the access token attached and returns the JSON or, for pictures, a data URL. Answers are checked structurally (`community-checks.ts`) before ports map them to views. Views show *Connect your community server* when it does not answer and *Sign in to the community* when an account is needed.
+- **Protections.** CORS is closed unless `CORS_ORIGINS` lists origins, writes are rate-limited per account, request bodies are capped before they are read, answers carry `nosniff`, and suspended accounts cannot write. Accounts are needed only to publish, vote, follow and share, never to create or train.
 
 ## Quality
 
@@ -406,7 +468,7 @@ One command verifies the whole repository:
 pnpm check
 ```
 
-It runs `biome check`, `tsc --noEmit`, `vitest run`, the file-size guideline report (`check:max-lines`, warnings only), the contract staleness check, `ruff check`, `ruff format --check`, `pyright` and `pytest -m "not slow and not live"`.
+It runs `biome check`, `tsc --noEmit`, `vitest run`, the file-size guideline report (`check:max-lines`, warnings only), the contract staleness check, and `ruff check`, `ruff format --check`, `pyright` and `pytest` for the engine (`-m "not slow and not live"`) and for the community service.
 
 | Layer | What is real | Command |
 |---|---|---|
@@ -441,8 +503,6 @@ A contract change lands first and alone; other zones consume it afterwards. Para
 Decisions are recorded as ADRs in `docs/decisions/` once data settles them.
 
 1. Default training budgets per task family, from measured learning curves on CPU.
-2. Pose extraction pipeline and retargeting approach for motion clips.
-3. Animation export formats and the runtime target for hardware export.
-4. Community service stack, hosting and bundle format versioning.
+2. Animation export formats beyond JSON and BVH (glTF, FBX) and the runtime target for hardware export.
 
-Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)).
+Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)); community service stack, hosting and sign-in ([ADR 014](./decisions/014-community-service-and-supabase-auth.md)); pose extraction and retargeting ([ADR 015](./decisions/015-motion-from-video.md)).

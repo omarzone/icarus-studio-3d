@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, Response
 
 from icarus.contracts.copilot import AttachmentInfo, AttachmentUpload
 from icarus.copilot.attachments import CONTENT_FILE, AttachmentStore
+from icarus.projects.skin_import import store_model
 from icarus.projects.store import ProjectStore
 
 router = APIRouter()
@@ -16,6 +17,8 @@ def _attachments(request: Request) -> AttachmentStore:
 def upload_attachment(request: Request, project_id: str, body: AttachmentUpload) -> AttachmentInfo:
     store: ProjectStore = request.app.state.store
     store.state(project_id)
+    if body.kind == "model":
+        store_model(request.app.state.skins, project_id, body.name, body.data)
     return _attachments(request).add(project_id, body)
 
 

@@ -5,11 +5,15 @@ from pathlib import Path
 
 def write_atomic(path: Path, text: str) -> None:
     """Replace a file in one step so readers never see a half-written document."""
+    write_atomic_bytes(path, text.encode("utf-8"))
+
+
+def write_atomic_bytes(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
-        "w", encoding="utf-8", dir=path.parent, prefix=f"{path.name}.", suffix=".tmp", delete=False
+        "wb", dir=path.parent, prefix=f"{path.name}.", suffix=".tmp", delete=False
     ) as handle:
-        handle.write(text)
+        handle.write(data)
     try:
         os.replace(handle.name, path)
     except OSError:

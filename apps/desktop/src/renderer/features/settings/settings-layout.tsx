@@ -3,7 +3,7 @@ import type { ScreenId } from "../../app/navigation/catalog-id.ts";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { LauncherPage } from "../../ui/launcher-page.tsx";
 
-export type SettingsSection = "profile" | "models" | "privacy" | "training" | "notifications";
+export type SettingsSection = "profile" | "models" | "privacy" | "training" | "storage" | "notifications";
 
 const NAV: readonly { label: string; section: SettingsSection; to: ScreenId; params?: Record<string, string> }[] = [
   { label: "Profile", section: "profile", to: "SCR-SETTINGS-PROFILE" },
@@ -11,6 +11,7 @@ const NAV: readonly { label: string; section: SettingsSection; to: ScreenId; par
   { label: "Privacy and safety", section: "privacy", to: "SCR-SETTINGS-PRIVACY" },
   { label: "Blocked people", section: "privacy", to: "SCR-SETTINGS-PRIVACY", params: { focus: "blocked" } },
   { label: "Training and hardware", section: "training", to: "SCR-SETTINGS-TRAINING" },
+  { label: "Storage", section: "storage", to: "SCR-SETTINGS-TRAINING", params: { page: "storage" } },
   { label: "Notifications", section: "notifications", to: "SCR-SETTINGS-NOTIFICATIONS" },
 ];
 

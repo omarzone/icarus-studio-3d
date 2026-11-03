@@ -7,7 +7,10 @@ import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.ts
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
-import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
+import { BuildMenus } from "../../editor/viewport/toolbar/build-menus.tsx";
+import { useGizmoTools } from "../../editor/viewport/toolbar/gizmo-tools.ts";
+import { Toolbar, type ToolGroup } from "../../editor/viewport/toolbar/toolbar.tsx";
+import { GIZMO_TOOLS } from "../../editor/viewport/toolbar/toolbar-presets.ts";
 import { OverlayBottomLeft, OverlayTop, PreviewPill } from "../../editor/viewport/viewport-overlays.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
@@ -44,6 +47,18 @@ export function WorldWorkspace({
   const toolActions = useWorldToolActions(scene);
   // In the app the project exists in every editable state (the empty states only show the guide over it).
   const appProject = useRuntimeMode() === "app" && variant !== "building";
+  // Move, Rotate and Scale lead the tools wherever the app has a scene to drag in; the designs keep their tools.
+  const gizmo = useGizmoTools();
+  const toolbar = appProject ? (
+    <Toolbar
+      groups={[GIZMO_TOOLS, ...withoutPartTool(config.tools)]}
+      active={gizmo.active}
+      actions={{ ...toolActions, ...gizmo.actions }}
+      trailing={<BuildMenus scene={scene} />}
+    />
+  ) : (
+    <Toolbar groups={config.tools} selected={config.selectedTool} actions={toolActions} />
+  );
   return (
     <DockWorkspaceShell
       header={{
@@ -75,7 +90,7 @@ export function WorldWorkspace({
             <ViewportPanel
               label="The project's world"
               scene={scene}
-              toolbar={<Toolbar groups={config.tools} selected={config.selectedTool} actions={toolActions} />}
+              toolbar={toolbar}
               tint={previewing ? "proposal" : undefined}
               ghosts={preview.data?.geoms}
               copiesPreview={copiesPreview}
@@ -104,6 +119,11 @@ export function WorldWorkspace({
       }}
     />
   );
+}
+
+// The building menus' Part replaces the plain Part tool of a new project, so one Part control shows.
+function withoutPartTool(groups: readonly ToolGroup[]): ToolGroup[] {
+  return groups.map((group) => group.filter((tool) => tool.label !== "Part")).filter((group) => group.length > 0);
 }
 
 function WorldOverlays({ variant, config, scene }: { variant: WorldVariant; config: WorldConfig; scene: string }) {

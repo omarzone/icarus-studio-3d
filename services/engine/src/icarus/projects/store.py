@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from icarus.contracts.design import DesignReport
 from icarus.contracts.errors import ValidationIssue
 from icarus.contracts.operations import EditOperation, OperationBatch, RenameProject
-from icarus.contracts.project import Project, ProjectState, ProjectSummary, Revision
+from icarus.contracts.project import Project, ProjectState, ProjectSummary, RemixOrigin, Revision
 from icarus.design.checks import design_report
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.files import append_line, write_atomic
@@ -20,6 +20,8 @@ from icarus.projects.operations import OperationError, apply_operations, empty_p
 from icarus.projects.validation import validate_project
 
 PROJECT_ID = re.compile(r"^[0-9a-f]{12}$")
+# The community creation a remixed project came from.
+LINEAGE_FILE = "lineage.json"
 
 
 class UnknownProject(LookupError):
@@ -103,12 +105,15 @@ class ProjectStore:
 
     def _state(self, directory: Path, head: _Head) -> ProjectState:
         snapshot = self._snapshot(directory, head.current)
+        lineage = directory / LINEAGE_FILE
+        origin = RemixOrigin.model_validate_json(lineage.read_text(encoding="utf-8")) if lineage.is_file() else None
         return ProjectState(
             project=snapshot.project,
             revision=snapshot.revision,
             report=snapshot.report,
             can_undo=snapshot.revision.parent is not None,
             can_redo=bool(head.redo),
+            remix_of=origin,
         )
 
     def _commit(
@@ -183,8 +188,31 @@ class ProjectStore:
         report, _ = design_report(project)
         directory = self.root / copy_id
         directory.mkdir(parents=True)
+        # Skins are project data the copy's document still points to (ADR 008).
+        skins = self.root / project_id / "skins"
+        if skins.is_dir():
+            shutil.copytree(skins, directory / "skins")
+        lineage = self.root / project_id / LINEAGE_FILE
+        if lineage.is_file():
+            shutil.copyfile(lineage, directory / LINEAGE_FILE)
         batch = OperationBatch(
             operations=[RenameProject(op="rename_project", name=name)], summary=f"Duplicated from {source.name}"
+        )
+        return self._commit(directory, project, report, batch, None)
+
+    def create_remix(self, document: Project, name: str, origin: RemixOrigin) -> ProjectState:
+        """A new project from someone else's document, kept only when it is valid, compiles and passes the design
+        tests; the creation it came from is recorded as its lineage."""
+        project_id = uuid.uuid4().hex[:12]
+        project = document.model_copy(update={"id": project_id, "name": name})
+        report, _ = design_report(project)
+        if not report.ok:
+            raise RejectedBatch(validate_project(project) or _report_issues(report), report)
+        directory = self.root / project_id
+        directory.mkdir(parents=True)
+        write_atomic(directory / LINEAGE_FILE, origin.model_dump_json())
+        batch = OperationBatch(
+            operations=[RenameProject(op="rename_project", name=name)], summary=f"Remixed from {origin.title}"
         )
         return self._commit(directory, project, report, batch, None)
 

@@ -1,6 +1,6 @@
 import type { Rollout, TrainingSnapshot } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
-import { checkpointMarks, replayFrames, snapshotCopies } from "./replay-views.ts";
+import { checkpointMarks, replayFrames, snapshotCopies, snapshotRays } from "./replay-views.ts";
 import { checkpoint, status } from "./testdata/training-runs.ts";
 
 describe("checkpoint marks", () => {
@@ -73,5 +73,32 @@ describe("snapshot copies", () => {
     const copies = snapshotCopies(snapshot);
     expect(copies).toHaveLength(2);
     expect(copies[1]?.get("chassis")).toEqual({ position: [5, 1, 0.2], quaternion: [0, 0, 0, 1] });
+  });
+});
+
+describe("snapshot rays", () => {
+  it("gives each copy its distance sensors, and none for engines that send none", () => {
+    const snapshot: TrainingSnapshot = {
+      step: 1,
+      geoms: [],
+      copies: [
+        {
+          positions: [],
+          quaternions: [],
+          rays: [
+            {
+              sensor: "car:ray0",
+              label: "Car distance 1",
+              origin: [0, 0, 0.5],
+              direction: [1, 0, 0],
+              range: 10,
+              distance: 2,
+            },
+          ],
+        },
+        { positions: [], quaternions: [] },
+      ],
+    };
+    expect(snapshotRays(snapshot).map((rays) => rays.map((item) => item.distance))).toEqual([[2], []]);
   });
 });

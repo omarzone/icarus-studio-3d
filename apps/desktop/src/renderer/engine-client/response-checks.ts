@@ -5,12 +5,14 @@ import type {
   PlayFrame,
   PlayMessage,
   PlayMessageEnvelope,
+  PlayPiece,
   PlayReading,
   PlaySessionInfo,
   ProjectState,
   ProjectSummary,
   Revision,
   SceneDescription,
+  SkinImported,
   ValidationErrorBody,
 } from "@icarus/contracts";
 
@@ -91,13 +93,23 @@ export function isLibraryCatalog(value: unknown): value is LibraryCatalog {
     has(value, "components", "array") &&
     has(value, "templates", "array") &&
     has(value, "reward_terms", "array") &&
-    has(value, "pieces", "array")
+    has(value, "pieces", "array") &&
+    (!isRecord(value) || value.bodies === undefined || (Array.isArray(value.bodies) && value.bodies.every(isVaultBody)))
   );
+}
+
+// A vault body brings the whole body it adds, so its body and objects are checked too.
+function isVaultBody(value: unknown): boolean {
+  const body = isRecord(value) ? value.body : null;
+  return has(value, "family", "string") && has(value, "rewards", "array") && has(body, "objects", "array");
 }
 
 export function isTriple(value: unknown, length: number): boolean {
   return Array.isArray(value) && value.length === length && value.every((item) => typeof item === "number");
 }
+
+// Which vehicle light a part is; scenes from before vehicle lights send none.
+const LIGHT_ROLES: readonly unknown[] = [undefined, null, "brake", "reverse", "head"];
 
 function isGeom(value: unknown): boolean {
   return (
@@ -106,11 +118,96 @@ function isGeom(value: unknown): boolean {
     has(value, "body", "string") &&
     has(value, "shape", "string") &&
     has(value, "color", "string") &&
+    isOptionalText(value.style) &&
+    isOptionalText(value.surface) &&
     isTriple(value.size, 3) &&
     isTriple(value.position, 3) &&
-    isTriple(value.quaternion, 4)
+    isTriple(value.quaternion, 4) &&
+    isOptionalSkin(value.skin) &&
+    LIGHT_ROLES.includes(value.light_role)
   );
 }
+
+// A model drawn over the part; scenes from before skins send none.
+function isOptionalSkin(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (has(value, "project", "string") &&
+      has(value, "asset", "string") &&
+      has(value, "fill", "number") &&
+      isRecord(value) &&
+      isTriple(value.offset, 3) &&
+      isTriple(value.rotation, 3))
+  );
+}
+
+export function isSkinImported(value: unknown): value is SkinImported {
+  return (
+    isRecord(value) &&
+    has(value, "object", "string") &&
+    has(value, "revision", "number") &&
+    has(value.skin, "id", "string") &&
+    has(value.skin, "name", "string")
+  );
+}
+
+const isOptionalText = (value: unknown): boolean => value === undefined || value === null || typeof value === "string";
+
+function isRay(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    has(value, "sensor", "string") &&
+    has(value, "label", "string") &&
+    has(value, "range", "number") &&
+    (value.distance === null || typeof value.distance === "number") &&
+    isTriple(value.origin, 3) &&
+    isTriple(value.direction, 3)
+  );
+}
+
+// Distance sensors drawn in a view; older engines send none.
+export const isOptionalRays = (value: unknown): boolean =>
+  value === undefined || (Array.isArray(value) && value.every(isRay));
+
+const isFlags = (value: unknown, flags: readonly string[]): boolean =>
+  isRecord(value) && flags.every((flag) => typeof value[flag] === "boolean");
+
+// Goal and vehicle light states of a frame; older engines send none.
+export const isOptionalSignals = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  (isRecord(value) &&
+    (value.goal === undefined || value.goal === null || isFlags(value.goal, ["inside", "aligned", "stopped", "met"])) &&
+    (value.lights === undefined || value.lights === null || isFlags(value.lights, ["brake", "reverse", "head"])) &&
+    isOptionalList(
+      value.plates,
+      (plate) => has(plate, "object", "string") && isFlags(plate, ["pressed", "occupied", "active", "reached"]),
+    ) &&
+    isOptionalList(
+      value.displays,
+      (reading) => has(reading, "object", "string") && (reading.value === null || typeof reading.value === "number"),
+    ));
+
+// Lists older engines leave out.
+function isOptionalList(value: unknown, item: (entry: Record_) => boolean): boolean {
+  return value === undefined || (Array.isArray(value) && value.every((entry) => isRecord(entry) && item(entry)));
+}
+
+const isPlaced = (value: Record_): boolean => isTriple(value.position, 3) && isTriple(value.quaternion, 4);
+
+const isAnchored = (value: Record_): boolean =>
+  isRecord(value.anchor) && has(value.anchor, "object", "string") && isPlaced(value.anchor);
+
+// Floor plates, displays and eyes; scenes from before them send none.
+const isOptionalDecor = (value: Record_): boolean =>
+  isOptionalList(
+    value.plates,
+    (plate) =>
+      has(plate, "name", "string") && has(plate, "role", "string") && isTriple(plate.size, 3) && isPlaced(plate),
+  ) &&
+  isOptionalList(value.displays, (display) => has(display, "source", "string") && isAnchored(display)) &&
+  isOptionalList(value.eyes, (eyes) => has(eyes, "size", "number") && isAnchored(eyes));
 
 const ZONE_KINDS: readonly unknown[] = ["spawn_point", "goal_zone", "zone"];
 const ZONE_SHAPES: readonly unknown[] = ["sphere", "box"];
@@ -147,7 +244,9 @@ export function isSceneDescription(value: unknown): value is SceneDescription {
     Array.isArray(value.geoms) &&
     value.geoms.every(isGeom) &&
     (value.zones === undefined || (Array.isArray(value.zones) && value.zones.every(isZone))) &&
-    isSky(value.sky)
+    isSky(value.sky) &&
+    isOptionalRays(value.rays) &&
+    isOptionalDecor(value)
   );
 }
 
@@ -179,7 +278,20 @@ export function isPlaySessionInfo(value: unknown): value is PlaySessionInfo {
     isListOf(value.tools, (tool): tool is { id: string; label: string } => {
       return has(tool, "id", "string") && has(tool, "label", "string");
     }) &&
-    isSceneDescription(value.scene)
+    isSceneDescription(value.scene) &&
+    (value.pieces === undefined || isListOf(value.pieces, isPlayPiece))
+  );
+}
+
+function isPlayPiece(value: unknown): value is PlayPiece {
+  return (
+    has(value, "id", "string") &&
+    has(value, "label", "string") &&
+    has(value, "friction", "number") &&
+    has(value, "bounciness", "number") &&
+    has(value, "color", "string") &&
+    isRecord(value) &&
+    (value.mass === null || typeof value.mass === "number")
   );
 }
 
@@ -196,7 +308,9 @@ export function isPlayFrame(value: unknown): value is PlayFrame {
     Array.isArray(value.geoms) &&
     value.geoms.every(isPose) &&
     isListOf(value.senses, isReading) &&
-    isListOf(value.actions, isReading)
+    isListOf(value.actions, isReading) &&
+    isOptionalRays(value.rays) &&
+    isOptionalSignals(value.signals)
   );
 }
 
@@ -217,6 +331,8 @@ function isPlayMessage(value: unknown): value is PlayMessage {
       return isPlayEvent(value.event);
     case "error":
       return has(value, "message", "string");
+    case "progress":
+      return value.stage === "world" || value.stage === "brain" || value.stage === "starting";
     default:
       return false;
   }

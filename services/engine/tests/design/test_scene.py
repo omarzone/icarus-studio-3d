@@ -47,8 +47,74 @@ def test_the_scene_shows_where_the_car_starts_and_where_it_must_park(car_scene):
     goal_position = (
         next(c for c in goal_object.components if c.kind == "transform").properties["position"].model_dump()["value"]
     )
-    radius = next(c for c in goal_object.components if c.kind == "goal_zone").properties["radius"].model_dump()["value"]
-    assert goal.shape == "sphere"
+    spot = next(c for c in goal_object.components if c.kind == "goal_zone").properties
+    assert goal.shape == "box"
     assert goal.position == pytest.approx(goal_position)
-    assert goal.size == pytest.approx((2 * radius, 2 * radius, 2 * radius))
+    length, width = spot["length"].model_dump()["value"], spot["width"].model_dump()["value"]
+    assert goal.size[:2] == pytest.approx((length, width))
     assert all(geom.name != goal.name for geom in car_scene.geoms)
+
+
+def test_the_car_is_drawn_as_a_car_while_its_colliders_stay_primitives(car_scene):
+    geoms = {geom.name: geom for geom in car_scene.geoms}
+    assert (geoms["car"].shape, geoms["car"].style) == ("box", "car_body")
+    for name in ("wheel_front_left", "wheel_front_right", "wheel_rear_left", "wheel_rear_right"):
+        assert (geoms[name].shape, geoms[name].style) == ("cylinder", "wheel")
+        assert geoms[name].surface == "rubber"
+
+
+def test_the_ground_says_what_it_is_made_of_and_carries_no_style(car_scene):
+    geoms = {geom.name: geom for geom in car_scene.geoms}
+    assert geoms["ground"].surface == "asphalt"
+    assert geoms["ground"].style is None
+
+
+def test_a_surface_component_names_the_ground_and_a_plain_style_exports_none():
+    project = apply_operations(empty_project("0123456789ab", "T"), template_operations("walker_robot"))
+    ground = next(obj for obj in project.world.objects if obj.id == "ground")
+    surface = next(c for c in ground.components if c.kind == "surface")
+    surface.properties["kind"] = surface.properties["kind"].model_copy(update={"value": "grass"})
+    torso = next(obj for body in project.bodies for obj in body.objects if obj.id == "torso")
+    material = next(c for c in torso.components if c.kind == "material")
+    material.properties["style"] = material.properties["style"].model_copy(update={"value": "plain"})
+    geoms = {geom.name: geom for geom in scene_description(compile_project(project), revision=1).geoms}
+    assert geoms["ground"].surface == "grass"
+    assert geoms["torso"].style is None
+
+
+def test_the_lot_is_painted_with_bay_lines_that_nothing_touches():
+    project = apply_operations(empty_project("0123456789ab", "T"), template_operations("parking_car"))
+    compiled = compile_project(project)
+    lines = [geom for geom in scene_description(compiled, revision=1).geoms if geom.style == "marking"]
+    assert len(lines) >= 4
+    for line in lines:
+        index = compiled.model.geom(line.name).id
+        assert (compiled.model.geom_contype[index], compiled.model.geom_conaffinity[index]) == (0, 0)
+        assert line.size[2] <= 0.02
+
+
+def test_a_part_carries_its_transparency_reflectance_and_shadow_as_looks_only():
+    from icarus.contracts.operations import SetProperty
+    from icarus.contracts.properties import SliderValue, SwitchValue
+
+    def material(prop: str, value) -> SetProperty:
+        return SetProperty(op="set_property", object="car", component="material", property=prop, value=value)
+
+    base = apply_operations(empty_project("0123456789ab", "T"), template_operations("parking_car"))
+    glass = apply_operations(
+        base,
+        [
+            material("transparency", SliderValue(type="slider", value=0.6)),
+            material("reflectance", SliderValue(type="slider", value=0.3)),
+            material("cast_shadow", SwitchValue(type="switch", value=False)),
+        ],
+    )
+    plain, seen = compile_project(base), compile_project(glass)
+    car = next(geom for geom in scene_description(seen, 1).geoms if geom.name == "car")
+    assert (car.transparency, car.reflectance, car.cast_shadow) == (0.6, 0.3, False)
+    assert plain.mjcf == seen.mjcf
+
+
+def test_lights_export_their_color_and_whether_they_cast_shadows(car_scene):
+    sun = car_scene.lights[0]
+    assert (sun.color, sun.shadows) == ("#ffffff", True)

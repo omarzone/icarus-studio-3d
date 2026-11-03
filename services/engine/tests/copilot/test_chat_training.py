@@ -6,11 +6,12 @@ import httpx
 import pytest
 
 from icarus.contracts.copilot import SendMessage
+from icarus.contracts.operations import OperationBatch, SetBrain
 from icarus.contracts.training import StartRun, WarmStart
 from icarus.copilot import fixture_provider
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat import Copilot
-from icarus.copilot.chat_training import ChatTrainer
+from icarus.copilot.chat_training import ChatTrainer, TrainingRequest
 from icarus.copilot.conversation_store import ConversationStore
 from icarus.copilot.settings import ModelSettingsStore
 from icarus.projects.store import ProjectStore
@@ -118,6 +119,18 @@ def test_training_defaults_come_from_the_recommended_budget_and_the_brain(
     assert run.total_steps == 1_000_000 and run.copies == store.state(project_id).project.brain.copies
 
 
+def test_a_brain_with_its_own_training_steps_trains_that_long_by_default(
+    copilot, store, runs, project_id, monkeypatch, tmp_path
+):
+    longer = SetBrain(op="set_brain", training_steps=50_000)
+    store.apply(project_id, OperationBatch(operations=[longer], summary="Shorter practice"))
+    script(monkeypatch, tmp_path, default=[tool_step("train", action="start"), answering("Ok.")])
+    copilot.set_autonomy(project_id, "autopilot")
+    say(copilot, project_id, "entrénalo")
+    (run,) = runs.list_runs(project_id)
+    assert run.total_steps == 50_000
+
+
 def test_a_project_without_a_task_is_not_trained_and_the_answer_says_why(copilot, store, runs, trains):
     project_id = store.create("Empty", "empty_world").project.id
     copilot.set_autonomy(project_id, "autopilot")
@@ -209,3 +222,33 @@ def test_continuing_without_a_trained_brain_says_so(copilot, runs, project_id, m
     answer = say(copilot, project_id, "train again from the best brain")
 
     assert runs.list_runs(project_id) == [] and "no trained brain to continue from" in answer.text
+
+
+class RecordingSupervisor(Supervisor):
+    def __init__(self, runs: RunStore) -> None:
+        super().__init__(runs)
+        self.started: list[StartRun] = []
+
+    def start(self, state, start, threads, use_graphics_card):
+        self.started.append(start)
+        return self.store.create(state, start, threads)
+
+
+def test_runs_the_chat_starts_are_coached_unless_the_person_asks_otherwise(tmp_path, store, runs, project_id):
+    supervisor = RecordingSupervisor(runs)
+    trainer = ChatTrainer(store, runs, supervisor, TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects"))
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1))
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1, coach=False))
+    assert [start.coach for start in supervisor.started] == [True, False]
+
+
+def test_the_copilot_pauses_and_resumes_the_run_training(tmp_path, store, runs, supervisor, project_id):
+    trainer = ChatTrainer(store, runs, supervisor, TrainingSettingsStore(tmp_path / "runs", tmp_path / "projects"))
+    assert not trainer.act(project_id, TrainingRequest(action="pause")).acted
+    trainer.act(project_id, TrainingRequest(action="start", total_steps=10_000, copies=1))
+    run = runs.list_runs(project_id)[0]
+    wait_for(state_is(runs, run.run_id, "running"))
+    paused = trainer.act(project_id, TrainingRequest(action="pause"))
+    assert paused.acted and "paused" in paused.text and runs.folder(run.run_id).status().paused
+    resumed = trainer.act(project_id, TrainingRequest(action="resume"))
+    assert resumed.acted and not runs.folder(run.run_id).status().paused

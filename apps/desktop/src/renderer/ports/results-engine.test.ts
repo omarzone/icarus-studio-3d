@@ -22,6 +22,7 @@ function fakeApi(diagnoses: Record<string, Diagnosis[]> = {}): Api {
     runs: async () => runs,
     checkpoints: async (id) => checkpoints[id] ?? [],
     rollout: () => Promise.reject(new Error("no rollout")),
+    runScene: () => Promise.reject(new Error("no scene")),
     conversation: async () => ({
       project_id: "p",
       messages: [],

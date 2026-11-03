@@ -47,9 +47,15 @@ function ModelsForm({ models }: { models: ModelSettings }) {
   const [names, setNames] = useState<Partial<Record<ModelCapability, string>>>(() =>
     Object.fromEntries(models.connections.map((connection) => [connection.capability, connection.model ?? ""])),
   );
+  const [windows, setWindows] = useState<Partial<Record<ModelCapability, string>>>(() =>
+    Object.fromEntries(
+      models.connections.map((connection) => [connection.capability, connection.contextTokens?.toString() ?? ""]),
+    ),
+  );
   // Shown after Test saved a new address without a key, since the engine then has no key to test with.
   const [keyNeeded, setKeyNeeded] = useState(false);
-  const request = modelSettingsRequest(models, { endpoint, apiKey, names });
+  const request = modelSettingsRequest(models, { endpoint, apiKey, names, windows });
+  const blocked = request.invalidWindows.length > 0;
   // Save also leaves the page, so the result is handled on the promise; per-call callbacks would not run.
   const refresh = () => client.invalidateQueries({ queryKey: ["settings", "models"] });
   const test = useEngineAction(settings.testModelConnection);
@@ -62,6 +68,9 @@ function ModelsForm({ models }: { models: ModelSettings }) {
           connection={connection}
           name={names[connection.capability] ?? ""}
           onName={(name) => setNames({ ...names, [connection.capability]: name })}
+          tokens={windows[connection.capability] ?? ""}
+          windowInvalid={request.invalidWindows.includes(connection.capability)}
+          onWindow={(tokens) => setWindows({ ...windows, [connection.capability]: tokens })}
         />
       ))}
       <div className="grid grid-cols-2 gap-3">
@@ -93,6 +102,7 @@ function ModelsForm({ models }: { models: ModelSettings }) {
       <div className="flex gap-2">
         <Act
           cta="Test connection"
+          disabled={blocked}
           onClick={() => {
             const { input, keyRequired } = request;
             void save
@@ -110,6 +120,7 @@ function ModelsForm({ models }: { models: ModelSettings }) {
         <GoTo
           to="SCR-HOME"
           cta="Save"
+          disabled={blocked}
           onClick={() => {
             void save.mutateAsync(request.input).then(refresh, () => undefined);
           }}
@@ -122,12 +133,19 @@ function ModelsForm({ models }: { models: ModelSettings }) {
   );
 }
 
-type RowProps = { connection: ModelConnection; name: string; onName: (name: string) => void };
+type RowProps = {
+  connection: ModelConnection;
+  name: string;
+  onName: (name: string) => void;
+  tokens: string;
+  windowInvalid: boolean;
+  onWindow: (tokens: string) => void;
+};
 
-function ConnectionRow({ connection, name, onName }: RowProps) {
+function ConnectionRow({ connection, name, onName, tokens, windowInvalid, onWindow }: RowProps) {
   const { label, purpose } = CAPABILITIES[connection.capability];
   return (
-    <div className="grid grid-cols-[150px_minmax(0,1fr)_auto] items-center gap-3 rounded-card-sm bg-control px-3.5 py-3">
+    <div className="grid grid-cols-[150px_minmax(0,1fr)_150px_auto] items-center gap-3 rounded-card-sm bg-control px-3.5 py-3">
       <span className="flex flex-col">
         <span className="leading-tight font-semibold">{label}</span>
         <span className="text-meta leading-tight text-fg-tertiary">{purpose}</span>
@@ -146,6 +164,26 @@ function ConnectionRow({ connection, name, onName }: RowProps) {
           <span className="text-meta leading-tight text-warn">{connection.detail}</span>
         ) : null}
       </span>
+      <label className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-meta leading-tight text-fg-tertiary">Context window (tokens)</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          data-cta={`${connection.capability}-context-window`}
+          aria-label={`${label} context window in tokens`}
+          aria-invalid={windowInvalid}
+          placeholder="auto"
+          spellCheck={false}
+          value={tokens}
+          onChange={(event) => onWindow(event.target.value)}
+          className="-mx-1 rounded-control bg-transparent px-1 font-mono text-ui leading-tight text-fg-secondary outline-none placeholder:text-fg-tertiary hover:bg-fill-hover focus:bg-control-raised focus:text-fg"
+        />
+        {windowInvalid ? (
+          <span role="alert" className="text-meta leading-tight text-warn">
+            4,000 to 10,000,000, or empty
+          </span>
+        ) : null}
+      </label>
       {connection.connected ? (
         <StatusPill tone="ok">Connected</StatusPill>
       ) : connection.required ? (

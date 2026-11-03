@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { type ChatAttachment, copilotPort } from "../../ports/copilot-port.ts";
@@ -12,10 +13,11 @@ import { formatBytes } from "./attachment-rules.ts";
 
 type ViewerProps = { attachment: ChatAttachment; onClose: () => void };
 
-// A sent picture or document opened over the app: Escape, × or a click outside close it.
+// A sent picture or document opened over the app: Escape, × or a click outside close it. It is drawn on the page's
+// body because a docked panel clips anything fixed inside it to the panel.
 function Viewer({ attachment, onClose, children }: ViewerProps & { children: ReactNode }) {
   useEscape(onClose);
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-scrim-modal p-6">
       <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="absolute inset-0" />
       <section
@@ -26,14 +28,17 @@ function Viewer({ attachment, onClose, children }: ViewerProps & { children: Rea
       >
         <header className="flex items-center gap-3">
           <p className="min-w-0 flex-1 truncate text-ui font-semibold">{attachment.name}</p>
-          <span className="text-meta text-fg-tertiary">{formatBytes(attachment.size)}</span>
+          {attachment.size > 0 ? (
+            <span className="text-meta text-fg-tertiary">{formatBytes(attachment.size)}</span>
+          ) : null}
           <Act cta="Close" aria-label="Close" onClick={onClose} className={buttonClass("icon", "-my-1 -mr-1")}>
             <X size={16} strokeWidth={1.75} aria-hidden />
           </Act>
         </header>
         {children}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

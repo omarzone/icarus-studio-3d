@@ -12,6 +12,17 @@ OBJECT_STEP_LIMIT = 1.0
 OBJECT_REST_BONUS = 10.0
 # Highest height above the start that height_gain pays for, in metres.
 HEIGHT_GAIN_MAX = 1.0
+# body_height pays nothing once the root is this share of its target height away from it.
+HEIGHT_TOLERANCE = 0.3
+# A landing pays feet_air_time for its air time above the first value, counting at most the second, in seconds.
+AIR_TIME_MIN = 0.1
+AIR_TIME_MAX = 0.5
+# feet_air_time pays only while the body moves this fast on the ground, in m/s, so stamping in place earns nothing.
+AIR_TIME_SPEED = 0.1
+# spot_alignment counts nothing this far from the goal, in metres, rising to its full amount at the goal.
+ALIGN_REACH = 5.0
+# gentle_arrival measures how settled a body is inside the goal against this speed, in m/s.
+ARRIVAL_SPEED = 1.0
 
 
 @dataclass(frozen=True)
@@ -38,6 +49,30 @@ class RewardState:
     start_height: float = 0.0
     # Grid cells of the ground the agent has entered in this try, when the task counts them.
     visited: int = 0
+    # Each actuator's control normalized to -1..1.
+    controls: tuple[float, ...] = ()
+    # Ground velocity of the agent in the world frame, in m/s.
+    velocity: tuple[float, float] = (0.0, 0.0)
+    # For each foot (see sim/gait.py), whether it touches something, and its air time if it lands at this step.
+    feet_down: tuple[bool, ...] = ()
+    landed_air: tuple[float, ...] = ()
+    # Share of the body's limited joints pressed against an end of their range.
+    at_limits: float = 0.0
+    # The root height body_height aims for, in metres.
+    target_height: float = 0.0
+    # Whether the goal zone's rules hold, measured by the simulation; None measures the agent's center against the
+    # goal radius, as every goal did before rectangles and footprints.
+    goal_inside: bool | None = None
+    goal_aligned: bool = True
+    # 1 when the heading matches the spot's entry rule, -1 when it faces the wrong way.
+    goal_alignment: float = 0.0
+    stop_speed: float = STOP_SPEED
+    # Goal plates whose trigger holds, goal plates reached this try and how many complete the goal (0: not a goal).
+    plates_on: int = 0
+    plates_reached: int = 0
+    plates_needed: int = 0
+    # How closely the limbs copy the tracked motion at this moment, 0 to 1, in an imitation task.
+    motion_match: float = 0.0
 
 
 def _goal_distance(state: RewardState) -> float:
@@ -47,11 +82,18 @@ def _goal_distance(state: RewardState) -> float:
 
 
 def inside_goal(state: RewardState) -> bool:
-    return state.goal is not None and _goal_distance(state) <= state.goal_radius
+    if state.goal is None:
+        return False
+    return state.goal_inside if state.goal_inside is not None else _goal_distance(state) <= state.goal_radius
+
+
+def stopped(state: RewardState) -> bool:
+    return state.speed <= state.stop_speed
 
 
 def parked(state: RewardState) -> bool:
-    return inside_goal(state) and state.speed <= STOP_SPEED
+    """Every rule of the goal zone holds: inside, aligned and stopped."""
+    return inside_goal(state) and state.goal_aligned and stopped(state)
 
 
 def reach_goal(before: RewardState, after: RewardState) -> float:
@@ -100,6 +142,28 @@ def heading_alignment(before: RewardState, after: RewardState) -> float:
     return (after.forward[0] * to_goal[0] + after.forward[1] * to_goal[1]) / norm
 
 
+def _lined_up(state: RewardState) -> float:
+    if state.goal is None:
+        return 0.0
+    return state.goal_alignment * max(0.0, 1.0 - _goal_distance(state) / ALIGN_REACH)
+
+
+def spot_alignment(before: RewardState, after: RewardState) -> float:
+    # Pays the gain in being lined up close to the spot, so waiting outside lined up earns nothing and never beats
+    # parking, which ends the episode.
+    return _lined_up(after) - _lined_up(before)
+
+
+def _settled(state: RewardState) -> float:
+    return 1.0 - min(state.speed, ARRIVAL_SPEED) / ARRIVAL_SPEED if inside_goal(state) else 0.0
+
+
+def gentle_arrival(before: RewardState, after: RewardState) -> float:
+    # The change in how settled the body is inside the goal: braking pays, speeding up or leaving costs the same,
+    # so rocking, lingering or driving in and out earns nothing over coming to rest once.
+    return _settled(after) - _settled(before)
+
+
 def collision_penalty(before: RewardState, after: RewardState) -> float:
     return float(after.colliding and not before.colliding)
 
@@ -124,11 +188,64 @@ def fall_penalty(before: RewardState, after: RewardState) -> float:
     return float(after.fallen and not before.fallen)
 
 
+def body_height(before: RewardState, after: RewardState) -> float:
+    target = after.target_height or after.start_height
+    if target <= 0:
+        return 0.0
+    return max(0.0, 1.0 - abs(after.position[2] - target) / (HEIGHT_TOLERANCE * target))
+
+
+def smooth_actions(before: RewardState, after: RewardState) -> float:
+    if not after.controls or len(before.controls) != len(after.controls):
+        return 0.0
+    changes = [(new - old) ** 2 for old, new in zip(before.controls, after.controls, strict=True)]
+    return sum(changes) / len(changes)
+
+
+def feet_air_time(before: RewardState, after: RewardState) -> float:
+    if after.speed < AIR_TIME_SPEED:
+        return 0.0
+    return sum(min(air, AIR_TIME_MAX) - AIR_TIME_MIN for air in after.landed_air if air > 0)
+
+
+def heading_and_drift(before: RewardState, after: RewardState) -> float:
+    norm = math.hypot(*after.forward)
+    facing = after.forward[0] / norm if norm > 1e-9 else 1.0
+    return (1.0 - facing) + abs(after.velocity[1])
+
+
+def joint_limits(before: RewardState, after: RewardState) -> float:
+    return after.at_limits
+
+
+def plates_done(state: RewardState) -> bool:
+    """The plates are the goal and enough of them are reached."""
+    return state.plates_needed > 0 and state.plates_reached >= state.plates_needed
+
+
+def reach_plates(before: RewardState, after: RewardState) -> float:
+    return float(plates_done(after) and not plates_done(before))
+
+
+def on_plate(before: RewardState, after: RewardState) -> float:
+    return float(after.plates_on > 0)
+
+
+def plates_pressed(before: RewardState, after: RewardState) -> float:
+    return float(max(after.plates_reached - before.plates_reached, 0))
+
+
+def track_motion(before: RewardState, after: RewardState) -> float:
+    return after.motion_match
+
+
 # Each term returns an unweighted amount; the sign of a penalty comes from its (negative) weight.
 TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "reach_goal": reach_goal,
     "progress_to_goal": progress_to_goal,
     "heading_alignment": heading_alignment,
+    "spot_alignment": spot_alignment,
+    "gentle_arrival": gentle_arrival,
     "collision_penalty": collision_penalty,
     "time_penalty": time_penalty,
     "forward_progress": forward_progress,
@@ -138,6 +255,15 @@ TERM_FUNCTIONS: dict[str, Callable[[RewardState, RewardState], float]] = {
     "object_to_goal": object_to_goal,
     "coverage": coverage,
     "height_gain": height_gain,
+    "body_height": body_height,
+    "smooth_actions": smooth_actions,
+    "feet_air_time": feet_air_time,
+    "heading_and_drift": heading_and_drift,
+    "joint_limits": joint_limits,
+    "reach_plates": reach_plates,
+    "on_plate": on_plate,
+    "plates_pressed": plates_pressed,
+    "track_motion": track_motion,
 }
 
 

@@ -1,6 +1,7 @@
-import type { SceneDescription } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
+import type { SceneDescription, SceneRay, SceneSignals } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
+import type { MotionPlayer } from "../scene/motion-player.ts";
+import type { AgentScore } from "./agent-lanes.ts";
 import { createTrainingFixture } from "./training.fixture.ts";
 import { createEngineAutopilot } from "./training-autopilot.ts";
 import { createEngineTrainingPort } from "./training-engine.ts";
@@ -58,7 +59,8 @@ export type LiveView = {
   caption: string;
   checkpoint: string;
   result: string;
-  episode?: { at: string; length: string; played: number; failureAt?: number };
+  // `step` is the checkpoint whose recorded episode it is, which Replay opens.
+  episode?: { step: number; at: string; length: string; played: number; failureAt?: number };
   speed: string;
 };
 
@@ -74,7 +76,8 @@ export type StartPlan = {
   coach: boolean;
 };
 
-export type StopSummary = { run: string; intro: string; keeps: readonly string[] };
+// `paused` while the run waits between two steps; Pause then resumes it.
+export type StopSummary = { run: string; intro: string; keeps: readonly string[]; paused?: boolean };
 
 export type AutopilotMode = "off" | "ask" | "fix";
 
@@ -110,9 +113,38 @@ export type CopyPoses = ReadonlyMap<string, CopyPose>;
 // The parallel copies of the selected run as the engine samples them while it trains.
 export type LiveCopies =
   | { kind: "connecting" }
-  | { kind: "message"; title: string; body: string }
-  | { kind: "live"; scene: SceneDescription; step: string; copies: readonly CopyPoses[]; note?: string }
+  // `starting`: the run is booting; the view shows it working, not a still message.
+  | { kind: "message"; title: string; body: string; starting?: boolean }
+  | {
+      kind: "live";
+      scene: SceneDescription;
+      step: string;
+      copies: readonly CopyPoses[];
+      // Each copy's distance sensors, in the order of `copies`.
+      rays: readonly (readonly SceneRay[])[];
+      // Each copy's goal and light states, in the order of `copies`.
+      signals?: readonly (SceneSignals | null)[];
+      // Plays the copies' recorded motion; absent when the run streams one pose per snapshot.
+      player?: MotionPlayer;
+      progress?: LiveProgress;
+      note?: string;
+      // Several agents training together: one line per agent, in their lanes' order.
+      agents?: readonly AgentScore[];
+    }
   | { kind: "closed"; reason: string };
+
+// How far the run is and what its worker is doing, as last reported.
+export type LiveProgress = {
+  // "Practicing", "Updating the brain", "Testing checkpoint 25k"; null when the run does not say.
+  phase: string | null;
+  step: number;
+  total: number;
+  // Measured end to end; the bar moves on with it between reports only while the copies practice.
+  stepsPerSecond: number;
+  advancing: boolean;
+  // performance.now() when this was reported.
+  reportedAt: number;
+};
 
 // What changed in a run, so the views that show it read it again.
 export type TrainingChange = "runs" | "metrics" | "checkpoints" | "console" | "live-view";
@@ -126,7 +158,8 @@ export type TrainingListener = {
 
 export type CheckpointMark = { step: number; label: string; result: string; best: boolean; replayable: boolean };
 
-export type ReplayFrame = { time: number; poses: CopyPoses };
+// `signals`: whether the goal's rules held and which vehicle lights were on at this frame.
+export type ReplayFrame = { time: number; poses: CopyPoses; signals?: SceneSignals | null };
 
 // A checkpoint's recorded episode, replayed exactly as MuJoCo computed it.
 export type Replay = {
@@ -148,6 +181,7 @@ export type TrainingPort = {
   updateStartPlan: (input: { project: string; steps?: number; copies?: number; coach?: boolean }) => Promise<StartPlan>;
   startRun: (project: string) => Promise<RunList>;
   getStopSummary: (project: string) => Promise<StopSummary>;
+  // Pauses the run training, or resumes it when it is paused.
   pauseRun: (project: string) => Promise<RunList>;
   stopRun: (project: string) => Promise<RunList>;
   getAutopilot: (project: string) => Promise<AutopilotSettings>;
@@ -168,7 +202,6 @@ export type TrainingPort = {
 export const trainingPort = definePort<TrainingPort>({
   app: {
     ...createEngineTrainingPort(),
-    pauseRun: pending({ key: "training.pause", summary: "Pausing a training run", sprint: 8, ids: ["MOD-STOP-RUN"] }),
     ...createEngineAutopilot(),
   },
   prototype: createTrainingFixture,

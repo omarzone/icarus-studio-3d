@@ -5,10 +5,20 @@ from typing import Any, Literal
 import numpy as np
 
 from icarus.contracts.project import Project
-from icarus.contracts.training import LogLine, MetricPoint, RunConfig, RunFailure, RunState, TrainingSnapshot
-from icarus.sim.env import EPISODE_SECONDS
+from icarus.contracts.training import (
+    CopyPoses,
+    LiveViewMode,
+    LogLine,
+    MetricPoint,
+    MotionSegment,
+    RunConfig,
+    RunFailure,
+    RunPhase,
+    RunState,
+    TrainingSnapshot,
+)
 from icarus.sim.policy import CheckpointPolicy
-from icarus.training import episode_frames
+from icarus.training import episode_frames, film_strip
 from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
 from icarus.training.evaluation import Evaluation, evaluate
 from icarus.training.run_store import RunFolder
@@ -73,6 +83,8 @@ class RunProgress:
         self.last_step = 0
         self._snapshot_warned = False
         self._frames_warned = False
+        self.phase: RunPhase | None = None
+        self._testing: int | None = None
 
     def elapsed(self) -> float:
         return max(0.0, (datetime.now(UTC) - self.started_at).total_seconds())
@@ -89,6 +101,8 @@ class RunProgress:
                 "steps_per_second": self.steps_per_second,
                 "best_step": self._best_step,
                 "success_rate": self._success_rate,
+                "phase": self.phase,
+                "testing_step": self._testing,
                 **updates,
             }
         )
@@ -98,11 +112,19 @@ class RunProgress:
     def state(self) -> RunState:
         return "stopping" if self.stopping else "running"
 
+    def set_phase(self, phase: RunPhase, step: int) -> None:
+        if phase != self.phase:
+            self.phase = phase
+            self.write_status(self.state, step)
+
     def has_checkpoint(self, step: int) -> bool:
         return step in self._saved
 
     def checkpoint(self, model: Any, step: int, model_step: int) -> None:
         """Save the brain at a checkpoint, evaluate it on fixed seeds and record its rollout."""
+        before = self.phase
+        self.phase, self._testing = "testing", step
+        self.write_status(self.state, model_step)
         model.save(self.folder.checkpoint_path(step))
         self._saved.add(step)
         policy = CheckpointPolicy(model, f"Checkpoint {step}")
@@ -111,7 +133,9 @@ class RunProgress:
         has_goal = result.success_rate is not None
         records = self._pictured(step, result)
         self.folder.write_episodes(
-            CheckpointEpisodes(step=step, has_goal=has_goal, episode_seconds=EPISODE_SECONDS, episodes=records)
+            CheckpointEpisodes(
+                step=step, has_goal=has_goal, episode_seconds=self.project.task.episode_seconds, episodes=records
+            )
         )
         self.folder.append_metric(result.metric(step, self.elapsed()))
         rank = (result.success_rate if result.success_rate is not None else 0.0, result.episode_return)
@@ -119,6 +143,7 @@ class RunProgress:
             self._best, self._best_step = rank, step
         self._success_rate = result.success_rate
         self.has_goal = result.success_rate is not None
+        self.phase, self._testing = before, None
         self.write_status(self.state, model_step)
         episodes = self.config.evaluation_episodes
         summary = f"Checkpoint {step:,}: mean return {result.episode_return:.2f} over {episodes} episodes"
@@ -132,6 +157,12 @@ class RunProgress:
         records = list(result.episodes)
         if result.world is None or not result.states:
             return records
+        try:
+            film_strip.save_states(self.folder, step, result.states)
+        except OSError as error:
+            if not self._frames_warned:
+                self._frames_warned = True
+                self.log(f"Episode states could not be kept ({error.strerror or error}); training goes on", "warn")
         try:
             rendered = episode_frames.render_frames(result.world, result.states)
             for index, files in enumerate(rendered):
@@ -159,20 +190,30 @@ class RunProgress:
             )
         self.write_status(self.state, step)
 
-    def snapshot(self, step: int, geoms: list[str], copies: list[Any]) -> None:
+    def snapshot(
+        self,
+        step: int,
+        geoms: list[str],
+        copies: list[CopyPoses],
+        live_view: LiveViewMode | None = None,
+        motion: list[list[MotionSegment]] | None = None,
+    ) -> None:
         # The live view is a preview: a file held open by a reader must never stop training.
         try:
-            self.folder.write_snapshot(TrainingSnapshot(step=step, geoms=geoms, copies=copies))
+            snapshot = TrainingSnapshot(step=step, geoms=geoms, copies=copies, live_view=live_view, motion=motion)
+            self.folder.write_snapshot(snapshot)
         except OSError as error:
             if not self._snapshot_warned:
                 self._snapshot_warned = True
                 self.log(f"The live view could not be updated ({error.strerror or error}); training goes on", "warn")
 
     def finish(self, state: RunState, step: int) -> None:
+        self.phase, self._testing = None, None
         self.write_status(state, step, finished_at=datetime.now(UTC))
 
     def fail(self, reason: str, details: list[str]) -> None:
         self.log(reason, "error")
         lines = [line.text for line in self.folder.log()[-LOG_DETAIL_LINES:]]
         failure = RunFailure(reason=reason, details=[*lines, *details][-LOG_DETAIL_LINES * 2 :])
+        self.phase, self._testing = None, None
         self.write_status("failed", self.last_step, finished_at=datetime.now(UTC), failure=failure)

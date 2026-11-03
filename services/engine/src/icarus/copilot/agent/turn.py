@@ -1,10 +1,12 @@
 import json
 import secrets
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from icarus.contracts.context_usage import ContextRequest
 from icarus.contracts.copilot import (
     Capability,
     ChatSuggestion,
@@ -23,7 +25,7 @@ from icarus.copilot.agent.loop import merged_steps, run_loop
 from icarus.copilot.agent.prompt import system_prompt
 from icarus.copilot.agent.summary_store import SummaryStore
 from icarus.copilot.agent.tools.base import Tool, ToolServices, TurnScope
-from icarus.copilot.client import CopilotError, ModelClient
+from icarus.copilot.client import CopilotError, ModelClient, UserContent, capability_client
 from icarus.copilot.context import lean_context
 from icarus.copilot.hooks import HookRegistry
 from icarus.copilot.language import detect, say
@@ -71,17 +73,45 @@ def _open_proposal(conversation: Conversation) -> str | None:
     return f"{found.id}: {found.summary}" if found else None
 
 
-def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -> tuple[TurnScope, str]:
-    services, project_id = setup.services, conversation.project_id
+def turn_scope(
+    services: ToolServices, conversation: Conversation, message: SendMessage | ContextRequest
+) -> tuple[TurnScope, str]:
+    """The turn's scope over the project as it is now, and the project context its prompt carries."""
+    project_id = conversation.project_id
     state = services.projects.state(project_id)
     context = lean_context(state, services.runs, message.selection, message.workspace, _open_proposal(conversation))
     language = detect(message.text)
     scope = TurnScope(project_id, state, conversation.autonomy, services, request=message.text, language=language)
+    return scope, context
+
+
+def turn_window(settings: ModelSettingsStore, capability: Capability, limits: AgentLimits) -> int:
+    return settings.context_tokens(capability) or limits.context_tokens
+
+
+def turn_prompt(
+    scope: TurnScope,
+    context: str,
+    summary: str | None,
+    history: list[dict],
+    user: UserContent,
+    skills: str,
+    memory: str,
+) -> list[dict]:
+    """Exactly what the turn's first step sends besides the tools."""
+    system = system_prompt(scope.autonomy, context, summary, skills, memory)
+    return [{"role": "system", "content": system}, *history, {"role": "user", "content": user}]
+
+
+def _scope(setup: TurnSetup, conversation: Conversation, message: SendMessage) -> tuple[TurnScope, str]:
+    scope, context = turn_scope(setup.services, conversation, message)
     scope.earlier_proposal = any(item.status == "open" for item in conversation.proposals)
     scope.tools, scope.hooks, scope.turn_id = setup.tools, setup.hooks, secrets.token_hex(6)
+    scope.client, scope.attachments = setup.client, list(message.attachments)
+    scope.vision = setup.client if setup.capability == "vision" else capability_client(setup.settings, "vision")
     publish = setup.publish
     if publish is not None:
-        scope.publish = lambda event: publish(event, project_id)
+        scope.publish = lambda event: publish(event, conversation.project_id)
     return scope, context
 
 
@@ -116,7 +146,7 @@ def _turn(
     media: TurnMedia,
 ) -> TurnResult:
     """The prompt, the loop, and its outcome mapped onto the copilot message."""
-    window = setup.settings.context_tokens(setup.capability) or setup.limits.context_tokens
+    window = turn_window(setup.settings, setup.capability, setup.limits)
     live = {body.id for body in scope.state.project.bodies} | {obj.id for obj in all_objects(scope.state.project)}
     live |= {status.name for status in setup.services.runs.list_runs(scope.project_id)}
     history = build_history(conversation, setup.summaries, setup.client, setup.limits, window, live)
@@ -125,9 +155,10 @@ def _turn(
     scope.sources += [context, *heard]
     scope.percent_sources += [run_headline, *heard]
     memory = setup.memory(scope, message.text) if setup.memory else ""
-    system = system_prompt(scope.autonomy, context, history.summary, setup.skills, memory)
-    messages = [{"role": "system", "content": system}, *history.messages]
-    messages.append({"role": "user", "content": media.user_content(message.text)})
+    user = media.user_content(message.text)
+    messages = turn_prompt(scope, context, history.summary, history.messages, user, setup.skills, memory)
+    # The loop's own budget starts now, so tools that plan with a model know when the turn ends.
+    scope.deadline = time.monotonic() + setup.limits.wall_seconds
     outcome = run_loop(
         setup.client,
         scope,

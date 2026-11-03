@@ -1,5 +1,4 @@
 import type { SceneDescription } from "@icarus/contracts";
-import { pending } from "../app/runtime/pending.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { copiesApi, engineApi } from "../engine-client/engine-api.ts";
 import { createSceneFixture } from "./scene.fixture.ts";
@@ -70,7 +69,7 @@ export type SceneSection = { label: string; objects: readonly SceneObject[] };
 
 export type SceneTree = { selected: string | null; sections: readonly SceneSection[] };
 
-// The 12 property types of the style guide, each with exactly one control.
+// The 13 property types of the style guide, each with exactly one control.
 export type PropertyType =
   | "number"
   | "slider"
@@ -83,7 +82,8 @@ export type PropertyType =
   | "count"
   | "asset"
   | "panel"
-  | "readonly";
+  | "readonly"
+  | "text";
 
 // The 6 states every property can be in.
 export type PropertyState = "default" | "changed" | "proposed" | "out-of-range" | "mixed" | "locked";
@@ -107,7 +107,8 @@ export type PropertyValue =
   | { type: "count"; value: number; min: number; max: number }
   | { type: "asset"; value: string; icon?: SceneIcon }
   | { type: "panel"; value: string; panel: PropertyPanel }
-  | { type: "readonly"; value: string };
+  | { type: "readonly"; value: string }
+  | { type: "text"; value: string };
 
 export type Property = {
   id: string;
@@ -144,11 +145,14 @@ export type Inspection =
       sections: readonly InspectorSection[];
       // Only scene objects have components; runs, brains and clips show settings without them.
       components: boolean;
+      // An older project's endless floor plane, which the user may turn into a slab with edges.
+      planeFloor?: boolean;
     };
 
 export type PropertyEdit = { scene: string; section: string; property: string; value: PropertyValue };
 
-export type ComponentKind = { id: string; label: string; icon: SceneIcon };
+// `unique` kinds fit once per object; the prototype's kinds leave it out.
+export type ComponentKind = { id: string; label: string; icon: SceneIcon; unique?: boolean };
 export type ComponentGroup = { label: string; kinds: readonly ComponentKind[] };
 
 // `objects` names the world objects that vary, or would once it is on; samples without it list none.
@@ -184,6 +188,10 @@ export type ScenePort = {
   setProperty: (edit: PropertyEdit) => Promise<Inspection>;
   resetProperty: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   acceptProposedValue: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
+  // How the brain practices (steps, copies, network, PPO), edited like a selection that has no components.
+  getBrainSettings: (scene: string) => Promise<Inspection>;
+  setBrainSetting: (edit: PropertyEdit) => Promise<Inspection>;
+  resetBrainSetting: (input: { scene: string; section: string; property: string }) => Promise<Inspection>;
   listComponentKinds: () => Promise<ComponentGroup[]>;
   addComponent: (input: { scene: string; kind: string }) => Promise<Inspection>;
   removeComponent: (input: { scene: string; section: string }) => Promise<Inspection>;
@@ -198,17 +206,39 @@ export type ScenePort = {
   getSceneDescription: (scene: string) => Promise<SceneDescription | null>;
   // Moves an object by a delta in world axes (metres, MuJoCo frame), as a gizmo drag ends.
   moveObject: (input: { scene: string; id: string; delta: [number, number, number] }) => Promise<Inspection>;
+  // Turns an object by a rotation in world axes (quaternion wxyz, MuJoCo frame), as a gizmo drag ends.
+  rotateObject: (input: {
+    scene: string;
+    id: string;
+    delta: readonly [number, number, number, number];
+  }) => Promise<Inspection>;
+  // Stretches an object along its own axes by these factors (1 keeps an axis), as a gizmo drag ends.
+  // With a move snap, the stretched sides land on multiples of it.
+  scaleObject: (input: {
+    scene: string;
+    id: string;
+    factor: readonly [number, number, number];
+    snap?: number | null;
+  }) => Promise<Inspection>;
+  // Adds a basic part (box, sphere, cylinder, wedge, corner_wedge, capsule) resting on a point, and selects it.
+  insertPart: (input: {
+    scene: string;
+    shape: string;
+    at: readonly [number, number, number];
+    snap: number | null;
+  }) => Promise<SceneTree>;
+  // Turns the selected endless floor plane into a ground slab with edges; only when the user asks.
+  makeGroundSlab: (scene: string) => Promise<Inspection>;
+  renameObject: (input: { scene: string; id: string; name: string }) => Promise<SceneTree>;
+  // Copies the object and what is nested in it, and selects the copy.
+  duplicateObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
+  // Deletes the object and what is nested in it.
+  deleteObject: (input: { scene: string; id: string }) => Promise<SceneTree>;
+  // Nests the object under another of its group (null: top level), keeping its place in the world.
+  reparentObject: (input: { scene: string; id: string; parent: string | null }) => Promise<SceneTree>;
 };
 
 export const scenePort = definePort<ScenePort>({
-  app: {
-    ...createEngineScenePort({ ...engineApi, ...copiesApi }),
-    acceptProposedValue: pending({
-      key: "scene.acceptProposedValue",
-      summary: "Accepting a value the copilot proposed",
-      sprint: 6,
-      ids: ["REF-PROPERTY-TYPES"],
-    }),
-  },
+  app: createEngineScenePort({ ...engineApi, ...copiesApi }),
   prototype: createSceneFixture,
 });

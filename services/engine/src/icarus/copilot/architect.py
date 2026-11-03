@@ -41,7 +41,9 @@ CREATE_OBJECT_EXAMPLE = CreateObject(
 )
 
 SYSTEM = """You are the architect of Icarus Studio 3D, where people design a world and a body and train a brain with
-reinforcement learning on MuJoCo. Turn the person's request into exactly three different design ideas.
+reinforcement learning on MuJoCo. Turn the person's request into exactly three design ideas that all keep what
+the person asked for: the same kind of body and the same goal. They differ in difficulty, world or approach, never in
+what is being built. List the idea closest to the request first; it is shown as the recommended one.
 An idea either starts from one library template and customizes it with edit operations: rename, recolor, resize,
 set property values inside their ranges, and add obstacles copied from library pieces with new unique ids.
 Only use object ids that exist in the chosen template or that your own operations create, only library component
@@ -52,13 +54,17 @@ its own unique id, for example:
 Or, when no template's body fits the request (another kind of robot: three wheels, four legs, a balancer, a
 pusher), the idea is built from scratch: its "template" is "empty_world", its "operations" stay empty and its
 "outline" says how the environment looks (surfaces, colors, props and their layout) and how the body is made
-(parts, sizes, joints, motors, senses); later stages build and test it. Offer a template idea next to it when one
-comes close. A template idea leaves "outline" empty.
+(parts, sizes, joints, motors, senses); later stages build and test it. Use a template only when its body is the
+kind of body the person asked for; a different kind of body (two legs for a four-legged dog) is never offered as an
+alternative. A template idea leaves "outline" empty.
 Follow the reference's "rules". A template body can only do what its template's "abilities" allow. The title,
-world, body and learns texts describe only what can be built from the library, never abilities it lacks. Only two
-tasks exist: reaching a goal zone (navigation) and moving forward without falling (locomotion); nothing rewards
-moving another object to a place. When the request needs something the library cannot do (flying, swimming,
-delivering an object to a zone), say so plainly in the idea texts and offer the closest real option instead.
+world, body and learns texts describe only what can be built from the library, never abilities it lacks. Two task
+families exist: navigation (reaching a goal zone; with the object_to_goal reward, pushing a movable crate or
+ball into the goal; with coverage, cleaning or exploring new ground) and locomotion (moving forward without
+falling; with height_gain, jumping or standing up). Pushing, cleaning and jumping ideas are built from scratch.
+Zones can make a floor patch slippery (like ice) or slow (like mud). When the request needs something the
+library cannot do (flying, swimming, grasping or carrying with hands), say so plainly in the idea texts and offer
+the closest real option instead.
 When the request implies a destination (a race, a finish line, parking, an obstacle course), the idea needs a
 goal zone at the finish and the navigation task. Obstacles meant to be jumped or to block the way span the whole
 lane, leaving no gap wider than the body to walk around. A body that must react to obstacles needs a distance_ray
@@ -123,7 +129,7 @@ def estimate_minutes(project: Project, compiled: CompiledModel) -> float:
     return RECOMMENDED_STEPS[project.task.family] / speed / 60
 
 
-def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
+def compile_idea(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
     """A compiled idea whose preview is a real scene, or why it failed its design tests."""
     draft = planned.draft
     try:
@@ -156,14 +162,14 @@ def _compile(planned: PlannedIdea, idea_id: str) -> DesignIdea | str:
     )
 
 
-def _fixed(client: ModelClient, system: str, fix: str, deadline: float) -> PlannedIdea | str | None:
+def fixed_idea(client: ModelClient, system: str, fix: str, deadline: float) -> PlannedIdea | str | None:
     try:
         return PlannedIdea(client.ask("design_idea_fix", IdeaDraft, system, fix, deadline=deadline).value)
     except CopilotError:
         return None
 
 
-def _from_scratch(client: ModelClient, prompt: str, draft: IdeaDraft, deadline: float) -> PlannedIdea | str | None:
+def scratch_idea(client: ModelClient, prompt: str, draft: IdeaDraft, deadline: float) -> PlannedIdea | str | None:
     """The draft with its planned and stage-tested design, or why it could not be built."""
     texts = {"title": draft.title, "world": draft.world, "body": draft.body, "learns": draft.learns}
     try:
@@ -195,10 +201,10 @@ def _second_round(
     """At the same time: plan and build each from-scratch idea, and fix each failing template idea once."""
     pool = ThreadPoolExecutor(max_workers=len(failing))
     futures: dict[int, Future[PlannedIdea | str | None]] = {
-        index: pool.submit(_from_scratch, client, prompt, drafts[index], deadline)
+        index: pool.submit(scratch_idea, client, prompt, drafts[index], deadline)
         if drafts[index].from_scratch
         else pool.submit(
-            _fixed, client, system, FIX.format(title=drafts[index].title, prompt=prompt, problem=problem), deadline
+            fixed_idea, client, system, FIX.format(title=drafts[index].title, prompt=prompt, problem=problem), deadline
         )
         for index, problem in failing.items()
     }
@@ -220,7 +226,7 @@ def propose_ideas(client: ModelClient, prompt: str) -> tuple[IdeaSet, dict[str, 
     titles = _unique_titles(drafts)
     planned = [PlannedIdea(draft) for draft in drafts]
     results: list[DesignIdea | str] = [
-        UNFINISHED if draft.from_scratch else _compile(plan, idea_id)
+        UNFINISHED if draft.from_scratch else compile_idea(plan, idea_id)
         for draft, plan, idea_id in zip(drafts, planned, ids, strict=True)
     ]
     failing = {index: result for index, result in enumerate(results) if isinstance(result, str)}
@@ -232,7 +238,7 @@ def propose_ideas(client: ModelClient, prompt: str) -> tuple[IdeaSet, dict[str, 
                 failing[index] += "; its fix-up did not arrive in time or was not valid"
             else:
                 planned[index] = outcome
-                results[index] = _compile(outcome, ids[index])
+                results[index] = compile_idea(outcome, ids[index])
                 if isinstance(results[index], str):
                     failing[index] += f"; after the fix-up: {results[index]}"
     valid = [(result, plan) for result, plan in zip(results, planned, strict=True) if isinstance(result, DesignIdea)]
@@ -260,6 +266,20 @@ class IdeaBook:
     def add(self, idea_set: IdeaSet, drafts: dict[str, PlannedIdea]) -> None:
         with self._lock:
             self._sets[idea_set.id] = (idea_set, drafts)
+
+    def put(self, idea_set_id: str, idea: DesignIdea, plan: PlannedIdea) -> IdeaSet:
+        """The set with this idea in place of the one with its id, or added after the others."""
+        with self._lock:
+            found = self._sets.get(idea_set_id)
+            if found is None:
+                raise UnknownIdeas(idea_set_id)
+            idea_set, planned = found
+            ideas = [idea if item.id == idea.id else item for item in idea_set.ideas]
+            if all(item.id != idea.id for item in idea_set.ideas):
+                ideas.append(idea)
+            updated = idea_set.model_copy(update={"ideas": ideas})
+            self._sets[idea_set_id] = (updated, {**planned, idea.id: plan})
+            return updated
 
     def get(self, idea_set_id: str) -> tuple[IdeaSet, dict[str, PlannedIdea]]:
         with self._lock:

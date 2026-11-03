@@ -133,3 +133,35 @@ def test_coverage_pays_one_for_each_newly_visited_cell_and_nothing_for_old_ones(
     before = replace(STILL, visited=3)
     assert weighted("coverage", before, replace(before, visited=4), 1) == pytest.approx(1.0)
     assert weighted("coverage", before, before, 1) == 0
+
+
+def test_body_height_is_one_at_the_target_and_zero_thirty_percent_away():
+    standing = replace(STILL, position=(0.0, 0.0, 1.0), target_height=1.0)
+    assert weighted("body_height", STILL, standing, 1) == pytest.approx(1.0)
+    assert weighted("body_height", STILL, replace(standing, position=(0.0, 0.0, 0.85)), 1) == pytest.approx(0.5)
+    assert weighted("body_height", STILL, replace(standing, position=(0.0, 0.0, 0.5)), 1) == 0
+    assert weighted("body_height", STILL, replace(STILL, start_height=0.5), 1) == pytest.approx(1.0)
+
+
+def test_smooth_actions_costs_the_mean_squared_change_of_the_commands():
+    before = replace(STILL, controls=(0.0, 0.5))
+    assert weighted("smooth_actions", before, replace(before, controls=(1.0, 0.5)), -1) == pytest.approx(-0.5)
+    assert weighted("smooth_actions", before, before, -1) == 0
+    assert weighted("smooth_actions", STILL, before, -1) == 0
+
+
+def test_feet_air_time_pays_long_landings_and_costs_shuffles_only_while_moving():
+    walking = replace(STILL, speed=0.5, feet_down=(True, True), landed_air=(0.4, 0.0))
+    assert weighted("feet_air_time", STILL, walking, 1) == pytest.approx(0.3)
+    assert weighted("feet_air_time", STILL, replace(walking, landed_air=(2.0, 0.05)), 1) == pytest.approx(0.35)
+    assert weighted("feet_air_time", STILL, replace(walking, speed=0.0), 1) == 0
+
+
+def test_heading_and_drift_costs_turning_away_and_sideways_speed():
+    assert weighted("heading_and_drift", STILL, STILL, -1) == 0
+    assert weighted("heading_and_drift", STILL, replace(STILL, forward=(0.0, 1.0)), -1) == pytest.approx(-1.0)
+    assert weighted("heading_and_drift", STILL, replace(STILL, velocity=(1.0, -0.3)), -1) == pytest.approx(-0.3)
+
+
+def test_joint_limits_costs_the_share_of_joints_at_a_limit():
+    assert weighted("joint_limits", STILL, replace(STILL, at_limits=0.25), -1) == pytest.approx(-0.25)

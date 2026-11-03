@@ -14,6 +14,7 @@ import { LoadingState, NoProjectState } from "../../ui/states.tsx";
 import { ChatPanel } from "../copilot/chat-panel.tsx";
 import { BODY_VARIANTS, type BodyConfig, type BodyVariant, bodyConfig } from "./body-variants.ts";
 import { CheckFailedBanner } from "./check-failed-banner.tsx";
+import { PosePreviewOverlay } from "./pose-preview.tsx";
 import { RigCheckPanel } from "./rig-check/rig-check-panel.tsx";
 
 // The bone inspector is taller than its panel; it scrolls without a gutter, as in the design.
@@ -41,7 +42,7 @@ export function BodyScreen() {
 function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: BodyConfig }) {
   const project = useOpenProjectName("dance-copy");
   const guide = useGuide(config.scene);
-  // The sample is a character with motion clips; app projects have no Motion workspace yet, so Play plays the project.
+  // The sample's Play shows its motion clip; in the app Play plays the project.
   const app = useRuntimeMode() === "app";
   // The header's project name and guide pill change label once they load, so the screen waits for them.
   if (guide.isPending || project === null) {
@@ -53,7 +54,7 @@ function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: Body
       header={{
         project,
         active: "Body",
-        workspaces: app ? undefined : CHARACTER_WORKSPACES,
+        workspaces: CHARACTER_WORKSPACES,
         activeGoesTo: "SCR-BODY",
         guide: guideLabel(guide.data),
         playTo: app ? undefined : "SCR-MOTION",
@@ -89,7 +90,12 @@ function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: Body
                 tabs={RIG_TABS}
                 scene={config.scene}
                 toolbar={toolbar}
-                overlays={variant === "check-failed" ? <CheckFailedBanner body={config.body} /> : null}
+                overlays={
+                  <>
+                    <PosePreviewOverlay body={config.body} />
+                    {variant === "check-failed" ? <CheckFailedBanner body={config.body} /> : null}
+                  </>
+                }
               />
             ) : (
               <ViewportPanel label="The project's world before a body is imported" toolbar={toolbar} />

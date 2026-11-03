@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.design import DesignReport
 from icarus.contracts.operations import EditOperation
-from icarus.contracts.specs import BodySpec, BrainSpec, RewardTermSpec, TaskFamily, TaskSpec, WorldSpec
+from icarus.contracts.specs import AgentSpec, BodySpec, BrainSpec, RewardTermSpec, TaskFamily, TaskSpec, WorldSpec
 
 
 class Project(BaseModel):
@@ -19,6 +19,8 @@ class Project(BaseModel):
     bodies: list[BodySpec]
     task: TaskSpec
     brain: BrainSpec
+    # Several learners side by side, each training with only its own body; empty for one agent (the first body).
+    agents: list[AgentSpec] = Field(default_factory=list)
 
 
 class Revision(BaseModel):
@@ -44,6 +46,16 @@ class ProjectSummary(BaseModel):
     updated_at: datetime
 
 
+class RemixOrigin(BaseModel):
+    """The community creation a project was remixed from; publishing the project names it as the original."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    creation_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,32}$")
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1, max_length=200)
+
+
 class ProjectState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -52,6 +64,7 @@ class ProjectState(BaseModel):
     report: DesignReport
     can_undo: bool
     can_redo: bool
+    remix_of: RemixOrigin | None = None
 
 
 class DuplicateProject(BaseModel):
@@ -68,6 +81,7 @@ class CreateProject(BaseModel):
 
 
 __all__ = [
+    "AgentSpec",
     "BodySpec",
     "BrainSpec",
     "CreateProject",
@@ -75,6 +89,7 @@ __all__ = [
     "Project",
     "ProjectState",
     "ProjectSummary",
+    "RemixOrigin",
     "RewardTermSpec",
     "Revision",
     "TaskFamily",

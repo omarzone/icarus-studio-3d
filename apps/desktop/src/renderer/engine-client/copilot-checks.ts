@@ -21,7 +21,7 @@ import { has, isListOf, isRecord, isSceneDescription } from "./response-checks.t
 const CAPABILITIES: readonly string[] = ["reasoning", "vision", "image", "pose"];
 const PROPOSAL_STATES: readonly string[] = ["open", "applied", "discarded", "outdated"];
 const STEP_STATES: readonly string[] = ["done", "running", "todo"];
-const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view"];
+const ATTACHMENT_KINDS: readonly string[] = ["image", "video", "document", "view", "model"];
 const ACTION_KINDS: readonly string[] = [
   "navigate",
   "train",
@@ -44,7 +44,7 @@ const SUGGESTION_INTENTS: readonly string[] = [
   "show",
   "share",
 ];
-const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library"];
+const AGENT_TOOLS: readonly string[] = ["inspect", "look", "try", "propose", "train", "library", "export"];
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -219,7 +219,8 @@ function isConnection(value: unknown): value is ModelConnection {
     isOptional(value, "model", "string") &&
     has(value, "required", "boolean") &&
     has(value, "connected", "boolean") &&
-    isOptional(value, "detail", "string")
+    isOptional(value, "detail", "string") &&
+    isOptional(value, "context_tokens", "number")
   );
 }
 

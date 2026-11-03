@@ -15,7 +15,7 @@ export function MatchScoreTab({ clip }: { clip: string }) {
     <QueryView
       query={query}
       isEmpty={(data) => data.length === 0}
-      empty={<EmptyState title="No match yet" body="The match per body part appears after the pose is mapped." />}
+      empty={<EmptyState title="No match yet" body="The match per body part appears once the copy has trained." />}
     >
       {(parts) => (
         <div className="grid grid-cols-[160px_minmax(0,1fr)_44px] items-center gap-x-3 gap-y-2 px-3 pt-3 pb-3 text-ui">

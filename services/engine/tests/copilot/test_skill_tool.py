@@ -24,7 +24,7 @@ def test_using_a_skill_returns_its_whole_body_and_checklist_without_truncation(s
 
     assert seen.ok
     assert skill.body in seen.text
-    assert "1. Start from a template" in seen.text
+    assert "1. Start from the vault or a template" in seen.text
     assert seen.summary == f"Leí la guía «{skill.title}»"
     assert USE_SKILL.effect == "read"
     assert USE_SKILL.observation_chars > MAX_SKILL_CHARS

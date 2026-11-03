@@ -1,6 +1,8 @@
-import { pending } from "../app/runtime/pending.ts";
+import type { SceneDescription } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
+import { rigApi } from "../engine-client/rig-api.ts";
+import { skinApi } from "../engine-client/skin-api.ts";
 import { createBodyFixture } from "./body.fixture.ts";
 import { createEngineBodyPort } from "./body-engine.ts";
 import type { CheckFact, ProgressStep } from "./progress-step.ts";
@@ -9,13 +11,21 @@ import type { CheckFact, ProgressStep } from "./progress-step.ts";
 
 export type RigCheck = {
   checks: readonly CheckFact[];
+  // Failing design tests and audit findings: what keeps the body from training well, never a test not run.
+  problems: number;
   poseHint: string;
   poses: readonly { id: string; label: string }[];
 };
 
+// A test pose as MuJoCo left it after the motors held it: what it found, and the posed body to look at (none in the
+// prototype, which has no engine).
+export type PosePreview = { label: string; facts: readonly CheckFact[]; scene: SceneDescription | null };
+
 export type BoneWeights = { bones: readonly { id: string; name: string; coverage: number; problem?: string }[] };
 
 export type ImportKind = { id: string; label: string };
+// A model file the person picked, read as base64.
+export type ModelFile = { name: string; data: string };
 export type ImportPreview = {
   kinds: readonly ImportKind[];
   kind: string;
@@ -35,66 +45,31 @@ export type BodyParts = {
   sensors: readonly BodySensor[];
 };
 
-export type AutoRigProgress = { file: string; percent: number; steps: readonly ProgressStep[] };
+export type AutoRigProgress = {
+  file: string;
+  percent: number;
+  steps: readonly ProgressStep[];
+  state: "running" | "done" | "failed" | "stopped";
+  // Why it failed or stopped, in words.
+  message?: string;
+};
 
 export type BodyPort = {
   getRigCheck: (body: string) => Promise<RigCheck>;
   getParts: (body: string) => Promise<readonly BodyParts[]>;
-  applyPose: (input: { body: string; id: string }) => Promise<void>;
+  applyPose: (input: { body: string; id: string }) => Promise<PosePreview>;
   fixProblems: (body: string) => Promise<RigCheck>;
   getWeights: (body: string) => Promise<BoneWeights>;
   autoFixWeights: (body: string) => Promise<BoneWeights>;
   getImport: (body: string) => Promise<ImportPreview>;
   setImportKind: (input: { body: string; kind: string }) => Promise<ImportPreview>;
-  importStatic: (body: string) => Promise<void>;
-  importAndRig: (body: string) => Promise<void>;
+  importStatic: (input: { body: string; kind: string; file: ModelFile | null }) => Promise<void>;
+  importAndRig: (input: { body: string; kind: string; file: ModelFile | null }) => Promise<void>;
   getAutoRig: (body: string) => Promise<AutoRigProgress>;
   cancelAutoRig: (body: string) => Promise<void>;
 };
 
 export const bodyPort = definePort<BodyPort>({
-  app: {
-    ...createEngineBodyPort(engineApi),
-    applyPose: pending({ key: "body.applyPose", summary: "Trying a test pose", sprint: 9, ids: ["SCR-BODY"] }),
-    fixProblems: pending({
-      key: "body.fixProblems",
-      summary: "Fixing the problems in the body",
-      sprint: 9,
-      ids: ["STA-BODY-CHECK-FAILED"],
-    }),
-    getWeights: pending({ key: "body.weights", summary: "Skin weights per bone", sprint: 9, ids: ["SCR-BODY"] }),
-    autoFixWeights: pending({
-      key: "body.autoFixWeights",
-      summary: "Fixing skin weights automatically",
-      sprint: 9,
-      ids: ["SCR-BODY"],
-    }),
-    getImport: pending({ key: "body.import", summary: "Reading a model to import", sprint: 9, ids: ["MOD-IMPORT"] }),
-    setImportKind: pending({
-      key: "body.setImportKind",
-      summary: "Choosing what kind of file to import",
-      sprint: 9,
-      ids: ["MOD-IMPORT"],
-    }),
-    importStatic: pending({
-      key: "body.importStatic",
-      summary: "Importing a model as a static mesh",
-      sprint: 9,
-      ids: ["MOD-IMPORT"],
-    }),
-    importAndRig: pending({
-      key: "body.importAndRig",
-      summary: "Importing and auto-rigging a model",
-      sprint: 9,
-      ids: ["MOD-IMPORT"],
-    }),
-    getAutoRig: pending({ key: "body.autoRig", summary: "Auto-rig progress", sprint: 9, ids: ["MOD-AUTO-RIG"] }),
-    cancelAutoRig: pending({
-      key: "body.cancelAutoRig",
-      summary: "Cancelling the auto-rig",
-      sprint: 9,
-      ids: ["MOD-AUTO-RIG"],
-    }),
-  },
+  app: createEngineBodyPort(engineApi, skinApi, rigApi),
   prototype: createBodyFixture,
 });

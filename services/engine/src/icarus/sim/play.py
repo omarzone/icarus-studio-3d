@@ -28,7 +28,12 @@ from icarus.contracts.play import (
     WindCommand,
 )
 from icarus.contracts.project import Project
+from icarus.copilot.language import Language, say
+from icarus.design.ray_readings import ray_readings
 from icarus.design.scene import scene_description
+from icarus.library.pieces import PIECES
+from icarus.sim.brain_readings import action_readings, sense_readings
+from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
     apply_action,
     build_world,
@@ -36,20 +41,32 @@ from icarus.sim.model_state import (
     observation,
     reset_world,
     reward_state,
-    sensor_value,
     touching,
+)
+from icarus.sim.play_drops import (
+    PendingDrop,
+    check_drop,
+    piece_object,
+    play_pieces,
+    rain,
+    spawn_point,
+    throw_velocity,
 )
 from icarus.sim.play_tools import (
     ToolRejected,
     add_piece,
     apply_impulse,
     body_id,
+    free_joint,
     movable_props,
     move_body,
     shuffle_props,
 )
 from icarus.sim.policy import Policy
-from icarus.sim.rewards import compose, inside_goal
+from icarus.sim.rewards import RewardState, compose, inside_goal
+from icarus.sim.signals import scene_signals
+from icarus.sim.start_pose import place_start
+from icarus.sim.success import task_done
 
 PlayReply = PlayEventMessage | PlayErrorMessage | PlayReady
 EventKind = Literal["user", "agent", "world"]
@@ -81,10 +98,23 @@ def _vector(values) -> tuple[float, float, float]:
 class PlaySession:
     """One live world stepped in real time with a brain. It works on its own copy and never changes the project."""
 
-    def __init__(self, project: Project, revision: int, brain: Policy, seed: int) -> None:
+    def __init__(
+        self,
+        project: Project,
+        revision: int,
+        brain: Policy,
+        seed: int,
+        language: Language = "en",
+        brain_steps: int | None = None,
+    ) -> None:
         self.revision = revision
+        self.language: Language = language
         self.brain = brain
-        self.world = build_world(project.model_copy(deep=True))
+        # The world as designed; Reset returns to it, dropping whatever Add object brought in.
+        self._project = project.model_copy(deep=True)
+        self.world = build_world(self._project.model_copy(deep=True))
+        self._added = 0
+        self._rain: list[tuple[AddObjectCommand, PendingDrop]] = []
         self.speed = 1.0
         self.paused = False
         self._project_id = project.id
@@ -93,20 +123,27 @@ class PlaySession:
         self._base_diffuse = self.world.model.light_diffuse.copy()
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
+        self.world.tally.training_steps = brain_steps
         self._restart()
 
     def _restart(self) -> None:
         reset_world(self.world)
+        spawn = self.world.spawn
+        # Play starts where the agent stands unless the spawn point asks for varied starts, which each reset draws.
+        if spawn is not None and spawn.mode != "auto":
+            place_start(self.world, self._rng)
         self.step = 0
         self.reward = 0.0
         self.episode_return = 0.0
         self._debt = 0.0
         self._observe()
+        self.world.tally.start_try(goal_distance(self._state))
         self._act()
 
     def _observe(self) -> None:
         self._state = reward_state(self.world)
         self._touching = touching(self.world)
+        self._plates_reached = list(self.world.plate_reached)
 
     def _act(self) -> None:
         if self.world.actuators:
@@ -114,6 +151,9 @@ class PlaySession:
 
     def _name(self, object_id: str | None) -> str:
         return self.world.object_names.get(object_id or "", object_id or "")
+
+    def _text(self, key: str, **values: object) -> str:
+        return say(key, self.language, **values)
 
     def _event(self, text: str, kind: EventKind = "user") -> PlayEvent:
         return PlayEvent(time=float(self.world.data.time), kind=kind, text=text)
@@ -138,19 +178,37 @@ class PlaySession:
         before, after = self._state, reward_state(self.world)
         self.reward = compose(self._terms, self._weights, before, after)[0] if self.world.agent is not None else 0.0
         self.episode_return += self.reward
+        self.world.tally.episode_return = self.episode_return
         events: list[PlayEvent] = []
         agent = self._name(self.world.agent_object)
         now = touching(self.world)
         for geom in sorted(now - self._touching):
             other = self._name(self.world.model.geom(geom).name)
-            events.append(self._event(f"{agent} touched {other}", "agent"))
+            events.append(self._event(self._text("play_touched", agent=agent, other=other), "agent"))
         if self.world.goal and inside_goal(after) and not inside_goal(before):
             goal = self._name(self.world.goal.object)
-            events.append(self._event(f"{agent} reached the {goal[:1].lower()}{goal[1:]}", "agent"))
+            events.append(
+                self._event(self._text("play_reached", agent=agent, goal=f"{goal[:1].lower()}{goal[1:]}"), "agent")
+            )
         if after.fallen and not before.fallen:
-            events.append(self._event(f"{agent} fell over", "agent"))
+            events.append(self._event(self._text("play_fell", agent=agent), "agent"))
+        events += self._plate_events(before, after, agent)
         self._state, self._touching = after, now
+        self._plates_reached = list(self.world.plate_reached)
         self._act()
+        return events
+
+    def _plate_events(self, before: RewardState, after: RewardState, agent: str) -> list[PlayEvent]:
+        """Plates reached for the first time in this try, and the goal completed when the plates are the goal; a plate
+        that flickers under a stumbling body is told once."""
+        events: list[PlayEvent] = []
+        for plate, now, was in zip(self.world.plates, self.world.plate_reached, self._plates_reached, strict=False):
+            if now and not was:
+                events.append(self._event(self._text("play_plate_on", plate=self._name(plate.object)), "world"))
+        if task_done(self.world, after) and not task_done(self.world, before):
+            self.world.tally.successes += 1
+            if self.world.plate_goal:
+                events.append(self._event(self._text("play_plates_done", agent=agent), "agent"))
         return events
 
     def apply(self, command: PlayCommand) -> list[PlayReply]:
@@ -171,7 +229,7 @@ class PlaySession:
         match command:
             case MoveCommand():
                 move_body(world, body_id(world, command.object), command.position)
-                return [self._say(f"You moved {self._name(command.object)}")]
+                return [self._say(self._text("play_moved", name=self._name(command.object)))]
             case PushCommand():
                 body = body_id(world, command.object)
                 direction = np.array(command.direction, dtype=float)
@@ -182,41 +240,100 @@ class PlaySession:
                 impulse = direction / length * command.speed * float(world.model.body_subtreemass[body])
                 apply_impulse(world, body, impulse)
                 magnitude = _amount(float(np.linalg.norm(impulse)))
-                return [self._say(f"You pushed {self._name(command.object)} with {magnitude} N·s")]
+                return [self._say(self._text("play_pushed", name=self._name(command.object), impulse=magnitude))]
             case AddObjectCommand():
-                self.world, name = add_piece(world, command.piece, command.position)
-                self.world.model.light_diffuse[:] = world.model.light_diffuse
-                self._observe()
-                return [self._ready(), self._say(f"You added {name}")]
+                check_drop(command)
+                drops = rain(command, float(world.data.time), self._rng)
+                name = self._drop(command, drops[0])
+                self._rain += [(command, drop) for drop in drops[1:]]
+                if command.count > 1:
+                    text = self._text("play_rain", count=command.count, name=name)
+                elif command.placement == "throw":
+                    text = self._text("play_threw", name=name, speed=f"{command.speed:g}")
+                else:
+                    text = self._text("play_dropped" if command.placement == "drop" else "play_added", name=name)
+                return [self._ready(), self._say(text)]
             case LightCommand():
                 world.model.light_diffuse[:] = self._base_diffuse * command.intensity
-                return [self._ready(), self._say(f"You set the light to {command.intensity * 100:.0f}%")]
+                return [self._ready(), self._say(self._text("play_light", percent=f"{command.intensity * 100:.0f}"))]
             case WindCommand():
                 world.model.opt.wind[:] = command.velocity
                 speed = math.hypot(*command.velocity)
                 # Wind only pushes bodies through air, so air gets its density while wind blows.
                 world.model.opt.density = AIR_DENSITY if speed > 0 else 0.0
-                text = f"You set the wind to {_amount(speed)} m/s" if speed > 0 else "You stopped the wind"
+                text = self._text("play_wind", speed=_amount(speed)) if speed > 0 else self._text("play_wind_off")
                 return [self._say(text)]
             case SpeedCommand():
                 self.speed = command.speed
-                return [self._say(f"You set the speed to {command.speed:g}×")]
+                return [self._say(self._text("play_speed", speed=f"{command.speed:g}"))]
             case PauseCommand():
                 self.paused = command.paused
-                return [self._say("You paused the simulation" if command.paused else "You resumed the simulation")]
+                return [self._say(self._text("play_paused" if command.paused else "play_resumed"))]
             case ResetCommand():
+                rebuilt = self._added > 0
+                self._clear_added()
                 self._restart()
-                return [self._say("Episode reset", "world")]
+                said = self._say(self._text("play_reset"), "world")
+                return [self._ready(), said] if rebuilt else [said]
             case ShuffleCommand():
                 count = shuffle_props(world, self._rng, SHUFFLE_REACH)
                 self._observe()
-                return [self._say(f"You shuffled {count} prop{'' if count == 1 else 's'}")]
+                return [self._say(self._text("play_shuffled_one" if count == 1 else "play_shuffled", count=count))]
             case TouchCommand():
                 body = body_id(world, command.object)
                 if not any(sensor.id == f"{command.object}:touch" for sensor in world.sensors):
                     raise ToolRejected(f"{self._name(command.object)} has no touch sensor to poke")
                 apply_impulse(world, body, np.array([0.0, 0.0, -POKE]))
-                return [self._say(f"You poked {self._name(command.object)}")]
+                return [self._say(self._text("play_poked", name=self._name(command.object)))]
+
+    def _drop(self, command: AddObjectCommand, drop: PendingDrop) -> str:
+        """Add one copy to the running world; a throw leaves already flying at the agent."""
+        old = self.world
+        spec = piece_object(old.project, command, drop.position)
+        launch = None
+        if command.placement == "throw":
+            if old.agent is None:
+                raise ToolRejected("There is no agent to throw at")
+            launch = throw_velocity(np.array(spawn_point(spec)), old.data.xpos[old.agent].copy(), command.speed)
+        self.world = add_piece(old, spec)
+        # The rebuilt world keeps the try's counts, so displays and plates carry on.
+        self.world.tally = old.tally
+        self.world.model.light_diffuse[:] = old.model.light_diffuse
+        self._added += 1
+        joint = free_joint(self.world, body_id(self.world, spec.id))
+        if launch is not None and joint is not None:
+            dof = int(self.world.model.jnt_dofadr[joint])
+            self.world.data.qvel[dof : dof + 3] = launch
+            mujoco.mj_forward(self.world.model, self.world.data)
+        self._observe()
+        return PIECES[command.piece].label if command.count > 1 else spec.name
+
+    def due(self) -> list[PlayReply]:
+        """Drop the copies of a rain whose time has come; a copy that cannot be added ends the rain."""
+        now = float(self.world.data.time)
+        ready = [entry for entry in self._rain if entry[1].due <= now]
+        if not ready:
+            return []
+        self._rain = [entry for entry in self._rain if entry[1].due > now]
+        try:
+            for command, drop in ready:
+                self._drop(command, drop)
+        except ToolRejected as rejected:
+            self._rain = []
+            return [self._ready(), PlayErrorMessage(type="error", message=str(rejected))]
+        return [self._ready()]
+
+    def _clear_added(self) -> None:
+        """Back to the designed world, keeping the light and wind the person set."""
+        self._rain = []
+        if self._added == 0:
+            return
+        old = self.world
+        self.world = build_world(self._project.model_copy(deep=True))
+        self.world.model.light_diffuse[:] = old.model.light_diffuse
+        self.world.model.opt.wind[:] = old.model.opt.wind
+        self.world.model.opt.density = old.model.opt.density
+        self._added = 0
 
     def tools(self) -> list[PlayToolInfo]:
         tools = [PlayToolInfo(id=id, label=label) for id, label in _CORE_TOOLS]
@@ -233,19 +350,11 @@ class PlaySession:
             brain=self.brain.label,
             tools=self.tools(),
             scene=scene_description(self.world.compiled, self.revision),
+            pieces=list(play_pieces()),
         )
 
     def _senses(self) -> list[PlayReading]:
-        readings: list[PlayReading] = []
-        for sensor in self.world.sensors:
-            raw = sensor_value(self.world, sensor)
-            value = float(raw[0]) if sensor.kind in ("ray", "touch") else float(np.linalg.norm(raw))
-            readings.append(
-                PlayReading(
-                    id=sensor.id, label=sensor.label, value=value, min=sensor.low, max=sensor.high, unit=sensor.unit
-                )
-            )
-        return readings
+        return sense_readings(self.world)
 
     def _status(self) -> PlayStatus:
         title = "Paused" if self.paused else "Playing"
@@ -282,17 +391,7 @@ class PlaySession:
                     ),
                 )
             )
-        actions = [
-            PlayReading(
-                id=actuator.id,
-                label=actuator.label,
-                value=float(data.ctrl[index]),
-                min=actuator.low,
-                max=actuator.high,
-                unit=actuator.unit,
-            )
-            for index, actuator in enumerate(self.world.actuators)
-        ]
+        actions = action_readings(self.world)
         return PlayFrame(
             time=float(data.time),
             step=self.step,
@@ -304,4 +403,6 @@ class PlaySession:
             reward=self.reward,
             episode_return=self.episode_return,
             status=self._status(),
+            rays=ray_readings(model, data, {sensor.id: sensor.label for sensor in self.world.sensors}),
+            signals=scene_signals(self.world, self._state),
         )

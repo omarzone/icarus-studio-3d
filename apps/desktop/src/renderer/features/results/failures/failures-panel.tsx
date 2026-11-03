@@ -62,7 +62,15 @@ export function FailuresPanel({ project, className = "flex-none" }: { project: s
           )}
         </QueryView>
       ) : tab === "all" ? (
-        <QueryView query={runs}>{(data) => <AllTestRunsTab runs={data} />}</QueryView>
+        <QueryView
+          query={runs}
+          isEmpty={(data) => data.length === 0}
+          empty={
+            <EmptyState title="No test runs yet" body="Every checkpoint is tested on fixed evaluation episodes." />
+          }
+        >
+          {(data) => <AllTestRunsTab runs={data} />}
+        </QueryView>
       ) : (
         <DiagnosesTab project={project} />
       )}

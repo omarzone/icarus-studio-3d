@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from icarus.contracts.scene import Quaternion, Vector3
+from icarus.contracts.scene import Quaternion, SceneRay, SceneSignals, Vector3
 
 MAX_STEPS = 50_000_000
 MAX_COPIES = 64
@@ -45,9 +45,17 @@ class RunConfig(_Model):
     evaluation_episodes: int = Field(ge=1)
     threads: int = Field(ge=1)
     warm_start: WarmStart | None = None
+    # In a project with several agents: the agent this run trains and the group of runs started with it.
+    agent: str | None = None
+    group: str | None = None
 
 
 RunState = Literal["starting", "running", "stopping", "done", "stopped", "failed"]
+# What a running worker is doing: stepping the copies, updating the brain from them, or testing a checkpoint.
+RunPhase = Literal["practicing", "updating", "testing"]
+# How the live view plays the copies: one pose per snapshot eased ("classic"), recorded motion at 1x sim speed a
+# moment behind ("realtime"), or recorded motion sped up to keep pace with training ("fast").
+LiveViewMode = Literal["classic", "realtime", "fast"]
 
 
 class RunFailure(_Model):
@@ -75,6 +83,25 @@ class RunStatus(_Model):
     # Evaluation of the latest checkpoint: share of episodes that reached the goal, when the task has one.
     success_rate: float | None = None
     failure: RunFailure | None = None
+    # Only while the worker runs; old status files have none.
+    phase: RunPhase | None = None
+    # The checkpoint being tested while `phase` is "testing".
+    testing_step: int | None = None
+    # In a project with several agents: the agent this run trains, its name and the group of runs started together.
+    agent: str | None = None
+    agent_name: str | None = None
+    group: str | None = None
+    # The worker holds training where it was until the run is resumed.
+    paused: bool = False
+
+
+class RunGroup(_Model):
+    """The runs started together for a project with several agents, one per agent, in the agents' order."""
+
+    group_id: str
+    project_id: str
+    revision_number: int
+    runs: list[RunStatus]
 
 
 class MetricPoint(_Model):
@@ -109,6 +136,8 @@ class RolloutFrame(_Model):
     positions: list[Vector3]
     quaternions: list[Quaternion]
     reward: float
+    # Goal and light states at this frame; absent in rollouts recorded before they existed.
+    signals: SceneSignals | None = None
 
 
 class Rollout(_Model):
@@ -126,6 +155,20 @@ class Rollout(_Model):
 class CopyPoses(_Model):
     positions: list[Vector3]
     quaternions: list[Quaternion]
+    # This copy's distance sensors right now.
+    rays: list[SceneRay] = []
+    # This copy's goal and light states right now.
+    signals: SceneSignals | None = None
+
+
+class MotionSegment(_Model):
+    """Contiguous recorded frames of one episode of one copy, as MuJoCo computed them."""
+
+    # Counts this copy's episodes; a new number is a cut, never motion to blend across.
+    episode: int
+    # Seconds of sim time since the episode started, increasing.
+    times: list[float]
+    frames: list[CopyPoses]
 
 
 class TrainingSnapshot(_Model):
@@ -133,7 +176,12 @@ class TrainingSnapshot(_Model):
 
     step: int
     geoms: list[str]
+    # Each copy's newest pose.
     copies: list[CopyPoses]
+    # Absent in snapshots written before the live view played recorded motion; those are "classic".
+    live_view: LiveViewMode | None = None
+    # Per copy, the frames recorded since the previous snapshot, oldest first.
+    motion: list[list[MotionSegment]] | None = None
 
 
 class LogLine(_Model):

@@ -1,12 +1,23 @@
-import type { PlayCommand, PlayFrame, PlayReading, PlaySessionInfo, PlayToolInfo } from "@icarus/contracts";
-import {
-  type LiveBar,
-  PLACED_PIECE,
-  type PlayAction,
-  type PlayEvent,
-  type PlaySession,
-  type PlayTool,
-  type PlayToolId,
+import type {
+  AddObjectCommand,
+  PlayBrainOption,
+  PlayCommand,
+  PlayFrame,
+  PlayPiece as PlayPieceInfo,
+  PlayReading,
+  PlaySessionInfo,
+  PlayToolInfo,
+} from "@icarus/contracts";
+import type {
+  LiveBar,
+  PlayAction,
+  PlayBrain,
+  PlayDrop,
+  PlayEvent,
+  PlayPiece,
+  PlaySession,
+  PlayTool,
+  PlayToolId,
 } from "./play-port.ts";
 
 // Pure mappings between the Play contract and the Play view types.
@@ -101,14 +112,83 @@ export function playSession({ info, frame, events, selectedTool }: SessionParts)
     speed: formatSpeed(frame.speed),
     paused: frame.paused,
     status: { title: frame.status.title, detail: frame.status.detail },
-    placing: selectedTool === "add-object" ? `Click to place: ${PLACED_PIECE.label}` : undefined,
+    agents: frame.agents?.length
+      ? frame.agents.map((agent) => ({
+          name: agent.name,
+          detail: `${agent.status.detail} · return ${formatValue(agent.episode_return)}`,
+        }))
+      : undefined,
+    pieces: playPieces(info.pieces),
     senses: {
       bars: senseBars(frame.senses),
       note: `Reward ${formatValue(frame.reward)} · episode return ${formatValue(frame.episode_return)}`,
     },
-    decisions: { bars: decisionBars(frame.actions), brain: info.brain },
+    decisions: {
+      bars: decisionBars(frame.actions),
+      brain: info.brain,
+      playing: info.run_id && typeof info.step === "number" ? { runId: info.run_id, step: info.step } : undefined,
+    },
     events,
   };
+}
+
+export function playBrains(options: readonly PlayBrainOption[]): PlayBrain[] {
+  return options.map((option) => ({
+    runId: option.run_id,
+    step: option.step,
+    label: option.label,
+    fits: option.fits,
+    reason: option.reason ?? undefined,
+    isDefault: option.default,
+  }));
+}
+
+// Add object as the engine reads it: only the choices that differ from the piece's own values are sent.
+export function dropCommand(drop: PlayDrop, at: [number, number, number]): AddObjectCommand {
+  const command: AddObjectCommand = {
+    tool: "add_object",
+    piece: drop.piece,
+    position: at,
+    placement: drop.placement,
+    scale: drop.scale,
+  };
+  if (drop.placement === "drop") {
+    command.height = drop.height;
+  }
+  if (drop.placement === "throw") {
+    command.height = drop.height;
+    command.speed = drop.speed;
+  }
+  if (drop.weight) {
+    command[drop.weight.kind] = drop.weight.value;
+  }
+  if (drop.friction !== null) {
+    command.friction = drop.friction;
+  }
+  if (drop.bounciness !== null) {
+    command.bounciness = drop.bounciness;
+  }
+  if (drop.color !== null) {
+    command.color = drop.color;
+  }
+  if (drop.count > 1) {
+    command.count = drop.count;
+    command.interval = drop.interval;
+    command.spread = drop.spread;
+  }
+  return command;
+}
+
+export function playPieces(pieces: readonly PlayPieceInfo[] | undefined): PlayPiece[] {
+  return (pieces ?? []).map((piece) => ({
+    id: piece.id,
+    label: piece.label,
+    category: piece.category,
+    mass: piece.mass,
+    friction: piece.friction,
+    bounciness: piece.bounciness,
+    color: piece.color,
+  }));
 }
 
 // The world settings the toggling tools change; the next command depends on them.
@@ -121,7 +201,7 @@ export function playCommand(action: PlayAction, controls: PlayControls): PlayCom
     case "push":
       return { tool: "push", object: action.object, direction: action.direction, speed: PUSH_SPEED };
     case "add-object":
-      return { tool: "add_object", piece: action.piece, position: action.at };
+      return dropCommand(action.drop, action.at);
     case "touch":
       return { tool: "touch", object: action.object };
     case "light": {

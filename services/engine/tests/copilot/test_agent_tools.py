@@ -29,11 +29,19 @@ def test_a_piece_carries_the_valid_values_of_its_components(scope):
     assert "asphalt" in wall["component_schemas"]["material"]["surface"]["options"]
 
 
+def test_asking_for_a_category_lists_all_its_pieces_with_sizes(scope):
+    street = json.loads(library(scope, LibraryArgs(query="street")).text)["pieces_by_category"]["street"]
+    assert {"curb", "lamp_post", "parked_car", "puddle"} <= set(street)
+    assert "4.2×1.8×1.45 m" in street["parked_car"] and "Fixed" in street["parked_car"]
+
+
 def test_a_body_is_inspected_part_by_part_with_schemas(scope):
     observation = inspect_object(scope, InspectArgs(object="car_body"))
     parts = json.loads(observation.text)["parts"]
     steering = next(part for part in parts if part["id"] == "steer_left")
-    assert steering["components"]["motor"]["schema"] and observation.summary == "Inspected Car"
+    car = next(part for part in parts if part["id"] == "car")
+    assert steering["components"]["joint"]["schema"] and car["components"]["vehicle"]["schema"]
+    assert observation.summary == "Inspected Car"
 
 
 def test_reading_runs_before_any_training_says_so_exactly(scope):
@@ -54,8 +62,19 @@ def test_a_template_brings_the_operations_that_add_its_body_and_task_to_this_pro
     assert tried["passed"], tried["checks"]
 
 
+def test_a_vault_body_brings_the_operations_that_make_it_this_projects_agent(scope):
+    listed = json.loads(library(scope, LibraryArgs(query="vault bodies")).text)["vault_bodies"]
+    assert {"spider", "dog", "snake", "humanoid_body"} <= set(listed)
+    spider = json.loads(library(scope, LibraryArgs(kind="spider")).text)
+    assert spider["type"] == "body" and spider["family"] == "locomotion"
+    operations = spider["operations_for_this_project"]
+    assert {"op": "remove_body", "body": "car_body"} in operations
+    tried = json.loads(try_change(scope, TryArgs.model_validate({"operations": operations, "look": None})).text)
+    assert tried["passed"], tried["checks"]
+
+
 class _BlankViews:
-    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+    def render(self, compiled, camera, zones, timeout=None, colliders=False) -> bytes:
         raise BlankPicture("every pixel is the same")
 
 
@@ -70,7 +89,7 @@ def test_a_blank_picture_is_a_failed_look_that_tells_the_model_not_to_describe_i
 
 
 class _NoGlViews:
-    def render(self, compiled, camera, zones, timeout=None) -> bytes:
+    def render(self, compiled, camera, zones, timeout=None, colliders=False) -> bytes:
         raise RenderUnavailable("no OpenGL on this machine")
 
 
