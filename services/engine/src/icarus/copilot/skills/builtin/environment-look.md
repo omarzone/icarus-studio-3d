@@ -2,8 +2,8 @@
 name: environment-look
 title: Make the world look like a believable place
 when: The person asks for a theme, colors, a sky, a mood, decoration, a realistic world or a scene that looks like a place (a street, a parking lot, a warehouse, a park, a farm, a planet).
-tools: [library, inspect_object, try, look, propose]
-version: 2
+tools: [library, inspect_object, find_objects, pattern, edit_matching, try, look, propose]
+version: 3
 ---
 The look never changes the task: the body learns the same thing in a believable world. A place reads as real when
 its surroundings frame it, its pieces share one scale and one palette, and the sky and ground fit the hour and the
@@ -19,6 +19,8 @@ weather. Build it around the task, never on top of it.
    regular rows (a lamp every 10 to 15 m, trees every 6 to 10 m) on the sidewalks or verges; `cone` pieces only
    where they mark something. Indoors, use walls, shelves (tall static boxes) and pillars instead. Repeat pieces at
    even spacing and vary them a little (`randomize.color` on, small size changes) so rows do not look stamped.
+   Lay rows, grids, rings and seeded scatter with `pattern` (keep_clear the spawn, the path and the goal), and
+   recolor many pieces at once with `edit_matching` after checking its filter with `find_objects`.
 3. **Keep the task's path and senses clear.** Decoration never blocks the way from the start to the goal, never
    sits on or inside the goal zone, and never stands where a `distance_ray` would read it as an obstacle unless the
    task is about avoiding it. Pieces that are only looks (`tree`, `lamp_post`, `sign`, markings) have no

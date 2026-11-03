@@ -2,7 +2,6 @@
 the pictures are rendered from them only when someone looks, so training never waits on them."""
 
 import io
-import math
 import os
 import secrets
 import time
@@ -14,7 +13,7 @@ import numpy as np
 
 from icarus.design.scene import scene_description
 from icarus.sim.model_state import LiveWorld
-from icarus.sim.views import encode_png, is_blank, open_renderer, release_renderer, render_pixels
+from icarus.sim.views import contact_sheet, encode_png, is_blank, open_renderer, release_renderer, render_pixels
 from icarus.training.episode_frames import chase
 from icarus.training.evaluation import EpisodeStates
 from icarus.training.run_store import RunFolder
@@ -119,16 +118,14 @@ class RenderedStrip:
 
 def strip_sheet(cells: list[tuple[np.ndarray, bool]]) -> np.ndarray:
     height, width = FRAME_HEIGHT // 2, FRAME_WIDTH // 2
-    rows = max(1, math.ceil(len(cells) / COLUMNS))
-    sheet = np.zeros((rows * height, COLUMNS * width, 3), np.uint8)
-    for number, (pixels, failure) in enumerate(cells):
+    halves: list[np.ndarray] = []
+    for pixels, failure in cells:
         cell = pixels[::2, ::2][:height, :width].copy()
         if failure:
             edge = FAILURE_BORDER
             cell[:edge], cell[-edge:], cell[:, :edge], cell[:, -edge:] = (FAILURE_COLOR,) * 4
-        row, column = divmod(number, COLUMNS)
-        sheet[row * height : (row + 1) * height, column * width : (column + 1) * width] = cell
-    return sheet
+        halves.append(cell)
+    return contact_sheet(halves, COLUMNS, (height, width))
 
 
 def stacked(first: np.ndarray, second: np.ndarray) -> np.ndarray:

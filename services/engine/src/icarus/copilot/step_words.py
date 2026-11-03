@@ -127,6 +127,27 @@ STEP_TEXTS: dict[str, dict[Language, str]] = {
     "autopilot_stopped": {"en": "Stopped the autopilot", "es": "Detuve el piloto automático"},
     "autopilot_checked": {"en": "Checked the autopilot", "es": "Revisé el piloto automático"},
     "coach_refused": {"en": "The coach could not act: {reason}", "es": "El entrenador no pudo actuar: {reason}"},
+    "found": {"en": "Searched the scene: {count} found", "es": "Busqué en la escena: {count} encontrados"},
+    "find_failed": {"en": "Could not search the scene", "es": "No pude buscar en la escena"},
+    "try_no_base": {"en": "Could not build on that try", "es": "No pude partir de esa prueba"},
+    "build_failed": {"en": "Could not build the change", "es": "No pude armar el cambio"},
+    "patterned": {"en": "Made {count} copies of {name}", "es": "Hice {count} copias de {name}"},
+    "group_move": {"en": "Moved {name} with what it holds", "es": "Moví {name} con lo que contiene"},
+    "group_rotate": {"en": "Turned {name} with what it holds", "es": "Giré {name} con lo que contiene"},
+    "group_scale": {"en": "Scaled {name} with what it holds", "es": "Escalé {name} con lo que contiene"},
+    "group_make_group": {"en": "Grouped objects next to {name}", "es": "Agrupé objetos junto a {name}"},
+    "group_ungroup": {"en": "Ungrouped {name}", "es": "Desagrupé {name}"},
+    "matched_edit": {"en": "Edited {count} matching objects", "es": "Edité {count} objetos que coinciden"},
+    "looked_sheet": {
+        "en": "Looked at {count} views of the scene{tried}",
+        "es": "Miré {count} vistas de la escena{tried}",
+    },
+    "colliders_only": {"en": " (physical shapes only)", "es": " (solo formas físicas)"},
+    "view_free": {"en": "from a free camera", "es": "desde una cámara libre"},
+    "verb_find_objects": {"en": "search the scene", "es": "buscar en la escena"},
+    "verb_pattern": {"en": "make copies", "es": "hacer copias"},
+    "verb_edit_group": {"en": "edit the group", "es": "editar el grupo"},
+    "verb_edit_matching": {"en": "edit matching objects", "es": "editar los objetos que coinciden"},
 }
 
 
