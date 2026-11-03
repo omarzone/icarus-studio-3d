@@ -3,8 +3,10 @@ import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
 import { createLibraryFixture } from "./library.fixture.ts";
 import { libraryItems, pieceScene, placePiece } from "./library-engine.ts";
+import { vaultBodyId, vaultBodyOperations } from "./vault-bodies.ts";
 
-// Ready-made pieces the user drags into a world; thumbnails are real 3D renders made by the engine.
+// Ready-made pieces the user drags into a world and vault bodies that become its agent; thumbnails are real 3D
+// renders made by the engine.
 export type LibraryShelf = "library" | "community" | "my-files";
 
 export type LibraryItemKind = "environment" | "prop" | "agent" | "body" | "brain" | "model" | "video";
@@ -32,10 +34,20 @@ export const libraryPort = definePort<LibraryPort>({
     listItems: async ({ shelf, search }) => libraryItems(await engineApi.library(), shelf, search),
     previewItem: async ({ scene, id }) => {
       const [state, catalog] = await Promise.all([engineApi.project(scene), engineApi.library()]);
+      const body = vaultBodyId(id);
+      if (body) {
+        const label = catalog.bodies?.find((item) => item.id === body)?.label ?? body;
+        await engineApi.applyOperations(scene, vaultBodyOperations(state.project, catalog, body), `Added ${label}`);
+        return;
+      }
       const operation = placePiece(state.project, catalog, id);
       await engineApi.applyOperations(scene, [operation], `Placed ${operation.object.name}`);
     },
     itemScene: async (id) => {
+      const body = vaultBodyId(id);
+      if (body) {
+        return engineApi.vaultBodyScene(body);
+      }
       const piece = ((await engineApi.library()).pieces ?? []).find((item) => item.id === id);
       const scene = piece ? pieceScene(piece) : null;
       if (!scene) {

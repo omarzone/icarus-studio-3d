@@ -93,7 +93,20 @@ export function isLibraryCatalog(value: unknown): value is LibraryCatalog {
     has(value, "components", "array") &&
     has(value, "templates", "array") &&
     has(value, "reward_terms", "array") &&
-    has(value, "pieces", "array")
+    has(value, "pieces", "array") &&
+    (!isRecord(value) || value.bodies === undefined || (Array.isArray(value.bodies) && value.bodies.every(isVaultBody)))
+  );
+}
+
+// A vault body brings the whole body it adds, so its body and objects are checked too.
+function isVaultBody(value: unknown): boolean {
+  return (
+    has(value, "id", "string") &&
+    has(value, "family", "string") &&
+    has(value, "rewards", "array") &&
+    isRecord(value) &&
+    has(value.body, "id", "string") &&
+    has(value.body, "objects", "array")
   );
 }
 
