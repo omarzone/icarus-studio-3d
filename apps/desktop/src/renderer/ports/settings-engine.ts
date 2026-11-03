@@ -72,6 +72,7 @@ function modelsView(settings: EngineModelSettings): ModelSettings {
         required: connection.required,
         connected: connection.connected,
         ...(connection.detail ? { detail: connection.detail } : {}),
+        ...(typeof connection.context_tokens === "number" ? { contextTokens: connection.context_tokens } : {}),
       }),
     ),
   };
@@ -82,7 +83,7 @@ export function createEngineModelSettings(
 ): Pick<SettingsPort, "getModelSettings" | "saveModelSettings" | "testModelConnection"> {
   return {
     getModelSettings: async () => modelsView(await api.modelSettings()),
-    saveModelSettings: async ({ endpoint, apiKey, models }) => {
+    saveModelSettings: async ({ endpoint, apiKey, models, contextTokens }) => {
       const patch: ModelSettingsPatch = { endpoint: endpoint.trim() };
       if (apiKey.trim() !== "") {
         patch.api_key = apiKey.trim();
@@ -92,6 +93,9 @@ export function createEngineModelSettings(
       );
       if (named.length > 0) {
         patch.models = Object.fromEntries(named);
+      }
+      if (contextTokens && Object.keys(contextTokens).length > 0) {
+        patch.context_tokens = contextTokens;
       }
       return modelsView(await api.saveModelSettings(patch));
     },

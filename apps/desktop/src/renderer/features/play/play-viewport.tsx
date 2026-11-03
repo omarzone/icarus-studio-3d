@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
-import { type PlayAction, type PlaySession, playPort } from "../../ports/play-port.ts";
+import { type PlayAction, type PlayDrop, type PlaySession, playPort } from "../../ports/play-port.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
 import { buttonClass } from "../../ui/button-styles.ts";
-import { ErrorState, LoadingState } from "../../ui/states.tsx";
+import { ErrorState } from "../../ui/states.tsx";
+import { AddObjectOptions } from "./add-object-options.tsx";
+import { freshDrop, pieceOf, placingHint } from "./drop-choice.ts";
+import { PlayLoading } from "./play-loading.tsx";
 import { PlayToolBar } from "./play-tool-bar.tsx";
 import { instantAction, nextSpeed, pickAction } from "./play-tools.ts";
-import { usePlayCache, usePlayLive, usePlaySession } from "./use-play-session.ts";
+import { usePlayCache, usePlayLive, usePlayProgress, usePlaySession } from "./use-play-session.ts";
 
 const PLAIN_VIEWS = [
   { id: "play", label: "Play" },
@@ -27,8 +30,14 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
   const select = useEngineAction(port.selectTool);
   const speed = useEngineAction(port.setSpeed);
   const act = useEngineAction(port.send);
+  const progress = usePlayProgress(project);
   const [held, setHeld] = useState<string | null>(null);
+  // What Add object brings, for this Play session only.
+  const [chosen, setChosen] = useState<PlayDrop | null>(null);
   const data = session.data;
+  const pieces = data?.pieces ?? [];
+  const drop = chosen ?? freshDrop(pieces.some((piece) => piece.id === "box") ? "box" : pieces[0]?.id);
+  const adding = data?.selectedTool === "add-object" && pieces.length > 0;
   const send = (action: PlayAction) => act.mutate({ project, action });
   const pause = data?.paused === undefined ? [] : [data.paused ? "Resume" : "Pause"];
   return (
@@ -55,7 +64,7 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
           if (!data) {
             return;
           }
-          const result = pickAction(data.selectedTool, pick, held, live.data ?? null);
+          const result = pickAction(data.selectedTool, pick, held, live.data ?? null, drop);
           setHeld(result.held);
           if (result.action) {
             send(result.action);
@@ -79,7 +88,14 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
         ) : data ? (
           <PlayOverlays
             session={data}
-            placing={held ? `Click where to put ${held}` : data.placing}
+            placing={
+              held
+                ? `Click where to put ${held}`
+                : adding
+                  ? placingHint(drop, pieceOf(drop, pieces)?.label ?? drop.piece)
+                  : data.placing
+            }
+            options={adding ? <AddObjectOptions drop={drop} pieces={pieces} onChange={setChosen} /> : null}
             onSelect={(tool) => {
               setHeld(null);
               select.mutate({ project, tool }, { onSuccess: cache });
@@ -90,21 +106,25 @@ export function PlayViewport({ project, closed, onReconnect }: Props) {
             }}
           />
         ) : session.isPending ? (
-          <div className="absolute inset-0">
-            <LoadingState label="Connecting to the live world" />
-          </div>
+          <PlayLoading stage={progress} />
         ) : null
       }
     />
   );
 }
 
-type OverlayProps = { session: PlaySession; placing?: string; onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"] };
+type OverlayProps = {
+  session: PlaySession;
+  placing?: string;
+  options: ReactNode;
+  onSelect: Parameters<typeof PlayToolBar>[0]["onSelect"];
+};
 
-function PlayOverlays({ session, placing, onSelect }: OverlayProps) {
+function PlayOverlays({ session, placing, options, onSelect }: OverlayProps) {
   return (
     <>
       <PlayToolBar tools={session.tools} selected={session.selectedTool} onSelect={onSelect} />
+      {options}
       {placing ? (
         <div className="absolute top-1/2 left-[61%] rounded-button bg-overlay px-2.5 py-1.5 text-ui">{placing}</div>
       ) : null}

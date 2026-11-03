@@ -16,6 +16,8 @@ export type ModelConnection = {
   connected: boolean;
   // Why it is not connected, in words.
   detail?: string;
+  // The model's context window in tokens as the person set it; absent means the copilot assumes one.
+  contextTokens?: number;
 };
 
 export type ModelSettings = {
@@ -71,11 +73,13 @@ export type NotificationSettings = Record<NotificationOption, boolean>;
 
 export type SettingsPort = {
   getModelSettings: () => Promise<ModelSettings>;
-  // An empty key keeps the stored one; only the model names given change, and an empty name clears it.
+  // An empty key keeps the stored one; only the model names and context windows given change; an empty name clears
+  // it and a null window goes back to the assumed one.
   saveModelSettings: (input: {
     endpoint: string;
     apiKey: string;
     models: Partial<Record<ModelCapability, string>>;
+    contextTokens?: Partial<Record<ModelCapability, number | null>>;
   }) => Promise<ModelSettings>;
   testModelConnection: () => Promise<ModelSettings>;
   getPrivacy: () => Promise<PrivacySettings>;

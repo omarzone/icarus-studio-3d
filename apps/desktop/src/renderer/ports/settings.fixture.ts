@@ -75,11 +75,17 @@ export function createSettingsFixture(): SettingsPort {
   let storage = STORAGE;
   return {
     getModelSettings: async () => models,
-    saveModelSettings: async ({ endpoint, apiKey, models: names }) => {
-      const connections = models.connections.map((connection) => ({
-        ...connection,
-        model: renamed(connection.model, names[connection.capability]),
-      }));
+    saveModelSettings: async ({ endpoint, apiKey, models: names, contextTokens = {} }) => {
+      const connections = models.connections.map((connection) => {
+        const { contextTokens: kept, ...rest } = connection;
+        const window = contextTokens[connection.capability];
+        const tokens = window === undefined ? kept : (window ?? undefined);
+        return {
+          ...rest,
+          model: renamed(connection.model, names[connection.capability]),
+          ...(tokens === undefined ? {} : { contextTokens: tokens }),
+        };
+      });
       models = { connections, endpoint, apiKeyHint: apiKey === "" ? models.apiKeyHint : apiKey.slice(-4) };
       return models;
     },

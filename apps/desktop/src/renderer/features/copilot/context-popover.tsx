@@ -9,6 +9,7 @@ import {
   PART_LABEL,
   tokens,
   usedPercent,
+  windowNote,
 } from "../../ports/context-usage-views.ts";
 import type { ContextCategoryView, ContextPart, ContextUsageView } from "../../ports/copilot-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
@@ -86,10 +87,7 @@ function Breakdown({ usage }: { usage: ContextUsageView }) {
         </div>
       ) : (
         <p className="text-meta text-fg-tertiary">
-          {usage.model} ·{" "}
-          {usage.windowKnown
-            ? `${tokens(usage.window)} token window`
-            : `${tokens(usage.window)} token window assumed; the connection does not say`}
+          {usage.model} · {windowNote(usage)}
         </p>
       )}
       <StackedBar usage={usage} />

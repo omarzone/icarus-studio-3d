@@ -233,6 +233,8 @@ export type ContextUsageView = {
   window: number;
   // False when the model's window is not set and the engine assumes a conservative one.
   windowKnown: boolean;
+  // Set in AI models, learned from a request the service refused as too long, or assumed.
+  windowSource?: "assumed" | "set" | "learned";
   used: number;
   // Kept for the answer and its reasoning.
   reserve: number;

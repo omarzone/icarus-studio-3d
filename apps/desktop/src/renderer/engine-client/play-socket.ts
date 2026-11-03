@@ -1,4 +1,11 @@
-import type { PlayCommand, PlayCommandEnvelope, PlayEvent, PlayFrame, PlaySessionInfo } from "@icarus/contracts";
+import type {
+  PlayCommand,
+  PlayCommandEnvelope,
+  PlayEvent,
+  PlayFrame,
+  PlayProgressMessage,
+  PlaySessionInfo,
+} from "@icarus/contracts";
 import { type EngineUrl, engineUrl } from "./engine-url.ts";
 import { isPlayFrame, isPlayMessageEnvelope } from "./response-checks.ts";
 
@@ -20,6 +27,8 @@ export type PlayHandlers = {
   onEvent: (event: PlayEvent) => void;
   // A command the engine refused, or a message the app cannot read; the session stays open.
   onError: (message: string) => void;
+  // What the engine is doing before the session is ready.
+  onProgress?: (stage: PlayProgressMessage["stage"]) => void;
   // The engine ended the session or could not be reached; not called after `close()`.
   onClosed: (reason: string) => void;
 };
@@ -84,6 +93,9 @@ export const openPlay: OpenPlay = (projectId, handlers, options = {}) => {
         return;
       case "error":
         handlers.onError(message.message);
+        return;
+      case "progress":
+        handlers.onProgress?.(message.stage);
         return;
     }
   };

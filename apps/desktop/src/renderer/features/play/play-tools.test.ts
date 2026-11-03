@@ -2,6 +2,7 @@ import type { SceneDescription } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
 import type { PlayLive } from "../../ports/play-port.ts";
 import type { ScenePick } from "../../scene/scene-view.tsx";
+import { freshDrop } from "./drop-choice.ts";
 import { instantAction, nextSpeed, pickAction } from "./play-tools.ts";
 
 const scene: SceneDescription = {
@@ -32,34 +33,35 @@ const pick = (object: string | null, point: [number, number, number]): ScenePick
   point,
   direction: [0, 1, 0],
 });
+const drop = freshDrop("ball");
 const onBox = pick("box", [2, 0, 0.5]);
 const onGround = pick(null, [4, 1, 0]);
 
 describe("play tools", () => {
   it("pushes and touches the clicked object, never the ground", () => {
-    expect(pickAction("push", onBox, null, live).action).toEqual({
+    expect(pickAction("push", onBox, null, live, drop).action).toEqual({
       tool: "push",
       object: "box",
       direction: [0, 1, 0],
     });
-    expect(pickAction("touch", onBox, null, live).action).toEqual({
+    expect(pickAction("touch", onBox, null, live, drop).action).toEqual({
       tool: "touch",
       object: "box",
     });
-    expect(pickAction("push", onGround, null, live).action).toBeNull();
+    expect(pickAction("push", onGround, null, live, drop).action).toBeNull();
   });
 
   it("moves in two clicks, keeping the object's height", () => {
-    const first = pickAction("move", onBox, null, live);
+    const first = pickAction("move", onBox, null, live, drop);
     expect(first).toEqual({ action: null, held: "box" });
-    const second = pickAction("move", onGround, first.held, live);
+    const second = pickAction("move", onGround, first.held, live, drop);
     expect(second).toEqual({ action: { tool: "move", object: "box", to: [4, 1, 0.3] }, held: null });
   });
 
-  it("adds the piece standing on the clicked point", () => {
-    expect(pickAction("add-object", onGround, null, live).action).toEqual({
+  it("brings the chosen drop to the clicked point", () => {
+    expect(pickAction("add-object", onGround, null, live, drop).action).toEqual({
       tool: "add-object",
-      piece: "box",
+      drop,
       at: [4, 1, 0],
     });
   });
