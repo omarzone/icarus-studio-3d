@@ -5,6 +5,7 @@ import {
   hemisphereLook,
   SHADOW_SOFTNESS,
   shadowCaster,
+  shadowMapSize,
   shadowRadius,
   sunFrame,
 } from "./scene-lighting.ts";
@@ -54,6 +55,12 @@ describe("scene lighting", () => {
 });
 
 describe("world lighting options", () => {
+  it("gives a big world's sun a bigger shadow map so its shadows stay crisp", () => {
+    expect(shadowMapSize(20)).toBe(2048);
+    expect(shadowMapSize(80)).toBe(4096);
+    expect(shadowMapSize(800)).toBe(4096);
+  });
+
   it("keeps the old shadow edge at the default softness", () => {
     expect(shadowRadius()).toBe(SHADOW_SOFTNESS);
     expect(shadowRadius(0)).toBe(1);

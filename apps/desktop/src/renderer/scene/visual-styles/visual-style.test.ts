@@ -61,6 +61,23 @@ const STYLED: SceneGeom[] = [
   geom("box", [1.2, 1.2, 1.2], "crate_stack"),
   geom("box", [2, 1.5, 0.02], "puddle"),
   geom("box", [4.2, 1.8, 1.45], "parked_car"),
+  // Outdoor pieces at their library sizes, road paint long and turned, and a sidewalk a lot long.
+  geom("cylinder", [0.35, 0.35, 3], "trunk"),
+  geom("cylinder", [0.22, 0.22, 6], "pole"),
+  geom("box", [0.45, 0.45, 1.1], "gate_post"),
+  geom("box", [5.3, 2, 1.85], "pickup"),
+  geom("box", [3.9, 1.75, 1.5], "hatchback"),
+  geom("box", [4.7, 1.9, 1.75], "suv"),
+  geom("cylinder", [0.55, 0.55, 0.95], "bin"),
+  geom("cylinder", [0.35, 0.35, 0.8], "hydrant"),
+  geom("box", [1.6, 0.8, 0.5], "planter"),
+  geom("box", [4, 2, 0.15], "sidewalk"),
+  geom("box", [60, 2.5, 0.15], "sidewalk"),
+  geom("box", [3, 7, 0.01], "crosswalk"),
+  geom("box", [12, 0.15, 0.01], "dashed_line"),
+  geom("box", [0.15, 40, 0.01], "dashed_line"),
+  geom("box", [1.6, 1.2, 0.01], "parking_mark"),
+  geom("box", [2.6, 0.9, 0.01], "road_arrow"),
 ];
 
 describe("visual styles", () => {
@@ -116,6 +133,15 @@ describe("visual styles", () => {
       0,
     );
     expect(vertices).toBeLessThan(300_000);
+  });
+
+  it("paints zebra stripes and dashes at their real size, however long the line", () => {
+    const pieces = (item: SceneGeom) =>
+      (styleParts(item) ?? []).reduce((total, part) => total + part.geometry.getAttribute("position").count, 0);
+    // A box is 36 vertices: 7 stripes across a 7 m road, 2 dashes on 12 m and 7 on 40 m.
+    expect(pieces(geom("box", [3, 7, 0.01], "crosswalk"))).toBe(7 * 36);
+    expect(pieces(geom("box", [12, 0.15, 0.01], "dashed_line"))).toBe(2 * 36);
+    expect(pieces(geom("box", [0.15, 40, 0.01], "dashed_line"))).toBe(7 * 36);
   });
 
   it("draws the plain primitive without a style, with a plain style, or when the style does not fit the shape", () => {

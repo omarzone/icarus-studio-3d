@@ -1,5 +1,5 @@
 import { DirectionalLight } from "three";
-import { SHADOW_BIAS, SHADOW_MAP_SIZE, SHADOW_NORMAL_BIAS, SHADOW_SOFTNESS, type SunFrame } from "./scene-lighting.ts";
+import { SHADOW_BIAS, SHADOW_NORMAL_BIAS, SHADOW_SOFTNESS, type SunFrame, shadowMapSize } from "./scene-lighting.ts";
 
 // A world light as a Three sun; only the first one casts shadows, so extra lights never multiply the shadow cost.
 export function sunLight(frame: SunFrame, castsShadow: boolean, softness = SHADOW_SOFTNESS): DirectionalLight {
@@ -9,7 +9,8 @@ export function sunLight(frame: SunFrame, castsShadow: boolean, softness = SHADO
   light.castShadow = castsShadow;
   if (castsShadow) {
     const { camera } = light.shadow;
-    light.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    const size = shadowMapSize(frame.extent);
+    light.shadow.mapSize.set(size, size);
     light.shadow.bias = SHADOW_BIAS;
     light.shadow.normalBias = SHADOW_NORMAL_BIAS;
     light.shadow.radius = softness;
