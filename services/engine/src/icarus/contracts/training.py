@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from icarus.contracts.scene import Quaternion, SceneRay, Vector3
+from icarus.contracts.scene import Quaternion, SceneRay, SceneSignals, Vector3
 
 MAX_STEPS = 50_000_000
 MAX_COPIES = 64
@@ -118,6 +118,8 @@ class RolloutFrame(_Model):
     positions: list[Vector3]
     quaternions: list[Quaternion]
     reward: float
+    # Goal and light states at this frame; absent in rollouts recorded before they existed.
+    signals: SceneSignals | None = None
 
 
 class Rollout(_Model):
@@ -137,6 +139,8 @@ class CopyPoses(_Model):
     quaternions: list[Quaternion]
     # This copy's distance sensors right now.
     rays: list[SceneRay] = []
+    # This copy's goal and light states right now.
+    signals: SceneSignals | None = None
 
 
 class MotionSegment(_Model):
