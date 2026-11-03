@@ -15,6 +15,8 @@ export type LibraryItem = {
   kind: LibraryItemKind;
   // Author for community pieces, file name for imported files.
   source?: string;
+  // The library category the piece is listed under (Street, Nature…); items without one are not grouped.
+  group?: string;
 };
 
 export type LibraryPort = {

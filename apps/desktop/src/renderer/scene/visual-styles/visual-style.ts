@@ -1,7 +1,13 @@
 import type { SceneGeom } from "@icarus/contracts";
+import { building, garage, house } from "./buildings.ts";
 import { carBody } from "./car-body.ts";
-import { ball, cone, crate, curb, lampPost, marking, post, tree, wall } from "./props.ts";
+import { bench, shelf, table } from "./furniture.ts";
+import { bush, rock } from "./nature.ts";
+import { parkedCar } from "./parked-car.ts";
+import { ball, barrel, cone, crate, crateStack, curb, lampPost, marking, post, tree, wall } from "./props.ts";
 import { joint, shell } from "./robot.ts";
+import { barrier, fence, puddle, sign, speedBump, wheelStop } from "./street-props.ts";
+import { pillar, planks, slab, stairs, step } from "./structures.ts";
 import type { Extents, StylePart } from "./style-parts.ts";
 import { wheel } from "./wheel.ts";
 
@@ -51,5 +57,49 @@ export function styleParts(geom: SceneGeom): StylePart[] | null {
       return shape === "sphere" ? ball(extents) : null;
     case "marking":
       return shape === "box" || shape === "plane" ? marking(extents) : null;
+    case "stairs":
+      return shape === "box" ? stairs(extents) : null;
+    case "step":
+      return shape === "box" ? step(extents) : null;
+    case "slab":
+      return shape === "box" ? slab(extents) : null;
+    case "pillar":
+      return round(shape) || shape === "box" ? pillar(extents, round(shape)) : null;
+    case "planks":
+      return shape === "box" ? planks(extents) : null;
+    case "speed_bump":
+      return shape === "box" ? speedBump(extents) : null;
+    case "wheel_stop":
+      return shape === "box" ? wheelStop(extents) : null;
+    case "barrier":
+      return shape === "box" ? barrier(extents) : null;
+    case "fence":
+      return shape === "box" ? fence(extents) : null;
+    case "sign":
+      return shape === "box" ? sign(extents) : null;
+    case "building":
+      return shape === "box" ? building(extents) : null;
+    case "house":
+      return shape === "box" ? house(extents) : null;
+    case "garage":
+      return shape === "box" ? garage(extents) : null;
+    case "table":
+      return shape === "box" ? table(extents) : null;
+    case "bench":
+      return shape === "box" ? bench(extents) : null;
+    case "shelf":
+      return shape === "box" ? shelf(extents) : null;
+    case "bush":
+      return shape === "box" || shape === "sphere" || round(shape) ? bush(extents) : null;
+    case "rock":
+      return shape === "box" || shape === "sphere" ? rock(extents) : null;
+    case "barrel":
+      return round(shape) ? barrel(extents) : null;
+    case "crate_stack":
+      return shape === "box" ? crateStack(extents) : null;
+    case "puddle":
+      return shape === "box" ? puddle(extents) : null;
+    case "parked_car":
+      return shape === "box" ? parkedCar(extents) : null;
   }
 }

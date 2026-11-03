@@ -15,7 +15,28 @@ const METRES: Record<Grain, number> = {
   rubber: 0.6,
   wood: 2,
   metal: 1.5,
+  brick: 1.2,
+  tiles: 1.2,
+  road: 6,
+  fabric: 0.4,
 };
+
+export function grainMetres(grain: Grain): number {
+  return METRES[grain];
+}
+
+// Rows and columns of a brick bond or a tile grid in one tile, and the joint width in texels.
+const BRICK_ROWS = 16;
+const BRICKS_PER_ROW = 4;
+const TILES = 4;
+
+function joint(x: number, y: number, rows: number, columns: number, offset: boolean): boolean {
+  const rowHeight = SIZE / rows;
+  const row = Math.floor(y / rowHeight);
+  const columnWidth = SIZE / columns;
+  const shift = offset && row % 2 === 1 ? columnWidth / 2 : 0;
+  return y % rowHeight < 1.5 || (x + shift) % columnWidth < 1.5;
+}
 
 // Repeatable pseudo-random value in [0, 1) for a lattice point; the same seed always gives the same image.
 function hash(x: number, y: number, seed: number): number {
@@ -73,6 +94,25 @@ function shade(grain: Grain, u: number, v: number, x: number, y: number): number
     }
     case "metal":
       return 0.82 + noise(u, v, 2, 96, 10) * 0.14;
+    case "brick": {
+      if (joint(x, y, BRICK_ROWS, BRICKS_PER_ROW, true)) {
+        return 1;
+      }
+      const row = Math.floor(v * BRICK_ROWS);
+      const brick = Math.floor(((u + (row % 2) / (2 * BRICKS_PER_ROW)) % 1) * BRICKS_PER_ROW);
+      return 0.62 + hash(brick, row, 11) * 0.16 + fbm(u, v, 12, 12) * 0.1;
+    }
+    case "tiles":
+      return joint(x, y, TILES, TILES, false) ? 0.6 : 0.9 + fbm(u, v, 4, 13) * 0.06 + (speck - 0.5) * 0.02;
+    // Asphalt with a dashed lane line along the tile's middle; the road finish keeps its own colors.
+    case "road": {
+      const line = Math.abs(y - SIZE / 2) < 2 && x % (SIZE / 2) < SIZE / 4;
+      return line ? 0.92 : 0.2 + fbm(u, v, 8, 14) * 0.06 + (speck > 0.97 ? 0.04 : 0);
+    }
+    case "fabric": {
+      const warp = Math.sin(x * Math.PI * 0.5) * Math.sin(y * Math.PI * 0.5);
+      return 0.8 + warp * 0.08 + fbm(u, v, 6, 15) * 0.08;
+    }
   }
 }
 

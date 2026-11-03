@@ -1,19 +1,6 @@
-import {
-  BoxGeometry,
-  type BufferGeometry,
-  ConeGeometry,
-  CylinderGeometry,
-  IcosahedronGeometry,
-  SphereGeometry,
-  TorusGeometry,
-} from "three";
+import { BoxGeometry, ConeGeometry, CylinderGeometry, IcosahedronGeometry, SphereGeometry, TorusGeometry } from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import type { Finish } from "./finishes.ts";
-import { type Extents, mergeByFinish, type StylePart } from "./style-parts.ts";
-
-type Piece = readonly [Finish, BufferGeometry];
-
-const at = (geometry: BufferGeometry, x: number, y: number, z: number) => geometry.translate(x, y, z);
+import { at, type Extents, mergeByFinish, type Piece, piecesOf, type StylePart } from "./style-parts.ts";
 
 // A wooden crate: inset panels inside a darker frame along its twelve edges.
 export function crate({ x, y, z }: Extents): StylePart[] {
@@ -164,6 +151,32 @@ export function ball({ x }: Extents): StylePart[] {
     seam((geometry) => geometry),
     seam((geometry) => geometry.rotateX(Math.PI / 2)),
     seam((geometry) => geometry.rotateY(Math.PI / 2)),
+  ]);
+}
+
+// A steel barrel: a painted drum with two raised hoops and a metal lid.
+export function barrel({ x, y }: Extents): StylePart[] {
+  const radius = x / 2;
+  const lid = Math.min(y * 0.03, 0.02);
+  const pieces: Piece[] = [
+    ["paint", at(new CylinderGeometry(radius * 0.95, radius * 0.95, y - lid, 28), 0, -lid / 2, 0)],
+    ["metal", at(new CylinderGeometry(radius * 0.9, radius * 0.9, lid, 28), 0, y / 2 - lid / 2, 0)],
+  ];
+  for (const height of [0.3, 0.7]) {
+    pieces.push(["shade", at(new CylinderGeometry(radius, radius, y * 0.035, 28), 0, -y / 2 + y * height, 0)]);
+  }
+  return mergeByFinish(pieces);
+}
+
+// Three crates: two side by side along x and one on top of them.
+export function crateStack({ x, y, z }: Extents): StylePart[] {
+  const width = x / 2;
+  const height = y / 2;
+  const box = { x: width * 0.97, y: height, z: z * 0.97 };
+  return mergeByFinish([
+    ...piecesOf(crate(box), -width / 2, -height / 2, 0),
+    ...piecesOf(crate(box), width / 2, -height / 2, 0),
+    ...piecesOf(crate({ ...box, z: z * 0.85 }), x * 0.05, height / 2, 0),
   ]);
 }
 

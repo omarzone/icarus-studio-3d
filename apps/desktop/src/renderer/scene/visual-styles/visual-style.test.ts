@@ -32,6 +32,35 @@ const STYLED: SceneGeom[] = [
   geom("cylinder", [2, 2, 5], "tree"),
   geom("sphere", [0.3, 0.3, 0.3], "ball"),
   geom("box", [5, 0.12, 0.01], "marking"),
+  // Library pieces at their default sizes, plus long pieces turned to lie along y and huge ones.
+  geom("box", [2.4, 1.2, 0.3], "stairs"),
+  geom("box", [0.3, 1.2, 0.17], "step"),
+  geom("box", [4, 2, 0.12], "slab"),
+  geom("box", [200, 200, 0.2], "slab"),
+  geom("cylinder", [0.5, 0.5, 3], "pillar"),
+  geom("box", [0.6, 0.6, 3], "pillar"),
+  geom("box", [3, 0.8, 0.08], "planks"),
+  geom("box", [0.5, 3, 0.08], "speed_bump"),
+  geom("box", [0.2, 1.8, 0.12], "wheel_stop"),
+  geom("box", [2, 0.6, 0.8], "barrier"),
+  geom("box", [0.6, 2, 0.8], "barrier"),
+  geom("box", [3, 0.08, 1.2], "fence"),
+  geom("box", [0.08, 3, 1.2], "fence"),
+  geom("box", [0.6, 0.08, 2.2], "sign"),
+  geom("box", [10, 10, 18], "building"),
+  geom("box", [300, 40, 400], "building"),
+  geom("box", [7, 6, 5.5], "house"),
+  geom("box", [4, 6.5, 3], "garage"),
+  geom("box", [1.6, 0.9, 0.75], "table"),
+  geom("box", [1.8, 0.5, 0.85], "bench"),
+  geom("box", [1.2, 0.4, 1.8], "shelf"),
+  geom("box", [1.2, 1.2, 0.9], "bush"),
+  geom("sphere", [1, 1, 1], "bush"),
+  geom("box", [1.2, 1, 0.7], "rock"),
+  geom("cylinder", [0.6, 0.6, 0.9], "barrel"),
+  geom("box", [1.2, 1.2, 1.2], "crate_stack"),
+  geom("box", [2, 1.5, 0.02], "puddle"),
+  geom("box", [4.2, 1.8, 1.45], "parked_car"),
 ];
 
 describe("visual styles", () => {
@@ -76,11 +105,26 @@ describe("visual styles", () => {
     expect(centre("taillight")).toBeLessThan(-1.9);
   });
 
+  it("lights a building's windows, gives a parked car its wheels and keeps huge parts to a bounded size", () => {
+    const finishes = (item: SceneGeom) => (styleParts(item) ?? []).map((part) => part.finish);
+    expect(finishes(geom("box", [10, 10, 18], "building"))).toContain("window");
+    expect(finishes(geom("box", [4.2, 1.8, 1.45], "parked_car"))).toEqual(
+      expect.arrayContaining(["paint", "glass", "rubber", "chrome"]),
+    );
+    const vertices = (styleParts(geom("box", [300, 40, 400], "building")) ?? []).reduce(
+      (total, part) => total + part.geometry.getAttribute("position").count,
+      0,
+    );
+    expect(vertices).toBeLessThan(300_000);
+  });
+
   it("draws the plain primitive without a style, with a plain style, or when the style does not fit the shape", () => {
     expect(styleParts(geom("box", [1, 1, 1]))).toBeNull();
     expect(styleParts(geom("box", [1, 1, 1], "plain"))).toBeNull();
     expect(styleParts(geom("box", [1, 1, 1], "wheel"))).toBeNull();
     expect(styleParts(geom("cylinder", [1, 1, 1], "car_body"))).toBeNull();
     expect(styleParts(geom("plane", [10, 10, 0], "shell"))).toBeNull();
+    expect(styleParts(geom("cylinder", [1, 1, 3], "building"))).toBeNull();
+    expect(styleParts(geom("box", [1, 1, 1], "barrel"))).toBeNull();
   });
 });

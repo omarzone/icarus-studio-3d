@@ -1,7 +1,7 @@
 import type { SceneGeom } from "@icarus/contracts";
 
 // What one piece of a drawn part is made of. "paint", "matte", "shade", "rubber", "shell", "joint", "concrete",
-// "marking" and "foliage" take the part's own color; the rest are fixed scene materials.
+// "marking", "foliage", "wood", "stone" and "water" take the part's own color; the rest are fixed scene materials.
 export type Finish =
   | "paint"
   | "matte"
@@ -20,9 +20,15 @@ export type Finish =
   | "concrete"
   | "marking"
   | "foliage"
-  | "bark";
+  | "bark"
+  | "wood"
+  | "stone"
+  | "water"
+  | "window"
+  | "roof";
 
-export type Grain = NonNullable<SceneGeom["surface"]>;
+// A surface's own grain, or a pattern only a part's finish draws.
+export type Grain = NonNullable<SceneGeom["surface"]> | "brick" | "tiles" | "road" | "fabric";
 
 // Physically based settings for a Three.js standard or physical material; `color` replaces the part's color, and
 // `shade` darkens it. `grain` lays a procedural texture over the color.
@@ -36,6 +42,10 @@ export type MaterialLook = {
   grain?: Grain;
   // Paint on another surface: drawn just in front of it and never casting a shadow.
   decal?: boolean;
+  // The color it glows in when `emissive` is set; without one it glows in its own color.
+  glow?: string;
+  // See-through share kept, 1 for opaque; the part's own transparency lowers it further.
+  opacity?: number;
 };
 
 // Scene material constants (tokens: scene.material.*); only parts drawn with a style use them.
@@ -48,6 +58,8 @@ const TAILLIGHT = "#d6342c";
 const LAMP = "#fff0c8";
 const BAND = "#f2f2f2";
 const BARK = "#5b4632";
+const ROOF = "#4a3b36";
+export const WINDOW_LIGHT = "#ffd99a";
 
 export function finishLook(finish: Finish): MaterialLook {
   switch (finish) {
@@ -89,6 +101,17 @@ export function finishLook(finish: Finish): MaterialLook {
       return { roughness: 0.9, metalness: 0, grain: "grass" };
     case "bark":
       return { roughness: 0.95, metalness: 0, color: BARK, grain: "wood" };
+    case "wood":
+      return { roughness: 0.72, metalness: 0, grain: "wood" };
+    case "stone":
+      return { roughness: 0.95, metalness: 0, grain: "concrete" };
+    case "water":
+      return { roughness: 0.04, metalness: 0.1, clearcoat: 1, opacity: 0.85 };
+    // Dark glass that lights up with the part's glow, as windows at night.
+    case "window":
+      return { roughness: 0.1, metalness: 0.4, clearcoat: 1, color: GLASS, glow: WINDOW_LIGHT };
+    case "roof":
+      return { roughness: 0.85, metalness: 0, color: ROOF, grain: "rubber" };
   }
 }
 
