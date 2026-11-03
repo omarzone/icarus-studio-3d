@@ -258,7 +258,7 @@ Left column, bottom, in Results. Folder: `features/results/summary/`. Used in: `
 
 ### `PNL-RESULTS-VIEW` Results view
 
-Center panel in Results. Folder: `features/results/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`.
+Center panel in Results. Folder: `features/results/results-view/`. Used in: `SCR-RESULTS`, `STA-RESULTS-FAILURES`. In the app a fourth tab, *Behavior tests*, opens `STA-RESULTS-REFERENCE`, so behavior tests are reachable from any project.
 
 | Tab | Label | File | Shows | User can |
 |---|---|---|---|---|
