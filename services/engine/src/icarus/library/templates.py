@@ -7,7 +7,17 @@ from icarus.library.parts import Part, Raw, hinge, motor, solid
 from icarus.library.rewards import REWARD_TERMS
 from icarus.library.vehicle_templates import lot_markings, motorcycle, parking_car
 
-__all__ = ["TEMPLATES", "Part", "Raw", "UnknownTemplate", "ground_part", "solid", "template_operations"]
+__all__ = [
+    "TEMPLATES",
+    "Part",
+    "Raw",
+    "UnknownTemplate",
+    "ground_part",
+    "humanoid_parts",
+    "solid",
+    "template_operations",
+    "walker_parts",
+]
 
 
 class UnknownTemplate(KeyError):
@@ -88,7 +98,8 @@ def _leg(side: str, y: float, parent: str, top: float) -> list[Part]:
     ]
 
 
-def _walker() -> list[Part]:
+def walker_parts(color: str = SHELL) -> list[Part]:
+    """A torso on two jointed legs with eyes; the vault's biped and the walker template."""
     torso = solid(
         "torso",
         "Torso",
@@ -97,14 +108,15 @@ def _walker() -> list[Part]:
         "box",
         (0.3, 0.3, 0.4),
         10,
-        SHELL,
+        color,
         extra={"balance": {}, "eyes": {"size": 0.07, "spacing": 0.13, "height": 0.08, "look": "movement"}},
         style="shell",
     )
     return [torso, *_leg("left", 0.12, "torso", -0.35), *_leg("right", -0.12, "torso", -0.35)]
 
 
-def _humanoid() -> list[Part]:
+def humanoid_parts(color: str = SHELL) -> list[Part]:
+    """Pelvis, chest, head with eyes, two arms and two legs; the vault's humanoid and the humanoid template."""
     parts = [
         solid(
             "pelvis",
@@ -114,7 +126,7 @@ def _humanoid() -> list[Part]:
             "box",
             (0.25, 0.3, 0.2),
             8,
-            SHELL,
+            color,
             extra={"balance": {}},
             style="shell",
         ),
@@ -126,7 +138,7 @@ def _humanoid() -> list[Part]:
             "box",
             (0.25, 0.3, 0.45),
             15,
-            SHELL,
+            color,
             extra={"joint": hinge((0, 1, 0), (-30, 45), (0, 0, -0.2)), "motor": motor("position", 100)},
             style="shell",
         ),
@@ -138,7 +150,7 @@ def _humanoid() -> list[Part]:
             "sphere",
             (0.22, 0.22, 0.22),
             4,
-            SHELL,
+            color,
             extra={
                 "joint": hinge((0, 1, 0), (-30, 30), (0, 0, -0.1)),
                 "motor": motor("position", 20),
@@ -233,7 +245,7 @@ def _templates() -> dict[str, _Template]:
         "walker_robot": _Template(
             _template("walker_robot", "Walker robot", "A torso on two jointed legs that learns to walk.", "locomotion"),
             ("walker_body", "Walker"),
-            _walker(),
+            walker_parts(),
             ["forward_progress", "stay_upright", "energy_cost", "fall_penalty"],
             "overcast",
         ),
@@ -242,7 +254,7 @@ def _templates() -> dict[str, _Template]:
                 "humanoid", "Humanoid", "A humanoid with twelve motors and balance and foot sensors.", "locomotion"
             ),
             ("humanoid_body", "Humanoid"),
-            _humanoid(),
+            humanoid_parts(),
             ["forward_progress", "stay_upright", "energy_cost", "fall_penalty"],
             "dusk",
         ),
