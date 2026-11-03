@@ -16,17 +16,16 @@ weather. Build it around the task, never on top of it.
 2. **Frame the space.** Surround the task area with context that says where it is, outside the path:
    `building` pieces (tall static boxes, `wall` style, 6 to 15 m high) along the far edges like a street front or
    the walls of a hall; `sidewalk` slabs and `curb` lines at road edges; `tree`, `lamp_post` and `sign` pieces in
-   regular rows (a lamp every 10 to 15 m, trees every 6 to 10 m) on the sidewalks or verges; `cone` pieces only
+   regular rows (a lamp every 10 to 15 m, trees every 6 to 10 m) on the sidewalks or verges; `traffic_cone` pieces only
    where they mark something. Indoors, use walls, shelves (tall static boxes) and pillars instead. Repeat pieces at
    even spacing and vary them a little (`randomize.color` on, small size changes) so rows do not look stamped.
    Lay rows, grids, rings and seeded scatter with `pattern` (keep_clear the spawn, the path and the goal), and
    recolor many pieces at once with `edit_matching` after checking its filter with `find_objects`.
 3. **Keep the task's path and senses clear.** Decoration never blocks the way from the start to the goal, never
    sits on or inside the goal zone, and never stands where a `distance_ray` would read it as an obstacle unless the
-   task is about avoiding it. Pieces that are only looks (`tree`, `lamp_post`, `sign`, markings) have no
-   `collider` and no `physics_body`, so nothing touches them; pieces that frame the space for real (`building`,
-   `curb`, walls) keep their collider. Keep at least 2 m between decoration and the path, and rest every piece on
-   the ground: nothing floats.
+   task is about avoiding it. Library pieces (`tree`, `lamp_post`, `sign`, `building`, `curb`...) are solid, so
+   place them outside the path; only floor markings and decoration you build without a `collider` are pure looks.
+   Keep at least 2 m between decoration and the path, and rest every piece on the ground: nothing floats.
 4. **One palette.** Three to six related colors set with `material.color`: ground, frame (buildings, walls), props
    and one accent for goals and hazards. Muted for buildings and ground (warm greys, sand, brick, concrete), one
    saturated accent, and a body color that stands out from the ground. Floor markings are static boxes 0.01 to
@@ -49,3 +48,14 @@ weather. Build it around the task, never on top of it.
 Done when the proposal names the place, frames it with context at the edges, keeps one scale and one palette,
 has a sky and ground that fit, leaves the path, the goal and the senses clear, and a three-quarter view shows a
 believable scene where the body, the goal and the obstacles are easy to tell apart.
+
+## Places from library pieces
+
+Build a place from ready-made pieces before plain boxes: `library` with the query street, buildings,
+furniture, nature, props or basics lists each category's pieces with their sizes. A street is road ground
+with `curb`, `sidewalk`, `lamp_post`, `sign`, `bollard`, `parked_car` and `traffic_cone`; a block adds `building`,
+`house` and `garage`; a park adds `tree`, `bush`, `rock`, `bench` and `fence`. Every piece is solid to its whole
+shape (nothing passes under a `table`), and `puddle` is as slippery as ice. Detail is drawing only and never
+retrains a brain: `material.finish` (brick, concrete, asphalt with lane lines, wood, tiles, painted_metal, glass,
+grass, fabric, rubber), `material.roughness` and `material.metalness` (0.5 keeps the finish's own) and
+`material.emissive` (lit windows and lamp heads at night).

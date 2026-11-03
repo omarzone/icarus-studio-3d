@@ -23,8 +23,9 @@ import { toThreePosition, toThreeQuaternion } from "./coordinates.ts";
 import { geomShape } from "./geom-shape.ts";
 import { partFinish } from "./part-finish.ts";
 import { floorDepth } from "./scene-materials.ts";
-import { grainImage } from "./surface-grain.ts";
-import { finishLook, type Grain, type MaterialLook, surfaceLook } from "./visual-styles/finishes.ts";
+import { grainImage, grainMetres } from "./surface-grain.ts";
+import type { Grain, MaterialLook } from "./visual-styles/finishes.ts";
+import { plainLook, styledLook } from "./visual-styles/part-look.ts";
 import { type StylePart, styleParts } from "./visual-styles/visual-style.ts";
 
 // Geometries, materials and grain images are shared by every geom that draws the same way (the copies of a training
@@ -88,7 +89,7 @@ function grainTexture(grain: Grain): DataTexture {
 
 // How often the grain repeats so one tile covers its metres on the geom's widest faces (x and MuJoCo y).
 function repeats(grain: Grain, geom: SceneGeom): [number, number] {
-  const metres = grainImage(grain).metres;
+  const metres = grainMetres(grain);
   const [x, y] = geom.size;
   const round = (value: number) => Math.round(Math.max(1, value / metres) * 100) / 100;
   return [round(x), round(y)];
@@ -112,14 +113,15 @@ function material(look: MaterialLook, color: string, geom: SceneGeom): Material 
   if (look.shade) {
     tint.multiplyScalar(look.shade);
   }
+  const opacity = finish.opacity * (look.opacity ?? 1);
   const settings = {
     color: tint,
     roughness: look.roughness * finish.roughness,
     metalness: look.metalness,
     envMapIntensity: finish.envMapIntensity,
-    ...(finish.opacity < 1 ? { transparent: true, opacity: finish.opacity, depthWrite: false } : {}),
+    ...(opacity < 1 ? { transparent: true, opacity, depthWrite: false } : {}),
     map,
-    emissive: look.emissive ? tint : new Color(0),
+    emissive: look.emissive ? new Color(look.glow ?? tint) : new Color(0),
     emissiveIntensity: look.emissive ?? 0,
     ...floorDepth(geom.shape),
     ...(look.decal ? { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } : {}),
@@ -144,8 +146,8 @@ function mesh(geometry: BufferGeometry, look: MaterialLook, geom: SceneGeom): Me
 export function geomObject(geom: SceneGeom): Object3D {
   const pieces = parts(geom);
   const object = pieces
-    ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, finishLook(piece.finish), geom)))
-    : mesh(primitive(geom), surfaceLook(geom.surface, geom.shape), geom);
+    ? new Group().add(...pieces.map((piece) => mesh(piece.geometry, styledLook(piece.finish, geom), geom)))
+    : mesh(primitive(geom), plainLook(geom), geom);
   object.position.set(...toThreePosition(geom.position));
   object.quaternion.set(...toThreeQuaternion(geom.quaternion));
   object.name = geom.name;

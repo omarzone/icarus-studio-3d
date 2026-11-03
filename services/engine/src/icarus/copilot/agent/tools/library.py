@@ -10,7 +10,7 @@ from icarus.copilot.context import property_schema
 from icarus.copilot.step_words import step_said
 from icarus.library.components import COMPONENTS
 from icarus.library.layouts import RECIPES, recipe_parameters
-from icarus.library.pieces import PIECES
+from icarus.library.pieces import PIECES, piece_summary, pieces_by_category
 from icarus.library.rewards import REWARD_TERMS, term_families
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects
@@ -53,7 +53,8 @@ def _entries() -> dict[str, dict[str, Any]]:
         entries[piece_id] = {
             "type": "piece",
             "label": piece.label,
-            "description": piece.description,
+            "category": piece.category,
+            "description": piece_summary(piece),
             "object": piece.object.model_dump(),
             "component_schemas": schemas,
         }
@@ -101,6 +102,13 @@ def library(scope: TurnScope, args: LibraryArgs) -> Observation:
             summary=step_said("library_read", scope.language, name=entry["label"]),
         )
     words = (args.query or "").lower().split()
+    shelves = pieces_by_category()
+    named = [category for category in shelves if category in words or category.rstrip("s") in words]
+    if named:
+        # A category asked by name lists all its pieces with their sizes, beyond the usual match limit.
+        listed = {category: shelves[category] for category in named}
+        summary = step_said("library_search", scope.language, query=(args.query or "")[:40], count=len(listed))
+        return Observation(compact({"pieces_by_category": listed}), summary=summary)
     found = [
         {"id": entry_id, "type": entry["type"], "label": entry["label"]}
         for entry_id, entry in entries.items()
@@ -117,7 +125,8 @@ LIBRARY = Tool(
         "ranges, a ready-made piece with the valid values of its components, a reward term with its weight range, "
         "a template with the operations that add its bodies and task to this project (try them as they are or "
         "adapted), or a layout recipe with its parameters for the layout tool. Give an exact id in kind, or words "
-        "in query to find up to 8 entries; the query layout lists the recipes."
+        "in query to find up to 8 entries; the query layout lists the recipes. Pieces come in categories: "
+        "basics, street, buildings, furniture, nature and props; a query naming one lists all its pieces with sizes."
     ),
     args=LibraryArgs,
     step="library",

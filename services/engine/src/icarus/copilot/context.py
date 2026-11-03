@@ -8,8 +8,8 @@ from icarus.contracts.specs import BodySpec
 from icarus.contracts.training import MetricPoint, RunStatus
 from icarus.design.compiler import CompiledModel, CompileError, compile_project
 from icarus.design.scene import object_extents, scene_description
-from icarus.library.components import COMPONENTS
-from icarus.library.pieces import PIECES
+from icarus.library.components import COMPONENTS, default_component
+from icarus.library.pieces import PIECES, piece_summary, pieces_by_category
 from icarus.library.rewards import REWARD_TERMS, term_families, term_fits
 from icarus.library.templates import TEMPLATES, template_operations
 from icarus.projects.document import all_objects, find_object
@@ -98,7 +98,7 @@ def _library(state: ProjectState) -> dict[str, Any]:
             for term, info in REWARD_TERMS.items()
             if term_fits(term, state.project.task.family)
         },
-        "pieces": {piece_id: piece.description for piece_id, piece in PIECES.items()},
+        "pieces": pieces_by_category(),
         "templates": {template_id: info.description for template_id, info in TEMPLATES.items()},
     }
 
@@ -269,7 +269,7 @@ def lean_context(
         "open_proposal": open_proposal,
         "library": {
             "component_kinds": sorted(COMPONENTS),
-            "pieces": sorted(PIECES),
+            "pieces": {category: list(pieces) for category, pieces in pieces_by_category().items()},
             "reward_terms": sorted(term for term in REWARD_TERMS if term_fits(term, project.task.family)),
             "task_families": sorted({info.family for info in REWARD_TERMS.values()}),
             "templates": {template_id: info.label for template_id, info in TEMPLATES.items()},
@@ -307,6 +307,19 @@ def design_rules() -> dict[str, str]:
     }
 
 
+def piece_reference(piece_id: str) -> dict[str, Any]:
+    """A piece as the architect copies it: its category, summary and object with only the values that differ from
+    the library defaults, which a copy gets back when it is placed."""
+    piece = PIECES[piece_id]
+    obj = piece.object.model_dump()
+    for component, spec in zip(obj["components"], piece.object.components, strict=True):
+        defaults = default_component(spec.kind, spec.id).properties
+        component["properties"] = {
+            name: value.model_dump() for name, value in spec.properties.items() if defaults.get(name) != value
+        }
+    return {"category": piece.category, "summary": piece_summary(piece), "object": obj}
+
+
 def design_reference() -> str:
     """The library as the architect needs it: templates with where their objects live, pieces, components, rewards."""
     templates: dict[str, Any] = {}
@@ -326,7 +339,7 @@ def design_reference() -> str:
     reference = {
         "rules": design_rules(),
         "templates": templates,
-        "pieces": {piece_id: piece.object.model_dump() for piece_id, piece in PIECES.items()},
+        "pieces": {piece_id: piece_reference(piece_id) for piece_id in PIECES},
         "components": {
             kind: {schema.id: property_schema(schema, False) for schema in spec.properties}
             for kind, spec in COMPONENTS.items()

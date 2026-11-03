@@ -10,12 +10,23 @@ import type {
 } from "@icarus/contracts";
 import { multiply, type Quaternion } from "../scene/quaternion.ts";
 import type { LibraryItem, LibraryShelf } from "./library-port.ts";
+import { pieceLook } from "./piece-look.ts";
 import { allObjects } from "./scene-views.ts";
 
 // Pieces sit this far from the spawn point along x, so they never land on the agent.
 const PLACE_OFFSET = 3;
 // Each further copy of a piece sits this far along y from the previous one.
 const COPY_SPACING = 2;
+
+// Labels of the library's piece categories; the panel lists them in the engine's order.
+const GROUPS: Record<NonNullable<PieceInfo["category"]>, string> = {
+  basics: "Basics",
+  street: "Street",
+  buildings: "Buildings",
+  furniture: "Furniture",
+  nature: "Nature",
+  props: "Props",
+};
 
 export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, search: string): LibraryItem[] {
   // Community pieces arrive with the community; imported files with import.
@@ -25,7 +36,7 @@ export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, searc
   const query = search.trim().toLowerCase();
   return (catalog.pieces ?? [])
     .filter((piece) => !query || piece.label.toLowerCase().includes(query))
-    .map((piece) => ({ id: piece.id, name: piece.label, kind: "prop" }));
+    .map((piece) => ({ id: piece.id, name: piece.label, kind: "prop", group: GROUPS[piece.category ?? "basics"] }));
 }
 
 function spawnPosition(project: Project): [number, number, number] {
@@ -87,7 +98,7 @@ function rotationQuaternion([x, y, z]: readonly number[]): [number, number, numb
   return [w, qx, qy, qz];
 }
 
-// A still scene of one library piece on a floor, from the shape, size, color and tilt it carries.
+// A still scene of one library piece on a floor, from the shape, size, color, tilt and look it carries.
 export function pieceScene(piece: PieceInfo): SceneDescription | null {
   const { components } = piece.object;
   const shapeValue = property(components, "mesh", "shape");
@@ -109,6 +120,7 @@ export function pieceScene(piece: PieceInfo): SceneDescription | null {
     position: [0, 0, height / 2],
     quaternion: rotationQuaternion(vectorOf(components, "transform", "rotation", 0)),
     color: color?.type === "color" ? color.value : FLOOR_COLOR,
+    ...pieceLook(components),
   };
   const floor: SceneGeom = {
     name: "floor",

@@ -5,7 +5,9 @@ from icarus.contracts.project import Project
 LOOK_COMPONENTS = frozenset({"sky", "light"})
 # Properties that only change the drawing or a label; the material's surface sets friction, so it stays.
 LOOK_PROPERTIES = {
-    "material": frozenset({"color", "style", "transparency", "reflectance", "cast_shadow"}),
+    "material": frozenset(
+        {"color", "style", "transparency", "reflectance", "cast_shadow", "finish", "roughness", "metalness", "emissive"}
+    ),
     "distance_ray": frozenset({"name"}),
 }
 # How a brain practices shapes the next run, not what a finished brain can drive; the checkpoint keeps its own layers.

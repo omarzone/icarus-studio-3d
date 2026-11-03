@@ -12,13 +12,16 @@ type Props = {
   scene?: LibraryPort["itemScene"];
 };
 
+// Narrowest a card gets before the row scrolls sideways, so long shelves keep readable thumbnails.
+const CARD_MIN = "6.5rem";
+
 // A row of piece cards: 3D thumbnail surface on top, name below, the dashed import card last.
 export function LibraryCards({ items, onPreview, importLabel, scene = null }: Props) {
   const columns = items.length + (importLabel ? 1 : 0);
   return (
     <div
-      className="grid h-full gap-2 px-3 pt-2.5 pb-3"
-      style={{ gridTemplateColumns: `repeat(${Math.max(columns, 5)}, minmax(0, 1fr))` }}
+      className="grid h-full gap-2 overflow-x-auto px-3 pt-2.5 pb-3"
+      style={{ gridTemplateColumns: `repeat(${Math.max(columns, 5)}, minmax(${CARD_MIN}, 1fr))` }}
     >
       {items.map((item) => (
         <Act

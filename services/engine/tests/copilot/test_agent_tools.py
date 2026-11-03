@@ -29,6 +29,12 @@ def test_a_piece_carries_the_valid_values_of_its_components(scope):
     assert "asphalt" in wall["component_schemas"]["material"]["surface"]["options"]
 
 
+def test_asking_for_a_category_lists_all_its_pieces_with_sizes(scope):
+    street = json.loads(library(scope, LibraryArgs(query="street")).text)["pieces_by_category"]["street"]
+    assert {"curb", "lamp_post", "parked_car", "puddle"} <= set(street)
+    assert "4.2×1.8×1.45 m" in street["parked_car"] and "Fixed" in street["parked_car"]
+
+
 def test_a_body_is_inspected_part_by_part_with_schemas(scope):
     observation = inspect_object(scope, InspectArgs(object="car_body"))
     parts = json.loads(observation.text)["parts"]
