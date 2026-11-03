@@ -8,6 +8,7 @@ from icarus.copilot.agent.tools.base import Observation, Tool, ToolArgs, TurnSco
 from icarus.copilot.agent.tools.inspect import compact
 from icarus.copilot.context import property_schema
 from icarus.copilot.step_words import step_said
+from icarus.library.agents import library_bodies
 from icarus.library.components import COMPONENTS
 from icarus.library.layouts import RECIPES, recipe_parameters
 from icarus.library.pieces import PIECES, piece_summary, pieces_by_category
@@ -73,6 +74,9 @@ def _entries() -> dict[str, dict[str, Any]]:
     for template_id, template in TEMPLATES.items():
         entries[template_id] = {"type": "template", "label": template.label, "family": template.family}
         entries[template_id]["description"] = template.description
+    for body_id, body in library_bodies().items():
+        # Its body can also be another agent, through add_agent with this id as body.
+        entries[body_id]["agent_body"] = {"name": body.name, "family": body.family, "rewards": body.rewards}
     return entries
 
 

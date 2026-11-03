@@ -2,17 +2,20 @@ from collections.abc import Sequence
 
 from icarus.contracts.copilot import ProposalChange
 from icarus.contracts.operations import (
+    AddAgent,
     AddBody,
     AddComponent,
     CreateObject,
     DeleteObject,
     EditOperation,
+    RemoveAgent,
     RemoveBody,
     RemoveComponent,
     RemoveRewardTerm,
     RenameObject,
     RenameProject,
     ReparentObject,
+    SetAgent,
     SetBrain,
     SetProperty,
     SetRewardTerm,
@@ -23,6 +26,7 @@ from icarus.contracts.properties import PropertyValue, RangeValue, SwitchValue, 
 from icarus.contracts.specs import BrainSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.rewards import REWARD_TERMS
+from icarus.projects.agents import agent_project
 from icarus.projects.document import find_object
 from icarus.projects.operations import apply_operations
 
@@ -82,9 +86,20 @@ def _brain_facts(brain: BrainSpec) -> list[str]:
     ]
 
 
+def _seen_by(project: Project, agent: str | None) -> Project:
+    """The project as the agent an operation is for trains it; the project itself without one."""
+    if agent is None or not any(item.id == agent for item in project.agents):
+        return project
+    return agent_project(project, agent)
+
+
+def _agent_name(project: Project, agent_id: str) -> str:
+    return next((item.name for item in project.agents if item.id == agent_id), agent_id)
+
+
 def _brain_change(project: Project, op: SetBrain) -> ProposalChange:
-    before = _brain_facts(project.brain)
-    after = _brain_facts(apply_operations(project, [op]).brain)
+    before = _brain_facts(_seen_by(project, op.agent).brain)
+    after = _brain_facts(_seen_by(apply_operations(project, [op]), op.agent).brain)
     changed = [index for index, (old, new) in enumerate(zip(before, after, strict=True)) if old != new]
     if not changed:
         return ProposalChange(label="Brain", after="Unchanged")
@@ -121,11 +136,12 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             return ProposalChange(label=body.name if body else body_id, after="Removed")
         case RenameProject(name=name):
             return ProposalChange(label="Project name", before=project.name, after=name)
-        case SetTaskFamily(family=family):
-            return ProposalChange(label="Task", before=project.task.family, after=family)
-        case SetRewardTerm(term=term):
+        case SetTaskFamily(family=family, agent=agent):
+            return ProposalChange(label="Task", before=_seen_by(project, agent).task.family, after=family)
+        case SetRewardTerm(term=term, agent=agent):
             info = REWARD_TERMS.get(term.term)
-            old = next((item for item in project.task.rewards if item.term == term.term), None)
+            rewards = _seen_by(project, agent).task.rewards
+            old = next((item for item in rewards if item.term == term.term), None)
             label = f"Reward: {info.label if info else term.term}"
             return ProposalChange(label=label, before=_number(old.weight) if old else None, after=_number(term.weight))
         case RemoveRewardTerm(term=term_id):
@@ -133,6 +149,14 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             return ProposalChange(label=f"Reward: {info.label if info else term_id}", after="Removed")
         case SetBrain():
             return _brain_change(project, op)
+        case AddAgent(agent=agent):
+            return ProposalChange(label=f"Agent {agent.name}", after="Added")
+        case RemoveAgent(agent=agent_id):
+            return ProposalChange(label=f"Agent {_agent_name(project, agent_id)}", after="Removed")
+        case SetAgent(agent=agent_id, name=name):
+            return ProposalChange(
+                label=f"Agent {_agent_name(project, agent_id)}", after=f"Renamed {name}" if name else "Lane changed"
+            )
 
 
 def proposal_changes(project: Project, operations: Sequence[EditOperation]) -> list[ProposalChange]:
