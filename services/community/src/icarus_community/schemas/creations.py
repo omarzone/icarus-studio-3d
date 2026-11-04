@@ -125,3 +125,23 @@ class ReportRequest(Strict):
 
 class AppealRequest(Strict):
     message: str = Field(min_length=1, max_length=1000)
+
+
+class Comment(Strict):
+    id: str
+    author: Person
+    text: str
+    created_at: datetime
+    # Whether the person asking may delete it: its author or a moderator.
+    can_delete: bool
+
+
+class CommentPage(Strict):
+    items: list[Comment]
+    total: int
+    # False when the creation's author turned comments off; earlier comments stay readable.
+    open: bool
+
+
+class CommentRequest(Strict):
+    text: str = Field(min_length=1, max_length=1000)

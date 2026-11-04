@@ -135,11 +135,25 @@ class Vote(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    creation_id: Mapped[str] = mapped_column(ForeignKey("creations.id", ondelete="CASCADE"), index=True)
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
 class Report(Base):
     __tablename__ = "reports"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     creation_id: Mapped[str] = mapped_column(ForeignKey("creations.id", ondelete="CASCADE"), index=True)
+    # Set when the report is about one comment on the creation rather than the creation itself.
+    comment_id: Mapped[str | None] = mapped_column(
+        ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     reporter_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reason: Mapped[str] = mapped_column(String(16))
     details: Mapped[str] = mapped_column(String(1000), default="")
@@ -189,7 +203,7 @@ class Notification(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    # vote · remix · follow · invite · moderation
+    # vote · remix · follow · invite · moderation · comment
     kind: Mapped[str] = mapped_column(String(16))
     actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     creation_id: Mapped[str | None] = mapped_column(ForeignKey("creations.id", ondelete="CASCADE"), nullable=True)

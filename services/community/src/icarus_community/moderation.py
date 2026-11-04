@@ -60,7 +60,9 @@ def list_queue(session: Session, queue: ModerationQueue) -> list[ModerationItem]
                 .order_by(Report.created_at)
             )
         )
-        reasons = sorted({report.reason for report in reports})
+        reasons = sorted(
+            {report.reason if report.comment_id is None else f"comment: {report.reason}" for report in reports}
+        )
         items.append(
             ModerationItem(
                 id=creation.id,

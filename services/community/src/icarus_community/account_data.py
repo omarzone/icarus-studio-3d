@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from icarus_community.file_store import FileStore
 from icarus_community.models import (
     Block,
+    Comment,
     Creation,
     CreationVersion,
     Follow,
@@ -78,6 +79,7 @@ def export_data(session: Session, user: User) -> dict[str, Any]:
         "versions": _rows(session, CreationVersion, CreationVersion.creation_id.in_(creation_ids)),
         "invites_sent": _rows(session, Invite, Invite.page_id.in_(select(Page.id).where(Page.owner_id == user.id))),
         "votes": _rows(session, Vote, Vote.user_id == user.id),
+        "comments": _rows(session, Comment, Comment.author_id == user.id),
         "reports_made": _rows(session, Report, Report.reporter_id == user.id),
         "following": _rows(session, Follow, Follow.follower_id == user.id),
         "blocked": _rows(session, Block, Block.blocker_id == user.id),
