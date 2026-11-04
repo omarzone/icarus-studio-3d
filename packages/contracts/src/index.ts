@@ -129,6 +129,7 @@ export type {
   PieceInfo,
   PlanItem,
   PlateSignal,
+  PlayBrainActivity,
   PlayBrainOption,
   PlayCommandEnvelope,
   PlayEvent,

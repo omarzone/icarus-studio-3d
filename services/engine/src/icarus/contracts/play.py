@@ -169,6 +169,19 @@ class PlayFrame(_Model):
     agents: list[PlayAgentStatus] = []
 
 
+class PlayBrainActivity(_Model):
+    """What the playing brain computed for the observation it last acted on: its policy's real forward pass."""
+
+    # Simulated time and physics step of the control step that read the observation.
+    time: float
+    step: int
+    observation: list[float]
+    # Every hidden layer's outputs, first layer first.
+    layers: list[list[float]]
+    # The action outputs before they are clipped to each motor's range.
+    outputs: list[float]
+
+
 class PlayEvent(_Model):
     time: float
     kind: Literal["user", "agent", "world"]
@@ -219,6 +232,8 @@ class PlaySessionInfo(_Model):
     scene: SceneDescription
     pieces: list[PlayPiece] = []
     agents: list[PlayAgentBrain] = []
+    # Whether the session streams the brain's neuron activity; only a trained brain of a single agent has neurons.
+    activity: bool = False
 
 
 class PlayBrainOption(_Model):
@@ -248,6 +263,13 @@ class PlayFrameMessage(_Model):
     frame: PlayFrame
 
 
+class PlayActivityMessage(_Model):
+    """The brain's activity, sent a few times a second while a trained brain plays."""
+
+    type: Literal["activity"]
+    activity: PlayBrainActivity
+
+
 class PlayEventMessage(_Model):
     type: Literal["event"]
     event: PlayEvent
@@ -267,7 +289,7 @@ class PlayProgressMessage(_Model):
 
 # What the engine sends over the Play WebSocket.
 PlayMessage = Annotated[
-    PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage,
+    PlayReady | PlayFrameMessage | PlayActivityMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage,
     Field(discriminator="type"),
 ]
 
