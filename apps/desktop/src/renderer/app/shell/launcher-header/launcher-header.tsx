@@ -1,6 +1,6 @@
 // HDR-LAUNCHER
 import { tokens } from "@icarus/ui-tokens";
-import { ArrowLeft, Bell, Search } from "lucide-react";
+import { ArrowLeft, Bell, Search, User } from "lucide-react";
 import { buttonClass } from "../../../ui/button-styles.ts";
 import { IcarusMark } from "../../../ui/icarus-mark.tsx";
 import { ctaSlug, type ScreenId } from "../../navigation/catalog-id.ts";
@@ -100,7 +100,7 @@ export function LauncherHeader({ active, activeGoesTo, account, unread = false }
         aria-label={account.signedIn ? "Profile" : "Sign in"}
         className="grid size-8 place-items-center rounded-full bg-control-raised text-ui font-semibold hover:bg-fill-hover active:opacity-80"
       >
-        {account.initial}
+        {account.initial === "" ? <User size={16} strokeWidth={1.75} aria-hidden /> : account.initial}
       </GoTo>
       <WindowControlsSpace side="end" />
     </header>

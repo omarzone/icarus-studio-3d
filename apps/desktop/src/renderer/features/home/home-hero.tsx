@@ -2,13 +2,15 @@ import { ArrowUp } from "lucide-react";
 import { useState } from "react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { HeroScene } from "./hero-scene.tsx";
 
-// The hero's 3D scene arrives with the renderer; until then it is a plain surface behind the prompt.
+// A real template scene sits behind the prompt; without the engine the surface stays plain.
 export function HomeHero({ showIdeasHint }: { showIdeasHint: boolean }) {
   const go = useNavigation((state) => state.go);
   const [prompt, setPrompt] = useState("");
   return (
     <section className="relative h-67.5 shrink-0 overflow-hidden rounded-dialog bg-strip">
+      <HeroScene />
       <div className="absolute top-11.5 left-9 flex w-135 flex-col gap-3">
         <h1 className="m-0 text-display leading-[1.05] font-semibold tracking-[-0.03em]">
           Train AI in 3D, from a sentence
