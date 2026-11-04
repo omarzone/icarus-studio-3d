@@ -10,7 +10,8 @@ import type {
   SceneOrnament,
 } from "@icarus/contracts";
 import { multiply, type Quaternion } from "../scene/quaternion.ts";
-import type { LibraryItem, LibraryShelf } from "./library-port.ts";
+import type { CreationSummary } from "./community-port.ts";
+import type { LibraryItem, LibraryItemKind, LibraryShelf } from "./library-port.ts";
 import { pieceLook } from "./piece-look.ts";
 import { allObjects } from "./scene-views.ts";
 import { vaultItems } from "./vault-bodies.ts";
@@ -31,7 +32,7 @@ const GROUPS: Record<NonNullable<PieceInfo["category"]>, string> = {
 };
 
 export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, search: string): LibraryItem[] {
-  // Community pieces arrive with the community; imported files with import.
+  // Community creations come from the community service (`communityItems`); imported files with import.
   if (shelf !== "library") {
     return [];
   }
@@ -40,6 +41,24 @@ export function libraryItems(catalog: LibraryCatalog, shelf: LibraryShelf, searc
     .filter((piece) => !query || piece.label.toLowerCase().includes(query))
     .map((piece) => ({ id: piece.id, name: piece.label, kind: "prop", group: GROUPS[piece.category ?? "basics"] }));
   return [...pieces, ...vaultItems(catalog, query)];
+}
+
+// Community categories (the service's `categories` table) that are not bodies.
+const COMMUNITY_KINDS: Readonly<Record<string, LibraryItemKind>> = {
+  Worlds: "environment",
+  "Brains only": "brain",
+};
+
+// A creation is a whole project, so its card opens the creation page instead of placing a piece.
+export function communityItems(creations: readonly CreationSummary[]): LibraryItem[] {
+  return creations.map((creation) => ({
+    id: creation.id,
+    name: creation.name,
+    kind: COMMUNITY_KINDS[creation.category] ?? "body",
+    source: creation.author.handle,
+    group: creation.category,
+    creation: creation.id,
+  }));
 }
 
 function spawnPosition(project: Project): [number, number, number] {
