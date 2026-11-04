@@ -1,14 +1,18 @@
 // TAB-SHARE-TO-COMMUNITY
+import type { SceneDescription } from "@icarus/contracts";
 import { ArrowBigUp, Check } from "lucide-react";
 import { useState } from "react";
 import { Act, GoTo } from "../../../app/navigation/go-to.tsx";
 import type { CommunityPage, PublishPermissionId } from "../../../ports/publish-port.ts";
+import { SceneThumbnail } from "../../../scene/scene-thumbnail.tsx";
 import { buttonClass } from "../../../ui/button-styles.ts";
 import { CheckLine } from "../../copilot/chat-messages.tsx";
 
 type Props = {
   page: CommunityPage;
   project: string;
+  // The project's compiled scene for the preview card; `load` is null where there is none (sample data).
+  picture: { cacheKey: string; load: (() => Promise<SceneDescription>) | null };
   // While a dialog is open over Build, Save draft leads back to it.
   underOverlay: boolean;
   onEdit: (edit: { title?: string; description?: string }) => void;
@@ -23,7 +27,15 @@ const chipClass =
   "inline-flex h-6.5 items-center rounded-full bg-fill-hover px-2.5 text-ui text-fg-tool hover:bg-control-raised hover:text-fg active:opacity-80";
 
 // The community page form: title, description, what people can do, what is included and the preview card.
-export function ShareToCommunityTab({ page, project, underOverlay, onEdit, onPermission, onSaveDraft }: Props) {
+export function ShareToCommunityTab({
+  page,
+  project,
+  picture,
+  underOverlay,
+  onEdit,
+  onPermission,
+  onSaveDraft,
+}: Props) {
   const [title, setTitle] = useState(page.title);
   const [description, setDescription] = useState(page.description);
   return (
@@ -76,7 +88,11 @@ export function ShareToCommunityTab({ page, project, underOverlay, onEdit, onPer
       <div className="flex flex-col gap-2.5">
         <span className="text-ui leading-[15px] text-fg-secondary">Preview card</span>
         <div className="overflow-hidden rounded-[18px] bg-control">
-          <div role="img" aria-label={`Community preview of ${project}`} className="h-50 bg-control-raised" />
+          <div role="img" aria-label={`Community preview of ${project}`} className="h-50 bg-control-raised">
+            {picture.load ? (
+              <SceneThumbnail cacheKey={picture.cacheKey} load={picture.load} className="size-full" />
+            ) : null}
+          </div>
           <div className="flex items-center gap-2 px-3.5 py-3">
             <span className="flex flex-1 flex-col">
               <span className="leading-4 font-semibold">{page.title}</span>

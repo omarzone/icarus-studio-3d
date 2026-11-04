@@ -59,7 +59,12 @@ export function BuildScreen() {
               title: "Share to community",
               minimumWidth: 360,
               render: () => (
-                <BuildTargetViewPanel project={project.id} projectName={project.name} underOverlay={underOverlay} />
+                <BuildTargetViewPanel
+                  project={project.id}
+                  projectName={project.name}
+                  revision={project.revision}
+                  underOverlay={underOverlay}
+                />
               ),
             },
             chat: copilotPanel(() => (
