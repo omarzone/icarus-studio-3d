@@ -15,7 +15,8 @@ export type NotificationKind =
   | "vote"
   | "follow"
   | "invite"
-  | "moderation";
+  | "moderation"
+  | "comment";
 
 export type AppNotification = {
   id: string;

@@ -27,6 +27,16 @@ export type CreationSummary = {
 
 export type CreationComment = { id: string; author: CommunityPerson; text: string };
 
+export type ThreadComment = CreationComment & {
+  // Relative time as shown ("5 min", "yesterday").
+  time: string;
+  // Its author and moderators may delete it.
+  canDelete: boolean;
+};
+
+// `open` is false when the creation's author turned comments off; earlier comments stay readable.
+export type CommentThread = { comments: ThreadComment[]; total: number; open: boolean };
+
 export type CreationDetail = CreationSummary & {
   // One line under the title ("Car · parks 93% of the time · 4M steps").
   tagline: string;
@@ -45,7 +55,14 @@ export type CreationDetail = CreationSummary & {
 
 export type ReportReason = "offensive" | "stolen" | "spam" | "harmful" | "other";
 
-export type CreationReport = { id: string; reason: ReportReason; details: string; blockAuthor: boolean };
+// With `commentId`, the report is about that comment on the creation and `blockAuthor` blocks its author.
+export type CreationReport = {
+  id: string;
+  commentId?: string;
+  reason: ReportReason;
+  details: string;
+  blockAuthor: boolean;
+};
 
 export type CreationQuery = { sort: CreationSort; category: string | null; search: string; limit?: number };
 
@@ -60,6 +77,9 @@ export type CommunityPort = {
   // Makes a new local project of the creation's latest version, remembering where it came from.
   remix: (id: string) => Promise<RemixedProject>;
   report: (report: CreationReport) => Promise<void>;
+  listComments: (creationId: string) => Promise<CommentThread>;
+  postComment: (input: { creationId: string; text: string }) => Promise<void>;
+  deleteComment: (input: { creationId: string; commentId: string }) => Promise<void>;
   // A creation's or person's picture as a data URL, or null when there is none.
   getPicture: (picture: string) => Promise<string | null>;
 };

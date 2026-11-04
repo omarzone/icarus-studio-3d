@@ -8,13 +8,13 @@ import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { accountPort } from "../../ports/account-port.ts";
-import { type CreationComment, type CreationDetail, communityPort } from "../../ports/community-port.ts";
-import { Avatar } from "../../ui/avatar.tsx";
+import { type CreationDetail, communityPort } from "../../ports/community-port.ts";
 import { LauncherPage } from "../../ui/launcher-page.tsx";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { CreationAside } from "./creation-aside.tsx";
+import { CommentPreview, CreationComments } from "./creation-comments.tsx";
 
 type Tab = "overview" | "brain" | "versions" | "comments";
 
@@ -106,7 +106,7 @@ function CreationTab({ tab, creation }: { tab: Tab; creation: CreationDetail }) 
               </GoTo>
             ))}
           </div>
-          <Comments comments={creation.comments} />
+          <CommentPreview comments={creation.comments} />
         </>
       );
     case "brain":
@@ -114,27 +114,8 @@ function CreationTab({ tab, creation }: { tab: Tab; creation: CreationDetail }) 
     case "versions":
       return <FactList lines={creation.versions.map((v) => `${v.label} · ${v.note}`)} empty="No earlier versions" />;
     case "comments":
-      return <Comments comments={creation.comments} />;
+      return <CreationComments creationId={creation.id} />;
   }
-}
-
-function Comments({ comments }: { comments: readonly CreationComment[] }) {
-  if (comments.length === 0) {
-    return <EmptyState title="No comments yet" />;
-  }
-  return (
-    <div className="flex flex-col gap-2.5">
-      {comments.map((comment) => (
-        <div key={comment.id} className="flex gap-2.5">
-          <Avatar initials={comment.author.initials} tone={comment.author.tone} className="size-7 text-micro" />
-          <span className="flex flex-col gap-0.5 text-ui leading-tight">
-            <span className="font-semibold">@{comment.author.handle}</span>
-            <span className="text-fg-secondary">{comment.text}</span>
-          </span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function FactList({ lines, empty }: { lines: readonly string[]; empty: string }) {

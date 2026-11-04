@@ -2,6 +2,8 @@ import { has, isListOf, isRecord } from "../engine-client/response-checks.ts";
 import type {
   AccountDeleted,
   Category,
+  Comment,
+  CommentPage,
   CreationDetail,
   CreationPage,
   CreationSummary,
@@ -64,6 +66,19 @@ export function isCreationDetail(value: unknown): value is CreationDetail {
 
 export function isCreationPage(value: unknown): value is CreationPage {
   return isRecord(value) && numbers(value, "total") && isListOf(value.items, isCreationSummary);
+}
+
+export function isComment(value: unknown): value is Comment {
+  return (
+    strings(value, "id", "text", "created_at") &&
+    booleans(value, "can_delete") &&
+    isRecord(value) &&
+    isPerson(value.author)
+  );
+}
+
+export function isCommentPage(value: unknown): value is CommentPage {
+  return isRecord(value) && numbers(value, "total") && booleans(value, "open") && isListOf(value.items, isComment);
 }
 
 export function isPage(value: unknown): value is Page {

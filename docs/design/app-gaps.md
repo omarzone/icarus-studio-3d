@@ -29,16 +29,16 @@ There are 594 features across seven groups.
 
 | App today | Count | | In spec? | Count |
 |---|---|---|---|---|
-| works | 369 | | built | 377 |
-| partial | 139 | | planned | 146 |
+| works | 370 | | built | 378 |
+| partial | 139 | | planned | 145 |
 | pending | 15 | | not in spec | 71 |
-| fixture-only | 18 | | | |
+| fixture-only | 17 | | | |
 | missing | 53 | | | |
 | broken | 0 | | | |
 
 | Group | Features | works | partial | pending | fixture-only | missing | broken |
 |---|---|---|---|---|---|---|---|
-| Launcher, projects, community, settings, system | 107 | 83 | 17 | 1 | 2 | 4 | 0 |
+| Launcher, projects, community, settings, system | 107 | 84 | 17 | 1 | 1 | 4 | 0 |
 | World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
 | Brain | 68 | 33 | 21 | 1 | 5 | 8 | 0 |
@@ -49,9 +49,9 @@ There are 594 features across seven groups.
 The short version:
 
 - **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON and BVH export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
-- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
+- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
 - **Broken (says or offers something it does not do):** nothing known after Sprint 15.
-- **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
+- **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without a brain tab or published timelapse.
 
 ### Diagnosis: body rig, motion and connectome
 
@@ -110,9 +110,9 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-COMMUNITY | "Every creation is reviewed" note | partial | planned | Moderation exists, but the service defaults to publishing straight to public; require review by default or change the line. |
 | SCR-COMMUNITY | Creation cards with thumbnail, votes, author, remixes | works | built | Nothing |
 | SCR-CREATION | Hero replay with "Watch how it learned" | partial | planned | The hero shows the published thumbnail, but bundles carry no training history, so the timelapse reads "not published"; publish rollouts with the bundle. |
-| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview and Versions are real; Brain and Comments are always empty and How it learned has no published timelapse. |
+| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview, Versions and Comments are real; Brain is always empty and How it learned has no published timelapse. |
 | SCR-CREATION | Checkpoint strip opening the timelapse at a step | fixture-only | planned | The app maps no checkpoints, so the strip never renders; needs checkpoint thumbnails in the bundle. |
-| SCR-CREATION | Comment list (read only) | fixture-only | planned | The community service has no comments; the app always shows "No comments yet". |
+| SCR-CREATION | Comment list | works | built | Nothing. The overview shows the newest three; the Comments tab lists them with a composer for signed-in people, delete for the comment's author and moderators, and Report through `MOD-REPORT`. The author's comments switch closes new ones. The comment controls are not in the design inventory. |
 | SCR-CREATION | Author card with Follow | works | built | Nothing |
 | SCR-CREATION | Votes, remixes, downloads tiles | works | built | Nothing |
 | SCR-CREATION | "Remix into my projects" | works | built | Nothing |
@@ -780,4 +780,4 @@ Ranked by how much each one confuses or blocks someone using the app.
 3. **The animation export writes JSON and BVH only;** glTF and FBX are not written.
 4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
 5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
-6. **Creation pages have no comments, brain tab or published timelapse.**
+6. **Creation pages have no brain tab or published timelapse.**

@@ -1,6 +1,6 @@
 // POP-NOTIFICATIONS
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowBigUp, Check, Copy, History, UserPlus, Users } from "lucide-react";
+import { ArrowBigUp, Check, Copy, History, MessageCircle, UserPlus, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Act, GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
@@ -20,6 +20,7 @@ const ICONS: Record<NotificationKind, { icon: ReactNode; className: string }> = 
   follow: { icon: <UserPlus size={14} strokeWidth={1.75} />, className: "text-fg" },
   invite: { icon: <Users size={14} strokeWidth={1.75} />, className: "text-fg" },
   moderation: { icon: "!", className: "text-warn" },
+  comment: { icon: <MessageCircle size={14} strokeWidth={1.75} />, className: "text-fg" },
 };
 
 export function NotificationsPopover() {
