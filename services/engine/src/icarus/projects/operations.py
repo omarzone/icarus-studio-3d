@@ -18,6 +18,7 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetCurriculum,
     SetEpisode,
     SetMotionReference,
     SetProperty,
@@ -204,6 +205,8 @@ def _apply(project: Project, operation: EditOperation) -> None:
                 task.end_on_fall = operation.end_on_fall
             if operation.end_on_success is not None:
                 task.end_on_success = operation.end_on_success
+        case SetCurriculum(stages=stages, agent=agent_id):
+            _task(project, agent_id).curriculum = [stage.model_copy(deep=True) for stage in stages]
         case AddAgent(agent=agent, body=body):
             _add_agent(project, agent, body)
         case RemoveAgent(agent=agent_id):
