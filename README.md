@@ -107,15 +107,25 @@ One contract is defined in Python with Pydantic and generated into TypeScript, s
 
 ## Status
 
-Icarus Studio 3D is in active development. The product, the architecture and the complete interface design are defined, and the code is landing zone by zone on top of them. This README is updated as each part becomes real; anything not built yet is described as a goal, never shown as a result.
+Icarus Studio 3D is in active development. Anything not built yet is described as a goal, never shown as a result; the screens that are not real yet say so. The full feature-by-feature account is in [`docs/design/app-gaps.md`](./docs/design/app-gaps.md).
 
-**Now real:** the first complete loop. The desktop app starts, supervises and restarts the local engine over one generated contract. Projects start from a template or from a sentence (three design ideas, then a staged build), change only through validated edit operations, and are compiled to MuJoCo and physically tested before every revision. The editor has a real 3D viewport with camera modes, task zones and a world sky, an inspector for every property, undo and project management. Play steps the physics live. Training runs PPO on the CPU with parallel copies that can vary per copy, live metrics, checkpoints and replays; a car learns to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). The copilot is an agent loop with tools: it inspects, looks at offscreen MuJoCo renders, reads attached images and videos, tries changes on a copy, proposes, applies and trains, depending on the autonomy mode. The coach reads checkpoint frames and failure groups, diagnoses runs from their real data, and the autopilot fixes and retrains, warm-starting when it can; Results compares runs on the same seeds.
+**Now real:**
 
-**Not built yet:** the Brain, Body, Motion and Build workspaces' engine work, connectome brains, hardware export, bundles and the community service. Their screens say so.
+- **Projects and the editor.** Projects start from a template or from a sentence (three design ideas, then a staged build), change only through validated edit operations, and are compiled to MuJoCo and physically tested before every revision. A real 3D viewport, an inspector for every property, undo, history, and closing a project stops its runs and saves first.
+- **The copilot.** An agent loop with tools on Muse Spark: it inspects, looks at offscreen MuJoCo renders, reads attached images and videos, tries changes on a copy, proposes, applies and trains, depending on the autonomy mode.
+- **Play and training.** Play steps the physics live with the newest fitting brain. Training runs PPO on the CPU with parallel copies, live metrics, checkpoints, replays, coaching and an autopilot that diagnoses, fixes and retrains; a car learns to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). A system notification says when a run ends.
+- **Results.** Failure groups, diagnoses from real run data, behavior tests, comparisons on the same seeds and the training timelapse.
+- **Brain.** Senses, motors, rewards, episode rules, brain sizes from measured budgets, and the network drawn from any checkpoint.
+- **Body.** Import a model as a mesh, auto-rig it, check the rig and fix what it finds, test poses and skin weights.
+- **Motion from video.** Choose the part of a video, track the dancer through the `pose` capability with real frame previews, retarget onto a physical humanoid, train it to imitate and compare per moment and limb with the video underneath, then export JSON or BVH.
+- **Build.** An export plan, ONNX brains, URDF and MJCF bodies and a hardware check.
+- **Community.** Sign-in, catalog, creation pages, publishing, remixing, votes, reports, moderation, profiles and privacy settings, served by `services/community`.
+
+**Not built yet:** connectome brains (the fruit fly), curriculum stages, comments on creations, glTF and FBX animation export, URDF and MJCF robot import, body tool modes and weight painting, live brain activity, and installers. Tracking dance with a general vision model drifts on fast moves; a dedicated pose estimator is planned.
 
 ## Development
 
-Requirements: Node.js 22+, pnpm, [uv](https://docs.astral.sh/uv/) and Git. No GPU is needed; training runs on the CPU.
+Requirements: Node.js 22+, pnpm, [uv](https://docs.astral.sh/uv/) and Git. No GPU is needed; training runs on the CPU. There are no installers yet, so the app runs from source. The copilot needs a Muse Spark connection, set in Settings › AI models.
 
 ```bash
 pnpm install && pnpm engine:sync   # install the app and the engine
