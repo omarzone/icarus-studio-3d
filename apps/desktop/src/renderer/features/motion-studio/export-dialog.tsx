@@ -20,7 +20,7 @@ import { TextField } from "../../ui/text-field.tsx";
 // Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
 
-// Export the motion as an animation file: format, physics result or raw pose, root motion, loop and target rig.
+// Export the motion as an animation file: format, physics result or raw pose, root motion and loop.
 export function ExportDialog() {
   return (
     <ProjectDialogGate projectKey={useProjectKey(CLIP)} title="Export animation">
@@ -93,7 +93,9 @@ function ExportBody({ settings, onFormat, onToggle }: BodyProps) {
           </span>
         ))}
       </div>
-      <TextField label="Target" value={target} onChange={(event) => setTarget(event.currentTarget.value)} />
+      {target !== null && (
+        <TextField label="Target" value={target} onChange={(event) => setTarget(event.currentTarget.value)} />
+      )}
       <div className="rounded-[14px] bg-control px-3.5 py-3 font-mono text-ui leading-[1.7]">
         {settings.summary.map((line) => (
           <p key={line}>{line}</p>

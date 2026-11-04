@@ -264,7 +264,7 @@ export function animationExport(workspace: MotionWorkspace, choices: ExportChoic
       { id: "root", label: "Include root motion", on: choices.options.root ?? true },
       { id: "loop", label: "Loop the clip", on: choices.options.loop ?? false },
     ],
-    target: choices.format === "BVH" ? "Any 3D tool or engine that reads BVH" : "Any tool that reads JSON",
+    target: null,
     summary: [
       `${stem}-${physics ? "physics" : "reference"}.${extension} · ${frames} frames`,
       comparison

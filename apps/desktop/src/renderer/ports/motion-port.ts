@@ -129,7 +129,8 @@ export type AnimationExport = {
   formats: readonly string[];
   format: string;
   options: readonly { id: string; label: string; on: boolean }[];
-  target: string;
+  // A named target rig; the engine exports to any tool and takes none, so the app leaves it null.
+  target: string | null;
   summary: readonly string[];
 };
 
