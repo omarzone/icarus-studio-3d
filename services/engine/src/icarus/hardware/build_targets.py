@@ -32,5 +32,5 @@ def build_targets(state: ProjectState, runs: RunStore) -> list[BuildTarget]:
         BuildTarget(kind="game", detail="ONNX for Unity Sentis or Godot" if brain else "Needs a trained brain")
     )
     if not any(view(obj, "vehicle") for obj in project.bodies[0].objects):
-        targets.append(BuildTarget(kind="animation", detail="JSON · BVH (for dancers)"))
+        targets.append(BuildTarget(kind="animation", detail="JSON · BVH · glTF (for dancers)"))
     return targets

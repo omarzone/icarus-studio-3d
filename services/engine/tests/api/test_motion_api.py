@@ -1,5 +1,7 @@
 import base64
 import json
+import math
+import struct
 import time
 from datetime import UTC, datetime
 
@@ -141,3 +143,65 @@ def test_the_reference_exports_as_json_and_bvh(client, project_id):
     assert bvh["content"].startswith("HIERARCHY\nROOT Hips") and f"Frames: {FRAMES + 1}" in bvh["content"]
     physics = client.post(f"/projects/{project_id}/motion/export", json={"format": "json", "source": "physics"})
     assert physics.status_code == 404 and "Train the copy first" in physics.json()["message"]
+
+
+def _glb(data: bytes) -> tuple[dict, bytes]:
+    """The JSON and binary chunks of a .glb, after checking its header and chunk lengths."""
+    magic, version, length = struct.unpack_from("<III", data, 0)
+    assert (magic, version, length) == (0x46546C67, 2, len(data))
+    json_length, json_type = struct.unpack_from("<II", data, 12)
+    assert json_type == 0x4E4F534A and json_length % 4 == 0
+    document = json.loads(data[20 : 20 + json_length])
+    binary_length, binary_type = struct.unpack_from("<II", data, 20 + json_length)
+    assert binary_type == 0x004E4942 and 28 + json_length + binary_length == len(data)
+    binary = data[28 + json_length :]
+    assert document["buffers"][0]["byteLength"] <= binary_length
+    for accessor in document["accessors"]:
+        view = document["bufferViews"][accessor["bufferView"]]
+        size = {"SCALAR": 1, "VEC3": 3, "VEC4": 4, "MAT4": 16}[accessor["type"]]
+        width = {5126: 4, 5123: 2}[accessor["componentType"]]
+        assert accessor["count"] * size * width == view["byteLength"]
+        assert view["byteOffset"] + view["byteLength"] <= binary_length
+    return document, binary
+
+
+def _floats(document: dict, binary: bytes, accessor: int) -> list[float]:
+    view = document["bufferViews"][document["accessors"][accessor]["bufferView"]]
+    return list(struct.unpack_from(f"<{view['byteLength'] // 4}f", binary, view["byteOffset"]))
+
+
+def test_the_reference_exports_as_a_skinned_gltf_animation_of_its_frames(client, project_id):
+    _connect_pose(client)
+    client.post(f"/projects/{project_id}/motion/videos", json=_video())
+    _tracked(client, project_id)
+    request = {"source": "reference", "root_motion": False}
+    exported = client.post(f"/projects/{project_id}/motion/export", json=request | {"format": "gltf"}).json()
+    assert exported["name"] == "walk-reference.glb" and exported["media_type"] == "model/gltf-binary"
+    assert exported["encoding"] == "base64" and exported["frames"] == FRAMES
+    document, binary = _glb(base64.b64decode(exported["content"]))
+
+    skin = document["skins"][0]
+    assert len(skin["joints"]) == 11 and document["nodes"][skin["skeleton"]]["name"] == "Hips"
+    assert document["accessors"][skin["inverseBindMatrices"]]["count"] == 11
+    body = next(node for node in document["nodes"] if "mesh" in node)
+    assert body["skin"] == 0 and "JOINTS_0" in document["meshes"][0]["primitives"][0]["attributes"]
+    animation = document["animations"][0]
+    assert len(animation["channels"]) == 12
+    for sampler in animation["samplers"]:
+        assert document["accessors"][sampler["input"]]["count"] == FRAMES
+        assert document["accessors"][sampler["output"]]["count"] == FRAMES
+    times = _floats(document, binary, animation["samplers"][0]["input"])
+    assert times == pytest.approx([index / 2.0 for index in range(FRAMES)])
+
+    # Every joint turns exactly as the BVH of the same frames says.
+    bvh = client.post(f"/projects/{project_id}/motion/export", json=request | {"format": "bvh"}).json()
+    rows = [[float(value) for value in line.split()] for line in bvh["content"].splitlines()[-FRAMES:]]
+    rotations = [channel for channel in animation["channels"] if channel["target"]["path"] == "rotation"]
+    assert any(abs(row[3 + 7 * 3]) > 1 for row in rows)
+    for channel in rotations:
+        joint = channel["target"]["node"]
+        quaternions = _floats(document, binary, animation["samplers"][channel["sampler"]]["output"])
+        for frame, row in enumerate(rows):
+            x, y, z, w = quaternions[frame * 4 : frame * 4 + 4]
+            assert (x, y) == (0.0, 0.0)
+            assert math.degrees(2 * math.atan2(z, w)) == pytest.approx(row[3 + joint * 3], abs=1e-3)
