@@ -112,13 +112,13 @@ Everything below runs today on a desktop CPU, on real MuJoCo physics and real tr
 
 - **Projects and the editor.** Projects start from a template or from a sentence (three design ideas, then a staged build), change only through validated edit operations, and are compiled to MuJoCo and physically tested before every revision. A real 3D viewport, an inspector for every property, undo, history, and closing a project stops its runs and saves first.
 - **The copilot.** An agent loop with tools on Muse Spark: it inspects, looks at offscreen MuJoCo renders, reads attached images and videos, tries changes on a copy, proposes, applies and trains, depending on the autonomy mode.
-- **Play and training.** Play steps the physics live with the newest fitting brain. Training runs PPO on the CPU with parallel copies, live metrics, checkpoints, replays, coaching and an autopilot that diagnoses, fixes and retrains; a car learns to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). A system notification says when a run ends.
+- **Play and training.** Play steps the physics live with the newest fitting brain. Training runs PPO on the CPU with parallel copies, live metrics, checkpoints, replays, coaching, curriculum stages that make the task harder as success rates rise, and an autopilot that diagnoses, fixes and retrains; a car learns to park on a desktop CPU in under 4 minutes ([ADR 001](./docs/decisions/001-cpu-training-budget.md)). A system notification says when a run ends.
 - **Results.** Failure groups, diagnoses from real run data, behavior tests, comparisons on the same seeds and the training timelapse.
-- **Brain.** Senses, motors, rewards, episode rules, brain sizes from measured budgets, and the network drawn from any checkpoint.
-- **Body.** Import a model as a mesh, auto-rig it, check the rig and fix what it finds, test poses and skin weights.
-- **Motion from video.** Choose the part of a video, track the dancer through the `pose` capability with real frame previews, retarget onto a physical humanoid, train it to imitate and compare per moment and limb with the video underneath, then export JSON or BVH.
+- **Brain.** Senses, motors, rewards, episode rules, brain sizes from measured budgets, and the network drawn from any checkpoint or live while the brain plays.
+- **Body.** Import a model as a mesh or a URDF or MJCF robot, auto-rig it, check the rig and fix what it finds, test poses and skin weights.
+- **Motion from video.** Choose the part of a video, track the dancer through the `pose` capability with real frame previews, retarget onto a physical humanoid, train it to imitate and compare per moment and limb with the video underneath, then export JSON, BVH or glTF.
 - **Build.** An export plan, ONNX brains, URDF and MJCF bodies and a hardware check.
-- **Community.** Sign-in, catalog, creation pages, publishing, remixing, votes, reports, moderation, profiles and privacy settings, served by `services/community`.
+- **Community.** Sign-in, catalog, creation pages with comments, publishing, remixing, votes, reports, moderation, profiles and privacy settings, served by `services/community`.
 
 ## Development
 
