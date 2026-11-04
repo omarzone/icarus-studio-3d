@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { bodyPort, type ImportPreview, type ModelFile } from "../../ports/body-port.ts";
+import { projectsPort } from "../../ports/projects-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
-import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
 import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
@@ -26,22 +27,37 @@ const BODY = "dance-copy";
 // A picked model: read and ready to send, or why it cannot be imported.
 type Picked = { file: ModelFile; facts: string } | { problem: string; name: string } | null;
 
+// Preview key of a dialog opened with no project: import options are the same for every project.
+const NO_PROJECT = "";
+
 // Bring a model, environment or robot description in, as a static mesh or rigged for physics. Opens over any screen.
 export function ImportDialog() {
-  return (
-    <ProjectDialogGate projectKey={useProjectKey(BODY)} title="Import">
-      {(body) => <Import body={body} />}
-    </ProjectDialogGate>
-  );
+  // The project when the dialog opened: one created on confirm must not reload the dialog mid-import.
+  const [body] = useState(useProjectKey(BODY));
+  return <Import body={body} />;
 }
 
-function Import({ body }: { body: string }) {
+// Opened with no project in the app, confirming creates an empty world named after the file and imports into it.
+function Import({ body }: { body: string | null }) {
   const port = usePort(bodyPort);
+  const projects = usePort(projectsPort);
+  const replaceParams = useNavigation((state) => state.replaceParams);
   const client = useQueryClient();
-  const key = ["body", body, "import"] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => port.getImport(body) });
+  const previewKey = body ?? NO_PROJECT;
+  const key = ["body", previewKey, "import"] as const;
+  const query = useQuery({ queryKey: key, queryFn: () => port.getImport(previewKey) });
   const setKind = useEngineAction(port.setImportKind);
   const [picked, setPicked] = useState<Picked>(null);
+  const file = picked && "file" in picked ? picked.file : null;
+  const target = async (): Promise<string> => {
+    if (body !== null || !file) {
+      return body ?? NO_PROJECT;
+    }
+    const created = await projects.createProject({ template: "empty_world", name: fileStem(file.name) });
+    replaceParams({ project: created.id });
+    void client.invalidateQueries({ queryKey: ["projects"] });
+    return created.id;
+  };
   const pick = async (file: File) => {
     const check = checkAttachment({ name: file.name, type: file.type, size: file.size }, 0);
     if (!check.ok || check.kind !== "model") {
@@ -62,18 +78,21 @@ function Import({ body }: { body: string }) {
             preview={preview}
             picked={picked}
             onPick={(file) => void pick(file)}
-            onKind={(kind) => setKind.mutate({ body, kind }, { onSuccess: (next) => client.setQueryData(key, next) })}
-            onStatic={() =>
-              port.importStatic({ body, kind: preview.kind, file: picked && "file" in picked ? picked.file : null })
+            onKind={(kind) =>
+              setKind.mutate({ body: previewKey, kind }, { onSuccess: (next) => client.setQueryData(key, next) })
             }
-            onRig={() =>
-              port.importAndRig({ body, kind: preview.kind, file: picked && "file" in picked ? picked.file : null })
-            }
+            onStatic={async () => port.importStatic({ body: await target(), kind: preview.kind, file })}
+            onRig={async () => port.importAndRig({ body: await target(), kind: preview.kind, file })}
           />
         )}
       </QueryView>
     </Dialog>
   );
+}
+
+function fileStem(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
 }
 
 type BodyProps = {
