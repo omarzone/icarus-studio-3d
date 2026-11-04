@@ -2,6 +2,7 @@ import type { MotionComparison, MotionWorkspace, Project, RunStatus } from "@ica
 import type {
   AnimationExport,
   ClipTimeline,
+  FrameStrip,
   MotionCompare,
   MotionTrainingPlan,
   MotionTrainingStatus,
@@ -127,7 +128,14 @@ const PEOPLE: readonly Option[] = [
   { id: "right", title: "Person on the right", detail: "The rightmost person in each frame" },
 ];
 
-export function videoSource(workspace: MotionWorkspace, project: Project | null): VideoSource {
+type FrameLink = ((index: number) => string) | null;
+
+function frameStrip(workspace: MotionWorkspace, link: FrameLink): FrameStrip | null {
+  const video = workspace.clip?.video;
+  return video && link && video.frames > 0 ? { count: video.frames, fps: video.fps, url: link } : null;
+}
+
+export function videoSource(workspace: MotionWorkspace, project: Project | null, link: FrameLink = null): VideoSource {
   const clip = workspace.clip;
   const people = clip?.people ? ` · ${clip.people} ${clip.people === 1 ? "person" : "people"} found` : "";
   const covered = clip ? clip.video.frames / clip.video.fps : 0;
@@ -154,6 +162,10 @@ export function videoSource(workspace: MotionWorkspace, project: Project | null)
       fromLabel: clock(start),
       toLabel: clock(start + covered),
     },
+    duration: clip?.video.duration ?? 0,
+    start,
+    span: covered,
+    strip: frameStrip(workspace, link),
     people: PEOPLE,
     person: clip?.person ?? "largest",
     targets: [
@@ -169,7 +181,7 @@ export function videoSource(workspace: MotionWorkspace, project: Project | null)
   };
 }
 
-export function trackingProgress(workspace: MotionWorkspace): TrackingProgress {
+export function trackingProgress(workspace: MotionWorkspace, link: FrameLink = null): TrackingProgress {
   const clip = workspace.clip;
   const tracking = workspace.tracking;
   const frames = tracking?.frames ?? clip?.video.frames ?? 0;
@@ -181,6 +193,9 @@ export function trackingProgress(workspace: MotionWorkspace): TrackingProgress {
     frame: frames ? `frame ${frame} of ${frames}` : "no frames yet",
     percent: frames ? Math.round((100 * frame) / frames) : 0,
     state: done ? "done" : (tracking?.state ?? "idle"),
+    strip: frameStrip(workspace, link),
+    current: Math.max(0, Math.min(frame, frames - 1)),
+    poses: done ? tracked(workspace).map((item) => item.keypoints.map(({ name, x, y }) => ({ name, x, y }))) : [],
     steps: [
       { text: `Sample the video · ${clip?.video.frames ?? 0} frames`, state: clip ? "done" : "todo" },
       {

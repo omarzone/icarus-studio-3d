@@ -10,7 +10,8 @@ import type {
   MotionWorkspace,
   RunStatus,
 } from "@icarus/contracts";
-import { request } from "./request.ts";
+import { engineUrl } from "./engine-url.ts";
+import { type RequestOptions, request } from "./request.ts";
 import { has, isListOf, isRecord } from "./response-checks.ts";
 import { isRunStatus } from "./training-checks.ts";
 
@@ -104,6 +105,16 @@ export const motionApi = {
     request(`${at(projectId)}/train`, post(body), isRunStatus),
   export: (projectId: string, body: MotionExportRequest): Promise<MotionExportFile> =>
     request(`${at(projectId)}/export`, post(body), isMotionExportFile),
+  // Where the engine serves each sampled frame of the project's clip, for <img>; the clip id keeps a new video's
+  // pictures from showing an old one's.
+  frameLink: async (
+    projectId: string,
+    clipId: string,
+    { url = engineUrl() }: RequestOptions = {},
+  ): Promise<(index: number) => string> => {
+    const base = `${await url.current()}${at(projectId)}/frames`;
+    return (index) => `${base}/${index}?clip=${encodeURIComponent(clipId)}`;
+  },
 };
 
 export type MotionApi = typeof motionApi;

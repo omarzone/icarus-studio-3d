@@ -2,13 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { GoTo } from "../../app/navigation/go-to.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
-import { motionPort } from "../../ports/motion-port.ts";
+import { motionPort, type TrackingProgress } from "../../ports/motion-port.ts";
 import { Dialog } from "../../ui/dialog.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
 import { ProgressBar, ProgressSteps } from "../../ui/progress-steps.tsx";
 import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
 import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
+import { ClipFrame, useFrameCycle } from "./clip-frame.tsx";
 
 // Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
@@ -49,15 +50,7 @@ function Tracking({ clip }: { clip: string }) {
       <QueryView query={query}>
         {(tracking) => (
           <>
-            <div
-              role="img"
-              aria-label="Video frame with the tracked skeleton"
-              className="relative h-55 rounded-[14px] bg-app"
-            >
-              <span className="absolute bottom-2.5 left-2.5 rounded-button bg-overlay px-2.5 py-1.25 font-mono text-mono">
-                {tracking.frame}
-              </span>
-            </div>
+            <TrackedFrame tracking={tracking} />
             <ProgressBar percent={tracking.percent} label="Tracking progress" />
             <ProgressSteps steps={tracking.steps} />
             {tracking.message ? (
@@ -69,5 +62,25 @@ function Tracking({ clip }: { clip: string }) {
         )}
       </QueryView>
     </Dialog>
+  );
+}
+
+// The frame the pose model is reading now; once tracked, the clip plays with the copied person drawn over it.
+function TrackedFrame({ tracking }: { tracking: TrackingProgress }) {
+  const done = tracking.state === "done" && tracking.poses.length > 0;
+  const strip = tracking.strip;
+  const playing = useFrameCycle(strip?.count ?? 0, strip?.fps ?? 1, done);
+  const index = done ? playing : tracking.current;
+  return (
+    <div
+      role="img"
+      aria-label="Video frame with the tracked skeleton"
+      className="relative h-55 overflow-hidden rounded-[14px] bg-app"
+    >
+      {strip ? <ClipFrame strip={strip} index={index} points={done ? tracking.poses[index] : undefined} /> : null}
+      <span className="absolute bottom-2.5 left-2.5 rounded-button bg-overlay px-2.5 py-1.25 font-mono text-mono">
+        {done && strip ? `frame ${index + 1} of ${strip.count}` : tracking.frame}
+      </span>
+    </div>
   );
 }

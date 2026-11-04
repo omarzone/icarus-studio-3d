@@ -1,8 +1,8 @@
 // MOD-MOTION-VIDEO
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock, Upload } from "lucide-react";
-import { useRef } from "react";
-import { Act, GoTo } from "../../app/navigation/go-to.tsx";
+import { Lock } from "lucide-react";
+import { useRef, useState } from "react";
+import { GoTo } from "../../app/navigation/go-to.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { motionPort, type Option, type VideoSource } from "../../ports/motion-port.ts";
@@ -15,7 +15,8 @@ import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import { videoFrames } from "../copilot/attachment-reading.ts";
-import { MOTION_SECONDS, MOTION_SIDE, motionFrameTimes, videoProblem } from "./motion-frames.ts";
+import { MOTION_SECONDS, MOTION_SIDE, motionFrameTimes, partStart, videoProblem } from "./motion-frames.ts";
+import { PartPicker, VideoPreview } from "./video-preview.tsx";
 
 // Sample clip of the gallery and prototype; the app uses the open project's.
 const CLIP = "dance-copy";
@@ -38,19 +39,23 @@ function Video({ clip }: { clip: string }) {
   const query = useQuery({ queryKey: key, queryFn: () => port.getVideoSource(clip) });
   const update = { onSuccess: (next: VideoSource) => client.setQueryData(key, next) };
   const choose = useEngineAction(port.setVideoChoice);
-  const add = useEngineAction(async (file: File) => {
+  const [picked, setPicked] = useState<File | null>(null);
+  const [draft, setDraft] = useState<number | null>(null);
+  const add = useEngineAction(async ({ file, start }: { file: File; start: number }) => {
     const problem = videoProblem(file);
     if (problem) {
       throw new Error(problem);
     }
-    const stills = await videoFrames(file, motionFrameTimes, MOTION_SIDE);
-    const covered = motionFrameTimes(stills.duration).length;
-    const seconds = Math.min(stills.duration, MOTION_SECONDS);
+    const stills = await videoFrames(file, (duration) => motionFrameTimes(duration, start), MOTION_SIDE);
+    const from = partStart(stills.duration, start);
+    const covered = motionFrameTimes(stills.duration, from).length;
+    const seconds = Math.min(stills.duration - from, MOTION_SECONDS);
     return port.addVideo({
       clip,
       video: {
         name: file.name,
         duration: stills.duration,
+        start: from,
         fps: covered / seconds,
         width: stills.width,
         height: stills.height,
@@ -58,6 +63,8 @@ function Video({ clip }: { clip: string }) {
       },
     });
   });
+  const sample = (file: File, start: number) =>
+    add.mutate({ file, start }, { onSuccess: update.onSuccess, onSettled: () => setDraft(null) });
   const onChoose = (field: Field, id: string) => choose.mutate({ clip, field, id }, update);
   const video = query.data;
   const blocked = !video?.hasVideo
@@ -92,8 +99,15 @@ function Video({ clip }: { clip: string }) {
         {(source) => (
           <VideoBody
             video={source}
+            picked={picked}
+            start={draft ?? source.start}
             reading={add.isPending}
-            onPick={(file) => add.mutate(file, update)}
+            onPick={(file) => {
+              setPicked(file);
+              sample(file, 0);
+            }}
+            onDraft={setDraft}
+            onPart={(start) => (picked ? sample(picked, start) : undefined)}
             onChoose={onChoose}
           />
         )}
@@ -104,12 +118,16 @@ function Video({ clip }: { clip: string }) {
 
 type BodyProps = {
   video: VideoSource;
+  picked: File | null;
+  start: number;
   reading: boolean;
   onPick: (file: File) => void;
+  onDraft: (start: number) => void;
+  onPart: (start: number) => void;
   onChoose: (field: Field, id: string) => void;
 };
 
-function VideoBody({ video, reading, onPick, onChoose }: BodyProps) {
+function VideoBody({ video, picked, start, reading, onPick, onDraft, onPart, onChoose }: BodyProps) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -131,16 +149,13 @@ function VideoBody({ video, reading, onPick, onChoose }: BodyProps) {
         </div>
       )}
       <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-3.5 rounded-card bg-control p-3">
-        <Act
-          cta="Choose video"
-          aria-label={`Choose a video to copy, now ${video.file.name}`}
-          disabled={reading}
-          onClick={() => input.current?.click()}
-          className="flex h-37.5 flex-col items-center justify-center gap-1.5 rounded-card-sm bg-app text-meta text-fg-secondary hover:bg-fill-hover hover:text-fg active:opacity-80"
-        >
-          <Upload size={20} strokeWidth={1.75} aria-hidden />
-          {reading ? "Reading the video…" : "Choose video"}
-        </Act>
+        <VideoPreview
+          video={video}
+          picked={picked}
+          start={start}
+          reading={reading}
+          onChoose={() => input.current?.click()}
+        />
         <input
           ref={input}
           type="file"
@@ -158,20 +173,14 @@ function VideoBody({ video, reading, onPick, onChoose }: BodyProps) {
           <span className="font-semibold">{video.file.name}</span>
           <span className="text-ui text-fg-secondary">{video.file.facts}</span>
           <span className="text-ui text-fg-secondary">Use this part</span>
-          <Act
-            cta="Use this part"
-            aria-label={`Use this part, from ${video.trim.fromLabel} to ${video.trim.toLabel}`}
-            className="relative h-7.5 rounded-control bg-control-raised hover:opacity-90"
-          >
-            <span
-              className="absolute inset-y-0 rounded-control bg-fill-ghost shadow-[inset_0_0_0_2px_var(--ic-fg)]"
-              style={{ left: `${video.trim.from * 100}%`, right: `${(1 - video.trim.to) * 100}%` }}
-            />
-          </Act>
-          <span className="flex font-mono text-mono text-fg-secondary">
-            {video.trim.fromLabel}
-            <span className="ml-auto">{video.trim.toLabel}</span>
-          </span>
+          <PartPicker
+            video={video}
+            picked={picked}
+            start={start}
+            reading={reading}
+            onDraft={onDraft}
+            onCommit={onPart}
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">

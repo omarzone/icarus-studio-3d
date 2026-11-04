@@ -99,6 +99,11 @@ const VIDEO: VideoSource = {
   source: "file",
   file: { name: "salsa.mp4", facts: "0:12 · 1080p · 30 fps · 2 people found" },
   trim: { from: 0.08, to: 0.88, fromLabel: "0:01.0", toLabel: "0:10.6" },
+  duration: 12,
+  start: 1,
+  span: 9.6,
+  // Sample data has no pictures; the box stays the plain surface of the design.
+  strip: null,
   people: [
     { id: "left", title: "Person on the left", detail: "In frame the whole clip" },
     { id: "right", title: "Person on the right", detail: "Leaves at 0:08" },
@@ -119,6 +124,9 @@ const TRACKING: TrackingProgress = {
   frame: "frame 224 of 360",
   percent: 62,
   state: "running",
+  strip: null,
+  current: 223,
+  poses: [],
   steps: [
     { text: "Find the dancer · person on the left", state: "done" },
     { text: "Track the pose in every frame · 224 / 360", state: "running" },
