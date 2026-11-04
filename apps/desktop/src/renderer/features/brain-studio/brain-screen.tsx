@@ -1,5 +1,7 @@
 // SCR-BRAIN · STA-BRAIN-NETWORK · STA-BRAIN-CONNECTOME
+import { useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
@@ -136,7 +138,9 @@ type Props = { variant: BrainVariant; config: BrainConfig };
 
 function BrainView({ variant, config }: Props) {
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
-  const checkpoints = useNetworkCheckpoints(variant === "network" ? config.brain : null);
+  const app = useRuntimeMode() === "app";
+  const network = useNetworkCheckpoints(variant === "network" ? config.brain : null);
+  const [checkpoint, setCheckpoint] = useState<string | null>(null);
   switch (variant) {
     case "learned":
       return (
@@ -153,9 +157,11 @@ function BrainView({ variant, config }: Props) {
         <ViewportPanel
           label="The body with its sensors wired into the network"
           tabs={NETWORK_TABS}
-          viewOptions={checkpoints}
+          viewOptions={network.checkpoints}
+          onViewOption={setCheckpoint}
+          activeViewOption={app ? (checkpoint ?? network.shown) : null}
           toolbar={toolbar}
-          overlays={<NetworkDiagram brain={config.brain} />}
+          overlays={<NetworkDiagram brain={config.brain} checkpoint={checkpoint} />}
         />
       );
     case "connectome":
