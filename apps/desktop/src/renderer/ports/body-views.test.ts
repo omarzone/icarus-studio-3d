@@ -78,6 +78,7 @@ describe("rig check from the engine", () => {
     ]);
     // A test not run is never counted as a problem that blocks training.
     expect(check.problems).toBe(2);
+    expect(check.blocking).toBe(1);
     expect(check.poses).toEqual([{ id: "rest", label: "Rest" }]);
   });
 
@@ -88,6 +89,15 @@ describe("rig check from the engine", () => {
       poses: [],
     });
     expect(check.checks.at(-1)).toEqual({ text: "Left shin has no motor", tone: "warn", part: "left_shin" });
+  });
+
+  it("counts only failing design tests as blocking; audit findings are worth fixing but do not block", () => {
+    const check = rigCheckFromEngine({
+      report: { ...REPORT, checks: REPORT.checks.filter((item) => item.status !== "fail") },
+      findings: [{ id: "f1", part: "left_shin", text: "Left shin has no motor", fixable: true }],
+      poses: [],
+    });
+    expect([check.blocking, check.problems]).toEqual([0, 1]);
   });
 
   it("says whether the motors held a pose, how far it sagged and what overlaps", () => {

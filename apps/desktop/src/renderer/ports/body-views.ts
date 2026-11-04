@@ -106,9 +106,11 @@ export function rigCheckFromEngine(check: EngineRigCheck): RigCheck {
     tone: "warn",
     part: finding.part,
   }));
+  const blocking = check.report.checks.filter((item) => item.status === "fail").length;
   return {
     checks: [...reportFacts(check.report), ...findings],
-    problems: check.report.checks.filter((item) => item.status === "fail").length + check.findings.length,
+    problems: blocking + check.findings.length,
+    blocking,
     poseHint: check.poses.length > 0 ? POSE_HINT : "Add a body to try poses.",
     poses: check.poses,
   };

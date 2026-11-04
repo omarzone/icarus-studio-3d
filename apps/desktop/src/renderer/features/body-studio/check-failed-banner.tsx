@@ -6,12 +6,14 @@ import { ActionButton } from "../../ui/action-button.tsx";
 import { dialogButtonClass } from "../../ui/dialog-button.ts";
 import { rigCheckKey, useRigCheck } from "./rig-check/rig-check-panel.tsx";
 
-// Amber banner over the view that blocks training until the body passes its physics tests, with the fix.
+// Amber banner over the view with the fix: it says training waits only while physics tests fail; audit findings
+// alone are worth fixing but training can start.
 export function CheckFailedBanner({ body }: { body: string }) {
   const port = usePort(bodyPort);
   const client = useQueryClient();
   const check = useRigCheck(body);
   const problems = check.data?.problems ?? 0;
+  const blocking = check.data?.blocking ?? 0;
   if (problems === 0) {
     return null;
   }
@@ -24,10 +26,19 @@ export function CheckFailedBanner({ body }: { body: string }) {
         !
       </span>
       <span className="flex-1 text-body">
-        <b className="font-semibold">
-          Can’t train yet, {problems} {problems === 1 ? "problem" : "problems"} in the body.
-        </b>{" "}
-        <span className="text-fg-secondary">Physics tests must pass so training is real.</span>
+        {blocking > 0 ? (
+          <>
+            <b className="font-semibold">
+              Can’t train yet, {problems} {problems === 1 ? "problem" : "problems"} in the body.
+            </b>{" "}
+            <span className="text-fg-secondary">Physics tests must pass so training is real.</span>
+          </>
+        ) : (
+          <>
+            <b className="font-semibold">{`${problems} ${problems === 1 ? "thing" : "things"} worth fixing in the body.`}</b>{" "}
+            <span className="text-fg-secondary">Training can start; fixing them usually trains better.</span>
+          </>
+        )}
       </span>
       <ActionButton
         cta={problems === 2 ? "Fix both for me" : "Fix them for me"}

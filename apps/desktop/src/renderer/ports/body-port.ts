@@ -13,6 +13,8 @@ export type RigCheck = {
   checks: readonly CheckFact[];
   // Failing design tests and audit findings: what keeps the body from training well, never a test not run.
   problems: number;
+  // Failing design tests alone: the store refuses the body until they pass, so training waits for them.
+  blocking: number;
   poseHint: string;
   poses: readonly { id: string; label: string }[];
 };

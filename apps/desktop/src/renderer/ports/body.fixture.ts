@@ -12,6 +12,7 @@ const POSE_HINT = "Move any bone to see how the joint limits feel.";
 
 const RIGGED: RigCheck = {
   problems: 1,
+  blocking: 1,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
@@ -23,6 +24,7 @@ const RIGGED: RigCheck = {
 
 const FAILED: RigCheck = {
   problems: 2,
+  blocking: 2,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
@@ -34,6 +36,7 @@ const FAILED: RigCheck = {
 
 const FIXED: RigCheck = {
   problems: 0,
+  blocking: 0,
   poseHint: POSE_HINT,
   poses: POSES,
   checks: [
