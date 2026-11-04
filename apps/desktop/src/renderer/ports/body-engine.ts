@@ -1,11 +1,13 @@
 import type { EngineApi } from "../engine-client/engine-api.ts";
 import type { RigApi } from "../engine-client/rig-api.ts";
+import type { RobotApi } from "../engine-client/robot-api.ts";
 import type { SkinApi } from "../engine-client/skin-api.ts";
 import type { BodyPort, ImportPreview, ModelFile } from "./body-port.ts";
 import { autoRigProgress, bodyParts, boneWeights, posePreview, rigCheckFromEngine } from "./body-views.ts";
 
 type BodyApi = Pick<EngineApi, "project" | "library">;
 type ImportApi = Pick<SkinApi, "importSkin">;
+type RobotImportApi = Pick<RobotApi, "importRobot">;
 
 export const MODEL_SUFFIXES = [".glb", ".gltf", ".obj", ".stl"] as const;
 
@@ -25,7 +27,21 @@ const IMPORT: ImportPreview = {
     "Run the physics tests before you use it",
   ],
   formats:
-    "Imports .glb, .gltf, .obj and .stl meshes. Auto-rig fits a standing figure with two separate legs; anything else becomes one rigid part. FBX and USD are not supported: export them as .glb. Robots from URDF or MJCF are not supported yet.",
+    "Imports .glb, .gltf, .obj and .stl meshes. Auto-rig fits a standing figure with two separate legs; anything else becomes one rigid part. FBX and USD are not supported: export them as .glb. Robots come from .urdf or MJCF .xml with their .stl or .obj meshes.",
+};
+
+// A robot brings its own joints and motors, so it skips the auto-rig and is checked as it is.
+const ROBOT: Pick<ImportPreview, "file" | "steps"> = {
+  file: {
+    name: "No files chosen",
+    facts: "A .urdf or MJCF .xml with the .stl or .obj meshes it uses, picked together",
+    detected: "Not read yet",
+  },
+  steps: [
+    "Read the robot with MuJoCo, finding each mesh among the picked files by name",
+    "Turn its links, joints and motors into body parts; mesh colliders become boxes",
+    "Run the physics tests before it becomes the body",
+  ],
 };
 
 function chosen(file: ModelFile | null): ModelFile {
@@ -36,9 +52,12 @@ function chosen(file: ModelFile | null): ModelFile {
 }
 
 // The body workspace on the engine: in the app the body key is the open project's id.
-export function createEngineBodyPort(api: BodyApi, skins: ImportApi, rig: RigApi): BodyPort {
+export function createEngineBodyPort(api: BodyApi, skins: ImportApi, rig: RigApi, robots: RobotImportApi): BodyPort {
   const kinds = new Map<string, string>();
-  const preview = (body: string): ImportPreview => ({ ...IMPORT, kind: kinds.get(body) ?? IMPORT.kind });
+  const preview = (body: string): ImportPreview => {
+    const kind = kinds.get(body) ?? IMPORT.kind;
+    return { ...IMPORT, ...(kind === "robot" ? ROBOT : {}), kind };
+  };
   return {
     getRigCheck: async (body) => rigCheckFromEngine(await rig.rigCheck(body)),
     getParts: async (body) => {
@@ -58,7 +77,7 @@ export function createEngineBodyPort(api: BodyApi, skins: ImportApi, rig: RigApi
     importStatic: async ({ body, kind, file }) => {
       const model = chosen(file);
       if (kind === "robot") {
-        throw new Error("Robots from URDF or MJCF cannot be imported yet; import the robot's look as a model");
+        throw new Error("A robot imports with its joints and motors; use Import robot");
       }
       await skins.importSkin(body, {
         name: model.name,
@@ -72,6 +91,13 @@ export function createEngineBodyPort(api: BodyApi, skins: ImportApi, rig: RigApi
         throw new Error("Only a model or character can be auto-rigged; import an environment as a static mesh");
       }
       await rig.startAutoRig(body, { name: model.name, data: model.data });
+    },
+    importRobot: async ({ body, files }) => {
+      const [first, ...rest] = files.map(({ name, data }) => ({ name, data }));
+      if (!first) {
+        throw new Error("Choose the robot's .urdf or .xml file and its meshes first");
+      }
+      await robots.importRobot(body, { files: [first, ...rest] });
     },
     getAutoRig: async (body) => autoRigProgress(await rig.autoRig(body)),
     cancelAutoRig: async (body) => {

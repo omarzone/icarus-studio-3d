@@ -1,5 +1,6 @@
-"""Copilot tools for bodies and motion: rig an attached mesh into a body, fix what the rig audit finds and make the
-project imitate its tracked clip. Each one only tries operations; propose or apply lands them like any change."""
+"""Copilot tools for bodies and motion: rig an attached mesh or import an attached robot as the body, fix what the
+rig audit finds and make the project imitate its tracked clip. Each one only tries operations; propose or apply
+lands them like any change."""
 
 from typing import Literal
 
@@ -15,6 +16,8 @@ from icarus.motion.comparison import compare
 from icarus.motion.imitation import imitation_operations
 from icarus.motion.retarget import NotRetargetable, build_reference
 from icarus.projects.auto_rig import AutoRigRefused, build_rig
+from icarus.projects.robot_files import RobotRejected, named_files
+from icarus.projects.robot_import import build_robot
 from icarus.projects.skin_files import SkinRejected
 
 FOCUS_SECONDS = 1.0
@@ -69,6 +72,54 @@ AUTO_RIG = Tool(
     run=_auto_rig,
     per_turn=2,
     timeout_s=90,
+)
+
+
+class ImportRobotArgs(ToolArgs):
+    attachments: list[str] = Field(
+        min_length=1,
+        max_length=10,
+        description="Ids of the attached robot files: one .urdf or MJCF .xml and the .stl or .obj meshes it names.",
+    )
+
+
+def _import_robot(scope: TurnScope, args: ImportRobotArgs) -> Observation:
+    def refused(reason: str) -> Observation:
+        return Observation(reason, ok=False, summary=step_said("robot_refused", scope.language, reason=reason))
+
+    try:
+        attachments = scope.services.attachments.of_project(scope.project_id, args.attachments)
+        build = build_robot(scope.state.project, named_files((item.info.name, item.content()) for item in attachments))
+    except UnknownAttachment:
+        return refused("one of those attachments is not in this project")
+    except RobotRejected as error:
+        return refused(str(error))
+    scope.sources.append(f"robot import of {build.label}: {build.parts} parts, {build.motors} motors")
+    look = LookSpec(target=build.body_id) if scope.can_see and scope.services.views is not None else None
+    tried = run_try(scope, build.operations, look)
+    notes = "".join(f"\n- {note}" for note in build.notes)
+    note = (
+        f"MuJoCo read {build.label} ({build.format.upper()}): {build.parts} parts, {build.joints} joints, "
+        f"{build.motors} motors; the body replaces the project's own when applied.{notes}"
+    )
+    return Observation(
+        f"{note}\n{tried.text}", ok=tried.ok, image=tried.image, image_label=tried.image_label, summary=tried.summary
+    )
+
+
+IMPORT_ROBOT = Tool(
+    name="import_robot",
+    description=(
+        "Make a robot the person attached as a URDF or MJCF file, with its mesh files, the project's body: MuJoCo "
+        "reads it, its links become parts, its joints and motors the library's (a URDF without motors gets one per "
+        "joint), mesh colliders become boxes. It returns a try of the operations; propose or apply it."
+    ),
+    args=ImportRobotArgs,
+    step="try",
+    effect="read",
+    run=_import_robot,
+    per_turn=2,
+    timeout_s=60,
 )
 
 

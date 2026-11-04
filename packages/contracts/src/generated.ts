@@ -4040,6 +4040,44 @@ export interface RigFixResult {
   revision: number | null;
 }
 /**
+ * One picked file of a robot: its URDF or MJCF description, a file it includes or a mesh it uses.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotFile".
+ */
+export interface RobotFile {
+  data: string;
+  name: string;
+}
+/**
+ * A URDF or MJCF robot the person picked with its meshes, to become the project's body.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotImport".
+ */
+export interface RobotImport {
+  /**
+   * @minItems 1
+   * @maxItems 200
+   */
+  files: [RobotFile, ...RobotFile[]];
+  main?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotImported".
+ */
+export interface RobotImported {
+  body: string;
+  format: "urdf" | "mjcf";
+  joints: number;
+  motors: number;
+  name: string;
+  notes: string[];
+  parts: number;
+  revision: number;
+}
+/**
  * The first deterministic evaluation episode of a checkpoint, replayed exactly as MuJoCo computed it.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema

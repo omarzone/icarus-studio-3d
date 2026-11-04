@@ -29,29 +29,29 @@ There are 594 features across seven groups.
 
 | App today | Count | | In spec? | Count |
 |---|---|---|---|---|
-| works | 370 | | built | 378 |
-| partial | 139 | | planned | 145 |
-| pending | 15 | | not in spec | 71 |
-| fixture-only | 17 | | | |
+| works | 374 | | built | 383 |
+| partial | 138 | | planned | 141 |
+| pending | 14 | | not in spec | 70 |
+| fixture-only | 15 | | | |
 | missing | 53 | | | |
 | broken | 0 | | | |
 
 | Group | Features | works | partial | pending | fixture-only | missing | broken |
 |---|---|---|---|---|---|---|---|
-| Launcher, projects, community, settings, system | 107 | 84 | 17 | 1 | 1 | 4 | 0 |
-| World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
+| Launcher, projects, community, settings, system | 107 | 86 | 16 | 0 | 1 | 4 | 0 |
+| World, ideas, editor panels | 121 | 72 | 23 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
-| Brain | 68 | 34 | 20 | 1 | 5 | 8 | 0 |
+| Brain | 68 | 34 | 21 | 1 | 4 | 8 | 0 |
 | Body and motion | 87 | 43 | 30 | 2 | 3 | 9 | 0 |
 | Train and results | 91 | 59 | 26 | 0 | 2 | 4 | 0 |
 | Play and build | 76 | 47 | 14 | 3 | 2 | 10 | 0 |
 
 The short version:
 
-- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON, BVH and glTF export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
-- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
-- **Broken (says or offers something it does not do):** nothing known after Sprint 15.
-- **Most visible partials:** body tool modes; Play for a motion clip; and creation pages without comments.
+- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching, curriculum stages and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from any checkpoint or live in Play); the Body workspace (import as mesh, URDF or MJCF robot import, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON, BVH and glTF export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, comments, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
+- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; editing curriculum stages by hand; imported reference recordings; FBX animation export; installers (Sprint 14).
+- **Broken (says or offers something it does not do):** nothing known.
+- **Most visible partials:** body tool modes; Play for a motion clip; imported robots drawn as their collision shapes; and creation pages without a brain tab or published timelapse.
 
 ### Diagnosis: body rig, motion and connectome
 
@@ -152,12 +152,12 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-PUBLISH | Guideline agreement gating Publish | works | built | Nothing |
 | MOD-PUBLISH | Publish sends for review | works | built | Nothing |
 | MOD-PUBLISHED | "Sent for review" confirmation | works | built | Nothing |
-| MOD-IMPORT | Kind switch: model, environment, robot | partial | planned | Model and environment import a glTF or GLB as a skin over a collider (ADR 008); robots wait for URDF and MJCF import (Sprint 9) |
-| MOD-IMPORT | Choosing or dropping the file | partial | planned | Choose file takes .glb, .gltf, .obj or .stl; FBX and USD are refused and there is no drop zone. |
+| MOD-IMPORT | Kind switch: model, environment, robot | works | built | Nothing. Model and environment import a mesh as a skin over a collider (ADR 008); Robot takes a .urdf or MJCF .xml with its meshes, read by MuJoCo into the project's body with its joints and motors (mesh colliders become boxes) |
+| MOD-IMPORT | Choosing or dropping the file | partial | planned | Choose file takes .glb, .gltf, .obj or .stl, or for a robot a .urdf or .xml picked together with its .stl, .obj or .msh meshes; FBX, USD and .dae meshes are refused and there is no drop zone. |
 | MOD-IMPORT | 3D preview with triangles, height, detected kind | missing | planned | The dialog shows only the file name and size with no preview; read the model for triangles, height and kind and show a 3D preview. |
 | MOD-IMPORT | Steps auto-rig will run | works | built | Nothing |
 | MOD-IMPORT | Import as static mesh, Import and auto-rig | works | built | Nothing |
-| MOD-IMPORT | Opening Import with no project open | pending | not in spec | Decide whether import from the launcher creates a project first |
+| MOD-IMPORT | Opening Import with no project open | works | built | Nothing; confirming creates an empty-world project first |
 | SCR-SETTINGS | Side navigation | works | built | Nothing |
 | SCR-SETTINGS-MODELS | One row per capability with status | works | built | Nothing |
 | SCR-SETTINGS-MODELS | Endpoint and API key stored locally | works | built | Nothing |
@@ -215,7 +215,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-WORLD-EMPTY | Part tool adds a basic shape | works | not in spec | Nothing |
 | STA-WORLD-EMPTY | Agent tool | works | built | Deliberately asks the copilot instead of opening Ideas |
 | STA-WORLD-EMPTY | Goal tool | works | built | Deliberately asks the copilot to add a goal zone |
-| STA-WORLD-EMPTY | Import tool | partial | planned | Models and environments import as meshes; URDF and MJCF robots cannot be imported yet. |
+| STA-WORLD-EMPTY | Import tool | works | built | Nothing. Models and environments import as meshes; URDF and MJCF robots import as the body. |
 | STA-WORLD-EMPTY | Library offers Parking lot, 16 lots, Car agent, Tripod, Humanoid | partial | not in spec | Environments (parking lot, lots) and a car agent as library items; props by category and vault bodies (Tripod, Humanoid…) are there. |
 | STA-WORLD-EMPTY | Chat greeting "Hi, what should we build?" with three routed chips | partial | not in spec | The three chips are sent as typed messages instead of routed intents. |
 | STA-WORLD-EMPTY | Train disabled in a new project | works | built | Deliberately enabled because the project exists |
@@ -265,7 +265,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | POP-ADD-COMPONENT | Brain group: learned, connectome, community | missing | planned | Brains as components (Sprints 8, 11, 13) |
 | POP-ADD-COMPONENT | Reward term as a component | missing | not in spec | Rewards are task terms edited in Brain |
 | POP-ADD-COMPONENT | World group: Wind, Water | missing | not in spec | Library and sim components |
-| POP-ADD-COMPONENT | Reference board with an imported URDF joint | fixture-only | planned | URDF import (Sprint 9) |
+| POP-ADD-COMPONENT | Reference board with an imported URDF joint | fixture-only | planned | URDF import exists and brings joints in as the library's Joint component; the board itself still shows sample data |
 | POP-ADD-COMPONENT | "Or ask for it" proposal | partial | built | Works through the main chat, not from the picker |
 | REF-PROPERTY-TYPES | Twelve live type cards | partial | built | Library has no `panel` or `readonly` properties, so 10 of 12 show |
 | REF-PROPERTY-TYPES | State Default | works | built | Nothing |
@@ -324,7 +324,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-CHAT | "What the copilot did" step list | works | built | Steps arrive with the finished answer |
 | TAB-CHAT | Live steps while the copilot works | works | built | Nothing |
 | TAB-CHAT | Scene renders sent and seen | works | built | Nothing |
-| TAB-CHAT | Attach images, videos, documents | works | built | Nothing |
+| TAB-CHAT | Attach images, videos, documents | works | built | Nothing. A URDF or MJCF file attached with its meshes can be imported as the body by the copilot (import_robot) |
 | TAB-CHAT | Proposal card with diff, warning, Apply, Discard, Edit by hand | partial | built | "Edit by hand" hidden |
 | TAB-CHAT | Proposal applied, discarded or outdated | works | built | Nothing |
 | TAB-CHAT | Open proposal previewed in blue | partial | built | Only in World |

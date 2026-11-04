@@ -13,7 +13,8 @@ export type AttachmentCheck =
 
 const IMAGES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const VIDEOS = ["video/mp4", "video/webm", "video/quicktime"];
-const TEXT_DOCUMENTS = ["text/plain", "text/markdown", "text/csv", "application/json"];
+// Robot descriptions (URDF, MJCF) are XML the copilot reads and can import as the body.
+const TEXT_DOCUMENTS = ["text/plain", "text/markdown", "text/csv", "application/json", "text/xml"];
 const PDF = "application/pdf";
 // 3D models the copilot can put on an object as its skin (ADR 008) or auto-rig into a body; OBJ and STL become GLB.
 const MODELS = ["model/gltf-binary", "model/gltf+json", "model/obj", "model/stl"];
@@ -34,6 +35,8 @@ const BY_EXTENSION: Readonly<Record<string, string>> = {
   markdown: "text/markdown",
   csv: "text/csv",
   json: "application/json",
+  xml: "text/xml",
+  urdf: "text/xml",
   pdf: PDF,
   glb: "model/gltf-binary",
   gltf: "model/gltf+json",
@@ -49,6 +52,8 @@ export const ACCEPTED_FILES = [
   ".md",
   ".csv",
   ".json",
+  ".xml",
+  ".urdf",
   ".pdf",
   ".glb",
   ".gltf",
