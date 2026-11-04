@@ -130,7 +130,8 @@ export type MotionTrainingStatus = {
   hardResult: string;
 };
 
-export type AnimationFile = { name: string; mediaType: string; content: string };
+// Text formats come as text; binary ones (.glb) as bytes.
+export type AnimationFile = { name: string; mediaType: string; content: string | Uint8Array<ArrayBuffer> };
 
 export type AnimationExport = {
   formats: readonly string[];

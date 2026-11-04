@@ -347,7 +347,7 @@ How a body copies a reference video ([ADR 015](./decisions/015-motion-from-video
 2. Tracking (`motion/pose_tracking.py`, a background task) sends each frame to the `pose` capability through the generic connection (`copilot/pose.py`), which answers 14 keypoints per person in a fixed JSON schema (`PoseEstimate`), validated with one retry; the clip keeps the person its rule picks (largest, leftmost or rightmost). Without a pose model, tracking refuses with "connect a pose model in Settings".
 3. `motion/retarget.py` matches each limb of the person (a segment between two keypoints) to a body part by name and side and keeps its direction in the picture's plane per frame; `motion/imitation.py` freezes that reference in the task with `set_motion_reference` and sets the `imitation` family with `track_motion` and posture terms.
 4. Training uses the supervisor like any run (`POST /projects/{id}/motion/train`, optionally warm-started and practicing the weakest second more). `sim/motion_tracking.py` measures each tracked part's direction against the reference every step; the brain sees where in the clip it is and a try lasts the clip.
-5. `motion/comparison.py` reads the latest evaluation episode limb by limb the same way, for the match curve, the match per limb and the weakest moment; `motion/export.py` writes the physics result or the reference as JSON (angles per frame, root motion) or BVH (a skeleton turning in the picture's plane).
+5. `motion/comparison.py` reads the latest evaluation episode limb by limb the same way, for the match curve, the match per limb and the weakest moment; `motion/export.py` writes the physics result or the reference as JSON (angles per frame, root motion), BVH (a skeleton turning in the picture's plane) or glTF (`motion/gltf_export.py`: one .glb with the same skeleton from `motion/skeleton.py` as skinned joints over a stick body and one animation keyed on the same frames).
 
 ### Hardware
 
@@ -505,6 +505,6 @@ A contract change lands first and alone; other zones consume it afterwards. Para
 Decisions are recorded as ADRs in `docs/decisions/` once data settles them.
 
 1. Default training budgets per task family, from measured learning curves on CPU.
-2. Animation export formats beyond JSON and BVH (glTF, FBX) and the runtime target for hardware export.
+2. Animation export formats beyond JSON, BVH and glTF (FBX) and the runtime target for hardware export.
 
 Settled: edit operation granularity ([ADR 005](./decisions/005-edit-operation-granularity.md)); community service stack, hosting and sign-in ([ADR 014](./decisions/014-community-service-and-supabase-auth.md)); pose extraction and retargeting ([ADR 015](./decisions/015-motion-from-video.md)).

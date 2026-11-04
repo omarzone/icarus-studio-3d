@@ -84,6 +84,7 @@ export function isMotionExportFile(value: unknown): value is MotionExportFile {
     has(value, "name", "string") &&
     has(value, "media_type", "string") &&
     has(value, "content", "string") &&
+    (value.encoding === undefined || value.encoding === "utf-8" || value.encoding === "base64") &&
     has(value, "frames", "number")
   );
 }

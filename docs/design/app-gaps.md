@@ -48,7 +48,7 @@ There are 594 features across seven groups.
 
 The short version:
 
-- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON and BVH export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
+- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON, BVH and glTF export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
 - **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
 - **Broken (says or offers something it does not do):** nothing known after Sprint 15.
 - **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
@@ -60,7 +60,7 @@ The three workspaces this section diagnosed on 2026-11-01 now stand as follows.
 | Pillar | Design IDs | Today | What is left | Plan |
 |---|---|---|---|---|
 | Body rig and import | `SCR-BODY`, `TAB-RIG-VIEW`, `TAB-MESH-VIEW`, `PNL-RIG-CHECK`, `MOD-IMPORT`, `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` | Built: mesh import (static or auto-rigged), auto-rig with progress, rig check with fixes, test poses, skin weights with auto-fix, skins drawn over the physical body | Bone and joint tool modes, a mesh-only view, weight painting, an import preview, URDF and MJCF import, a true stand-up test | [`sprint-09-body-rig.md`](../plans/sprint-09-body-rig.md) |
-| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON and BVH export | Play for the clip, link and webcam sources, glTF and FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
+| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON, BVH and glTF export | Play for the clip, link and webcam sources, FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
 | Connectome brain | `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME`, `PNL-BRAIN-ACTIVITY`, `STA-RESULTS-REFERENCE` | Not built: these panels show the trained brain (its readings, layers, behaviors and wiring) and say so, and behavior tests compare checkpoints | Connectome data, a spiking simulator fast enough for Play, the fly body, taste and looming senses, reference recordings | [`sprint-11-connectome.md`](../plans/sprint-11-connectome.md) |
 
 In the app `MOD-BRAIN-SOURCE` offers "Use this brain"; the design still says "Motor neurons drive the leg and wing joints · 92% matched", which the data cannot support; once connectomes are real that line becomes the count of descending neurons driving the gait generator.
@@ -513,10 +513,10 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-MOTION-TRAINING | Hard moment "6 of 10" | partial | planned | Shows the weakest moment and its match, not a per-segment count. |
 | STA-MOTION-TRAINING | Watch, Export now | partial | planned | Export now is real. Watch opens the comparison of the latest checkpoint, not a live replay. |
 | STA-MOTION-TRAINING | Stop | works | built | Nothing |
-| MOD-EXPORT-ANIMATION | glTF, FBX, BVH | partial | planned | Exports JSON and BVH only, not glTF or FBX. |
+| MOD-EXPORT-ANIMATION | glTF, FBX, BVH | partial | planned | Exports JSON, BVH and glTF (one .glb: the skeleton as skinned joints and one animation keyed on the real frames), not FBX. |
 | MOD-EXPORT-ANIMATION | Use the physics result | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Include root motion | works | built | Nothing |
-| MOD-EXPORT-ANIMATION | Loop the clip | partial | not in spec | BVH repeats the first frame at the end and JSON only records a flag. There is no loop blending. |
+| MOD-EXPORT-ANIMATION | Loop the clip | partial | not in spec | BVH and glTF repeat the first frame at the end and JSON only records a flag. There is no loop blending. |
 | MOD-EXPORT-ANIMATION | Target rig "Roblox · R15 · 30 fps" | works | not in spec | Nothing; the app no longer shows a Target it cannot send |
 | MOD-EXPORT-ANIMATION | File summary | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Download | works | built | Nothing |
@@ -777,7 +777,7 @@ Ranked by how much each one confuses or blocks someone using the app.
 
 1. **No connectome brains.** `STA-BRAIN-CONNECTOME` and the fly source honestly show the trained brain until Sprint 11 is built.
 2. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
-3. **The animation export writes JSON and BVH only;** glTF and FBX are not written.
+3. **The animation export writes JSON, BVH and glTF;** FBX is not written.
 4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
 5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
 6. **Creation pages have no comments, brain tab or published timelapse.**
