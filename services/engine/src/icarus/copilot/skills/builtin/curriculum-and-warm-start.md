@@ -3,13 +3,22 @@ name: curriculum-and-warm-start
 title: Train in stages and continue from a trained brain
 when: A task is too hard to learn at once, or the person wants to keep training or build on an earlier run.
 tools: [read_run, inspect_object, try, propose, train]
-version: 4
+version: 5
 ---
-There is no automatic curriculum: stages are revisions of the project, and each stage continues from the best
-brain of the one before. A continued run counts its own steps from 0, and its first evaluation is the inherited
-brain. The plan is always the same: a simple world first, trained close to the recommended budget (1M steps for
-navigation, 2M for locomotion) until it succeeds, then one difficulty at a time, each continued from the best
-brain. Restarting from zero throws away every step trained so far, so plan the final senses and motors up front.
+There are two ways to train in stages. **Inside one run**, the task's curriculum (the set_curriculum operation)
+lists stages that change only the try length (episode_seconds), the start's distance from the goal
+(`spawn_point.goal_distance`, for starts anywhere) and turn (`spawn_point.heading_range`), and the goal's alignment
+tolerance (`goal_zone.align_within`) and stop speed (`goal_zone.stop_speed`). Each stage names a promotion: the
+share of the last training tries that must succeed (0.8 over 20 by default) before the copies move to the next
+stage; the last stage stays. The run records the stage of every metric and checkpoint, and each checkpoint is
+tested on the stage practiced when it was saved. Use it when the hard part is one of those settings, list the
+stages easiest first, and `try` and `propose` the whole list as one change.
+**Across runs**, for everything else (obstacles, randomization, a smaller goal), stages are revisions of the
+project, and each stage continues from the best brain of the one before. A continued run counts its own steps
+from 0, and its first evaluation is the inherited brain. The plan is always the same: a simple world first, trained
+close to the recommended budget (1M steps for navigation, 2M for locomotion) until it succeeds, then one difficulty
+at a time, each continued from the best brain. Restarting from zero throws away every step trained so far, so plan
+the final senses and motors up front.
 
 1. **Check a warm start is possible.** A brain is shaped by how many values the body senses and how many motors it
    drives. Continuing works after changes to rewards, weights, positions, goals, obstacles, randomization or looks.
