@@ -1,7 +1,7 @@
-import type { EngineEvent, TaskInfo } from "@icarus/contracts";
+import type { EngineEvent, RunStatus, TaskInfo } from "@icarus/contracts";
 import { describe, expect, it } from "vitest";
 import { status } from "../../ports/testdata/training-runs.ts";
-import { eventInvalidations, nextLiveSteps, withTaskProgress } from "./engine-event-effects.ts";
+import { eventInvalidations, nextLiveSteps, runEndedNotice, withTaskProgress } from "./engine-event-effects.ts";
 
 const step = (summary: string): EngineEvent => ({ type: "step", turn_id: "t1", step: { tool: "inspect", summary } });
 
@@ -108,5 +108,29 @@ describe("withTaskProgress", () => {
     expect(withTaskProgress(undefined, { type: "task_progress", task_id: "k1", progress: 0.6, text: "" })).toBe(
       undefined,
     );
+  });
+});
+
+describe("runEndedNotice", () => {
+  it("turns the end of a run into a system notice and ignores everything else", () => {
+    const ended = (state: RunStatus["state"]): EngineEvent => ({
+      type: "run_event",
+      run_id: "r1",
+      event: { type: "status", status: status({ name: "Run 3", state }) },
+    });
+    expect(runEndedNotice(ended("done"))).toEqual({
+      title: "Run 3 finished",
+      body: "Its best brain is ready in Results.",
+    });
+    expect(runEndedNotice(ended("stopped"))).toEqual({
+      title: "Run 3 stopped",
+      body: "Its best brain so far is kept.",
+    });
+    expect(runEndedNotice(ended("failed"))).toEqual({
+      title: "Run 3 failed",
+      body: "Open Train to see what went wrong.",
+    });
+    expect(runEndedNotice(ended("running"))).toBeNull();
+    expect(runEndedNotice(step("Read"))).toBeNull();
   });
 });
