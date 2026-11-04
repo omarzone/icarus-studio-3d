@@ -22,6 +22,8 @@ import { ReadingsCard } from "./readings-card.tsx";
 import { SensesActionsPanel } from "./senses-actions/senses-actions-panel.tsx";
 
 const PANEL_ROUTES = { "brain-sizes": "MOD-BRAIN-SIZES" } as const;
+// Connectome brains do not exist in the app yet, so the connectome screens show the trained brain and say so.
+const CONNECTOME_NOTE = "Showing the trained brain: connectome brains are not available yet";
 const NETWORK_TABS = [
   { id: "network", label: "Network" },
   { id: "scene", label: "Scene" },
@@ -127,7 +129,7 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
         activity: {
           title: "Brain activity",
           home: HOME.below("viewport", 196),
-          render: () => <BrainActivityPanel brain={config.brain} />,
+          render: () => <ConnectomeActivity brain={config.brain} />,
         },
         chat,
       };
@@ -135,6 +137,11 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
 }
 
 type Props = { variant: BrainVariant; config: BrainConfig };
+
+function ConnectomeActivity({ brain }: { brain: string }) {
+  const app = useRuntimeMode() === "app";
+  return <BrainActivityPanel brain={brain} note={app ? CONNECTOME_NOTE : undefined} />;
+}
 
 function BrainView({ variant, config }: Props) {
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
@@ -168,6 +175,7 @@ function BrainView({ variant, config }: Props) {
       return (
         <ViewportPanel
           label="The body, its brain lit where neurons fire"
+          note={app ? CONNECTOME_NOTE : undefined}
           toolbar={toolbar}
           overlays={<ReadingsCard brain={config.brain} />}
         />
