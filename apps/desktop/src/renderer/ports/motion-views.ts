@@ -2,6 +2,7 @@ import type { MotionComparison, MotionWorkspace, Project, RunStatus } from "@ica
 import type {
   AnimationExport,
   ClipTimeline,
+  FramePoint,
   FrameStrip,
   MotionCompare,
   MotionTrainingPlan,
@@ -92,7 +93,7 @@ export function clipTimeline(workspace: MotionWorkspace, current: number): ClipT
   };
 }
 
-export function motionCompare(workspace: MotionWorkspace, speed: string): MotionCompare {
+export function motionCompare(workspace: MotionWorkspace, speed: string, link: FrameLink = null): MotionCompare {
   const { clip, comparison } = workspace;
   const reference = referencePoses(workspace);
   const compare: MotionCompare = {
@@ -110,7 +111,13 @@ export function motionCompare(workspace: MotionWorkspace, speed: string): Motion
   }
   return {
     ...compare,
-    playback: { fps: clip.video.fps, reference, result: comparison ? resultPoses(comparison) : [] },
+    playback: {
+      fps: clip.video.fps,
+      reference,
+      result: comparison ? resultPoses(comparison) : [],
+      strip: frameStrip(workspace, link),
+      points: framePoints(workspace),
+    },
   };
 }
 
@@ -129,6 +136,10 @@ const PEOPLE: readonly Option[] = [
 ];
 
 type FrameLink = ((index: number) => string) | null;
+
+function framePoints(workspace: MotionWorkspace): FramePoint[][] {
+  return tracked(workspace).map((item) => item.keypoints.map(({ name, x, y }) => ({ name, x, y })));
+}
 
 function frameStrip(workspace: MotionWorkspace, link: FrameLink): FrameStrip | null {
   const video = workspace.clip?.video;
@@ -195,7 +206,7 @@ export function trackingProgress(workspace: MotionWorkspace, link: FrameLink = n
     state: done ? "done" : (tracking?.state ?? "idle"),
     strip: frameStrip(workspace, link),
     current: Math.max(0, Math.min(frame, frames - 1)),
-    poses: done ? tracked(workspace).map((item) => item.keypoints.map(({ name, x, y }) => ({ name, x, y }))) : [],
+    poses: done ? framePoints(workspace) : [],
     steps: [
       { text: `Sample the video · ${clip?.video.frames ?? 0} frames`, state: clip ? "done" : "todo" },
       {
@@ -264,7 +275,7 @@ export function animationExport(workspace: MotionWorkspace, choices: ExportChoic
       { id: "root", label: "Include root motion", on: choices.options.root ?? true },
       { id: "loop", label: "Loop the clip", on: choices.options.loop ?? false },
     ],
-    target: choices.format === "BVH" ? "Any 3D tool or engine that reads BVH" : "Any tool that reads JSON",
+    target: null,
     summary: [
       `${stem}-${physics ? "physics" : "reference"}.${extension} · ${frames} frames`,
       comparison

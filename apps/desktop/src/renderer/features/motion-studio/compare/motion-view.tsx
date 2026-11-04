@@ -1,6 +1,7 @@
 import { tokens } from "@icarus/ui-tokens";
 import { useEffect, useState } from "react";
 import type { MotionPlayback, Pose } from "../../../ports/motion-port.ts";
+import { ClipFrame } from "../clip-frame.tsx";
 
 type Figure = "reference" | "result";
 
@@ -50,16 +51,30 @@ function Stick({ pose, color }: { pose: Pose; color: string }) {
   );
 }
 
-// The tracked reference and the physics result as stick figures; a plain surface until the clip is tracked.
+// The tracked reference over its video frames (or as a stick figure without them) and the physics result as a stick figure.
 export function MotionView({ label, caption, playback, figures = [], speed = "1×" }: Props) {
   const frame = useClipFrame(playback, speed);
+  const [broken, setBroken] = useState(false);
+  const strip = playback?.strip ?? null;
+  const index = strip ? Math.min(frame, strip.count - 1) : 0;
+  const points = playback?.points[index];
+  // The video only stands in for the reference alone: the physics result is not in the picture's coordinates.
+  const video = strip && points && !broken && figures.includes("reference") && !figures.includes("result");
   const shown = figures.flatMap((figure) => {
+    if (video && figure === "reference") {
+      return [];
+    }
     const poses = playback?.[figure] ?? [];
     const pose = poses[Math.min(frame, poses.length - 1)];
     return pose ? [{ figure, pose }] : [];
   });
   return (
     <div role="img" aria-label={label} className="relative min-w-0 flex-1 overflow-hidden rounded-[14px] bg-app">
+      {video ? (
+        <div className="absolute inset-0">
+          <ClipFrame strip={strip} index={index} points={points} onError={() => setBroken(true)} />
+        </div>
+      ) : null}
       {shown.length > 0 ? (
         <svg aria-hidden className="absolute inset-0 size-full" viewBox="0 0 60 70" preserveAspectRatio="xMidYMid meet">
           {shown.map(({ figure, pose }) => (
