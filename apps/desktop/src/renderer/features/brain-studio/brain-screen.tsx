@@ -1,5 +1,7 @@
 // SCR-BRAIN · STA-BRAIN-NETWORK · STA-BRAIN-CONNECTOME
+import { useState } from "react";
 import { useNavigation } from "../../app/navigation/navigation-store.tsx";
+import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
@@ -20,6 +22,8 @@ import { ReadingsCard } from "./readings-card.tsx";
 import { SensesActionsPanel } from "./senses-actions/senses-actions-panel.tsx";
 
 const PANEL_ROUTES = { "brain-sizes": "MOD-BRAIN-SIZES" } as const;
+// Connectome brains do not exist in the app yet, so the connectome screens show the trained brain and say so.
+const CONNECTOME_NOTE = "Showing the trained brain: connectome brains are not available yet";
 const NETWORK_TABS = [
   { id: "network", label: "Network" },
   { id: "scene", label: "Scene" },
@@ -125,7 +129,7 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
         activity: {
           title: "Brain activity",
           home: HOME.below("viewport", 196),
-          render: () => <BrainActivityPanel brain={config.brain} />,
+          render: () => <ConnectomeActivity brain={config.brain} />,
         },
         chat,
       };
@@ -134,9 +138,16 @@ function brainPanels(variant: BrainVariant, config: BrainConfig): DockPanels {
 
 type Props = { variant: BrainVariant; config: BrainConfig };
 
+function ConnectomeActivity({ brain }: { brain: string }) {
+  const app = useRuntimeMode() === "app";
+  return <BrainActivityPanel brain={brain} note={app ? CONNECTOME_NOTE : undefined} />;
+}
+
 function BrainView({ variant, config }: Props) {
   const toolbar = <Toolbar groups={config.tools} selected={config.selectedTool} overrides={config.toolOverrides} />;
-  const checkpoints = useNetworkCheckpoints(variant === "network" ? config.brain : null);
+  const app = useRuntimeMode() === "app";
+  const network = useNetworkCheckpoints(variant === "network" ? config.brain : null);
+  const [checkpoint, setCheckpoint] = useState<string | null>(null);
   switch (variant) {
     case "learned":
       return (
@@ -153,15 +164,18 @@ function BrainView({ variant, config }: Props) {
         <ViewportPanel
           label="The body with its sensors wired into the network"
           tabs={NETWORK_TABS}
-          viewOptions={checkpoints}
+          viewOptions={network.checkpoints}
+          onViewOption={setCheckpoint}
+          activeViewOption={app ? (checkpoint ?? network.shown) : null}
           toolbar={toolbar}
-          overlays={<NetworkDiagram brain={config.brain} />}
+          overlays={<NetworkDiagram brain={config.brain} checkpoint={checkpoint} />}
         />
       );
     case "connectome":
       return (
         <ViewportPanel
           label="The body, its brain lit where neurons fire"
+          note={app ? CONNECTOME_NOTE : undefined}
           toolbar={toolbar}
           overlays={<ReadingsCard brain={config.brain} />}
         />

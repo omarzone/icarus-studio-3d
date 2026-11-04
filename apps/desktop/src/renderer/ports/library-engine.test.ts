@@ -1,7 +1,7 @@
 import type { CreateObject } from "@icarus/contracts";
 import { expect, it } from "vitest";
 import { isLibraryCatalog, isProject } from "../engine-client/response-checks.ts";
-import { libraryItems, pieceScene, placePiece } from "./library-engine.ts";
+import { communityItems, libraryItems, pieceScene, placePiece } from "./library-engine.ts";
 import parking from "./testdata/parking-car.json";
 
 it("places a second copy of a piece next to the first, not on top of it", () => {
@@ -72,4 +72,19 @@ it("draws a piece's card with its style, finish and glow, and lists pieces under
   expect(geom).toMatchObject({ style: "building", finish: "brick", emissive: 0.6, roughness: 0.5 });
   const items = libraryItems({ ...catalog, pieces: [box, building] }, "library", "");
   expect(items.map((item) => item.group)).toEqual(["Basics", "Buildings"]);
+});
+
+it("lists community creations with their author, each opening its page", () => {
+  const author = { handle: "lu", name: "Lu", initials: "LU", tone: 2 as const, creations: 2 };
+  const creation = { author, votes: 3, remixes: 1, opensIn: "page" as const, picture: null };
+  const items = communityItems([
+    { ...creation, id: "c1", name: "Salsa Dancer", category: "Humanoids" },
+    { ...creation, id: "c2", name: "Ice Rink", category: "Worlds" },
+    { ...creation, id: "c3", name: "Walker", category: "Brains only" },
+  ]);
+  expect(items).toEqual([
+    { id: "c1", name: "Salsa Dancer", kind: "body", source: "lu", group: "Humanoids", creation: "c1" },
+    { id: "c2", name: "Ice Rink", kind: "environment", source: "lu", group: "Worlds", creation: "c2" },
+    { id: "c3", name: "Walker", kind: "brain", source: "lu", group: "Brains only", creation: "c3" },
+  ]);
 });

@@ -19,6 +19,14 @@ def test_targets_without_a_brain_offer_robot_files_and_a_parts_list(tmp_path):
     assert targets["game"] == "Needs a trained brain" and "animation" not in targets
 
 
+def test_the_animation_target_names_the_formats_the_export_writes(tmp_path):
+    client = TestClient(create_app(tmp_path / "projects", tmp_path / "runs"))
+    project = client.post("/projects", json={"name": "Dancer", "template": "humanoid"}).json()["project"]["id"]
+    targets = client.get(f"/projects/{project}/build/targets").json()
+    animation = next(item for item in targets if item["kind"] == "animation")
+    assert animation["detail"] == "JSON · BVH (for dancers)"
+
+
 def test_the_plan_lists_real_sizes_and_the_export_writes_them_to_the_chosen_zip(tmp_path):
     client, project = _client(tmp_path)
     choice = {"format": "urdf", "options": ["parts", "runtime"]}

@@ -163,7 +163,7 @@ export function PartPicker({ video, picked, start, reading, onDraft, onCommit }:
           }
         }}
         onKeyDown={step}
-        className={`relative h-7.5 rounded-control bg-control-raised ${blocked ? "cursor-default" : "cursor-ew-resize hover:opacity-90"}`}
+        className={`relative h-7.5 rounded-control bg-control-raised hover:opacity-90 ${blocked ? "cursor-default" : "cursor-ew-resize"}`}
       >
         <span
           className="absolute inset-y-0 rounded-control bg-fill-ghost shadow-[inset_0_0_0_2px_var(--ic-fg)]"

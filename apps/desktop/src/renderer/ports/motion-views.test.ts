@@ -99,6 +99,12 @@ describe("the motion workspace from the engine", () => {
     expect(compare.playback?.result).toHaveLength(4);
   });
 
+  it("plays the reference over the clip's own frames once it is tracked", () => {
+    const compare = motionCompare(workspace(), "1×", (index) => `http://engine/frames/${index}`);
+    expect([compare.playback?.strip?.count, compare.playback?.points.length]).toEqual([4, 4]);
+    expect(motionCompare(workspace(), "1×").playback?.strip).toBeNull();
+  });
+
   it("turns limb angles into a figure: a thigh swung forward puts the foot ahead of the hip", () => {
     const pose = anglePose(["left_thigh", "left_shin"], [-0.8, -1.2]);
     expect(pose.feet[0][0]).toBeGreaterThan(pose.hip[0]);

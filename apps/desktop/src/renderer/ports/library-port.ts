@@ -1,8 +1,9 @@
 import type { SceneDescription } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
+import { createCommunityCatalog } from "./catalog-community.ts";
 import { createLibraryFixture } from "./library.fixture.ts";
-import { libraryItems, pieceScene, placePiece } from "./library-engine.ts";
+import { communityItems, libraryItems, pieceScene, placePiece } from "./library-engine.ts";
 import { vaultBodyId, vaultBodyOperations } from "./vault-bodies.ts";
 
 // Ready-made pieces the user drags into a world and vault bodies that become its agent; thumbnails are real 3D
@@ -19,7 +20,11 @@ export type LibraryItem = {
   source?: string;
   // The library category the piece is listed under (Street, Nature…); items without one are not grouped.
   group?: string;
+  // The community creation the card opens (SCR-CREATION): creations are whole projects, not pieces.
+  creation?: string;
 };
+
+const COMMUNITY_SHELF_SIZE = 24;
 
 export type LibraryPort = {
   // Pieces suggested for a project's scene, filtered by a search.
@@ -31,7 +36,13 @@ export type LibraryPort = {
 
 export const libraryPort = definePort<LibraryPort>({
   app: {
-    listItems: async ({ shelf, search }) => libraryItems(await engineApi.library(), shelf, search),
+    listItems: async ({ shelf, search }) => {
+      if (shelf === "community") {
+        const query = { sort: "featured", category: null, search, limit: COMMUNITY_SHELF_SIZE } as const;
+        return communityItems(await createCommunityCatalog().listCreations(query));
+      }
+      return libraryItems(await engineApi.library(), shelf, search);
+    },
     previewItem: async ({ scene, id }) => {
       const [state, catalog] = await Promise.all([engineApi.project(scene), engineApi.library()]);
       const body = vaultBodyId(id);

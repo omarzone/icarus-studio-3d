@@ -2,18 +2,21 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEngineAction } from "../../../app/runtime/engine-query.tsx";
 import { usePort } from "../../../app/runtime/port.tsx";
+import { projectsPort } from "../../../ports/projects-port.ts";
 import { type CommunityPage, publishPort } from "../../../ports/publish-port.ts";
+import { projectThumbnailKey } from "../../../scene/thumbnail-cache.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { ShareToCommunityTab } from "./share-to-community-tab.tsx";
 
-type Props = { project: string; projectName: string; underOverlay: boolean; className?: string };
+type Props = { project: string; projectName: string; revision: string; underOverlay: boolean; className?: string };
 
 export const communityPageKey = (project: string) => ["publish", "page", project] as const;
 
 // The selected build target; Build opens on the community page.
-export function BuildTargetViewPanel({ project, projectName, underOverlay, className = "flex-1" }: Props) {
+export function BuildTargetViewPanel({ project, projectName, revision, underOverlay, className = "flex-1" }: Props) {
   const port = usePort(publishPort);
+  const { projectScene } = usePort(projectsPort);
   const client = useQueryClient();
   const key = communityPageKey(project);
   const page = useQuery({ queryKey: key, queryFn: () => port.getCommunityPage(project) });
@@ -27,6 +30,10 @@ export function BuildTargetViewPanel({ project, projectName, underOverlay, class
           <ShareToCommunityTab
             page={data}
             project={projectName}
+            picture={{
+              cacheKey: projectThumbnailKey(project, revision),
+              load: projectScene && project ? () => projectScene(project) : null,
+            }}
             underOverlay={underOverlay}
             onEdit={(edit) => update.mutate({ project, ...edit }, saved)}
             onPermission={(id, on) => update.mutate({ project, permission: { id, on } }, saved)}

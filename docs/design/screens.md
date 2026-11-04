@@ -1240,7 +1240,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Reached from:** `MOD-AUTO-RIG`
 - **Purpose:** Block training until the body is physically valid, and offer the fix.
 - **Content:**
-  - Amber banner: *Can’t train yet, ‹n› problems in the body*, with *Fix both for me* and *Show me*. Rig check lists the failing tests.
+  - Amber banner: *Can’t train yet, ‹n› problems in the body* only while design tests fail (the store refuses the body until they pass); when only rig audit findings remain it reads *‹n› things worth fixing in the body. Training can start; fixing them usually trains better.* Both keep *Fix both for me* and *Show me*. Rig check lists the failing tests and findings; a finding about one part selects it.
 - **Header:** `HDR-WORKSPACE` · project **Dance Copy** · workspaces World · Body · Motion · Brain · Train · Results · Build (active: **Body**) · Play → `SCR-MOTION` · primary *Train* → `MOD-START-TRAINING`
 - **Left column:** `PNL-EXPLORER` (**Rig**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Type, Range, Damping, Strength, Speed, Mass, Collider
 - **Center column:** `PNL-VIEWPORT` (**Rig**, Mesh); `PNL-RIG-CHECK` (**Rig check**, Pose test, Weights) · toolbar: Import, Auto-rig, Bone, Joint, Motor, Sensor, Mirror, Collider, Weights, Test pose

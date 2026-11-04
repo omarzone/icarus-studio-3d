@@ -32,10 +32,10 @@ export function useFrameCycle(count: number, fps: number, playing: boolean): num
   return Math.min(index, Math.max(0, count - 1));
 }
 
-type Props = { strip: FrameStrip; index: number; points?: readonly FramePoint[] };
+type Props = { strip: FrameStrip; index: number; points?: readonly FramePoint[]; onError?: () => void };
 
 // One sampled frame as the engine keeps it, with the tracked person drawn over it when there is one.
-export function ClipFrame({ strip, index, points }: Props) {
+export function ClipFrame({ strip, index, points, onError }: Props) {
   const at = new Map((points ?? []).map((point) => [point.name, point]));
   return (
     <div className="flex size-full items-center justify-center overflow-hidden">
@@ -44,6 +44,7 @@ export function ClipFrame({ strip, index, points }: Props) {
           src={strip.url(index)}
           alt={`Frame ${index + 1} of ${strip.count}`}
           draggable={false}
+          onError={onError}
           className="block h-full w-auto"
         />
         {points && points.length > 0 ? (

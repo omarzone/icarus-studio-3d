@@ -18,6 +18,9 @@ const CARD_MIN = "6.5rem";
 const CARD_HEIGHT = "7.5rem";
 
 function cardTitle(item: LibraryItem): string {
+  if (item.creation) {
+    return `Open ${item.name}${item.source ? ` by ${item.source}` : ""}`;
+  }
   if (item.kind === "body") {
     return `Add ${item.name} as the agent, in place of the current body`;
   }
@@ -53,7 +56,7 @@ export function LibraryCards({ items, onPreview, importLabel, scene = null }: Pr
           )}
           <span className="flex items-center gap-1.5 px-2.25 py-1.75">
             <span className="min-w-0 flex-1 truncate text-meta font-medium">{item.name}</span>
-            {item.kind === "body" ? (
+            {item.kind === "body" && !item.creation ? (
               <span className="shrink-0 rounded-control bg-selected px-1.5 text-meta font-semibold text-on-selected group-hover:opacity-90 group-active:opacity-80">
                 Add
               </span>

@@ -128,7 +128,11 @@ export function isModerationCounts(value: unknown): value is ModerationCounts {
 }
 
 export function isModerationItem(value: unknown): value is ModerationItem {
-  return strings(value, "id", "creation", "author", "reason", "scan") && numbers(value, "reports");
+  return (
+    strings(value, "id", "creation", "author", "reason", "scan") &&
+    numbers(value, "reports") &&
+    nullableString(value, "picture")
+  );
 }
 
 export function isAccountDeleted(value: unknown): value is AccountDeleted {

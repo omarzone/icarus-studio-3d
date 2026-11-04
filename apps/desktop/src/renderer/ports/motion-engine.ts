@@ -50,14 +50,18 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
     const current = await workspace(clip);
     return videoSource(current, await project(clip), await link(clip, current));
   };
+  const compare = async (clip: string) => {
+    const current = await workspace(clip);
+    return motionCompare(current, speeds.get(clip) ?? "1×", await link(clip, current));
+  };
   const plan = async (clip: string) =>
     trainingPlan(await workspace(clip), await project(clip), focuses.get(clip) ?? "even");
   const exported = async (clip: string) => animationExport(await workspace(clip), choices(clip));
   return {
-    getCompare: async (clip) => motionCompare(await workspace(clip), speeds.get(clip) ?? "1×"),
+    getCompare: compare,
     setSpeed: async ({ clip, speed }) => {
       speeds.set(clip, SPEEDS.find((item) => item === speed) ?? "1×");
-      return motionCompare(await workspace(clip), speeds.get(clip) ?? "1×");
+      return compare(clip);
     },
     getClip: async (clip) => clipTimeline(await workspace(clip), frames.get(clip) ?? 0),
     selectFrame: async ({ clip, index }) => {

@@ -32,6 +32,7 @@ Each sprint gets its own detailed task plan (`sprint-NN-<name>.md`) written when
 | 11 | **Planned**: no connectome engine work yet; its screens show the trained brain |
 | 12–13 | **Built** with gaps listed below; the official community instance is not deployed |
 | 14 | **Planned** |
+| 15 | **Built**: closing verified gaps from Sprints 8–13 |
 | Beyond plan | **Built**: copilot agent loop and harness extensions (below Sprint 6 and 7) |
 
 Order follows dependencies: each sprint only needs what earlier sprints delivered. Sprints 1–7 form the first complete loop (describe → build → play → train → watch → diagnose → fix); 8–14 extend it to every workspace and service.
@@ -219,6 +220,18 @@ Ship it.
 
 **Status:** planned.
 
+### Sprint 15 · Closing verified gaps
+
+Fix what the 2026-11-03 audit found broken or untrue, and finish the partials that real data already supports. Plan: [`sprint-15-gap-closing.md`](./sprint-15-gap-closing.md).
+
+- Rig check rows select their part, and the banner says "Can't train yet" only for findings that block training.
+- The animation export names JSON and BVH only and sends no unused target; the video frame is drawn under the motion reference.
+- The Library's Community shelf lists real creations; Home cards, the share preview and moderation reports show their pictures.
+- Import works with no open project, and finished runs raise a system notification when the window is not focused.
+- The network view switches between checkpoints, and the connectome screens say they show the trained brain.
+
+**Status:** built. Still open and outside this sprint: connectome brains (Sprint 11), installers (Sprint 14), body tool modes and weight painting, URDF and MJCF import, glTF and FBX export, curriculum, comments, live activations, a dedicated pose estimator, and deploying the official community instance.
+
 ## Coverage
 
 Every catalog ID mapped to its sprint.
@@ -239,5 +252,6 @@ Every catalog ID mapped to its sprint.
 | 12 | `SCR-BUILD`, `PNL-BUILD-TARGETS`, `PNL-BUILD-TARGET-VIEW`, `MOD-EXPORT-BRAIN`, `STA-BUILD-HARDWARE` |
 | 13 | `MOD-SIGN-IN`, `MOD-SHARE`, `MOD-PUBLISH`, `MOD-PUBLISHED`, `SCR-COMMUNITY`, `SCR-CREATION`, `MOD-REPORT`, `SCR-PROFILE`, `POP-NOTIFICATIONS`, `SCR-SETTINGS-PROFILE`, `SCR-SETTINGS-PRIVACY`, `SCR-SETTINGS-NOTIFICATIONS`, `SCR-MODERATION` |
 | 14 | parity pass over every ID, installers |
+| 15 | fixes across `PNL-RIG-CHECK`, `STA-BODY-CHECK-FAILED`, `MOD-EXPORT-ANIMATION`, `SCR-MOTION`, `PNL-LIBRARY`, `SCR-HOME`, `MOD-SHARE`, `SCR-MODERATION`, `MOD-IMPORT`, `STA-BRAIN-NETWORK`, `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME` |
 
 Architecture coverage: contract (2, extended where used), library (2, 9, 11), projects and edit operations (2), objects and components (2–3), design ideas (6), design compilation and tests (2), simulation (4), brains (5 learned, 11 connectome, 13 community), Play (4), comparison with real behavior (11), training and timeline (5), run store (5), copilot roles (6 Architect and Guide, 7 Coach, 10 Motion, 12 Builder, 13 Artist for thumbnails and skins), coach and autopilot (7), motion (10), hardware (12), bundles (13), HTTP API (grows each sprint), desktop studio (1, 3), distribution (14), community service (13), quality (1, every sprint).

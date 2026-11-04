@@ -75,6 +75,11 @@ function isPopoutPage(url: string, appUrl: string): boolean {
   return target.origin === page.origin && target.pathname.endsWith("/popout.html");
 }
 
+// Windows shows system notifications only for an app with a user model id; unpackaged runs go by their executable.
+if (process.platform === "win32") {
+  app.setAppUserModelId(app.isPackaged ? "studio.icarus.desktop" : process.execPath);
+}
+
 void app.whenReady().then(() => {
   ipcMain.handle(ENGINE_CHANNEL.status, () => engine.status);
   ipcMain.handle(ENGINE_CHANNEL.restart, () => engine.restart());

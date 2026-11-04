@@ -28,6 +28,8 @@ export type ViewportPanelProps = {
   // View options on the right of the tab bar (Lit, Perspective, speed).
   viewOptions?: readonly string[];
   onViewOption?: (option: string) => void;
+  // The view option currently chosen (the checkpoint shown), marked as pressed.
+  activeViewOption?: string | null;
   // Plain note before the view options ("Tools follow its senses").
   note?: string;
   // PNL-TOOLBAR strip drawn between the tab bar and the view.
@@ -81,6 +83,7 @@ export function ViewportPanel({
   tabs = DEFAULT_VIEWPORT_TABS,
   viewOptions = DEFAULT_OPTIONS,
   onViewOption,
+  activeViewOption = null,
   note,
   toolbar,
   overlays,
@@ -160,7 +163,8 @@ export function ViewportPanel({
               key={option}
               cta={option}
               onClick={() => onViewOption?.(option)}
-              className={`rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg ${NOT_YET_CLASS}`}
+              aria-pressed={activeViewOption === null ? undefined : option === activeViewOption}
+              className={`rounded-control bg-control px-2 py-0.75 text-ui text-fg-tertiary hover:bg-control-raised hover:text-fg aria-pressed:bg-control-raised aria-pressed:text-fg ${NOT_YET_CLASS}`}
               {...(onViewOption ? {} : notYet?.(option, OPTION_PURPOSES[option] ?? "Change what the view shows"))}
             >
               {option}
