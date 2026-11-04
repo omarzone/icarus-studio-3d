@@ -16,7 +16,7 @@ export const catalog: Catalog = {
       id: "PNL-RIG-CHECK",
       component: () => (
         <div className="flex w-200 flex-col p-3">
-          <RigCheckPanel body="dance-copy" />
+          <RigCheckPanel body="dance-copy" scene="dance-copy-rig" />
         </div>
       ),
     },

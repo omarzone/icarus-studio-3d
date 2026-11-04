@@ -101,7 +101,11 @@ const POSE_HINT = "Each pose sets the joints in the physics engine, then the bod
 
 // The design tests run again now, then each problem the rig audit found, and the poses the body can take.
 export function rigCheckFromEngine(check: EngineRigCheck): RigCheck {
-  const findings: CheckFact[] = check.findings.map((finding) => ({ text: finding.text, tone: "warn" }));
+  const findings: CheckFact[] = check.findings.map((finding) => ({
+    text: finding.text,
+    tone: "warn",
+    part: finding.part,
+  }));
   return {
     checks: [...reportFacts(check.report), ...findings],
     problems: check.report.checks.filter((item) => item.status === "fail").length + check.findings.length,

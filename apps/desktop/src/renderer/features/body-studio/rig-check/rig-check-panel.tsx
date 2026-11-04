@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useEngineAction } from "../../../app/runtime/engine-query.tsx";
 import { usePort, useRuntimeMode } from "../../../app/runtime/port.tsx";
+import { useSceneCache, useSceneTree } from "../../../editor/scene-queries.ts";
 import { bodyPort } from "../../../ports/body-port.ts";
+import { scenePort } from "../../../ports/scene-port.ts";
 import { Panel, PanelTab } from "../../../ui/panel.tsx";
 import { QueryView } from "../../../ui/query-view.tsx";
 import { poseKey } from "../pose-preview.tsx";
@@ -21,8 +23,18 @@ export function useRigCheck(body: string) {
   return useQuery({ queryKey: rigCheckKey(body), queryFn: () => port.getRigCheck(body) });
 }
 
-export function RigCheckPanel({ body }: { body: string }) {
+export function RigCheckPanel({ body, scene }: { body: string; scene: string }) {
   const port = usePort(bodyPort);
+  const scenes = usePort(scenePort);
+  const tree = useSceneTree(scene);
+  const cache = useSceneCache(scene);
+  const select = useEngineAction(scenes.selectObject);
+  // A part removed since the check ran has no row; selecting it would only clear the current selection.
+  const onSelectPart = (part: string) => {
+    if (tree.data?.sections.some((section) => section.objects.some((row) => row.id === part))) {
+      select.mutate({ scene, id: part }, { onSuccess: cache.tree });
+    }
+  };
   const query = useRigCheck(body);
   const client = useQueryClient();
   const pose = useEngineAction(port.applyPose);
@@ -52,7 +64,7 @@ export function RigCheckPanel({ body }: { body: string }) {
         <QueryView query={query}>
           {(check) =>
             tab === "check" ? (
-              <RigCheckTab check={check} onPose={onPose} />
+              <RigCheckTab check={check} onPose={onPose} onSelectPart={onSelectPart} />
             ) : (
               <PoseTestTab check={check} onPose={onPose} />
             )

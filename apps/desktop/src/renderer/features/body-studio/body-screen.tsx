@@ -106,7 +106,7 @@ function BodyWorkspace({ variant, config }: { variant: BodyVariant; config: Body
               checks: {
                 title: "Checks",
                 home: HOME.below("viewport", 168),
-                render: () => <RigCheckPanel body={config.body} />,
+                render: () => <RigCheckPanel body={config.body} scene={config.scene} />,
               },
             }
           : {}) satisfies DockPanels),

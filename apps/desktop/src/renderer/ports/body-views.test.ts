@@ -74,11 +74,20 @@ describe("rig check from the engine", () => {
       { text: "Compiles in MuJoCo", tone: "ok" },
       { text: "Settles: Falls after 1.4 s", tone: "warn" },
       { text: "Sensors: not run", tone: "warn" },
-      { text: "Shin: motor too weak to lift it", tone: "warn" },
+      { text: "Shin: motor too weak to lift it", tone: "warn", part: "shin" },
     ]);
     // A test not run is never counted as a problem that blocks training.
     expect(check.problems).toBe(2);
     expect(check.poses).toEqual([{ id: "rest", label: "Rest" }]);
+  });
+
+  it("keeps the part of every audit finding so its row can select it", () => {
+    const check = rigCheckFromEngine({
+      report: REPORT,
+      findings: [{ id: "f1", part: "left_shin", text: "Left shin has no motor", fixable: true }],
+      poses: [],
+    });
+    expect(check.checks.at(-1)).toEqual({ text: "Left shin has no motor", tone: "warn", part: "left_shin" });
   });
 
   it("says whether the motors held a pose, how far it sagged and what overlaps", () => {
