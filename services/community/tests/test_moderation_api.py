@@ -19,6 +19,17 @@ def test_only_moderators_see_the_queues(client, sign_in):
     }
 
 
+def test_each_queued_report_carries_the_creation_picture(client, sign_in, publish):
+    mod, ana, ben = sign_in(MOD), sign_in(ANA), sign_in(BEN)
+    creation = publish(ana)
+    client.post(f"/v1/creations/{creation['id']}/reports", json={"reason": "spam", "details": ""}, headers=ben)
+
+    item = client.get("/v1/moderation/queue", params={"queue": "reports"}, headers=mod).json()[0]
+
+    assert item["picture"] == creation["thumbnail_path"]
+    assert client.get(item["picture"], headers=mod).status_code == 200
+
+
 def test_reports_are_decided_and_the_author_hears_the_result(client, sign_in, publish):
     mod, ana, ben = sign_in(MOD), sign_in(ANA), sign_in(BEN)
     creation = publish(ana)

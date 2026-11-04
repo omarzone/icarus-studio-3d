@@ -1,6 +1,7 @@
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from icarus_community.catalog import thumbnail_path
 from icarus_community.errors import ServiceError, not_found
 from icarus_community.models import Appeal, Creation, Decision, Report, User
 from icarus_community.notifications import notify
@@ -68,6 +69,7 @@ def list_queue(session: Session, queue: ModerationQueue) -> list[ModerationItem]
                 reason=", ".join(reasons) if reasons else ("New creation" if queue == "new" else queue.capitalize()),
                 reports=len(reports),
                 scan=_scan(creation),
+                picture=thumbnail_path(creation.id),
             )
         )
     return items

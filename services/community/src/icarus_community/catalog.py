@@ -84,6 +84,10 @@ def permissions(row: Creation | Page) -> Permissions:
     )
 
 
+def thumbnail_path(creation_id: str) -> str:
+    return f"/v1/creations/{creation_id}/thumbnail"
+
+
 def summary(session: Session, creation: Creation) -> CreationSummary:
     owner = session.get(User, creation.owner_id)
     category = session.get(Category, creation.category_id)
@@ -99,7 +103,7 @@ def summary(session: Session, creation: Creation) -> CreationSummary:
         downloads=creation.downloads,
         status=cast(CreationStatus, creation.status),
         visibility=cast(Visibility, creation.visibility),
-        thumbnail_path=f"/v1/creations/{creation.id}/thumbnail",
+        thumbnail_path=thumbnail_path(creation.id),
         created_at=creation.created_at,
     )
 

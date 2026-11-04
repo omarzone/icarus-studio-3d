@@ -36,7 +36,7 @@ export const catalog: Catalog = {
       id: "PNL-BUILD-TARGET-VIEW",
       component: () => (
         <div className="flex h-210 w-197.5 flex-col p-3">
-          <BuildTargetViewPanel project="park-pilot" projectName="Park Pilot" underOverlay={false} />
+          <BuildTargetViewPanel project="park-pilot" projectName="Park Pilot" revision="" underOverlay={false} />
         </div>
       ),
     },

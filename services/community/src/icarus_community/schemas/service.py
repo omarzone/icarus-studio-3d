@@ -40,6 +40,7 @@ class ModerationItem(Strict):
     reason: str
     reports: int
     scan: str
+    picture: str | None = None
 
 
 class DecisionRequest(Strict):

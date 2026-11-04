@@ -122,6 +122,8 @@ export type ModerationItem = {
   reason: string;
   reports: number;
   scan: string;
+  // Where the community keeps the creation's thumbnail; null when it has none.
+  picture: string | null;
 };
 
 export type AccountDeleted = { deleted: boolean; identity_deleted: boolean };
