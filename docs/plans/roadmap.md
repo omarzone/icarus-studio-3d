@@ -27,8 +27,11 @@ Each sprint gets its own detailed task plan (`sprint-NN-<name>.md`) written when
 | Sprint | Status |
 |---|---|
 | 1–6 | **Built** and merged |
-| 7 | **Mostly built**: coach, autopilot, warm start and Results on the engine; timelapse export and the measured *Done when* still open |
-| 8–14 | **Planned**: their screens open in the app and say what is not available yet; no engine work yet |
+| 7 | **Built**; the measured *Done when* (autopilot beating training from zero) has not been run |
+| 8–10 | **Built** with gaps listed in each sprint below and in [`app-gaps.md`](../design/app-gaps.md) |
+| 11 | **Planned**: no connectome engine work yet; its screens show the trained brain |
+| 12–13 | **Built** with gaps listed below; the official community instance is not deployed |
+| 14 | **Planned** |
 | Beyond plan | **Built**: copilot agent loop and harness extensions (below Sprint 6 and 7) |
 
 Order follows dependencies: each sprint only needs what earlier sprints delivered. Sprints 1–7 form the first complete loop (describe → build → play → train → watch → diagnose → fix); 8–14 extend it to every workspace and service.
@@ -129,7 +132,7 @@ Judge brains fairly, understand failures with vision, and let the copilot iterat
 
 **Demo:** the full first loop: describe, build, play, train, compare, diagnose a failure, apply the fix, retrain, present the timelapse.
 
-**Status:** mostly built ([plan](./sprint-07-coach.md)). Built: checkpoint frames and failure groups, watch rules, diagnoses grounded in run data, the `coach` tool, the autopilot in `ask` and `fix` modes with warm starts and same-seed comparison, Results, Train coaching messages and *Diagnose now* on the engine. Open: `SCR-TIMELAPSE` on real runs with video export, and the measured *Done when* (autopilot beating training from zero) has not been run.
+**Status:** built ([plan](./sprint-07-coach.md)): checkpoint frames and failure groups, watch rules, diagnoses grounded in run data, the `coach` tool, the autopilot in `ask` and `fix` modes with warm starts and same-seed comparison, Results, coaching at checkpoints, *Diagnose now*, and `SCR-TIMELAPSE` chaining each checkpoint's recorded episode. Open: the timelapse exports one checkpoint's episode as an animated PNG rather than a video of the whole timelapse, and the measured *Done when* (autopilot beating training from zero) has not been run.
 
 ### Sprint 8 · Brain workspace
 
@@ -140,7 +143,7 @@ Everything about what the agent perceives, does and is rewarded for.
 
 **Demo:** turn on two side sensors, raise a penalty, pick a bigger brain, train and see the network light up.
 
-**Status:** planned.
+**Status:** built: senses and motors from the body with switches and added rays, reward cards with weights, goal and episode rules, Practice and Expert settings with proposed values, the network from a checkpoint with named inputs and outputs, sizes with training time and success measured from past runs, and starting from another trained brain. Open: curriculum stages, live activations (views read one evaluation observation), the checkpoint switch on the network view, and community brains as a source.
 
 ### Sprint 9 · Body workspace and import
 
@@ -152,7 +155,7 @@ Any body, built in Icarus or imported.
 
 **Demo:** import a humanoid model, auto-rig it, fix the failed check with the copilot, make it stand in Play.
 
-**Status:** planned ([plan](./sprint-09-body-rig.md)).
+**Status:** built ([plan](./sprint-09-body-rig.md)): mesh import (static or auto-rigged), auto-rig with progress and cancel, rig check with fixes, test poses, skin weights with auto-fix, and skins drawn over the physical body. Open: URDF and MJCF robot import, FBX and USD, an import preview, bone, joint and weight tool modes, weight painting, a true stand-up test, and the rig check rows that do not select their part.
 
 ### Sprint 10 · Motion from video
 
@@ -163,7 +166,7 @@ Characters that copy a reference video under physics.
 
 **Demo:** upload a dance clip, track it, train the copy focusing on the hardest moment, export the animation.
 
-**Status:** planned ([plan](./sprint-10-motion.md)).
+**Status:** built ([plan](./sprint-10-motion.md)): frames sampled from a chosen part of the video with live previews, tracking through the `pose` capability, retargeting, the imitation family with a tracking reward, imitation training with focus on the weakest moment, match per moment and limb, and JSON and BVH export. Open: glTF and FBX export, link and webcam sources, the video picture behind the skeleton, Play for the clip, and named target rigs. Tracking with a general vision model drifts on fast moves, and no imitation run has been trained to the end yet.
 
 ### Sprint 11 · Connectome brains
 
@@ -175,7 +178,7 @@ Bodies driven by real wiring maps, with no training.
 
 **Demo:** load the connectome into the fly, drop sugar in Play, watch it walk there and its neurons fire, compare its walk with recordings.
 
-**Status:** planned ([plan](./sprint-11-connectome.md)).
+**Status:** planned ([plan](./sprint-11-connectome.md)). Behavior tests exist (they compare checkpoints of a trained brain); connectome data, the spiking simulator, the fly body and reference recordings do not.
 
 ### Sprint 12 · Build and hardware
 
@@ -187,7 +190,7 @@ Taking creations out of Icarus.
 
 **Demo:** export the parking brain to ONNX, run it with the runtime on a single-board computer reading real sensors.
 
-**Status:** planned.
+**Status:** built: build targets with real facts, an export plan with file sizes, ONNX, URDF and MJCF, the runtime package, hardware kits and the pass, warn or fail check, and the copilot's `export_robot` and `check_hardware`. Open: TorchScript and a game-engine package (the game target is the ONNX export), sim-to-real randomization presets, and running the runtime on a real board.
 
 ### Sprint 13 · Community
 
@@ -202,7 +205,7 @@ Sharing, remixing and safety.
 
 **Demo:** publish the parking car, open its page from another account, remix it and retrain.
 
-**Status:** planned.
+**Status:** built in code: the community service (catalog, creations, votes, follows, reports, moderation, profiles, privacy, sharing), Supabase sign-in with a local development mode, pack and publish with validation, remix into a new project, and the desktop screens. Open: deploying the official instance (domain, secrets, terms and privacy pages), comments, publishing training history with a creation, and review before publishing being on by default.
 
 ### Sprint 14 · Release
 
