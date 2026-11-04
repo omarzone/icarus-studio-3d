@@ -1,6 +1,7 @@
 import { tokens } from "@icarus/ui-tokens";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePort } from "../../app/runtime/port.tsx";
+import { useLiveBrain } from "../../editor/brain-activity/use-live-brain.ts";
 import { brainPort, type NetworkColumn, type NetworkView, type NeuronState } from "../../ports/brain-port.ts";
 
 const HEIGHT = 430;
@@ -35,6 +36,7 @@ export function useNetworkCheckpoints(brain: string | null): { checkpoints: read
 // The body's senses wired into the network: hot neurons and connections lit red, drawn from the engine's network state.
 export function NetworkDiagram({ brain, checkpoint }: { brain: string; checkpoint: string | null }) {
   const port = usePort(brainPort);
+  useLiveBrain(brain);
   const query = useQuery({
     queryKey: networkKey(brain, checkpoint),
     queryFn: () => port.getNetwork({ brain, checkpoint: checkpoint ?? undefined }),

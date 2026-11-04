@@ -157,5 +157,7 @@ export function createBrainFixture(): BrainPort {
     getActivity: async (brain) => find(brain).activity,
     getBehaviors: async (brain) => find(brain).behaviors,
     getWiring: async (brain) => find(brain).wiring,
+    // Sample brains never play, so nothing live ever changes.
+    watchLive: () => () => undefined,
   };
 }

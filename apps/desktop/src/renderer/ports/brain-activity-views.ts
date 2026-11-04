@@ -9,6 +9,7 @@ import type {
 } from "@icarus/contracts";
 import { compactNumber } from "../ui/compact-number.ts";
 import type { Behavior, BrainActivity, BrainRegion, BrainSource, Wiring } from "./brain-port.ts";
+import type { LiveBrain } from "./live-brain.ts";
 import type { CheckFact, LiveReadings } from "./progress-step.ts";
 
 // Pure mappings from a checkpoint's readings, activations and episodes, and from trained brains, onto brain views.
@@ -42,21 +43,48 @@ export const NO_READINGS: LiveReadings = {
   caption: "No trained brain yet: train it to see what it senses and picks",
 };
 
+function readingRows(senses: readonly PlayReading[]): LiveReadings["rows"] {
+  const shownSenses = senses.slice(0, READINGS_ROWS);
+  const offsets = shownSenses.map((reading) => Math.abs(ratioOf(reading) - 0.5));
+  const hottest = offsets.indexOf(Math.max(...offsets));
+  return shownSenses.map((reading, index) => ({
+    label: reading.label,
+    value: shown(reading),
+    ratio: ratioOf(reading),
+    hot: index === hottest,
+  }));
+}
+
+const picks = (actions: readonly PlayReading[]) =>
+  actions.map((action) => `${action.label} ${shown(action)}`).join(", ") || "nothing to move";
+
 // The senses one second into a test try, the one furthest from the middle of its range marked, then the actions.
 export function readingsView(readings: BrainReadings, checkpoint: Checkpoint): LiveReadings {
-  const senses = readings.senses.slice(0, READINGS_ROWS);
-  const offsets = senses.map((reading) => Math.abs(ratioOf(reading) - 0.5));
-  const hottest = offsets.indexOf(Math.max(...offsets));
-  const picks = readings.actions.map((action) => `${action.label} ${shown(action)}`).join(", ");
   return {
     title: "What the brain senses",
-    rows: senses.map((reading, index) => ({
-      label: reading.label,
-      value: shown(reading),
-      ratio: ratioOf(reading),
-      hot: index === hottest,
-    })),
-    caption: `${amount(readings.seconds)} s into a test try, ${checkpoint.runName} at ${compactNumber(checkpoint.step)} steps picks: ${picks || "nothing to move"}`,
+    rows: readingRows(readings.senses),
+    caption: `${amount(readings.seconds)} s into a test try, ${checkpoint.runName} at ${compactNumber(checkpoint.step)} steps picks: ${picks(readings.actions)}`,
+  };
+}
+
+// The same card while Play runs: what the playing brain senses and picks now.
+export function liveReadingsView(live: LiveBrain): LiveReadings {
+  return {
+    title: "What the brain senses",
+    rows: readingRows(live.senses),
+    caption: `Live in Play, ${amount(live.activity.time)} s in, ${live.brain} picks: ${picks(live.actions)}`,
+  };
+}
+
+// The Play stream's activity in the shape of a checkpoint's activations, so the same mappings draw both.
+export function liveActivations(live: LiveBrain): BrainActivations {
+  return {
+    run_id: live.runId,
+    step: live.step,
+    observation_labels: [],
+    observation: live.activity.observation,
+    layers: live.activity.layers,
+    outputs: live.activity.outputs,
   };
 }
 
@@ -72,8 +100,9 @@ function region(id: string, name: string, detail: string, values: readonly numbe
   };
 }
 
-// The policy's columns as regions: what reaches it, each hidden layer and the actions, lit by what each computes.
-export function activityView(network: BrainNetwork, activations: BrainActivations): BrainActivity {
+// The policy's columns as regions: what reaches it, each hidden layer and the actions, lit by what each computes,
+// live while Play runs and otherwise at the first moment of a test try.
+export function activityView(network: BrainNetwork, activations: BrainActivations, live = false): BrainActivity {
   const layers = network.layers.map((layer, index) =>
     region(
       `layer-${index + 1}`,
@@ -83,7 +112,8 @@ export function activityView(network: BrainNetwork, activations: BrainActivation
     ),
   );
   return {
-    live: false,
+    live,
+    note: live ? "Live in Play" : "First moment of a test try",
     regions: [
       region("inputs", `Senses · ${network.inputs.length}`, "What reaches the brain", activations.observation),
       ...layers,

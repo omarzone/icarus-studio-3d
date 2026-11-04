@@ -128,6 +128,8 @@ export function playSession({ info, frame, events, selectedTool }: SessionParts)
       brain: info.brain,
       playing: info.run_id && typeof info.step === "number" ? { runId: info.run_id, step: info.step } : undefined,
     },
+    // A trained brain streams its neurons, so Play shows them live next to the events.
+    activity: info.activity === true ? true : undefined,
     events,
   };
 }

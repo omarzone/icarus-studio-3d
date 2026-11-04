@@ -1,6 +1,7 @@
 import type {
   ApiError,
   LibraryCatalog,
+  PlayBrainActivity,
   PlayEvent,
   PlayFrame,
   PlayMessage,
@@ -318,6 +319,21 @@ export function isPlayEvent(value: unknown): value is PlayEvent {
   return has(value, "time", "number") && has(value, "kind", "string") && has(value, "text", "string");
 }
 
+const isNumberList = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "number");
+
+function isPlayBrainActivity(value: unknown): value is PlayBrainActivity {
+  return (
+    isRecord(value) &&
+    has(value, "time", "number") &&
+    has(value, "step", "number") &&
+    isNumberList(value.observation) &&
+    Array.isArray(value.layers) &&
+    value.layers.every(isNumberList) &&
+    isNumberList(value.outputs)
+  );
+}
+
 function isPlayMessage(value: unknown): value is PlayMessage {
   if (!isRecord(value)) {
     return false;
@@ -327,6 +343,8 @@ function isPlayMessage(value: unknown): value is PlayMessage {
       return isPlaySessionInfo(value.session);
     case "frame":
       return isPlayFrame(value.frame);
+    case "activity":
+      return isPlayBrainActivity(value.activity);
     case "event":
       return isPlayEvent(value.event);
     case "error":

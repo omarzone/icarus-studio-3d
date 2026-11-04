@@ -48,13 +48,18 @@ function parameters(network: BrainNetwork): number {
   return sizes.slice(1).reduce((total, size, i) => total + ((sizes[i] ?? 0) + 1) * size, 0);
 }
 
-// A checkpoint's real network: neurons lit by what they compute for the first observation of its evaluation.
+// The view option that follows the brain playing the project.
+export const LIVE = "Live";
+
+// A checkpoint's real network: neurons lit by what they compute live in Play (`live`), or otherwise for the first
+// observation of its evaluation; the summary says which.
 export function networkView(input: {
   name: string;
   network: BrainNetwork;
   activations: BrainActivations;
   checkpoints: readonly string[];
   checkpoint: string;
+  live?: boolean;
 }): NetworkView {
   const { network, activations } = input;
   const inputLabels = network.inputs.map((item) => item.label);
@@ -72,6 +77,6 @@ export function networkView(input: {
     columns,
     links: hotLinks(columns),
     name: input.name,
-    summary: `${shape} · ${parameters(network).toLocaleString("en-US")} parameters · step ${checkpointLabel(network.step)}`,
+    summary: `${shape} · ${parameters(network).toLocaleString("en-US")} parameters · step ${checkpointLabel(network.step)} · ${input.live ? "live in Play" : "first moment of a test try"}`,
   };
 }
