@@ -211,7 +211,8 @@ class MotionTrain(_Model):
     warm: bool = False
 
 
-ExportFormat = Literal["json", "bvh"]
+# glTF is written as one binary .glb file.
+ExportFormat = Literal["json", "bvh", "gltf"]
 
 
 class MotionExportRequest(_Model):
@@ -226,4 +227,6 @@ class MotionExportFile(_Model):
     name: str
     media_type: str
     content: str
+    # Text files are sent as they are; binary files (.glb) as base64.
+    encoding: Literal["utf-8", "base64"] = "utf-8"
     frames: int = Field(ge=0)

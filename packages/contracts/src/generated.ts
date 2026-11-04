@@ -3259,6 +3259,7 @@ export interface PartMatch {
  */
 export interface MotionExportFile {
   content: string;
+  encoding?: "utf-8" | "base64";
   frames: number;
   media_type: string;
   name: string;
@@ -3268,7 +3269,7 @@ export interface MotionExportFile {
  * via the `definition` "MotionExportRequest".
  */
 export interface MotionExportRequest {
-  format?: "json" | "bvh";
+  format?: "json" | "bvh" | "gltf";
   loop?: boolean;
   root_motion?: boolean;
   source?: "physics" | "reference";
