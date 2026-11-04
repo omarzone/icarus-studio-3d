@@ -18,7 +18,14 @@ export type Pose = {
 };
 
 // Stick figures to play side by side: the tracked reference and the physics result, at the clip's rate.
-export type MotionPlayback = { fps: number; reference: readonly Pose[]; result: readonly Pose[] };
+export type MotionPlayback = {
+  fps: number;
+  reference: readonly Pose[];
+  result: readonly Pose[];
+  // The clip's own frames and keypoints, to show the reference over the real video; null when the engine has none.
+  strip: FrameStrip | null;
+  points: readonly (readonly FramePoint[])[];
+};
 
 export type MotionCompare = {
   reference: string;
