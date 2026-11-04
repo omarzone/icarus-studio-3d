@@ -8,6 +8,7 @@ import { QueryView } from "../../ui/query-view.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { BehaviorsTab } from "./behaviors-tab.tsx";
 import { BrainActivityTab } from "./brain-activity-tab.tsx";
+import { useLiveBrain } from "./use-live-brain.ts";
 import { WiringTab } from "./wiring-tab.tsx";
 
 type Tab = "activity" | "behaviors" | "wiring";
@@ -25,8 +26,10 @@ type Props = {
 
 export function BrainActivityPanel({ brain, tabs = ALL_TABS, note, className = "h-49 shrink-0" }: Props) {
   const port = usePort(brainPort);
+  useLiveBrain(brain);
   const activity = useQuery({ queryKey: ["brain", brain, "activity"], queryFn: () => port.getActivity(brain) });
   const [tab, setTab] = useState<Tab>("activity");
+  const shown = note ?? activity.data?.note;
   return (
     <Panel
       id="PNL-BRAIN-ACTIVITY"
@@ -44,7 +47,7 @@ export function BrainActivityPanel({ brain, tabs = ALL_TABS, note, className = "
       }
       options={
         <>
-          {note ? <span className="pr-1 text-ui text-fg-tertiary">{note}</span> : null}
+          {shown ? <span className="pr-1 text-ui text-fg-tertiary">{shown}</span> : null}
           {activity.data?.live ? <span className="pr-1 text-ui text-danger">● live</span> : null}
         </>
       }

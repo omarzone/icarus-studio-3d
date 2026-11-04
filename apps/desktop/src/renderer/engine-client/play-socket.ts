@@ -1,4 +1,5 @@
 import type {
+  PlayBrainActivity,
   PlayCommand,
   PlayCommandEnvelope,
   PlayEvent,
@@ -25,6 +26,8 @@ export type PlayHandlers = {
   onReady: (session: PlaySessionInfo) => void;
   onFrame: (frame: PlayFrame) => void;
   onEvent: (event: PlayEvent) => void;
+  // What the trained brain computed for the observation it last acted on, a few times a second.
+  onActivity?: (activity: PlayBrainActivity) => void;
   // A command the engine refused, or a message the app cannot read; the session stays open.
   onError: (message: string) => void;
   // What the engine is doing before the session is ready.
@@ -84,6 +87,9 @@ export const openPlay: OpenPlay = (projectId, handlers, options = {}) => {
         return;
       case "frame":
         handlers.onFrame(message.frame);
+        return;
+      case "activity":
+        handlers.onActivity?.(message.activity);
         return;
       case "event":
         handlers.onEvent(message.event);

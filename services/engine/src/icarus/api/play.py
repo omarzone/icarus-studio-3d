@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from icarus.contracts.play import (
+    PlayActivityMessage,
     PlayBrainOption,
     PlayCommand,
     PlayCommandEnvelope,
@@ -33,6 +34,8 @@ from icarus.training.warm_start import warm_start_problem
 router = APIRouter()
 
 FRAME_PERIOD = 1 / 30
+# The brain's activity goes at most this often: enough for the eye, cheap next to the frames.
+ACTIVITY_PERIOD = 1 / 10
 # Longest real time one tick may simulate, so a stalled loop never catches up in one huge step.
 MAX_TICK = 0.1
 UNKNOWN_PROJECT = 4404
@@ -41,7 +44,10 @@ UNPLAYABLE = 4422
 Inbound = PlayCommand | PlayErrorMessage
 
 
-async def _send(websocket: WebSocket, message: PlayReply | PlayFrameMessage | PlayProgressMessage) -> None:
+Outbound = PlayReply | PlayFrameMessage | PlayProgressMessage | PlayActivityMessage
+
+
+async def _send(websocket: WebSocket, message: Outbound) -> None:
     await websocket.send_text(PlayMessageEnvelope(message=message).model_dump_json())
 
 
@@ -210,6 +216,8 @@ async def _receive(websocket: WebSocket, inbox: asyncio.Queue[Inbound]) -> None:
 async def _run(websocket: WebSocket, session: PlaySession | AgentsPlay, receiver: asyncio.Task[None], inbox) -> None:
     loop = asyncio.get_running_loop()
     last = loop.time()
+    # When the activity last went and for which control step, so a paused brain is not sent again and again.
+    shown: tuple[float, int | None] = (float("-inf"), None)
     while not receiver.done():
         while not inbox.empty():
             item = inbox.get_nowait()
@@ -227,6 +235,11 @@ async def _run(websocket: WebSocket, session: PlaySession | AgentsPlay, receiver
         for reply in await asyncio.to_thread(session.due):
             await _send(websocket, reply)
         await _send(websocket, PlayFrameMessage(type="frame", frame=await asyncio.to_thread(session.frame)))
+        if isinstance(session, PlaySession) and now - shown[0] >= ACTIVITY_PERIOD:
+            activity = await asyncio.to_thread(session.activity)
+            if activity is not None and activity.step != shown[1]:
+                await _send(websocket, PlayActivityMessage(type="activity", activity=activity))
+                shown = (now, activity.step)
         await asyncio.sleep(max(0.0, FRAME_PERIOD - (loop.time() - now)))
 
 

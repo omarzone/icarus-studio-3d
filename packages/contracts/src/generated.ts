@@ -3423,6 +3423,29 @@ export interface PersonPose {
   keypoints: Keypoint[];
 }
 /**
+ * The brain's activity, sent a few times a second while a trained brain plays.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayActivityMessage".
+ */
+export interface PlayActivityMessage {
+  activity: PlayBrainActivity;
+  type: "activity";
+}
+/**
+ * What the playing brain computed for the observation it last acted on: its policy's real forward pass.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayBrainActivity".
+ */
+export interface PlayBrainActivity {
+  layers: number[][];
+  observation: number[];
+  outputs: number[];
+  step: number;
+  time: number;
+}
+/**
  * The brain one agent of a project with several plays with.
  *
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -3621,7 +3644,8 @@ export interface PlayFrameMessage {
  * via the `definition` "PlayMessageEnvelope".
  */
 export interface PlayMessageEnvelope {
-  message: PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage;
+  message:
+    PlayReady | PlayFrameMessage | PlayActivityMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -3636,6 +3660,7 @@ export interface PlayReady {
  * via the `definition` "PlaySessionInfo".
  */
 export interface PlaySessionInfo {
+  activity?: boolean;
   agents?: PlayAgentBrain[];
   brain: string;
   pieces?: PlayPiece[];

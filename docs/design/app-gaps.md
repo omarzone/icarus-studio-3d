@@ -1,6 +1,6 @@
 # App gaps against the design
 
-What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed. On 2026-11-04 the rows Sprint 15 closed were updated.
+What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed. On 2026-11-04 the rows Sprint 15 closed were updated, and then the brain views that now follow Play live.
 
 ## How to read the tables
 
@@ -29,10 +29,10 @@ There are 594 features across seven groups.
 
 | App today | Count | | In spec? | Count |
 |---|---|---|---|---|
-| works | 369 | | built | 377 |
-| partial | 139 | | planned | 146 |
+| works | 370 | | built | 378 |
+| partial | 139 | | planned | 145 |
 | pending | 15 | | not in spec | 71 |
-| fixture-only | 18 | | | |
+| fixture-only | 17 | | | |
 | missing | 53 | | | |
 | broken | 0 | | | |
 
@@ -41,17 +41,17 @@ There are 594 features across seven groups.
 | Launcher, projects, community, settings, system | 107 | 83 | 17 | 1 | 2 | 4 | 0 |
 | World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
-| Brain | 68 | 33 | 21 | 1 | 5 | 8 | 0 |
+| Brain | 68 | 34 | 20 | 1 | 5 | 8 | 0 |
 | Body and motion | 87 | 43 | 30 | 2 | 3 | 9 | 0 |
 | Train and results | 91 | 59 | 26 | 0 | 2 | 4 | 0 |
-| Play and build | 76 | 47 | 13 | 3 | 3 | 10 | 0 |
+| Play and build | 76 | 47 | 14 | 3 | 2 | 10 | 0 |
 
 The short version:
 
 - **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON, BVH and glTF export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
 - **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
 - **Broken (says or offers something it does not do):** nothing known after Sprint 15.
-- **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
+- **Most visible partials:** body tool modes; Play for a motion clip; and creation pages without comments.
 
 ### Diagnosis: body rig, motion and connectome
 
@@ -370,7 +370,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-BRAIN | Proposed inspector value with Accept | works | built | Nothing |
 | SCR-BRAIN | 3D viewport with Scene and Game view | works | built | Nothing |
 | SCR-BRAIN | Senses tool: sensor rays overlay | works | built | Nothing |
-| SCR-BRAIN | "What the brain sees now" live card | partial | planned | Real readings one second into the newest checkpoint's test try, not live; the card still hides on a query error. |
+| SCR-BRAIN | "What the brain sees now" live card | partial | planned | Live while the workspace plays the trained brain in the background (each step's senses and picks); otherwise one second into the newest checkpoint's test try, and the caption says which. The card still hides on a query error. |
 | SCR-BRAIN | Network tool | works | built | Nothing |
 | TAB-REWARD | One card per reward term with weight | works | built | Nothing |
 | TAB-REWARD | Drag a weight | works | built | Nothing |
@@ -386,7 +386,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-BRAIN-NETWORK | Named input column | works | built | Nothing |
 | STA-BRAIN-NETWORK | Hidden layers with sampled neurons and wires | partial | planned | Layers and sampled neurons come from the checkpoint; the faint background wires are still a fixed pattern. |
 | STA-BRAIN-NETWORK | Named output column | works | built | Nothing |
-| STA-BRAIN-NETWORK | Live activation glow and hot connections | partial | planned | Glow and hot links come from one observation of the checkpoint's evaluation, not live. |
+| STA-BRAIN-NETWORK | Live activation glow and hot connections | works | built | Live follows the policy's real per-layer activations streamed from Play about 10 times a second; a saved checkpoint shows the first observation of its evaluation, and the caption says which. |
 | STA-BRAIN-NETWORK | Body with rays wired into inputs | missing | planned | Draw the project body and anchor wires to sensors |
 | STA-BRAIN-NETWORK | Hover a neuron for an explanation | missing | planned | Hover in the renderer; attributions from real rollouts |
 | STA-BRAIN-NETWORK | Live, 25k, 312k switch | works | built | Nothing |
@@ -662,7 +662,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | PNL-PLAY-DECISIONS | "Use another brain" | works | built | Nothing |
 | PNL-PLAY-DECISIONS | No learned brain state | works | built | Nothing |
 | PNL-PLAY-VISION | What each eye or camera sees | fixture-only | planned | Vision field in `PlayFrame` (Sprint 11) |
-| PNL-BRAIN-ACTIVITY | Activity strip in Play | fixture-only | planned | Connectome simulator |
+| PNL-BRAIN-ACTIVITY | Activity strip in Play | partial | planned | Live per-layer activity of a trained brain while it plays; connectome regions need the simulator (Sprint 11) |
 | PNL-PLAY-EVENTS | Timestamped log | works | built | Nothing |
 | PNL-PLAY-EVENTS | Interpretive behavior lines | missing | not in spec | Behavior detection or narration |
 | PNL-PLAY-EVENTS | Click a line to jump there | pending | planned | Clip recording |
@@ -761,23 +761,21 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 
 ## 5. Neurons and the brain view
 
-**What exists.** The named input and output layout, the network architecture in `BrainSpec` (layers, algorithm, learning rate), `GET /runs/{id}/network`, activations from one observation of a checkpoint's evaluation (`/activations`), readings, behaviors grouped from evaluation episodes, and measured sizes with training time and success from past runs (`training/brain_insights.py`).
+**What exists.** The named input and output layout, the network architecture in `BrainSpec` (layers, algorithm, learning rate), `GET /runs/{id}/network`, activations from one observation of a checkpoint's evaluation (`/activations`), the playing brain's per-layer activations and observation streamed over the Play WebSocket (`activity` messages, about 10 a second), readings, behaviors grouped from evaluation episodes, and measured sizes with training time and success from past runs (`training/brain_insights.py`).
 
 **What is left, in order:**
 
-1. **Live activations.** Glow, hot links, readings and brain activity read one evaluation observation, not the running Play session; add activations to `PlayFrame` behind a watch command.
-2. **Checkpoint switch.** The Live, 25k, 312k options are real labels but clicking one says not available yet; load the network of the chosen checkpoint.
-3. **Real wiring in the diagram.** The faint background wires are still a fixed pattern; draw the checkpoint's strongest weights.
-4. **Neuron explanations.** Correlate each hidden neuron with the named inputs over evaluation rollouts (`NeuronNote`) so the chat can say what a neuron responds to.
-5. **Copilot access.** A read tool returning the layout, activations and neuron notes, so questions about the brain are answered from data.
+1. **Checkpoint switch.** The Live, 25k, 312k options are real labels but clicking one says not available yet; load the network of the chosen checkpoint.
+2. **Real wiring in the diagram.** The faint background wires are still a fixed pattern; draw the checkpoint's strongest weights.
+3. **Neuron explanations.** Correlate each hidden neuron with the named inputs over evaluation rollouts (`NeuronNote`) so the chat can say what a neuron responds to.
+4. **Copilot access.** A read tool returning the layout, activations and neuron notes, so questions about the brain are answered from data.
 
 ## 6. Top gaps today
 
 Ranked by how much each one confuses or blocks someone using the app.
 
 1. **No connectome brains.** `STA-BRAIN-CONNECTOME` and the fly source honestly show the trained brain until Sprint 11 is built.
-2. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
-3. **The animation export writes JSON, BVH and glTF;** FBX is not written.
-4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
-5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
-6. **Creation pages have no comments, brain tab or published timelapse.**
+2. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
+3. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
+4. **Creation pages have no comments, brain tab or published timelapse.**
+5. **The animation export writes JSON, BVH and glTF;** FBX is not written.

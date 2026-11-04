@@ -54,7 +54,7 @@ describe("engine network", () => {
     const fake = api();
     const view = await createEngineNetwork(fake).getNetwork({ brain: "p1" });
     expect(fake.network).toHaveBeenCalledWith("b", 25_000);
-    expect(view.checkpoints).toEqual(["5k", "25k"]);
+    expect(view.checkpoints).toEqual(["Live", "5k", "25k"]);
     expect(view.checkpoint).toBe("25k");
     expect(view.name).toBe("Run b");
   });

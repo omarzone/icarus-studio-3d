@@ -9,6 +9,7 @@ from icarus.contracts.play import (
     LightCommand,
     MoveCommand,
     PauseCommand,
+    PlayBrainActivity,
     PlayCommand,
     PlayErrorMessage,
     PlayEvent,
@@ -63,7 +64,7 @@ from icarus.sim.play_tools import (
     move_body,
     shuffle_props,
 )
-from icarus.sim.policy import Policy
+from icarus.sim.policy import ActivityPolicy, Policy
 from icarus.sim.rewards import RewardState, compose, inside_goal
 from icarus.sim.signals import scene_signals
 from icarus.sim.start_pose import place_start
@@ -126,6 +127,8 @@ class PlaySession:
         self._terms = [term.term for term in project.task.rewards]
         self._weights = [term.weight for term in project.task.rewards]
         self.world.tally.training_steps = brain_steps
+        # The observation the brain last acted on, with the time and physics step it was read at.
+        self._acted_on: tuple[float, int, np.ndarray] | None = None
         self._restart()
 
     def _restart(self) -> None:
@@ -149,7 +152,19 @@ class PlaySession:
 
     def _act(self) -> None:
         if self.world.actuators:
-            apply_action(self.world, self.brain.act(observation(self.world)))
+            observed = observation(self.world)
+            self._acted_on = (float(self.world.data.time), self.step, observed.copy())
+            apply_action(self.world, self.brain.act(observed))
+
+    def activity(self) -> PlayBrainActivity | None:
+        """The brain's forward pass on the observation it last acted on; None for a brain without neurons."""
+        if not isinstance(self.brain, ActivityPolicy) or self._acted_on is None:
+            return None
+        time, step, observed = self._acted_on
+        layers, outputs = self.brain.activity(observed)
+        return PlayBrainActivity(
+            time=time, step=step, observation=[float(value) for value in observed], layers=layers, outputs=outputs
+        )
 
     def _name(self, object_id: str | None) -> str:
         return self.world.object_names.get(object_id or "", object_id or "")
@@ -353,6 +368,7 @@ class PlaySession:
             tools=self.tools(),
             scene=scene_description(self.world.compiled, self.revision),
             pieces=list(play_pieces()),
+            activity=isinstance(self.brain, ActivityPolicy) and bool(self.world.actuators),
         )
 
     def _senses(self) -> list[PlayReading]:

@@ -123,3 +123,34 @@ def test_an_unexpected_failure_in_one_command_is_reported_and_the_session_goes_o
         assert "boom" in next_of(socket, "error")["message"]
         first = next_of(socket, "frame")["frame"]["time"]
         assert next_of(socket, "frame")["frame"]["time"] > first
+
+
+def test_a_trained_brain_streams_its_activity_while_random_actions_do_not(tmp_path, monkeypatch):
+    from stable_baselines3 import PPO
+
+    from icarus.api import play
+    from icarus.sim.env import ProjectEnv
+    from icarus.sim.model_state import observation
+    from icarus.sim.policy import CheckpointPolicy
+
+    app = create_app(tmp_path)
+    client = TestClient(app)
+    project_id = client.post("/projects", json={"name": "P", "template": "parking_car"}).json()["project"]["id"]
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        assert next_of(socket, "ready")["session"]["activity"] is False
+        assert "activity" not in [socket.receive_json()["message"]["type"] for _ in range(20)]
+
+    project = app.state.store.state(project_id).project
+    path = tmp_path / "brain.zip"
+    env = ProjectEnv(project)
+    senses, motors = observation(env.world).shape[0], len(env.world.actuators)
+    PPO("MlpPolicy", env, seed=0, device="cpu", policy_kwargs={"net_arch": [8]}).save(path)
+    trained = play._Brain(CheckpointPolicy.load(path, "Trained brain", senses), "run1", 0)
+    monkeypatch.setattr(play, "_load_brain", lambda runs, world, choice: trained)
+    with client.websocket_connect(f"/projects/{project_id}/play") as socket:
+        assert next_of(socket, "ready")["session"]["activity"] is True
+        first = next_of(socket, "activity")["activity"]
+        assert len(first["observation"]) == senses
+        assert [len(layer) for layer in first["layers"]] == [8]
+        assert len(first["outputs"]) == motors
+        assert next_of(socket, "activity")["activity"]["step"] > first["step"]

@@ -9,6 +9,7 @@ from icarus.contracts.project import Project
 from icarus.contracts.training import Rollout
 from icarus.sim.env import ProjectEnv
 from icarus.sim.model_state import LiveWorld, build_world
+from icarus.sim.policy_activity import forward_activity, hidden_layers
 from icarus.training.evaluation import EVALUATION_SEED
 
 _AXES = ("x", "y", "z")
@@ -67,18 +68,12 @@ def _load(path: Path) -> Any:
     return PPO.load(path, device="cpu")
 
 
-def _hidden(model: Any) -> list[tuple[Any, Any]]:
-    """Pairs of (linear, activation) modules of the policy branch."""
-    modules = list(model.policy.mlp_extractor.policy_net)
-    return [(modules[i], modules[i + 1]) for i in range(0, len(modules) - 1, 2)]
-
-
 def read_network(path: Path, project: Project, run_id: str, step: int) -> BrainNetwork:
     model = _load(path)
     world = build_world(project)
     layers = [
         NetworkLayer(name=f"Layer {i + 1}", size=int(linear.out_features), activation=type(act).__name__.lower())
-        for i, (linear, act) in enumerate(_hidden(model))
+        for i, (linear, act) in enumerate(hidden_layers(model))
     ]
     return BrainNetwork(
         run_id=run_id, step=step, inputs=input_labels(world), layers=layers, outputs=output_labels(world)
@@ -86,8 +81,6 @@ def read_network(path: Path, project: Project, run_id: str, step: int) -> BrainN
 
 
 def read_activations(path: Path, project: Project, run_id: str, step: int) -> BrainActivations:
-    import torch
-
     model = _load(path)
     env = ProjectEnv(project)
     observed, _ = env.reset(seed=EVALUATION_SEED)
@@ -95,15 +88,7 @@ def read_activations(path: Path, project: Project, run_id: str, step: int) -> Br
         raise ValueError(
             f"The checkpoint expects an observation of {model.observation_space.shape}, the body gives {observed.shape}"
         )
-    policy = model.policy
-    layers: list[list[float]] = []
-    with torch.no_grad():
-        tensor, _ = policy.obs_to_tensor(np.asarray(observed, dtype=np.float32))
-        signal = policy.extract_features(tensor, policy.pi_features_extractor)
-        for linear, act in _hidden(model):
-            signal = act(linear(signal))
-            layers.append([float(value) for value in signal[0]])
-        outputs = [float(value) for value in policy.action_net(signal)[0]]
+    layers, outputs = forward_activity(model, observed)
     return BrainActivations(
         run_id=run_id,
         step=step,
@@ -128,7 +113,7 @@ def read_episode_activations(
         raise ValueError(
             f"The checkpoint expects an observation of {model.observation_space.shape}, the body gives {observed.shape}"
         )
-    policy, hidden = model.policy, _hidden(model)
+    policy, hidden = model.policy, hidden_layers(model)
     sums = [np.zeros(int(linear.out_features)) for linear, _ in hidden]
     peaks = [np.zeros(int(linear.out_features)) for linear, _ in hidden]
     active = [np.zeros(int(linear.out_features)) for linear, _ in hidden]

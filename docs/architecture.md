@@ -253,7 +253,7 @@ A body is driven by one brain component:
 
 ### Play mode
 
-Play steps the physics live with the current brain and streams `PlayFrame`s to the viewport, in the engine, never in the renderer. The user acts on the running world with `PlayCommand`s: move, push, add an object, change light or wind, slow down, reset, plus stimuli derived from the body's senses (shadow for vision, scent for smell, touch for touch sensors). Add object brings any library piece with a chosen size, mass or density, friction, bounciness and color, placed on the clicked point, dropped from a height, thrown at the agent at a chosen speed (the engine aims the arc), or as a rain of copies over simulated time (`sim/play_drops.py`); Reset removes everything added. While a session opens, the socket sends progress (world, brain, starting) before the first `ready`. Play never changes the project; a `PlayEvent` log records behavior and user actions, and any session can be saved as a clip.
+Play steps the physics live with the current brain and streams `PlayFrame`s to the viewport, in the engine, never in the renderer. The user acts on the running world with `PlayCommand`s: move, push, add an object, change light or wind, slow down, reset, plus stimuli derived from the body's senses (shadow for vision, scent for smell, touch for touch sensors). Add object brings any library piece with a chosen size, mass or density, friction, bounciness and color, placed on the clicked point, dropped from a height, thrown at the agent at a chosen speed (the engine aims the arc), or as a rain of copies over simulated time (`sim/play_drops.py`); Reset removes everything added. While a session opens, the socket sends progress (world, brain, starting) before the first `ready`. A trained brain also streams `PlayBrainActivity` about 10 times a second: the observation it last acted on and its policy's real forward pass on it (every hidden layer and the action outputs), which the brain views follow live and replace with the evaluation snapshot when no session runs. Play never changes the project; a `PlayEvent` log records behavior and user actions, and any session can be saved as a clip.
 
 ### Comparison with real behavior
 
@@ -384,7 +384,7 @@ Routes that exist today (`services/engine/src/icarus/api/`):
 | `POST` | `/projects/{id}/revisions/{n}/restore` · `/duplicate` | Restore a revision · duplicate the project |
 | `POST` | `/projects/{id}/undo` · `/redo` | Walk the revision log |
 | `GET` | `/projects/{id}/scene` · `/projects/{id}/copies` | `SceneDescription` for the current revision · the training copies with their per-copy variation |
-| `WS` | `/projects/{id}/play` | Play session: `PlayCommand`s in, `PlayFrame`s and `PlayEvent`s out |
+| `WS` | `/projects/{id}/play` | Play session: `PlayCommand`s in, `PlayFrame`s, `PlayEvent`s and the brain's activity out |
 | `POST` · `GET` | `/ideas` · `/ideas/{id}` | Three `DesignIdea`s with previews for a sentence |
 | `POST` · `GET` | `/builds` · `/builds/{id}` | Build a chosen idea, with progress |
 | `GET` | `/projects/{id}/conversation` | The project's copilot conversation |

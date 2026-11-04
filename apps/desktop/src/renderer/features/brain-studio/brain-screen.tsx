@@ -5,11 +5,13 @@ import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
+import { useLiveBrainStream } from "../../editor/brain-activity/use-live-brain.ts";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
+import { LIVE } from "../../ports/brain-network-views.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { useOpenProjectName, useProjectKey } from "../../ui/project-name.ts";
 import { LoadingState, NoProjectState } from "../../ui/states.tsx";
@@ -18,7 +20,7 @@ import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
 import { BRAIN_VARIANTS, type BrainConfig, type BrainVariant, brainConfig } from "./brain-variants.ts";
 import { LearningPanel } from "./learning/learning-panel.tsx";
 import { NetworkDiagram, useNetworkCheckpoints } from "./network-diagram.tsx";
-import { ReadingsCard } from "./readings-card.tsx";
+import { ReadingsCard, useReadings } from "./readings-card.tsx";
 import { SensesActionsPanel } from "./senses-actions/senses-actions-panel.tsx";
 
 const PANEL_ROUTES = { "brain-sizes": "MOD-BRAIN-SIZES" } as const;
@@ -148,6 +150,13 @@ function BrainView({ variant, config }: Props) {
   const app = useRuntimeMode() === "app";
   const network = useNetworkCheckpoints(variant === "network" ? config.brain : null);
   const [checkpoint, setCheckpoint] = useState<string | null>(null);
+  const readings = useReadings(config.brain, variant !== "network").data;
+  // With a trained brain, the live views play it in the background; a saved checkpoint picked in the network does not.
+  const live =
+    variant === "network"
+      ? network.checkpoints.length > 1 && (checkpoint === null || checkpoint === LIVE)
+      : (readings?.rows.length ?? 0) > 0;
+  useLiveBrainStream(config.brain, live);
   switch (variant) {
     case "learned":
       return (

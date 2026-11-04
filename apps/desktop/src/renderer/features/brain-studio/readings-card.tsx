@@ -1,12 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePort } from "../../app/runtime/port.tsx";
+import { useLiveBrain } from "../../editor/brain-activity/use-live-brain.ts";
 import { brainPort } from "../../ports/brain-port.ts";
+
+// What the brain senses: live while its brain plays, otherwise a moment of a test try.
+export function useReadings(brain: string, enabled = true) {
+  const port = usePort(brainPort);
+  useLiveBrain(brain);
+  return useQuery({ queryKey: ["brain", brain, "readings"], queryFn: () => port.getReadings(brain), enabled });
+}
 
 // Live card over the view: what the brain senses (learned brains) or which neurons fire (connectome brains).
 export function ReadingsCard({ brain }: { brain: string }) {
-  const port = usePort(brainPort);
-  const query = useQuery({ queryKey: ["brain", brain, "readings"], queryFn: () => port.getReadings(brain) });
-  const readings = query.data;
+  const readings = useReadings(brain).data;
   if (!readings) {
     return null;
   }
