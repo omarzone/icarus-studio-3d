@@ -28,7 +28,7 @@ Status: **works** (real, against the engine) · **pending-honest** (says *not av
 | Projects | Project card | Opens the project in World | works | |
 | Projects | *Open a file* | Opens `MOD-IMPORT` (pending); tooltip added | pending-honest | |
 | Projects | *New project* | Creates an empty project with the checklist | works | Reopened the last project when one was in the route → starts clean; tooltip added |
-| Project menu | Rename, Duplicate, History, Delete project…, Open project…, Close project (the design's *Back to Home*) | Work against the engine; Close project returns Home with no project open | works | |
+| Project menu | Rename, Duplicate, History, Delete project…, Open project…, Close project (the design's *Back to Home*) | Work against the engine; Close project stops the project's training, autopilot and background tasks (asking first when any run) and returns Home with no project open | works | |
 | Duplicate, Delete dialogs | Training runs line | Count the project's real runs. Runs live in the engine's runs folder, not in the project: Delete says they stay in the runs folder, and Duplicate dims *Trained brains* and *Training runs* with *N runs stay with the original*. No size is shown because the engine does not measure it | works | Always said there were no runs → real run count and what happens to the runs |
 | Project menu | Project settings | Opens `SCR-SETTINGS-TRAINING` as `screens.md` says; the tooltip says these training and hardware settings are shared by every project | works | Label promised per-project settings → kept the design's label and destination, tooltip says the settings are shared |
 | Workspace header | Workspace tabs | Navigate; each explains its workspace on hover | works | No tooltips → one-line purpose per tab |

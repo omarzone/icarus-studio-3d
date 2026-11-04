@@ -2,7 +2,7 @@ import type { SceneDescription } from "@icarus/contracts";
 import type { ScreenId } from "../app/navigation/catalog-id.ts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
-import { projectFootprint, projectView, withRuns } from "./project-views.ts";
+import { projectFootprint, projectView, withRuns, workView } from "./project-views.ts";
 import { createProjectsFixture } from "./projects.fixture.ts";
 
 // View types the screens need; the engine implementation maps @icarus/contracts types onto them.
@@ -33,12 +33,25 @@ export type ProjectFootprint = {
   runsFollowProject: boolean;
 };
 
+// Something the project still runs in the engine; closing the project stops it.
+export type ProjectWork = {
+  kind: "training" | "autopilot" | "task";
+  id: string;
+  title: string;
+  progress: number | null;
+};
+
+// What closing stopped, and what was asked to stop but was still ending when closing stopped waiting.
+export type ProjectClosing = { stopped: ProjectWork[]; stillRunning: ProjectWork[] };
+
 export type ProjectsPort = {
   listProjects: () => Promise<ProjectSummary[]>;
   getProject: (id: string) => Promise<ProjectSummary>;
   renameProject: (input: { id: string; name: string; description: string }) => Promise<ProjectSummary>;
   duplicateProject: (input: { id: string; name: string; include: readonly string[] }) => Promise<ProjectSummary>;
   deleteProject: (id: string) => Promise<void>;
+  projectActivity: (id: string) => Promise<ProjectWork[]>;
+  closeProject: (id: string) => Promise<ProjectClosing>;
   getFootprint: (id: string) => Promise<ProjectFootprint>;
   createProject: (input: { template: string; name: string }) => Promise<ProjectSummary>;
   // The compiled scene of the current revision; null where there is none (sample data).
@@ -72,6 +85,11 @@ export const projectsPort = definePort<ProjectsPort>({
     },
     deleteProject: async (id) => {
       await engineApi.deleteProject(id);
+    },
+    projectActivity: async (id) => (await engineApi.projectActivity(id)).running.map(workView),
+    closeProject: async (id) => {
+      const closed = await engineApi.closeProject(id);
+      return { stopped: closed.stopped.map(workView), stillRunning: closed.still_running.map(workView) };
     },
     getFootprint: async (id) => projectFootprint(await engineApi.runs(id)),
     createProject: async ({ template, name }) => {

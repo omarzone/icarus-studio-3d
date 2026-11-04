@@ -94,6 +94,9 @@ export function createProjectsFixture(): ProjectsPort {
     deleteProject: async (id) => {
       projects = projects.filter((item) => item.id !== id);
     },
+    // Sample data trains nothing in the background, so closing has nothing to stop.
+    projectActivity: async () => [],
+    closeProject: async () => ({ stopped: [], stillRunning: [] }),
     getFootprint: async (id) =>
       FOOTPRINTS_FIXTURE[find(id).id] ?? { trainingRuns: 0, runsBytes: 0, runsFollowProject: true },
     createProject: async ({ name }) => {
