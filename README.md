@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="apps/desktop/resources/icon.png" alt="Icarus Studio 3D" width="96" />
+
 # Icarus Studio 3D
 
 **Describe a creature or a robot. Watch it learn to move in real physics. Take it into the real world.**
@@ -7,7 +9,6 @@
 ![Meta Global AI Developer Hackathon](https://img.shields.io/badge/Meta-Global%20AI%20Developer%20Hackathon-0467DF?style=for-the-badge&logo=meta&logoColor=white)
 [![Copilot powered by Muse Spark](https://img.shields.io/badge/Copilot-Muse%20Spark-0467DF?style=for-the-badge&logo=meta&logoColor=white)](#the-ai-copilot)
 
-![Status](https://img.shields.io/badge/status-in%20development-F0A63A?style=flat-square)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20·%20macOS%20·%20Linux-262626?style=flat-square)
 ![Physics](https://img.shields.io/badge/physics-MuJoCo-262626?style=flat-square)
 ![Training](https://img.shields.io/badge/training-PPO%20on%20CPU-262626?style=flat-square)
@@ -105,11 +106,9 @@ One contract is defined in Python with Pydantic and generated into TypeScript, s
 | AI | Muse Spark through an OpenAI-compatible client, one connection per capability |
 | Quality | Biome, Vitest, ruff, pyright, pytest, one `pnpm check` for the whole repository |
 
-## Status
+## What runs today
 
-Icarus Studio 3D is in active development. Anything not built yet is described as a goal, never shown as a result; the screens that are not real yet say so. The full feature-by-feature account is in [`docs/design/app-gaps.md`](./docs/design/app-gaps.md).
-
-**Now real:**
+Everything below runs today on a desktop CPU, on real MuJoCo physics and real training runs.
 
 - **Projects and the editor.** Projects start from a template or from a sentence (three design ideas, then a staged build), change only through validated edit operations, and are compiled to MuJoCo and physically tested before every revision. A real 3D viewport, an inspector for every property, undo, history, and closing a project stops its runs and saves first.
 - **The copilot.** An agent loop with tools on Muse Spark: it inspects, looks at offscreen MuJoCo renders, reads attached images and videos, tries changes on a copy, proposes, applies and trains, depending on the autonomy mode.
@@ -121,11 +120,9 @@ Icarus Studio 3D is in active development. Anything not built yet is described a
 - **Build.** An export plan, ONNX brains, URDF and MJCF bodies and a hardware check.
 - **Community.** Sign-in, catalog, creation pages, publishing, remixing, votes, reports, moderation, profiles and privacy settings, served by `services/community`.
 
-**Not built yet:** connectome brains (the fruit fly), curriculum stages, comments on creations, glTF and FBX animation export, URDF and MJCF robot import, body tool modes and weight painting, live brain activity, and installers. Tracking dance with a general vision model drifts on fast moves; a dedicated pose estimator is planned.
-
 ## Development
 
-Requirements: Node.js 22+, pnpm, [uv](https://docs.astral.sh/uv/) and Git. No GPU is needed; training runs on the CPU. There are no installers yet, so the app runs from source. The copilot needs a Muse Spark connection, set in Settings › AI models.
+Requirements: Node.js 22+, pnpm, [uv](https://docs.astral.sh/uv/) and Git. No GPU is needed; training runs on the CPU. The app runs from source. The copilot needs a Muse Spark connection, set in Settings › AI models.
 
 ```bash
 pnpm install && pnpm engine:sync   # install the app and the engine

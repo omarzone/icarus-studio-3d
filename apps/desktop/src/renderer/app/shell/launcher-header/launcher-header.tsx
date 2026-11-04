@@ -2,6 +2,7 @@
 import { tokens } from "@icarus/ui-tokens";
 import { ArrowLeft, Bell, Search } from "lucide-react";
 import { buttonClass } from "../../../ui/button-styles.ts";
+import { IcarusMark } from "../../../ui/icarus-mark.tsx";
 import { ctaSlug, type ScreenId } from "../../navigation/catalog-id.ts";
 import { Act, GoTo } from "../../navigation/go-to.tsx";
 import { useNavigation, useNavigationStore } from "../../navigation/navigation-store.tsx";
@@ -32,7 +33,10 @@ export function LauncherHeader({ active, activeGoesTo, account, unread = false }
     >
       <WindowControlsSpace side="start" />
       <WayBackButton />
-      <span className="text-headline font-semibold">Icarus Studio 3D</span>
+      <span className="flex items-center gap-2 text-headline font-semibold">
+        <IcarusMark className="size-4.5" />
+        Icarus Studio 3D
+      </span>
       {PAGES.map((item) =>
         item === active && activeGoesTo ? (
           <GoTo
