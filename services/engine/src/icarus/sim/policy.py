@@ -26,6 +26,13 @@ class BatchPolicy(Protocol):
     def act_many(self, observations: np.ndarray) -> np.ndarray: ...
 
 
+@runtime_checkable
+class ActivityPolicy(Protocol):
+    """A brain whose neurons can be read: the hidden layers and action outputs it computes for one observation."""
+
+    def activity(self, observation: np.ndarray) -> tuple[list[list[float]], list[float]]: ...
+
+
 class RandomPolicy:
     """The untrained brain: seeded uniform actions within each actuator's range."""
 
@@ -70,3 +77,8 @@ class CheckpointPolicy:
     def act_many(self, observations: np.ndarray) -> np.ndarray:
         actions, _ = self._model.predict(observations, deterministic=True)
         return np.asarray(actions, dtype=float)
+
+    def activity(self, observation: np.ndarray) -> tuple[list[list[float]], list[float]]:
+        from icarus.sim.policy_activity import forward_activity
+
+        return forward_activity(self._model, observation)
