@@ -25,6 +25,7 @@ function createWindow(): BrowserWindow {
     useContentSize: true,
     show: false,
     backgroundColor: tokens.color.bg.app,
+    icon: join(app.getAppPath(), "resources", process.platform === "win32" ? "icon.ico" : "icon.png"),
     ...windowFrame(process.platform, tokens.size.headerLauncher),
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
