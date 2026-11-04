@@ -11,6 +11,7 @@ const REPORTS: readonly ModerationItem[] = [
     reason: "Stolen work, not credited",
     reports: 2,
     scan: SCAN,
+    picture: null,
   },
   {
     id: "salsa-dancer",
@@ -19,8 +20,9 @@ const REPORTS: readonly ModerationItem[] = [
     reason: "Inappropriate content",
     reports: 1,
     scan: SCAN,
+    picture: null,
   },
-  { id: "lot-swarm", creation: "Lot Swarm", author: "dev_ana", reason: "Spam", reports: 4, scan: SCAN },
+  { id: "lot-swarm", creation: "Lot Swarm", author: "dev_ana", reason: "Spam", reports: 4, scan: SCAN, picture: null },
 ];
 
 export function createModerationFixture(): ModerationPort {

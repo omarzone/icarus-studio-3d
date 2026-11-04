@@ -3,6 +3,7 @@ import { tokens } from "@icarus/ui-tokens";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Act } from "../../app/navigation/go-to.tsx";
+import { useCommunityPicture } from "../../app/runtime/community-picture.ts";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../../app/shell/window-frame.tsx";
@@ -75,6 +76,15 @@ export function ModerationScreen() {
   );
 }
 
+function ReportPicture({ picture }: { picture: string | null }) {
+  const source = useCommunityPicture(picture);
+  return (
+    <span aria-hidden className="h-21.5 w-35 overflow-hidden rounded-button bg-control-raised">
+      {source ? <img src={source} alt="" draggable={false} className="size-full object-cover" /> : null}
+    </span>
+  );
+}
+
 function ReviewList({ items, queue }: { items: readonly ModerationItem[]; queue: ModerationQueue }) {
   const moderation = usePort(moderationPort);
   const client = useQueryClient();
@@ -89,7 +99,7 @@ function ReviewList({ items, queue }: { items: readonly ModerationItem[]; queue:
       onFocusCapture={() => setSelected(item.id)}
       className={`grid grid-cols-[140px_minmax(0,1fr)_auto] items-center gap-4 rounded-card p-3 ${item.id === selected ? "bg-control" : "border border-line"}`}
     >
-      <span aria-hidden className="h-21.5 w-35 rounded-button bg-control-raised" />
+      <ReportPicture picture={item.picture} />
       <span className="flex flex-col gap-1 leading-tight">
         <span className="font-semibold">
           {item.creation} <span className="font-normal text-fg-tertiary">by @{item.author}</span>

@@ -13,6 +13,8 @@ export type ModerationItem = {
   reports: number;
   // Result of the automatic check every new creation goes through.
   scan: string;
+  // Where the community keeps the creation's thumbnail (read with `useCommunityPicture`); null for sample data.
+  picture: string | null;
 };
 
 export type ModerationDecision = "keep" | "remove" | "ban";
