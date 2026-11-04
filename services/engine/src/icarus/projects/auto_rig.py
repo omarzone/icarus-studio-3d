@@ -71,7 +71,7 @@ def _label(name: str) -> str:
     return (stem[:1].upper() + stem[1:])[:80] or "Imported body"
 
 
-def _body_id(label: str, project: Project) -> str:
+def new_body_id(label: str, project: Project) -> str:
     taken = {body.id for body in project.bodies} | {obj.id for obj in all_objects(project)}
     base = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:40] or "body"
     candidate, number = f"{base}_body", 2
@@ -80,7 +80,7 @@ def _body_id(label: str, project: Project) -> str:
     return candidate
 
 
-def _spawn(project: Project) -> tuple[float, float]:
+def spawn_spot(project: Project) -> tuple[float, float]:
     for obj in project.world.objects:
         kinds = {component.kind: component for component in obj.components}
         position = kinds["transform"].properties.get("position") if "transform" in kinds else None
@@ -95,7 +95,7 @@ def _skin(asset: str) -> ComponentSpec:
     return component
 
 
-def _task(project: Project) -> list[EditOperation]:
+def walking_task(project: Project) -> list[EditOperation]:
     """A walking task for a project whose task cannot drive a body, keeping an imitation or locomotion one."""
     if project.task.family in ("locomotion", "imitation"):
         return []
@@ -205,8 +205,8 @@ def build_rig(
         parts[0].components["skin"] = {"asset": info.id}
     report(4, "Bind the skin to the parts · each vertex follows one part")
     check()
-    body_id = _body_id(label, project)
-    x, y = _spawn(project)
+    body_id = new_body_id(label, project)
+    x, y = spawn_spot(project)
     objects = []
     for part in parts:
         spec = part.spec()
@@ -222,7 +222,7 @@ def build_rig(
     operations: list[EditOperation] = [RemoveBody(op="remove_body", body=body.id) for body in project.bodies]
     operations.append(AddBody(op="add_body", body=BodySpec(id=body_id, name=label, objects=[])))
     operations += [CreateObject(op="create_object", target=body_id, object=obj) for obj in objects]
-    operations += _task(project)
+    operations += walking_task(project)
     return RigBuild(operations, body_id, label, fit.humanoid, len(objects))
 
 

@@ -19,6 +19,7 @@ import type {
   RichText,
   RunProgress,
 } from "./copilot-port.ts";
+import { stageGoals } from "./curriculum-views.ts";
 import type { RunSummary } from "./training-port.ts";
 
 // Pure mappings from the engine's conversation documents onto the chat's view types.
@@ -235,14 +236,14 @@ export function conversationView(conversation: EngineConversation, links: Attach
   };
 }
 
-// The run card of an answer from the run as the engine reports it now; goals stay empty until runs have stages.
+// The run card of an answer from the run as the engine reports it now; its goals are the task's curriculum stages.
 export function runCardProgress(run: RunSummary): RunProgress {
   const running = run.status === "running";
   return {
     title: run.name,
     meta: running ? "training" : run.detail,
     done: run.status === "done" ? 1 : (run.progress ?? 0),
-    goals: [],
+    goals: stageGoals(run.stages ?? [], run.stage, running || run.status === "paused"),
   };
 }
 

@@ -154,7 +154,15 @@ def run_facts(state: ProjectState, runs: RunStore, status: RunStatus) -> dict[st
         ],
         "latest_evaluation": _episodes(evaluations[-1], period) if evaluations else None,
         "latest_training": _episodes(training[-1], period) if training else None,
+        # The curriculum stage the copies practice, counted from 1, when the task has stages.
+        **({"curriculum_stage": status.stage + 1} if status.stage is not None else {}),
     }
+
+
+def _curriculum(project: Project) -> dict[str, Any]:
+    """The task's curriculum stages, only when it has any."""
+    stages = project.task.curriculum
+    return {"curriculum": [stage.model_dump() for stage in stages]} if stages else {}
 
 
 def _compiled(project: Project) -> CompiledModel | None:
@@ -190,6 +198,7 @@ def project_context(state: ProjectState, runs: RunStore, selection: str | None, 
             "task": {
                 "family": project.task.family,
                 "rewards": [{"term": term.term, "weight": term.weight} for term in project.task.rewards],
+                **_curriculum(project),
             },
             "brain": project.brain.model_dump(exclude_defaults=True),
             "design_checks": [{"check": check.label, "status": check.status} for check in state.report.checks],
@@ -261,6 +270,7 @@ def lean_context(
         "task": {
             "family": project.task.family,
             "rewards": [{"term": term.term, "weight": term.weight} for term in project.task.rewards],
+            **_curriculum(project),
         },
         "brain": project.brain.model_dump(exclude_defaults=True),
         "design_checks": [{"check": check.label, "status": check.status} for check in state.report.checks],

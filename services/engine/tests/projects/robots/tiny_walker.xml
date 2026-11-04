@@ -1,0 +1,40 @@
+<mujoco model="tiny walker">
+  <compiler angle="degree" meshdir="meshes"/>
+  <asset>
+    <mesh name="foot" file="meshes/foot.stl"/>
+    <texture name="checker" type="2d" file="textures/checker.png"/>
+    <material name="shell" texture="checker" rgba="0.9 0.5 0.1 1"/>
+  </asset>
+  <worldbody>
+    <geom name="floor" type="plane" size="5 5 0.1"/>
+    <light pos="0 0 3"/>
+    <body name="torso" pos="0 0 0.6">
+      <freejoint/>
+      <geom type="box" size="0.15 0.1 0.05" mass="2" material="shell"/>
+      <geom name="torso_look" type="sphere" size="0.05" pos="0 0 0.08" contype="0" conaffinity="0"/>
+      <body name="left_leg" pos="0 0.12 -0.05">
+        <joint name="left_hip_roll" type="hinge" axis="1 0 0" range="-20 20"/>
+        <joint name="left_hip" type="hinge" axis="0 1 0" range="-60 60" damping="0.2"/>
+        <geom type="capsule" fromto="0 0 0 0 0 -0.4" size="0.03" mass="0.5"/>
+        <body name="left_foot" pos="0 0 -0.43">
+          <joint name="left_ankle" type="hinge" axis="0 1 0" range="-30 30"/>
+          <geom type="mesh" mesh="foot" mass="0.2"/>
+        </body>
+      </body>
+      <body name="right_leg" pos="0 -0.12 -0.05">
+        <joint name="right_hip" type="hinge" axis="0 1 0" range="-60 60"/>
+        <geom type="capsule" fromto="0 0 0 0 0 -0.4" size="0.03" mass="0.5"/>
+        <body name="right_foot" pos="0 0 -0.43">
+          <joint name="right_ankle" type="hinge" axis="0 1 0" range="-30 30"/>
+          <geom type="mesh" mesh="foot" mass="0.2"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <motor name="left_hip_motor" joint="left_hip" gear="20" ctrlrange="-1 1"/>
+    <position name="right_hip_servo" joint="right_hip" kp="30"/>
+    <motor joint="left_ankle" gear="5" ctrlrange="-1 1"/>
+    <motor joint="right_ankle" gear="5" ctrlrange="-1 1"/>
+  </actuator>
+</mujoco>

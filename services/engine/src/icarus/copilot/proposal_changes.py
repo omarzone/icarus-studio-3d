@@ -17,6 +17,7 @@ from icarus.contracts.operations import (
     ReparentObject,
     SetAgent,
     SetBrain,
+    SetCurriculum,
     SetEpisode,
     SetMotionReference,
     SetProperty,
@@ -25,7 +26,7 @@ from icarus.contracts.operations import (
 )
 from icarus.contracts.project import Project
 from icarus.contracts.properties import PropertyValue, RangeValue, SwitchValue, VectorValue
-from icarus.contracts.specs import BrainSpec, TaskSpec
+from icarus.contracts.specs import BrainSpec, CurriculumStage, TaskSpec
 from icarus.library.components import COMPONENTS
 from icarus.library.rewards import REWARD_TERMS
 from icarus.projects.agents import agent_project
@@ -101,6 +102,10 @@ def _episode_facts(task: TaskSpec) -> str:
     return ", ".join(ends)
 
 
+def _stage_names(stages: Sequence[CurriculumStage]) -> str:
+    return " then ".join(stage.name for stage in stages) if stages else "One stage"
+
+
 def _seen_by(project: Project, agent: str | None) -> Project:
     """The project as the agent an operation is for trains it; the project itself without one."""
     if agent is None or not any(item.id == agent for item in project.agents):
@@ -170,6 +175,9 @@ def _change(project: Project, op: EditOperation) -> ProposalChange:
             before = _episode_facts(_seen_by(project, agent).task)
             after = _episode_facts(_seen_by(apply_operations(project, [op]), agent).task)
             return ProposalChange(label="Each try", before=before, after=after)
+        case SetCurriculum(stages=stages, agent=agent):
+            before = _stage_names(_seen_by(project, agent).task.curriculum)
+            return ProposalChange(label="Curriculum", before=before, after=_stage_names(stages))
         case AddAgent(agent=agent):
             return ProposalChange(label=f"Agent {agent.name}", after="Added")
         case RemoveAgent(agent=agent_id):

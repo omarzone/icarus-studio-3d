@@ -5,6 +5,7 @@ from icarus.contracts.copilot import AttachmentInfo, SendMessage
 from icarus.copilot.attachments import Attachment, AttachmentStore
 from icarus.copilot.client import UserContent
 from icarus.projects.mesh_files import as_glb
+from icarus.projects.robot_files import DESCRIPTIONS
 from icarus.projects.skin_files import SkinRejected, read_skin
 from icarus.projects.skins import skin_id
 
@@ -48,6 +49,11 @@ class TurnMedia:
         )
         self.documents.append(shown)
         self.lines.append(f"Document {name}{cut}:\n```\n{shown}\n```")
+        if name.lower().endswith(DESCRIPTIONS):
+            self.lines.append(
+                f"If {name} describes a robot, call import_robot with attachment {attachment.info.id} and the ids of "
+                "the meshes it names to make it the project's body."
+            )
 
     def _model(self, attachment: Attachment) -> None:
         name = attachment.info.name

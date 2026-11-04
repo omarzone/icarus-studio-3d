@@ -12,7 +12,7 @@ import { dialogButtonClass } from "../../ui/dialog-button.ts";
 import { ProjectDialogGate } from "../../ui/project-dialog-gate.tsx";
 import { useProjectKey } from "../../ui/project-name.ts";
 import { QueryView } from "../../ui/query-view.tsx";
-import { saveTextFile } from "../../ui/save-file.ts";
+import { saveEngineFile } from "../../ui/save-file.ts";
 import { Segmented } from "../../ui/segmented.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -48,7 +48,7 @@ function Export({ clip }: { clip: string }) {
           </CloseOverlay>
           <ActionButton
             cta="Download"
-            run={async () => saveTextFile(await port.downloadAnimation(clip))}
+            run={async () => saveEngineFile(await port.downloadAnimation(clip))}
             disabled={!query.data}
             title={query.data ? undefined : "Available once the export settings load"}
             className={dialogButtonClass("primary")}

@@ -9,7 +9,7 @@ from icarus_community.schemas.people import NotificationItem, NotificationKind
 
 MAX_LISTED = 50
 # Activity on someone's creations that their "remixes or comments" setting can turn off.
-ACTIVITY_KINDS = {"vote", "remix", "follow"}
+ACTIVITY_KINDS = {"vote", "remix", "follow", "comment"}
 
 
 def notify(

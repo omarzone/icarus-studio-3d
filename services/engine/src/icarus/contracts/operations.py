@@ -6,10 +6,12 @@ from icarus.contracts.motion import MotionReference
 from icarus.contracts.objects import ComponentSpec, ObjectSpec
 from icarus.contracts.properties import PropertyValue
 from icarus.contracts.specs import (
+    MAX_CURRICULUM_STAGES,
     AgentSpec,
     BodySpec,
     BrainAlgorithm,
     BrainStart,
+    CurriculumStage,
     DecisionsPerSecond,
     EpisodeSeconds,
     LayerSize,
@@ -161,6 +163,15 @@ class SetEpisode(_Operation):
     agent: str | None = None
 
 
+class SetCurriculum(_Operation):
+    """Replaces the task's curriculum stages; an empty list goes back to one stage, the task as it is."""
+
+    op: Literal["set_curriculum"]
+    stages: list[CurriculumStage] = Field(max_length=MAX_CURRICULUM_STAGES)
+    # The agent whose task this changes, in a project with several; None changes the project's own task.
+    agent: str | None = None
+
+
 class AddAgent(_Operation):
     """Adds a learner; with `body` the body is added too. The first agent added to a one-agent project also makes
     its first body an agent, so the agent it had keeps its task and brain."""
@@ -205,6 +216,7 @@ EditOperation = Annotated[
     | SetMotionReference
     | SetBrain
     | SetEpisode
+    | SetCurriculum
     | AddAgent
     | RemoveAgent
     | SetAgent,

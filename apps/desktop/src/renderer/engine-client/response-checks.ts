@@ -1,6 +1,7 @@
 import type {
   ApiError,
   LibraryCatalog,
+  PlayBrainActivity,
   PlayEvent,
   PlayFrame,
   PlayMessage,
@@ -11,6 +12,7 @@ import type {
   ProjectState,
   ProjectSummary,
   Revision,
+  RobotImported,
   SceneDescription,
   SkinImported,
   ValidationErrorBody,
@@ -149,6 +151,17 @@ export function isSkinImported(value: unknown): value is SkinImported {
     has(value, "revision", "number") &&
     has(value.skin, "id", "string") &&
     has(value.skin, "name", "string")
+  );
+}
+
+export function isRobotImported(value: unknown): value is RobotImported {
+  return (
+    isRecord(value) &&
+    has(value, "body", "string") &&
+    has(value, "name", "string") &&
+    has(value, "revision", "number") &&
+    has(value, "motors", "number") &&
+    Array.isArray(value.notes)
   );
 }
 
@@ -318,6 +331,21 @@ export function isPlayEvent(value: unknown): value is PlayEvent {
   return has(value, "time", "number") && has(value, "kind", "string") && has(value, "text", "string");
 }
 
+const isNumberList = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "number");
+
+function isPlayBrainActivity(value: unknown): value is PlayBrainActivity {
+  return (
+    isRecord(value) &&
+    has(value, "time", "number") &&
+    has(value, "step", "number") &&
+    isNumberList(value.observation) &&
+    Array.isArray(value.layers) &&
+    value.layers.every(isNumberList) &&
+    isNumberList(value.outputs)
+  );
+}
+
 function isPlayMessage(value: unknown): value is PlayMessage {
   if (!isRecord(value)) {
     return false;
@@ -327,6 +355,8 @@ function isPlayMessage(value: unknown): value is PlayMessage {
       return isPlaySessionInfo(value.session);
     case "frame":
       return isPlayFrame(value.frame);
+    case "activity":
+      return isPlayBrainActivity(value.activity);
     case "event":
       return isPlayEvent(value.event);
     case "error":

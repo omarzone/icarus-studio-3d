@@ -130,6 +130,7 @@ export function createBodyFixture(): BodyPort {
     },
     importStatic: async () => undefined,
     importAndRig: async () => undefined,
+    importRobot: async () => undefined,
     getAutoRig: async () => AUTO_RIG,
     cancelAutoRig: async () => undefined,
   };

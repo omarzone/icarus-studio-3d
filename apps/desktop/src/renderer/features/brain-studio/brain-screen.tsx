@@ -5,11 +5,13 @@ import { useRuntimeMode } from "../../app/runtime/port.tsx";
 import { copilotPanel, type DockPanels, HOME } from "../../app/shell/dock/dock-layout.ts";
 import { DockWorkspaceShell } from "../../app/shell/dock/dock-workspace-shell.tsx";
 import { BrainActivityPanel } from "../../editor/brain-activity/brain-activity-panel.tsx";
+import { useLiveBrainStream } from "../../editor/brain-activity/use-live-brain.ts";
 import { ExplorerPanel } from "../../editor/explorer/explorer-panel.tsx";
 import { InspectorPanel } from "../../editor/inspector/inspector-panel.tsx";
 import { useGuide } from "../../editor/scene-queries.ts";
 import { Toolbar } from "../../editor/viewport/toolbar/toolbar.tsx";
 import { ViewportPanel } from "../../editor/viewport/viewport-panel.tsx";
+import { LIVE } from "../../ports/brain-network-views.ts";
 import { guideLabel } from "../../ui/guide-label.ts";
 import { useOpenProjectName, useProjectKey } from "../../ui/project-name.ts";
 import { LoadingState, NoProjectState } from "../../ui/states.tsx";
@@ -148,6 +150,8 @@ function BrainView({ variant, config }: Props) {
   const app = useRuntimeMode() === "app";
   const network = useNetworkCheckpoints(variant === "network" ? config.brain : null);
   const [checkpoint, setCheckpoint] = useState<string | null>(null);
+  // Playing the brain in the background costs CPU, so it runs only once Live is picked in the network.
+  useLiveBrainStream(config.brain, variant === "network" && checkpoint === LIVE);
   switch (variant) {
     case "learned":
       return (

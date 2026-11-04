@@ -98,7 +98,8 @@ export type BrainSource = {
 };
 
 export type BrainRegion = { id: string; name: string; detail: string; neurons: number; active: number };
-export type BrainActivity = { live: boolean; regions: readonly BrainRegion[] };
+// `note` says what the activity shows: live while Play runs, or the moment of the evaluation it was read at.
+export type BrainActivity = { live: boolean; note?: string; regions: readonly BrainRegion[] };
 export type Behavior = { id: string; name: string; when: string; detail: string };
 export type Wiring = {
   maps: readonly { id: string; name: string; matched: string; detail: string }[];
@@ -131,6 +132,8 @@ export type BrainPort = {
   getActivity: (brain: string) => Promise<BrainActivity>;
   getBehaviors: (brain: string) => Promise<Behavior[]>;
   getWiring: (brain: string) => Promise<Wiring>;
+  // Calls back whenever the brain playing the project changes what it computes or stops; the function stops it.
+  watchLive: (brain: string, onChange: () => void) => () => void;
 };
 
 export const brainPort = definePort<BrainPort>({

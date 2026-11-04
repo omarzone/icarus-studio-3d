@@ -4,8 +4,11 @@ import type { MotionApi } from "../engine-client/motion-api.ts";
 import type { MotionPort } from "./motion-port.ts";
 import {
   animationExport,
+  animationFile,
   clipTimeline,
   type ExportChoices,
+  exportFormat,
+  FORMATS,
   motionCompare,
   partMatches,
   SPEEDS,
@@ -137,7 +140,7 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
     },
     getExport: exported,
     setExportFormat: async ({ clip, format }) => {
-      exports.set(clip, { ...choices(clip), format: format === "BVH" ? "BVH" : "JSON" });
+      exports.set(clip, { ...choices(clip), format: FORMATS.find((item) => item === format) ?? "JSON" });
       return exported(clip);
     },
     toggleExportOption: async ({ clip, id }) => {
@@ -150,12 +153,12 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
       const settings = await exported(clip);
       const option = (id: string) => settings.options.find((item) => item.id === id)?.on ?? false;
       const file = await motion.export(clip, {
-        format: settings.format === "BVH" ? "bvh" : "json",
+        format: exportFormat(settings.format),
         source: option("physics") ? "physics" : "reference",
         root_motion: option("root"),
         loop: option("loop"),
       });
-      return { name: file.name, mediaType: file.media_type, content: file.content };
+      return animationFile(file);
     },
   };
 }

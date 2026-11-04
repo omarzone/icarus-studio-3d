@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from icarus.contracts.scene import Quaternion, SceneRay, SceneSignals, Vector3
+from icarus.contracts.specs import MAX_CURRICULUM_STAGES
 
 MAX_STEPS = 50_000_000
 MAX_COPIES = 64
@@ -93,6 +94,10 @@ class RunStatus(_Model):
     group: str | None = None
     # The worker holds training where it was until the run is resumed.
     paused: bool = False
+    # The names of the task's curriculum stages, and the one the copies practice now (0 is the first); a task without
+    # stages has none.
+    stages: list[str] = Field(default_factory=list, max_length=MAX_CURRICULUM_STAGES)
+    stage: int | None = Field(default=None, ge=0)
 
 
 class RunGroup(_Model):
@@ -120,6 +125,8 @@ class MetricPoint(_Model):
     # Mean return of each reward term over the episodes, by term id.
     reward_terms: dict[str, float]
     steps_per_second: float | None = None
+    # The curriculum stage the episodes ran on (0 is the first), for a task with stages.
+    stage: int | None = Field(default=None, ge=0)
 
 
 class CheckpointInfo(_Model):

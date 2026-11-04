@@ -1,6 +1,7 @@
 import type { PlayCommand, PlayFrame, PlaySessionInfo, SceneSignals } from "@icarus/contracts";
 import { type PlayBrainsApi, playBrainsApi } from "../engine-client/play-brains-api.ts";
 import { type OpenPlay, openPlay, type PlayConnection } from "../engine-client/play-socket.ts";
+import { type LiveBrains, liveBrains } from "./live-brain.ts";
 import {
   actsAtOnce,
   type PlayEvent,
@@ -124,6 +125,7 @@ export function createEnginePlayPort(
   open: OpenPlay = openPlay,
   api: PlayBrainsApi = playBrainsApi,
   pacing: PlayPacing = browserPacing(),
+  brains: LiveBrains = liveBrains,
 ): PlayPort {
   const channels = new Map<string, Channel>();
   const channelOf = (project: string): Channel => {
@@ -225,6 +227,7 @@ export function createEnginePlayPort(
       }
       const channel = fresh(previous?.waiters);
       channels.set(project, channel);
+      brains.clear(project);
       const token = {};
       channel.token = token;
       channel.listener = listener;
@@ -247,6 +250,19 @@ export function createEnginePlayPort(
               channel.liveStale = true;
               channel.panelsStale = true;
               schedule(channel);
+            }
+          },
+          onActivity: (activity) => {
+            const { info, frame } = channel;
+            if (current() && info?.run_id && typeof info.step === "number" && frame) {
+              brains.publish(project, {
+                runId: info.run_id,
+                step: info.step,
+                brain: info.brain,
+                activity,
+                senses: frame.senses,
+                actions: frame.actions,
+              });
             }
           },
           onEvent: (event) => {
@@ -274,6 +290,7 @@ export function createEnginePlayPort(
               return;
             }
             channel.connection = null;
+            brains.clear(project);
             if (!sessionOf(channel)) {
               channel.failure = new Error(reason);
               for (const waiter of channel.waiters.splice(0)) {
@@ -290,6 +307,7 @@ export function createEnginePlayPort(
           channel.token = null;
           channel.connection?.close();
           channels.set(project, fresh());
+          brains.clear(project);
         }
       };
     },

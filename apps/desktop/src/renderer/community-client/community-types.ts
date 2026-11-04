@@ -45,6 +45,18 @@ export type CreationDetail = CreationSummary & {
 
 export type CreationPage = { items: CreationSummary[]; total: number };
 
+export type Comment = {
+  id: string;
+  author: Person;
+  text: string;
+  created_at: string;
+  // Whether the signed-in person may delete it: its author or a moderator.
+  can_delete: boolean;
+};
+
+// `open` is false when the creation's author turned comments off; earlier comments stay readable.
+export type CommentPage = { items: Comment[]; total: number; open: boolean };
+
 export type Page = {
   project_id: string;
   title: string;
@@ -99,7 +111,7 @@ export type NotificationSettings = {
 
 export type NotificationItem = {
   id: string;
-  kind: "vote" | "remix" | "follow" | "invite" | "moderation";
+  kind: "vote" | "remix" | "follow" | "invite" | "moderation" | "comment";
   text: string;
   actor: Person | null;
   creation_id: string | null;

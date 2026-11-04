@@ -14,9 +14,11 @@ from icarus.copilot.agent.tools.rigging import (
     AutoRigArgs,
     FixBodyArgs,
     ImitateArgs,
+    ImportRobotArgs,
     _auto_rig,
     _fix_body,
     _imitate,
+    _import_robot,
 )
 from icarus.copilot.attachments import AttachmentStore
 from icarus.motion.clip_store import ClipStore
@@ -24,6 +26,7 @@ from icarus.projects.skins import SkinStore
 from icarus.projects.store import ProjectStore
 from icarus.training.run_store import RunStore
 from tests.model_files import humanoid_obj
+from tests.robot_files import leg_files
 
 
 def _scope(tmp_path, template: str) -> TurnScope:
@@ -52,7 +55,7 @@ def _applied(scope: TurnScope, observation) -> None:
 
 
 def test_the_tools_are_registered():
-    assert {"auto_rig", "fix_body", "imitate_clip"} <= set(REGISTRY)
+    assert {"auto_rig", "import_robot", "fix_body", "imitate_clip"} <= set(REGISTRY)
 
 
 def test_the_copilot_rigs_an_attached_obj_into_the_body(tmp_path):
@@ -66,6 +69,22 @@ def test_the_copilot_rigs_an_attached_obj_into_the_body(tmp_path):
     _applied(scope, observation)
     body = scope.services.projects.state(scope.project_id).project.bodies[0]
     assert len(body.objects) == 13
+
+
+def test_the_copilot_imports_an_attached_urdf_with_its_mesh_as_the_body(tmp_path):
+    scope = _scope(tmp_path, "empty_world")
+    description, mesh = leg_files()
+    uploads = [
+        AttachmentUpload(name=description.name, media_type="text/xml", kind="document", data=description.data),
+        AttachmentUpload(name=mesh.name, media_type="model/stl", kind="model", data=mesh.data),
+    ]
+    ids = [scope.services.attachments.add(scope.project_id, upload).id for upload in uploads]
+    assert not _import_robot(scope, ImportRobotArgs(attachments=ids[:1])).ok
+    observation = _import_robot(scope, ImportRobotArgs(attachments=ids))
+    assert "3 parts, 2 joints, 2 motors" in observation.text
+    _applied(scope, observation)
+    body = scope.services.projects.state(scope.project_id).project.bodies[0]
+    assert {obj.id for obj in body.objects} == {"base-link", "thigh", "shin"}
 
 
 def test_an_unknown_attachment_is_refused(tmp_path):
@@ -115,6 +134,6 @@ def test_the_copilot_makes_the_body_imitate_the_tracked_clip(tmp_path):
     assert task.family == "imitation" and task.motion is not None
 
 
-@pytest.mark.parametrize("name", ["auto_rig", "fix_body", "imitate_clip"])
+@pytest.mark.parametrize("name", ["auto_rig", "import_robot", "fix_body", "imitate_clip"])
 def test_each_tool_only_tries_and_never_writes(name):
     assert REGISTRY[name].effect == "read" and REGISTRY[name].step == "try"

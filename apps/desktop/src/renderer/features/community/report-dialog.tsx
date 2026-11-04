@@ -1,12 +1,14 @@
 // MOD-REPORT
 import { useState } from "react";
 import { Act, CloseOverlay } from "../../app/navigation/go-to.tsx";
+import { useNavigation } from "../../app/navigation/navigation-store.tsx";
 import { useEngineAction } from "../../app/runtime/engine-query.tsx";
 import { usePort } from "../../app/runtime/port.tsx";
 import { communityPort, type ReportReason } from "../../ports/community-port.ts";
 import { buttonClass } from "../../ui/button-styles.ts";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Switch } from "../../ui/switch.tsx";
+import { useCommentsRefresh } from "./creation-comments.tsx";
 import { useCreation } from "./creation-screen.tsx";
 
 const REASONS: readonly { reason: ReportReason; label: string }[] = [
@@ -21,12 +23,22 @@ export function ReportDialog() {
   const creation = useCreation().data;
   const community = usePort(communityPort);
   const report = useEngineAction(community.report);
+  // Opened from a comment's flag, the report is about that comment and its author.
+  const commentId = useNavigation((state) => state.params.comment);
+  const commentBy = useNavigation((state) => state.params.commentBy);
+  const refreshComments = useCommentsRefresh();
+  const about = commentId !== undefined && commentBy !== undefined ? { commentId, author: commentBy } : null;
+  const title = about
+    ? `Report the comment by @${about.author}`
+    : creation
+      ? `Report ${creation.name}`
+      : "Report a creation";
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState("");
   const [blockAuthor, setBlockAuthor] = useState(false);
   return (
     <Dialog
-      title={creation ? `Report ${creation.name}` : "Report a creation"}
+      title={title}
       width="w-125"
       footer={
         <>
@@ -39,7 +51,14 @@ export function ReportDialog() {
             title={reason === null ? "Choose a reason first" : undefined}
             onClick={() => {
               if (reason !== null && creation) {
-                report.mutate({ id: creation.id, reason, details, blockAuthor });
+                if (about) {
+                  report.mutate(
+                    { id: creation.id, commentId: about.commentId, reason, details, blockAuthor },
+                    { onSuccess: refreshComments },
+                  );
+                } else {
+                  report.mutate({ id: creation.id, reason, details, blockAuthor });
+                }
               }
             }}
             className={buttonClass("primary", "h-8.5 text-body")}
@@ -82,7 +101,12 @@ export function ReportDialog() {
           className="h-17.5 resize-none rounded-button bg-control px-3 py-6.5 leading-tight text-fg outline-none placeholder:text-fg-tertiary hover:bg-control-raised focus:bg-control-raised"
         />
       </label>
-      {creation ? (
+      {about ? (
+        <div className="flex items-center gap-2.5">
+          <Switch label={`Also block @${about.author}`} checked={blockAuthor} onChange={setBlockAuthor} />
+          <span>Also block @{about.author} · you will not see their comments or creations</span>
+        </div>
+      ) : creation ? (
         <div className="flex items-center gap-2.5">
           <Switch label={`Also block @${creation.author.handle}`} checked={blockAuthor} onChange={setBlockAuthor} />
           <span>Also block @{creation.author.handle} · you will not see their creations</span>

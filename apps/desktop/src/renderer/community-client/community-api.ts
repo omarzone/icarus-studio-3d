@@ -2,6 +2,8 @@ import {
   isAccountDeleted,
   isAnyJson,
   isCategory,
+  isComment,
+  isCommentPage,
   isCreationDetail,
   isCreationPage,
   isList,
@@ -52,6 +54,14 @@ export const communityApi = {
     communityRequest(on ? "PUT" : "DELETE", `/v1/creations/${segment(id)}/vote`, isCreationDetail),
   report: (id: string, body: { reason: string; details: string; block_author: boolean }) =>
     communityRequest("POST", `/v1/creations/${segment(id)}/reports`, isNothing, body),
+  comments: (id: string, input: { limit?: number; offset?: number } = {}) =>
+    communityRequest("GET", `/v1/creations/${segment(id)}/comments${query(input)}`, isCommentPage),
+  postComment: (id: string, text: string) =>
+    communityRequest("POST", `/v1/creations/${segment(id)}/comments`, isComment, { text }),
+  deleteComment: (id: string, commentId: string) =>
+    communityRequest("DELETE", `/v1/creations/${segment(id)}/comments/${segment(commentId)}`, isNothing),
+  reportComment: (id: string, commentId: string, body: { reason: string; details: string; block_author: boolean }) =>
+    communityRequest("POST", `/v1/creations/${segment(id)}/comments/${segment(commentId)}/reports`, isNothing, body),
   publish: (body: PublishRequest) => communityRequest("POST", "/v1/creations", isCreationDetail, body),
   picture: (path: string) => communityPicture(path),
 

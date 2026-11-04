@@ -79,6 +79,7 @@ from icarus.contracts.rig import (
     RigFixResult,
     SkinWeights,
 )
+from icarus.contracts.robots import RobotFile, RobotImport, RobotImported
 from icarus.contracts.scene import SceneDescription
 from icarus.contracts.skins import SkinImport, SkinImported, SkinInfo
 from icarus.contracts.storage import ChangeDataFolder, DataFolderCheck, DataFolderChoice, DataFolderMove, StorageInfo
@@ -164,6 +165,9 @@ MODELS: tuple[type[BaseModel], ...] = (
     SkinInfo,
     SkinImport,
     SkinImported,
+    RobotFile,
+    RobotImport,
+    RobotImported,
     BuildTarget,
     ExportChoice,
     ExportPlan,

@@ -63,7 +63,7 @@ describe("networkView", () => {
 
   it("summarizes the real shape and parameter count", () => {
     // (2+1)*3 + (3+1)*40 + (40+1)*1
-    expect(view.summary).toBe("2 layers · 3, 40 neurons · 210 parameters · step 25k");
+    expect(view.summary).toBe("2 layers · 3, 40 neurons · 210 parameters · step 25k · first moment of a test try");
     expect(view.name).toBe("Run 1");
     expect(view.checkpoint).toBe("25k");
   });

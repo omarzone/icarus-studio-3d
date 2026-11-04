@@ -7,6 +7,7 @@ from gymnasium import spaces
 
 from icarus.contracts.project import Project
 from icarus.contracts.training import CopyPoses
+from icarus.projects.curriculum import stage_project
 from icarus.sim.displays import goal_distance
 from icarus.sim.model_state import (
     LiveWorld,
@@ -43,9 +44,23 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     metadata = {"render_modes": []}
 
-    def __init__(self, project: Project, randomize: bool = False) -> None:
-        self.world = trainable_world(project)
+    def __init__(self, project: Project, randomize: bool = False, stage: int = 0) -> None:
+        self.project = project
         self.randomize = randomize
+        # The curriculum stage the tries practice; set_stage changes it from the next try on.
+        self.stage = stage
+        self._next_stage = stage
+        self._load(stage_project(project, stage))
+        size = observation(self.world).shape[0]
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(size,), dtype=np.float32)
+        self.action_space = spaces.Box(-1.0, 1.0, shape=(len(self.world.actuators),), dtype=np.float32)
+        # Training turns this on so each step's info carries the pose for the live view; evaluations leave it off.
+        self.live_recording = False
+        self._episode = 0
+        self._start_episode()
+
+    def _load(self, project: Project) -> None:
+        self.world = trainable_world(project)
         self.variation = WorldVariation(self.world)
         self._substeps = control_substeps(self.world)
         self._terms = [term.term for term in project.task.rewards]
@@ -53,16 +68,21 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
         self._seconds = project.task.episode_seconds
         self._end_on_fall = project.task.end_on_fall
         self._end_on_success = project.task.end_on_success
-        size = observation(self.world).shape[0]
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=(size,), dtype=np.float32)
-        self.action_space = spaces.Box(-1.0, 1.0, shape=(len(self.world.actuators),), dtype=np.float32)
         self._state = reward_state(self.world)
         self._geoms = sorted(set(moving_geoms(self.world)) | self.variation.moved_geoms)
         self.moving_geoms = [self.world.model.geom(index).name for index in self._geoms]
-        # Training turns this on so each step's info carries the pose for the live view; evaluations leave it off.
-        self.live_recording = False
-        self._episode = 0
-        self._start_episode()
+
+    def set_stage(self, stage: int) -> None:
+        """Practice another curriculum stage from the next try on; the try underway ends in the world it began in."""
+        self._next_stage = stage
+
+    def _enter_stage(self) -> None:
+        tally = self.world.tally
+        self._load(stage_project(self.project, self._next_stage))
+        if observation(self.world).shape != self.observation_space.shape:
+            raise ValueError("A curriculum stage changed what the brain senses")
+        self.world.tally = tally
+        self.stage = self._next_stage
 
     def _start_episode(self) -> None:
         self._episode_terms = dict.fromkeys(self._terms, 0.0)
@@ -83,6 +103,8 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)
+        if self._next_stage != self.stage:
+            self._enter_stage()
         if seed is not None:
             # A seeded reset restarts a cycling start at the seed's spawn point, so fixed seeds give fixed starts.
             self.world.spawn_next = seed
@@ -138,6 +160,7 @@ class ProjectEnv(gymnasium.Env[np.ndarray, np.ndarray]):
             info["failed"] = not self._reached and (self._fell or self._collided)
             info["fell"] = self._fell
             info["episode_terms"] = dict(self._episode_terms)
+            info["stage"] = self.stage
         if self.live_recording:
             rows = pose_rows(self.world, self._geoms)
             time = round(float(self.world.data.time), 3)

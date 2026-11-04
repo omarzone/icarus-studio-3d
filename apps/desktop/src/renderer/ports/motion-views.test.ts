@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { anglePose } from "./motion-poses.ts";
 import {
   animationExport,
+  animationFile,
   clipTimeline,
   motionCompare,
   partMatches,
@@ -166,5 +167,15 @@ describe("the motion workspace from the engine", () => {
     expect(settings.summary[0]).toBe("walk-reference.bvh · 4 frames");
     const trained = animationExport(workspace({ comparison: COMPARISON }), { format: "JSON", options: {} });
     expect(trained.summary[0]).toBe("walk-physics.json · 4 frames");
+    const gltf = animationExport(workspace({ comparison: COMPARISON }), { format: "glTF", options: {} });
+    expect(gltf.formats).toContain("glTF");
+    expect(gltf.summary[0]).toBe("walk-physics.glb · 4 frames");
+  });
+
+  it("saves a binary export as its bytes and a text export as its text", () => {
+    const file = { name: "walk-physics.glb", media_type: "model/gltf-binary", frames: 4 };
+    const binary = animationFile({ ...file, content: btoa("glTF\u0002"), encoding: "base64" });
+    expect(binary.content).toEqual(new Uint8Array([103, 108, 84, 70, 2]));
+    expect(animationFile({ ...file, name: "walk.bvh", content: "HIERARCHY" }).content).toBe("HIERARCHY");
   });
 });

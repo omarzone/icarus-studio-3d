@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -6,6 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from icarus.contracts.training import LiveViewMode
 from icarus.sim.displays import stamp_training_steps, training_step_displays
 from icarus.training.copy_envs import CopyProcesses
+from icarus.training.curriculum import StagePromotion
 from icarus.training.live_motion import LiveMotion, frame_rate
 from icarus.training.progress import EpisodeTally, RunProgress
 
@@ -32,6 +34,7 @@ class TrainingCallback(BaseCallback):
         self._total = progress.config.total_steps
         self._marks = [step for step in progress.config.checkpoint_steps if step > 0]
         self._tally = EpisodeTally()
+        self._promotion = StagePromotion(progress.project.task)
         self._step_displays = training_step_displays(progress.project)
         self._last_snapshot = 0.0
         self._last_stop_check = 0.0
@@ -54,6 +57,7 @@ class TrainingCallback(BaseCallback):
         for info, done in zip(infos, dones, strict=True):
             if done and "episode" in info:
                 self._tally.add(info)
+                self._promote(info)
         now = time.monotonic()
         if now - self._last_stop_check >= STOP_CHECK_PERIOD:
             self._last_stop_check = now
@@ -75,6 +79,17 @@ class TrainingCallback(BaseCallback):
             self._last_snapshot = now
             self._snapshot(now)
         return True
+
+    def _promote(self, info: dict[str, Any]) -> None:
+        """Count a finished try toward its curriculum stage; tries begun on an earlier stage do not count."""
+        promotion = self._promotion
+        if not promotion.active or info.get("stage", 0) != promotion.stage:
+            return
+        episodes = promotion.stages[promotion.stage].promote.episodes
+        rate = promotion.add(bool(info.get("is_success", False)))
+        if rate is not None:
+            self.training_env.env_method("set_stage", promotion.stage)
+            self.progress.enter_stage(promotion.stage, rate, episodes, self.num_timesteps)
 
     def _hold(self) -> None:
         """While a pause is requested, wait between two steps with the brain, the copies and the rollout in memory,

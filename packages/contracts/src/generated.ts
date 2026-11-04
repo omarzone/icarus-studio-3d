@@ -83,12 +83,78 @@ export interface BrainStart {
  * via the `definition` "TaskSpec".
  */
 export interface TaskSpec {
+  /**
+   * @maxItems 8
+   */
+  curriculum?:
+    | []
+    | [CurriculumStage]
+    | [CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ];
   end_on_fall?: boolean;
   end_on_success?: boolean;
   episode_seconds?: number;
   family: "none" | "navigation" | "locomotion" | "imitation";
   motion?: MotionReference | null;
   rewards: RewardTermSpec[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CurriculumStage".
+ */
+export interface CurriculumStage {
+  name: string;
+  promote?: StagePromotion;
+  /**
+   * @maxItems 5
+   */
+  settings?:
+    | []
+    | [StageSetting]
+    | [StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting, StageSetting, StageSetting];
+}
+/**
+ * A stage is passed once this share of the last `episodes` training tries succeeded.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StagePromotion".
+ */
+export interface StagePromotion {
+  episodes?: number;
+  success_rate?: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StageSetting".
+ */
+export interface StageSetting {
+  parameter: "episode_seconds" | "goal_distance" | "heading_range" | "align_within" | "stop_speed";
+  value: number;
 }
 /**
  * The motion an imitation task tracks, frozen in the project so every run keeps the reference it learned.
@@ -1436,6 +1502,7 @@ export interface CopilotProposal {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1457,6 +1524,7 @@ export interface CopilotProposal {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1647,6 +1715,46 @@ export interface SetEpisode {
   end_on_success?: boolean | null;
   op: "set_episode";
   seconds?: number | null;
+}
+/**
+ * Replaces the task's curriculum stages; an empty list goes back to one stage, the task as it is.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SetCurriculum".
+ */
+export interface SetCurriculum {
+  agent?: string | null;
+  op: "set_curriculum";
+  /**
+   * @maxItems 8
+   */
+  stages:
+    | []
+    | [CurriculumStage]
+    | [CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ];
 }
 /**
  * Removes an agent with its body and the world objects only it used; one agent left is the project's again.
@@ -2681,6 +2789,20 @@ export interface RunStatus {
   project_id: string;
   revision_number: number;
   run_id: string;
+  stage?: number | null;
+  /**
+   * @maxItems 8
+   */
+  stages?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string];
   started_at: string;
   state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
   step: number;
@@ -2720,6 +2842,7 @@ export interface MetricPoint {
   reward_terms: {
     [k: string]: number;
   };
+  stage?: number | null;
   step: number;
   steps_per_second?: number | null;
   success_rate?: number | null;
@@ -3259,6 +3382,7 @@ export interface PartMatch {
  */
 export interface MotionExportFile {
   content: string;
+  encoding?: "utf-8" | "base64";
   frames: number;
   media_type: string;
   name: string;
@@ -3268,7 +3392,7 @@ export interface MotionExportFile {
  * via the `definition` "MotionExportRequest".
  */
 export interface MotionExportRequest {
-  format?: "json" | "bvh";
+  format?: "json" | "bvh" | "gltf";
   loop?: boolean;
   root_motion?: boolean;
   source?: "physics" | "reference";
@@ -3375,6 +3499,7 @@ export interface OperationBatch {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -3396,6 +3521,7 @@ export interface OperationBatch {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -3420,6 +3546,29 @@ export interface PersonPose {
    * @maxItems 32
    */
   keypoints: Keypoint[];
+}
+/**
+ * The brain's activity, sent a few times a second while a trained brain plays.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayActivityMessage".
+ */
+export interface PlayActivityMessage {
+  activity: PlayBrainActivity;
+  type: "activity";
+}
+/**
+ * What the playing brain computed for the observation it last acted on: its policy's real forward pass.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "PlayBrainActivity".
+ */
+export interface PlayBrainActivity {
+  layers: number[][];
+  observation: number[];
+  outputs: number[];
+  step: number;
+  time: number;
 }
 /**
  * The brain one agent of a project with several plays with.
@@ -3620,7 +3769,8 @@ export interface PlayFrameMessage {
  * via the `definition` "PlayMessageEnvelope".
  */
 export interface PlayMessageEnvelope {
-  message: PlayReady | PlayFrameMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage;
+  message:
+    PlayReady | PlayFrameMessage | PlayActivityMessage | PlayEventMessage | PlayErrorMessage | PlayProgressMessage;
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
@@ -3635,6 +3785,7 @@ export interface PlayReady {
  * via the `definition` "PlaySessionInfo".
  */
 export interface PlaySessionInfo {
+  activity?: boolean;
   agents?: PlayAgentBrain[];
   brain: string;
   pieces?: PlayPiece[];
@@ -3836,6 +3987,7 @@ export interface Revision {
     | SetMotionReference
     | SetBrain
     | SetEpisode
+    | SetCurriculum
     | AddAgent
     | RemoveAgent
     | SetAgent
@@ -3886,6 +4038,44 @@ export interface RigFixResult {
   applied: string[];
   check: RigCheck;
   revision: number | null;
+}
+/**
+ * One picked file of a robot: its URDF or MJCF description, a file it includes or a mesh it uses.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotFile".
+ */
+export interface RobotFile {
+  data: string;
+  name: string;
+}
+/**
+ * A URDF or MJCF robot the person picked with its meshes, to become the project's body.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotImport".
+ */
+export interface RobotImport {
+  /**
+   * @minItems 1
+   * @maxItems 200
+   */
+  files: [RobotFile, ...RobotFile[]];
+  main?: string | null;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "RobotImported".
+ */
+export interface RobotImported {
+  body: string;
+  format: "urdf" | "mjcf";
+  joints: number;
+  motors: number;
+  name: string;
+  notes: string[];
+  parts: number;
+  revision: number;
 }
 /**
  * The first deterministic evaluation episode of a checkpoint, replayed exactly as MuJoCo computed it.

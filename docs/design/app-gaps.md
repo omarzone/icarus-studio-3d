@@ -1,6 +1,6 @@
 # App gaps against the design
 
-What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed. On 2026-11-04 the rows Sprint 15 closed were updated.
+What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed. On 2026-11-04 the rows Sprint 15 closed were updated, and then the brain views that now follow Play live.
 
 ## How to read the tables
 
@@ -29,29 +29,29 @@ There are 594 features across seven groups.
 
 | App today | Count | | In spec? | Count |
 |---|---|---|---|---|
-| works | 369 | | built | 377 |
-| partial | 139 | | planned | 146 |
-| pending | 15 | | not in spec | 71 |
-| fixture-only | 18 | | | |
+| works | 374 | | built | 383 |
+| partial | 138 | | planned | 141 |
+| pending | 14 | | not in spec | 70 |
+| fixture-only | 15 | | | |
 | missing | 53 | | | |
 | broken | 0 | | | |
 
 | Group | Features | works | partial | pending | fixture-only | missing | broken |
 |---|---|---|---|---|---|---|---|
-| Launcher, projects, community, settings, system | 107 | 83 | 17 | 1 | 2 | 4 | 0 |
-| World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
+| Launcher, projects, community, settings, system | 107 | 86 | 16 | 0 | 1 | 4 | 0 |
+| World, ideas, editor panels | 121 | 72 | 23 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
-| Brain | 68 | 33 | 21 | 1 | 5 | 8 | 0 |
+| Brain | 68 | 34 | 21 | 1 | 4 | 8 | 0 |
 | Body and motion | 87 | 43 | 30 | 2 | 3 | 9 | 0 |
 | Train and results | 91 | 59 | 26 | 0 | 2 | 4 | 0 |
-| Play and build | 76 | 47 | 13 | 3 | 3 | 10 | 0 |
+| Play and build | 76 | 47 | 14 | 3 | 2 | 10 | 0 |
 
 The short version:
 
-- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON and BVH export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
-- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
-- **Broken (says or offers something it does not do):** nothing known after Sprint 15.
-- **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
+- **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching, curriculum stages and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from any checkpoint or live in Play); the Body workspace (import as mesh, URDF or MJCF robot import, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON, BVH and glTF export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, comments, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
+- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; editing curriculum stages by hand; imported reference recordings; FBX animation export; installers (Sprint 14).
+- **Broken (says or offers something it does not do):** nothing known.
+- **Most visible partials:** body tool modes; Play for a motion clip; imported robots drawn as their collision shapes; and creation pages without a brain tab or published timelapse.
 
 ### Diagnosis: body rig, motion and connectome
 
@@ -60,7 +60,7 @@ The three workspaces this section diagnosed on 2026-11-01 now stand as follows.
 | Pillar | Design IDs | Today | What is left | Plan |
 |---|---|---|---|---|
 | Body rig and import | `SCR-BODY`, `TAB-RIG-VIEW`, `TAB-MESH-VIEW`, `PNL-RIG-CHECK`, `MOD-IMPORT`, `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` | Built: mesh import (static or auto-rigged), auto-rig with progress, rig check with fixes, test poses, skin weights with auto-fix, skins drawn over the physical body | Bone and joint tool modes, a mesh-only view, weight painting, an import preview, URDF and MJCF import, a true stand-up test | [`sprint-09-body-rig.md`](../plans/sprint-09-body-rig.md) |
-| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON and BVH export | Play for the clip, link and webcam sources, glTF and FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
+| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON, BVH and glTF export | Play for the clip, link and webcam sources, FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
 | Connectome brain | `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME`, `PNL-BRAIN-ACTIVITY`, `STA-RESULTS-REFERENCE` | Not built: these panels show the trained brain (its readings, layers, behaviors and wiring) and say so, and behavior tests compare checkpoints | Connectome data, a spiking simulator fast enough for Play, the fly body, taste and looming senses, reference recordings | [`sprint-11-connectome.md`](../plans/sprint-11-connectome.md) |
 
 In the app `MOD-BRAIN-SOURCE` offers "Use this brain"; the design still says "Motor neurons drive the leg and wing joints · 92% matched", which the data cannot support; once connectomes are real that line becomes the count of descending neurons driving the gait generator.
@@ -110,9 +110,9 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-COMMUNITY | "Every creation is reviewed" note | partial | planned | Moderation exists, but the service defaults to publishing straight to public; require review by default or change the line. |
 | SCR-COMMUNITY | Creation cards with thumbnail, votes, author, remixes | works | built | Nothing |
 | SCR-CREATION | Hero replay with "Watch how it learned" | partial | planned | The hero shows the published thumbnail, but bundles carry no training history, so the timelapse reads "not published"; publish rollouts with the bundle. |
-| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview and Versions are real; Brain and Comments are always empty and How it learned has no published timelapse. |
+| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview, Versions and Comments are real; Brain is always empty and How it learned has no published timelapse. |
 | SCR-CREATION | Checkpoint strip opening the timelapse at a step | fixture-only | planned | The app maps no checkpoints, so the strip never renders; needs checkpoint thumbnails in the bundle. |
-| SCR-CREATION | Comment list (read only) | fixture-only | planned | The community service has no comments; the app always shows "No comments yet". |
+| SCR-CREATION | Comment list | works | built | Nothing. The overview shows the newest three; the Comments tab lists them with a composer for signed-in people, delete for the comment's author and moderators, and Report through `MOD-REPORT`. The author's comments switch closes new ones. The comment controls are not in the design inventory. |
 | SCR-CREATION | Author card with Follow | works | built | Nothing |
 | SCR-CREATION | Votes, remixes, downloads tiles | works | built | Nothing |
 | SCR-CREATION | "Remix into my projects" | works | built | Nothing |
@@ -152,12 +152,12 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-PUBLISH | Guideline agreement gating Publish | works | built | Nothing |
 | MOD-PUBLISH | Publish sends for review | works | built | Nothing |
 | MOD-PUBLISHED | "Sent for review" confirmation | works | built | Nothing |
-| MOD-IMPORT | Kind switch: model, environment, robot | partial | planned | Model and environment import a glTF or GLB as a skin over a collider (ADR 008); robots wait for URDF and MJCF import (Sprint 9) |
-| MOD-IMPORT | Choosing or dropping the file | partial | planned | Choose file takes .glb, .gltf, .obj or .stl; FBX and USD are refused and there is no drop zone. |
+| MOD-IMPORT | Kind switch: model, environment, robot | works | built | Nothing. Model and environment import a mesh as a skin over a collider (ADR 008); Robot takes a .urdf or MJCF .xml with its meshes, read by MuJoCo into the project's body with its joints and motors (mesh colliders become boxes) |
+| MOD-IMPORT | Choosing or dropping the file | partial | planned | Choose file takes .glb, .gltf, .obj or .stl, or for a robot a .urdf or .xml picked together with its .stl, .obj or .msh meshes; FBX, USD and .dae meshes are refused and there is no drop zone. |
 | MOD-IMPORT | 3D preview with triangles, height, detected kind | missing | planned | The dialog shows only the file name and size with no preview; read the model for triangles, height and kind and show a 3D preview. |
 | MOD-IMPORT | Steps auto-rig will run | works | built | Nothing |
 | MOD-IMPORT | Import as static mesh, Import and auto-rig | works | built | Nothing |
-| MOD-IMPORT | Opening Import with no project open | pending | not in spec | Decide whether import from the launcher creates a project first |
+| MOD-IMPORT | Opening Import with no project open | works | built | Nothing; confirming creates an empty-world project first |
 | SCR-SETTINGS | Side navigation | works | built | Nothing |
 | SCR-SETTINGS-MODELS | One row per capability with status | works | built | Nothing |
 | SCR-SETTINGS-MODELS | Endpoint and API key stored locally | works | built | Nothing |
@@ -215,7 +215,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-WORLD-EMPTY | Part tool adds a basic shape | works | not in spec | Nothing |
 | STA-WORLD-EMPTY | Agent tool | works | built | Deliberately asks the copilot instead of opening Ideas |
 | STA-WORLD-EMPTY | Goal tool | works | built | Deliberately asks the copilot to add a goal zone |
-| STA-WORLD-EMPTY | Import tool | partial | planned | Models and environments import as meshes; URDF and MJCF robots cannot be imported yet. |
+| STA-WORLD-EMPTY | Import tool | works | built | Nothing. Models and environments import as meshes; URDF and MJCF robots import as the body. |
 | STA-WORLD-EMPTY | Library offers Parking lot, 16 lots, Car agent, Tripod, Humanoid | partial | not in spec | Environments (parking lot, lots) and a car agent as library items; props by category and vault bodies (Tripod, Humanoid…) are there. |
 | STA-WORLD-EMPTY | Chat greeting "Hi, what should we build?" with three routed chips | partial | not in spec | The three chips are sent as typed messages instead of routed intents. |
 | STA-WORLD-EMPTY | Train disabled in a new project | works | built | Deliberately enabled because the project exists |
@@ -265,7 +265,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | POP-ADD-COMPONENT | Brain group: learned, connectome, community | missing | planned | Brains as components (Sprints 8, 11, 13) |
 | POP-ADD-COMPONENT | Reward term as a component | missing | not in spec | Rewards are task terms edited in Brain |
 | POP-ADD-COMPONENT | World group: Wind, Water | missing | not in spec | Library and sim components |
-| POP-ADD-COMPONENT | Reference board with an imported URDF joint | fixture-only | planned | URDF import (Sprint 9) |
+| POP-ADD-COMPONENT | Reference board with an imported URDF joint | fixture-only | planned | URDF import exists and brings joints in as the library's Joint component; the board itself still shows sample data |
 | POP-ADD-COMPONENT | "Or ask for it" proposal | partial | built | Works through the main chat, not from the picker |
 | REF-PROPERTY-TYPES | Twelve live type cards | partial | built | Library has no `panel` or `readonly` properties, so 10 of 12 show |
 | REF-PROPERTY-TYPES | State Default | works | built | Nothing |
@@ -324,7 +324,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-CHAT | "What the copilot did" step list | works | built | Steps arrive with the finished answer |
 | TAB-CHAT | Live steps while the copilot works | works | built | Nothing |
 | TAB-CHAT | Scene renders sent and seen | works | built | Nothing |
-| TAB-CHAT | Attach images, videos, documents | works | built | Nothing |
+| TAB-CHAT | Attach images, videos, documents | works | built | Nothing. A URDF or MJCF file attached with its meshes can be imported as the body by the copilot (import_robot) |
 | TAB-CHAT | Proposal card with diff, warning, Apply, Discard, Edit by hand | partial | built | "Edit by hand" hidden |
 | TAB-CHAT | Proposal applied, discarded or outdated | works | built | Nothing |
 | TAB-CHAT | Open proposal previewed in blue | partial | built | Only in World |
@@ -370,14 +370,14 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-BRAIN | Proposed inspector value with Accept | works | built | Nothing |
 | SCR-BRAIN | 3D viewport with Scene and Game view | works | built | Nothing |
 | SCR-BRAIN | Senses tool: sensor rays overlay | works | built | Nothing |
-| SCR-BRAIN | "What the brain sees now" live card | partial | planned | Real readings one second into the newest checkpoint's test try, not live; the card still hides on a query error. |
+| SCR-BRAIN | "What the brain sees now" live card | partial | planned | Live while the workspace plays the trained brain in the background (each step's senses and picks); otherwise one second into the newest checkpoint's test try, and the caption says which. The card still hides on a query error. |
 | SCR-BRAIN | Network tool | works | built | Nothing |
 | TAB-REWARD | One card per reward term with weight | works | built | Nothing |
 | TAB-REWARD | Drag a weight | works | built | Nothing |
 | TAB-REWARD | "1 change proposed" | fixture-only | planned | Map open proposals and diagnoses onto cards; the app always reports zero. |
 | TAB-GOAL | Success condition and time limit | partial | planned | Shows the task's real time limit and end rules; success is a fixed sentence per task family and not editable. |
-| TAB-CURRICULUM | Stages that make the task harder | fixture-only | planned | Curriculum in TaskSpec and the env; the app honestly shows one stage. |
-| SCR-BRAIN | Chat explains a reward change | partial | built | The copilot can change rewards, senses, network and episode rules through operations; curriculum does not exist. |
+| TAB-CURRICULUM | Stages that make the task harder | partial | built | Shows the task's real stages, what each changes, its promotion rule and the stage a training run of this revision practices; stages are added and edited through the copilot (`set_curriculum`), not yet by hand in the tab. |
+| SCR-BRAIN | Chat explains a reward change | partial | built | The copilot can change rewards, senses, network, episode rules and curriculum stages through operations. |
 | STA-BRAIN-NETWORK | Layer size sliders | works | built | Nothing |
 | STA-BRAIN-NETWORK | Decisions per second | works | built | Nothing |
 | STA-BRAIN-NETWORK | "+ Add a layer" | partial | planned | On the network screen it opens Brain sizes instead of adding a layer; it adds in place only with that dialog open. |
@@ -386,7 +386,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-BRAIN-NETWORK | Named input column | works | built | Nothing |
 | STA-BRAIN-NETWORK | Hidden layers with sampled neurons and wires | partial | planned | Layers and sampled neurons come from the checkpoint; the faint background wires are still a fixed pattern. |
 | STA-BRAIN-NETWORK | Named output column | works | built | Nothing |
-| STA-BRAIN-NETWORK | Live activation glow and hot connections | partial | planned | Glow and hot links come from one observation of the checkpoint's evaluation, not live. |
+| STA-BRAIN-NETWORK | Live activation glow and hot connections | works | built | Live follows the policy's real per-layer activations streamed from Play about 10 times a second; a saved checkpoint shows the first observation of its evaluation, and the caption says which. |
 | STA-BRAIN-NETWORK | Body with rays wired into inputs | missing | planned | Draw the project body and anchor wires to sensors |
 | STA-BRAIN-NETWORK | Hover a neuron for an explanation | missing | planned | Hover in the renderer; attributions from real rollouts |
 | STA-BRAIN-NETWORK | Live, 25k, 312k switch | works | built | Nothing |
@@ -513,10 +513,10 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-MOTION-TRAINING | Hard moment "6 of 10" | partial | planned | Shows the weakest moment and its match, not a per-segment count. |
 | STA-MOTION-TRAINING | Watch, Export now | partial | planned | Export now is real. Watch opens the comparison of the latest checkpoint, not a live replay. |
 | STA-MOTION-TRAINING | Stop | works | built | Nothing |
-| MOD-EXPORT-ANIMATION | glTF, FBX, BVH | partial | planned | Exports JSON and BVH only, not glTF or FBX. |
+| MOD-EXPORT-ANIMATION | glTF, FBX, BVH | partial | planned | Exports JSON, BVH and glTF (one .glb: the skeleton as skinned joints and one animation keyed on the real frames), not FBX. |
 | MOD-EXPORT-ANIMATION | Use the physics result | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Include root motion | works | built | Nothing |
-| MOD-EXPORT-ANIMATION | Loop the clip | partial | not in spec | BVH repeats the first frame at the end and JSON only records a flag. There is no loop blending. |
+| MOD-EXPORT-ANIMATION | Loop the clip | partial | not in spec | BVH and glTF repeat the first frame at the end and JSON only records a flag. There is no loop blending. |
 | MOD-EXPORT-ANIMATION | Target rig "Roblox · R15 · 30 fps" | works | not in spec | Nothing; the app no longer shows a Target it cannot send |
 | MOD-EXPORT-ANIMATION | File summary | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Download | works | built | Nothing |
@@ -662,7 +662,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | PNL-PLAY-DECISIONS | "Use another brain" | works | built | Nothing |
 | PNL-PLAY-DECISIONS | No learned brain state | works | built | Nothing |
 | PNL-PLAY-VISION | What each eye or camera sees | fixture-only | planned | Vision field in `PlayFrame` (Sprint 11) |
-| PNL-BRAIN-ACTIVITY | Activity strip in Play | fixture-only | planned | Connectome simulator |
+| PNL-BRAIN-ACTIVITY | Activity strip in Play | partial | planned | Live per-layer activity of a trained brain while it plays; connectome regions need the simulator (Sprint 11) |
 | PNL-PLAY-EVENTS | Timestamped log | works | built | Nothing |
 | PNL-PLAY-EVENTS | Interpretive behavior lines | missing | not in spec | Behavior detection or narration |
 | PNL-PLAY-EVENTS | Click a line to jump there | pending | planned | Clip recording |
@@ -730,7 +730,7 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 | Motor speed | Sprint 9 | Motor `max_velocity` | Compiler | Inspector row |
 | Motion retiming, looping, Roblox R15 target | Sprint 10 if kept; otherwise drop from the design | Export options | `motion/export.py` | Dialog fields |
 | Run inspector (method, start, budget, locks) | Sprint 7 | None | None | Inspector from `RunStatus` and `RunConfig` |
-| Run goals in the progress card | Sprint 8 (with curriculum) | Goals or curriculum stages | Stage progress per run | Progress card |
+| Run goals in the progress card | Done: curriculum stages | `RunStatus.stages` and `stage` | Worker advances stages | Progress card shows stages |
 | Stop at a chosen step | Sprint 8 | `PATCH /runs/{id}` with `total_steps` | Worker reads a new budget | Chip action |
 | Live-episode scrubber | Sprint 7 follow-up | None | Latest rollout (exists) | Fill `LiveView.episode` |
 | Reward weight change on breakdown | Sprint 8 | None | Revision diff (exists in comparisons) | Show previous weight |
@@ -751,7 +751,7 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 | Inline action buttons | Several | Real | None |
 | Proposal card | Every workspace | Real | "Edit by hand" needs proposed values per property |
 | Build progress card | STA-WORLD-BUILDING | Real | None |
-| Run progress card with goals | SCR-TRAIN | Real progress | Goals stay empty until runs have stages (curriculum) |
+| Run progress card with goals | SCR-TRAIN | Real progress; goals are the run's curriculum stages | Runs without stages show no goals |
 | Milestone divider, coach observations | SCR-TRAIN | Real on coached runs | None |
 | "Next run, if you agree" plan card | SCR-TRAIN | Real plan | The card has no action buttons of its own |
 | Welcome with starter chips | STA-WORLD-EMPTY | Real | Chips are sent as messages, not routed intents |
@@ -761,23 +761,21 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 
 ## 5. Neurons and the brain view
 
-**What exists.** The named input and output layout, the network architecture in `BrainSpec` (layers, algorithm, learning rate), `GET /runs/{id}/network`, activations from one observation of a checkpoint's evaluation (`/activations`), readings, behaviors grouped from evaluation episodes, and measured sizes with training time and success from past runs (`training/brain_insights.py`).
+**What exists.** The named input and output layout, the network architecture in `BrainSpec` (layers, algorithm, learning rate), `GET /runs/{id}/network`, activations from one observation of a checkpoint's evaluation (`/activations`), the playing brain's per-layer activations and observation streamed over the Play WebSocket (`activity` messages, about 10 a second), readings, behaviors grouped from evaluation episodes, and measured sizes with training time and success from past runs (`training/brain_insights.py`).
 
 **What is left, in order:**
 
-1. **Live activations.** Glow, hot links, readings and brain activity read one evaluation observation, not the running Play session; add activations to `PlayFrame` behind a watch command.
-2. **Checkpoint switch.** The Live, 25k, 312k options are real labels but clicking one says not available yet; load the network of the chosen checkpoint.
-3. **Real wiring in the diagram.** The faint background wires are still a fixed pattern; draw the checkpoint's strongest weights.
-4. **Neuron explanations.** Correlate each hidden neuron with the named inputs over evaluation rollouts (`NeuronNote`) so the chat can say what a neuron responds to.
-5. **Copilot access.** A read tool returning the layout, activations and neuron notes, so questions about the brain are answered from data.
+1. **Checkpoint switch.** The Live, 25k, 312k options are real labels but clicking one says not available yet; load the network of the chosen checkpoint.
+2. **Real wiring in the diagram.** The faint background wires are still a fixed pattern; draw the checkpoint's strongest weights.
+3. **Neuron explanations.** Correlate each hidden neuron with the named inputs over evaluation rollouts (`NeuronNote`) so the chat can say what a neuron responds to.
+4. **Copilot access.** A read tool returning the layout, activations and neuron notes, so questions about the brain are answered from data.
 
 ## 6. Top gaps today
 
 Ranked by how much each one confuses or blocks someone using the app.
 
 1. **No connectome brains.** `STA-BRAIN-CONNECTOME` and the fly source honestly show the trained brain until Sprint 11 is built.
-2. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
-3. **The animation export writes JSON and BVH only;** glTF and FBX are not written.
-4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
-5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
-6. **Creation pages have no comments, brain tab or published timelapse.**
+2. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
+3. **Curriculum stages are edited only through the copilot.** The Curriculum tab shows the real stages but has no add, reorder or edit controls yet.
+4. **Creation pages have no brain tab or published timelapse.**
+5. **The animation export writes JSON, BVH and glTF;** FBX is not written.

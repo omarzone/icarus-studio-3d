@@ -1,6 +1,14 @@
-import type { MotionComparison, MotionWorkspace, Project, RunStatus } from "@icarus/contracts";
+import type {
+  MotionComparison,
+  MotionExportFile,
+  MotionExportRequest,
+  MotionWorkspace,
+  Project,
+  RunStatus,
+} from "@icarus/contracts";
 import type {
   AnimationExport,
+  AnimationFile,
   ClipTimeline,
   FramePoint,
   FrameStrip,
@@ -18,7 +26,8 @@ import { anglePose, boundsOf, keypointPose } from "./motion-poses.ts";
 // Pure maps from the engine's motion workspace onto the motion views, kept apart so they are tested without it.
 
 export const SPEEDS = ["0.5×", "1×"] as const;
-export const FORMATS = ["JSON", "BVH"] as const;
+export const FORMATS = ["JSON", "BVH", "glTF"] as const;
+type ExportFormat = NonNullable<MotionExportRequest["format"]>;
 export const TIMELINE_FRAMES = 10;
 const CURVE_POINTS = 40;
 const RECOMMENDED_STEPS = 2_000_000;
@@ -261,11 +270,32 @@ export function trainingStatus(run: RunStatus, comparison: MotionComparison | nu
 
 export type ExportChoices = { format: string; options: Readonly<Record<string, boolean>> };
 
+// The engine's name for a format label; anything unknown exports as JSON.
+export function exportFormat(label: string): ExportFormat {
+  switch (label) {
+    case "BVH":
+      return "bvh";
+    case "glTF":
+      return "gltf";
+    default:
+      return "json";
+  }
+}
+
+const EXTENSIONS: Readonly<Record<ExportFormat, string>> = { json: "json", bvh: "bvh", gltf: "glb" };
+
+// The engine's file as the app saves it: binary files arrive as base64 and are saved as their bytes.
+export function animationFile(file: MotionExportFile): AnimationFile {
+  const content =
+    file.encoding === "base64" ? Uint8Array.from(atob(file.content), (char) => char.charCodeAt(0)) : file.content;
+  return { name: file.name, mediaType: file.media_type, content };
+}
+
 export function animationExport(workspace: MotionWorkspace, choices: ExportChoices): AnimationExport {
   const comparison = workspace.comparison;
   const physics = (choices.options.physics ?? true) && comparison !== null;
   const stem = (workspace.clip?.video.name ?? "motion").replace(/\.[^.]+$/, "");
-  const extension = choices.format === "BVH" ? "bvh" : "json";
+  const extension = EXTENSIONS[exportFormat(choices.format)];
   const frames = workspace.clip?.frames?.length ?? 0;
   return {
     formats: FORMATS,

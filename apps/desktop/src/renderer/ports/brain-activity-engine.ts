@@ -4,26 +4,31 @@ import {
   activityView,
   behaviorsView,
   type Checkpoint,
+  liveActivations,
+  liveReadingsView,
   NO_READINGS,
   readingsView,
   sourceOperation,
   sourceView,
   wiringView,
 } from "./brain-activity-views.ts";
+import { networkMemo } from "./brain-network-engine.ts";
 import type { BrainPort } from "./brain-port.ts";
 import { sensesActions } from "./brain-views.ts";
+import { type LiveBrains, liveBrains } from "./live-brain.ts";
 
 type ActivityApi = Pick<EngineApi, "runs" | "checkpoints" | "project" | "library" | "applyOperations"> &
   Pick<BrainNetworkApi, "network" | "activations" | "readings" | "behaviors" | "sources">;
 
 export type EngineBrainActivity = Pick<
   BrainPort,
-  "getReadings" | "getActivity" | "getBehaviors" | "getWiring" | "getSource" | "loadSource"
+  "getReadings" | "getActivity" | "getBehaviors" | "getWiring" | "getSource" | "loadSource" | "watchLive"
 >;
 
 // What the newest trained brain of the project senses, computes and did in its test tries, how it is wired to the
 // body, and the trained brains the body can start from; the brain key is the project id.
-export function createEngineBrainActivity(api: ActivityApi): EngineBrainActivity {
+export function createEngineBrainActivity(api: ActivityApi, live: LiveBrains = liveBrains): EngineBrainActivity {
+  const network = networkMemo(api);
   // The best checkpoint of the newest run that saved one, or null before any brain was trained.
   const newest = async (brain: string): Promise<Checkpoint | null> => {
     for (const run of await api.runs(brain)) {
@@ -37,20 +42,29 @@ export function createEngineBrainActivity(api: ActivityApi): EngineBrainActivity
   };
   return {
     getReadings: async (brain) => {
+      const playing = live.current(brain);
+      if (playing) {
+        return liveReadingsView(playing);
+      }
       const checkpoint = await newest(brain);
       return checkpoint ? readingsView(await api.readings(checkpoint.runId, checkpoint.step), checkpoint) : NO_READINGS;
     },
     getActivity: async (brain) => {
+      const playing = live.current(brain);
+      if (playing) {
+        return activityView(await network(playing.runId, playing.step), liveActivations(playing), true);
+      }
       const checkpoint = await newest(brain);
       if (!checkpoint) {
         return { live: false, regions: [] };
       }
-      const [network, activations] = await Promise.all([
-        api.network(checkpoint.runId, checkpoint.step),
+      const [shape, activations] = await Promise.all([
+        network(checkpoint.runId, checkpoint.step),
         api.activations(checkpoint.runId, checkpoint.step),
       ]);
-      return activityView(network, activations);
+      return activityView(shape, activations);
     },
+    watchLive: (brain, onChange) => live.subscribe(brain, onChange),
     getBehaviors: async (brain) => {
       const checkpoint = await newest(brain);
       return checkpoint ? behaviorsView(await api.behaviors(checkpoint.runId, checkpoint.step)) : [];
