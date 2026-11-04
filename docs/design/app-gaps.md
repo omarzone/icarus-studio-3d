@@ -1,6 +1,6 @@
 # App gaps against the design
 
-What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed.
+What the design proposes, what the app does today, and what the spec plans for each part. It was first written from the reference renders in `docs/design/reference/`, the design source files, `screens.md`, the plans in `docs/plans/` and the renderer, port and engine code as of 2026-11-01. On 2026-11-03 every row that was not `works` was checked again against `main`, after the body rig, motion, brain, build, community and multi-agent work landed. On 2026-11-04 the rows Sprint 15 closed were updated.
 
 ## How to read the tables
 
@@ -25,33 +25,33 @@ What the design proposes, what the app does today, and what the spec plans for e
 
 ## 1. Summary
 
-There are 593 features across seven groups.
+There are 594 features across seven groups.
 
 | App today | Count | | In spec? | Count |
 |---|---|---|---|---|
-| works | 354 | | built | 364 |
-| partial | 146 | | planned | 158 |
-| pending | 18 | | not in spec | 71 |
+| works | 369 | | built | 377 |
+| partial | 139 | | planned | 146 |
+| pending | 15 | | not in spec | 71 |
 | fixture-only | 18 | | | |
 | missing | 53 | | | |
-| broken | 4 | | | |
+| broken | 0 | | | |
 
 | Group | Features | works | partial | pending | fixture-only | missing | broken |
 |---|---|---|---|---|---|---|---|
-| Launcher, projects, community, settings, system | 107 | 78 | 19 | 3 | 2 | 5 | 0 |
-| World, ideas, editor panels | 121 | 70 | 24 | 7 | 2 | 17 | 1 |
+| Launcher, projects, community, settings, system | 107 | 83 | 17 | 1 | 2 | 4 | 0 |
+| World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
-| Brain | 68 | 31 | 22 | 2 | 5 | 8 | 0 |
-| Body and motion | 87 | 38 | 32 | 2 | 3 | 9 | 3 |
+| Brain | 68 | 33 | 21 | 1 | 5 | 8 | 0 |
+| Body and motion | 87 | 43 | 30 | 2 | 3 | 9 | 0 |
 | Train and results | 91 | 59 | 26 | 0 | 2 | 4 | 0 |
-| Play and build | 75 | 45 | 15 | 3 | 3 | 9 | 0 |
+| Play and build | 76 | 47 | 13 | 3 | 3 | 10 | 0 |
 
 The short version:
 
 - **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON and BVH export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
 - **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
-- **Broken (says or offers something it does not do):** clicking a rig check problem does nothing; the amber "Can't train yet" banner counts findings that do not block training; the animation export Target field is never sent; and the Library's Community shelf always says nothing is published.
-- **Most visible partials:** pictures missing where real data exists (Home community cards, the share preview card, moderation previews, the video behind the motion skeleton); views that read one evaluation instead of live data (brain readings, network glow, brain activity); and notifications that never fire for local runs.
+- **Broken (says or offers something it does not do):** nothing known after Sprint 15.
+- **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
 
 ### Diagnosis: body rig, motion and connectome
 
@@ -59,11 +59,11 @@ The three workspaces this section diagnosed on 2026-11-01 now stand as follows.
 
 | Pillar | Design IDs | Today | What is left | Plan |
 |---|---|---|---|---|
-| Body rig and import | `SCR-BODY`, `TAB-RIG-VIEW`, `TAB-MESH-VIEW`, `PNL-RIG-CHECK`, `MOD-IMPORT`, `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` | Built: mesh import (static or auto-rigged), auto-rig with progress, rig check with fixes, test poses, skin weights with auto-fix, skins drawn over the physical body | Bone and joint tool modes, a mesh-only view, weight painting, an import preview, URDF and MJCF import, a true stand-up test, the two broken rig-check rows | [`sprint-09-body-rig.md`](../plans/sprint-09-body-rig.md) |
-| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON and BVH export | The video picture behind the skeleton, Play for the clip, link and webcam sources, glTF and FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
-| Connectome brain | `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME`, `PNL-BRAIN-ACTIVITY`, `STA-RESULTS-REFERENCE` | Not built: these panels show the trained brain (its readings, layers, behaviors and wiring) and behavior tests compare checkpoints | Connectome data, a spiking simulator fast enough for Play, the fly body, taste and looming senses, reference recordings | [`sprint-11-connectome.md`](../plans/sprint-11-connectome.md) |
+| Body rig and import | `SCR-BODY`, `TAB-RIG-VIEW`, `TAB-MESH-VIEW`, `PNL-RIG-CHECK`, `MOD-IMPORT`, `MOD-AUTO-RIG`, `STA-BODY-CHECK-FAILED` | Built: mesh import (static or auto-rigged), auto-rig with progress, rig check with fixes, test poses, skin weights with auto-fix, skins drawn over the physical body | Bone and joint tool modes, a mesh-only view, weight painting, an import preview, URDF and MJCF import, a true stand-up test | [`sprint-09-body-rig.md`](../plans/sprint-09-body-rig.md) |
+| Motion from video | `SCR-MOTION`, `MOD-MOTION-VIDEO`, `MOD-MOTION-TRACKING`, `MOD-MOTION-TRAIN`, `STA-MOTION-TRAINING`, `MOD-EXPORT-ANIMATION` | Built: frames sampled from a chosen part of the video, tracking through the `pose` capability with real frame previews, retargeting, imitation training with a tracking reward, match per moment and limb, JSON and BVH export | Play for the clip, link and webcam sources, glTF and FBX export, named target rigs. Tracking with a general vision model drifts on fast moves; a dedicated pose estimator would track better | [`sprint-10-motion.md`](../plans/sprint-10-motion.md) |
+| Connectome brain | `MOD-BRAIN-SOURCE`, `STA-BRAIN-CONNECTOME`, `PNL-BRAIN-ACTIVITY`, `STA-RESULTS-REFERENCE` | Not built: these panels show the trained brain (its readings, layers, behaviors and wiring) and say so, and behavior tests compare checkpoints | Connectome data, a spiking simulator fast enough for Play, the fly body, taste and looming senses, reference recordings | [`sprint-11-connectome.md`](../plans/sprint-11-connectome.md) |
 
-`MOD-BRAIN-SOURCE` still says "Motor neurons drive the leg and wing joints · 92% matched", which the data cannot support; once connectomes are real that line becomes the count of descending neurons driving the gait generator.
+In the app `MOD-BRAIN-SOURCE` offers "Use this brain"; the design still says "Motor neurons drive the leg and wing joints · 92% matched", which the data cannot support; once connectomes are real that line becomes the count of descending neurons driving the gait generator.
 
 ## 2. Per screen group
 
@@ -80,9 +80,9 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-HOME | Template row: Empty world, Parking car, Walker, Dancer, Fruit fly | partial | planned | Dancer (Sprint 10) and Fruit fly (Sprint 11) templates; `templateView` must map those kinds |
 | SCR-HOME | Rendered 3D thumbnail per template | works | built | Nothing |
 | SCR-HOME | Template opens the right workspace (Dancer to motion video, Fruit fly to brain source) | partial | planned | Sprint 10 and 11 templates |
-| SCR-HOME | "Import your own" card | pending | planned | Import works inside a project, but from Home with no project open MOD-IMPORT only says no project is open; import without an open project. |
+| SCR-HOME | "Import your own" card | works | built | Nothing; confirming an import with no project open creates one named after the file |
 | SCR-HOME | Community header with Featured, Recent, Most voted | works | built | Nothing |
-| SCR-HOME | Four community cards with thumbnail, votes, Remix | partial | planned | Cards, votes and Remix are real from the community service, but the Home strip leaves the thumbnail area empty; draw the creation picture as the Community screen does. |
+| SCR-HOME | Four community cards with thumbnail, votes, Remix | works | built | Nothing |
 | SCR-HOME | Remix pill starts a project from a creation | works | built | Nothing |
 | STA-HOME-EMPTY | First-launch card with the 3 minute tour | works | built | Nothing |
 | HDR-WORKSPACE | Project name with chevron opening POP-PROJECT-MENU (added) | works | built | Nothing |
@@ -102,7 +102,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-PROJECTS | Status pill per card (training, needs attention, published, draft yesterday) | partial | not in spec | "Training · Run N at P%" is real now; failed runs, published state and last-modified time are not in `ProjectSummary` |
 | SCR-PROJECTS | Filter All, Training, Drafts, Published | partial | not in spec | Published never fills because ProjectSummary carries no publish state, and its empty state still says publishing is not available yet. |
 | SCR-PROJECTS | Open in the workspace it was last in | works | not in spec | Nothing |
-| SCR-PROJECTS | "Open a file" button | pending | planned | Opens MOD-IMPORT, which needs an open project and otherwise only says no project is open; import without an open project. |
+| SCR-PROJECTS | "Open a file" button | works | built | Nothing |
 | SCR-PROJECTS | "New project" starts an empty world with the guide | works | built | Nothing |
 | SCR-PROJECTS | Saved-locally note and empty states | works | built | Nothing |
 | SCR-COMMUNITY | Featured, Recent, Most voted switch | works | built | Nothing |
@@ -124,7 +124,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-REPORT | Send report (added) | works | built | Nothing |
 | SCR-MODERATION | Team-only screen with its own title bar, "Signed in as moderator" (added) | partial | planned | The screen and role check on the service are real, but "Signed in as moderator" is fixed text; read the role from the account. |
 | SCR-MODERATION | Queues Reports, New creations, Banned people, Appeals with counts (added) | works | built | Nothing |
-| SCR-MODERATION | Report card with preview, reason, report count, automatic scan result (added) | partial | planned | Reason, report count and scan are real; the preview is an empty box, so show the creation thumbnail. |
+| SCR-MODERATION | Report card with preview, reason, report count, automatic scan result (added) | works | built | Nothing |
 | SCR-MODERATION | Keep, Remove, Ban user (added) | works | built | Nothing |
 | SCR-MODERATION | "Nothing to review" empty queue (added) | works | built | Nothing |
 | SCR-PROFILE | Header with avatar, bio, signature, Edit profile | works | built | Nothing |
@@ -132,7 +132,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-PROFILE | Shelves My creations, Remixes, Liked, Drafts | works | built | Nothing |
 | SCR-PROFILE | Follow on someone else's profile | works | built | Nothing |
 | MOD-SIGN-IN | Google, GitHub, email sign-in | works | built | Nothing |
-| POP-NOTIFICATIONS | Run stopped/finished, publication approved, remixes, each opening its screen | partial | planned | Votes, remixes, follows, invites and moderation results come from the community and open their screen; local run stopped or finished notifications are never produced. |
+| POP-NOTIFICATIONS | Run stopped/finished, publication approved, remixes, each opening its screen | partial | planned | Community notifications are real and a run that ends in the background shows a system notification; local runs still do not appear in this list |
 | POP-NOTIFICATIONS | Unread highlight and "Mark all read" | works | built | Nothing |
 | POP-PROJECT-MENU | Rename, Duplicate, History with revision, Open, Settings, Delete, Home | works | built | Nothing |
 | POP-PROJECT-MENU | "Ctrl O" shown next to Open project | works | not in spec | Nothing |
@@ -173,8 +173,8 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-SETTINGS-TRAINING | Editable projects folder | works | not in spec | Nothing |
 | SCR-SETTINGS-TRAINING | Keep checkpoints policy | works | not in spec | Nothing |
 | SCR-SETTINGS-TRAINING | Engine status with Restart | works | built | "healthy" is hardcoded but only shown after the engine answered |
-| SCR-SETTINGS-NOTIFICATIONS | Run finished, copilot needs OK, remixes, news | partial | planned | The switches are saved on the community account, but run-finished and copilot notifications are never sent, and the page claims they show in the system tray. |
-| SCR-SETTINGS-NOTIFICATIONS | Notifications in the system tray | missing | not in spec | Electron Notification from the main process on run events; the Notifications page already says notifications show in the tray. |
+| SCR-SETTINGS-NOTIFICATIONS | Run finished, copilot needs OK, remixes, news | partial | planned | The run-finished switch drives the system notification; copilot notifications are never sent |
+| SCR-SETTINGS-NOTIFICATIONS | Notifications in the system tray | works | not in spec | Nothing |
 | SCR-SETTINGS | Community server (official or self-hosted) | works | built | Nothing |
 | SYS-ENGINE-DOWN | Full-screen "The Icarus engine stopped" | works | built | Nothing |
 | SYS-ENGINE-DOWN | Copy "Training runs pause until the engine is back" | works | not in spec | Nothing |
@@ -303,7 +303,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | PNL-LIBRARY | Drag a card into the viewport | missing | not in spec | Drag and drop with a drop position |
 | PNL-LIBRARY | Click to preview | partial | built | Clicking places the piece as an edit |
 | PNL-LIBRARY | Import environment card | partial | planned | Opens the real import, which brings an environment in as a static mesh; USD is not supported. |
-| TAB-LIBRARY-COMMUNITY | Pieces published by others | broken | planned | List creations from the community service; the shelf always returns nothing and says no community pieces exist yet. |
+| TAB-LIBRARY-COMMUNITY | Pieces published by others | works | built | Nothing; each creation opens its page, where it can be remixed |
 | TAB-MY-FILES | Imported models, environments, videos | pending | planned | Sprint 9 |
 | PNL-LIBRARY | Search assets | works | built | Nothing |
 
@@ -389,7 +389,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-BRAIN-NETWORK | Live activation glow and hot connections | partial | planned | Glow and hot links come from one observation of the checkpoint's evaluation, not live. |
 | STA-BRAIN-NETWORK | Body with rays wired into inputs | missing | planned | Draw the project body and anchor wires to sensors |
 | STA-BRAIN-NETWORK | Hover a neuron for an explanation | missing | planned | Hover in the renderer; attributions from real rollouts |
-| STA-BRAIN-NETWORK | Live, 25k, 312k switch | pending | planned | Checkpoint labels are real but clicking one says not available yet; wire it to the network of that checkpoint. |
+| STA-BRAIN-NETWORK | Live, 25k, 312k switch | works | built | Nothing |
 | STA-BRAIN-NETWORK | Caption with layers, parameters, rate | partial | planned | Layers, parameters and step come from the checkpoint; the decision rate is not in the caption. |
 | STA-BRAIN-NETWORK | Network and Scene tabs | partial | planned | Scene tab gets no project scene |
 | STA-BRAIN-NETWORK | Copilot explains what the brain is thinking | missing | not in spec | A copilot read tool over the network (section 5) |
@@ -406,13 +406,13 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-BRAIN-SOURCE | Learn, connectome, community options | partial | planned | Offers Learn and trained brains from local projects that fit the body; no connectome or community options. |
 | MOD-BRAIN-SOURCE | FlyWire dataset card | fixture-only | planned | Connectome library entries; the app never sets a dataset. |
 | MOD-BRAIN-SOURCE | How it connects, matched share | partial | planned | Real counts of senses and actions and which trained brains do not fit; no matched share. |
-| MOD-BRAIN-SOURCE | Load into the fly | partial | planned | Really sets the starting brain; the label and destination still assume the fly connectome. |
+| MOD-BRAIN-SOURCE | Load into the fly | works | built | Nothing; in the app it reads "Use this brain" and sets the starting brain |
 | STA-BRAIN-CONNECTOME | Explorer of body parts and brain regions | missing | planned | Connectome objects in the tree |
 | STA-BRAIN-CONNECTOME | Inspector wiring and simulation | missing | planned | Connectome spec and LIF settings |
 | STA-BRAIN-CONNECTOME | Fly body viewport | missing | planned | Fly body in the library |
 | STA-BRAIN-CONNECTOME | "Firing right now" card | missing | planned | A spiking simulator streaming region activity; the card shows the trained brain's sense readings instead. |
 | STA-BRAIN-CONNECTOME | Neurons, Connections, Regions, maps tools | pending | planned | Sprint 11 |
-| STA-BRAIN-CONNECTOME | Brain activity panel | partial | planned | Shows the trained policy's layers as regions from one evaluation observation; no connectome regions or live stream. |
+| STA-BRAIN-CONNECTOME | Brain activity panel | partial | planned | Says it shows the trained brain; connectome regions and a live stream wait for Sprint 11 |
 | STA-BRAIN-CONNECTOME | Behaviors tab | partial | planned | Real behaviors grouped from the trained brain's evaluation episodes; cards say "Jump to this moment" but do nothing. |
 | STA-BRAIN-CONNECTOME | Wiring tab | partial | planned | Real senses and motor maps of the project's body; no connectome mapping report (unmatched is always 0). |
 | STA-BRAIN-CONNECTOME | Run test and chat | partial | planned | Run test opens the engine-backed behavior tests in Results; no connectome copilot tools. |
@@ -458,13 +458,13 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-BODY | Bone, Joint, Motor, Sensor, Mirror, Collider, Weights, Test pose tools | pending | planned | Viewport tool modes that emit edit operations. Today these tools have no action and say they are not available yet. |
 | TAB-RIG-CHECK | Rig check list with pass and warn | works | built | Nothing |
 | TAB-RIG-CHECK | Stand-up test | partial | planned | Today only a rest-stability check; a falling humanoid passes |
-| TAB-RIG-CHECK | Click a problem to select the part | broken | planned | Problem rows are buttons with no action. The engine already sends each finding's part, but the desktop drops it. |
+| TAB-RIG-CHECK | Click a problem to select the part | works | built | Nothing |
 | TAB-RIG-CHECK | Test pose chips | works | built | Nothing |
 | TAB-POSE-TEST | Preset poses applied to the view | works | built | Nothing |
 | TAB-WEIGHTS | Skin coverage, Auto-fix weights | works | built | Nothing |
 | SCR-BODY | Chat auto-rig summary | partial | planned | The copilot has auto_rig and fix_body tools, but the chat has no auto-rig summary card. |
 | SCR-BODY | Chat chips "Make it lighter", "Stiffer knees", "Copy this video" | partial | planned | The engine never suggests a motion-video chip, so "Copy this video" appears only in the prototype, even though its dialog is real. |
-| STA-BODY-CHECK-FAILED | Amber "Can't train yet" banner | broken | planned | The banner counts rig-audit findings, which do not block training, so "Can't train yet" is untrue. |
+| STA-BODY-CHECK-FAILED | Amber "Can't train yet" banner | works | built | Nothing; it says "Can't train yet" only when design tests fail, and "worth fixing" for audit findings |
 | STA-BODY-CHECK-FAILED | Failing checks (falls after 1.4 s, knee 0° to 210°) | missing | planned | Stand-up and anatomical range checks; limits capped at ±180° |
 | STA-BODY-CHECK-FAILED | "Fix both for me" | works | built | Nothing |
 | STA-BODY-CHECK-FAILED | "Show me" | partial | planned | Select and frame the part |
@@ -479,10 +479,10 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-MOTION | Retarget inspector | fixture-only | planned | Retarget settings |
 | SCR-MOTION | Physics inspector (balance help, joint force) | fixture-only | planned | Imitation task parameters |
 | SCR-MOTION | Video, Detect pose, Retarget, Trim, Export tools | partial | planned | Video, Detect pose, Trim and Export open real dialogs. Retarget says it is not available yet. |
-| TAB-SIDE-BY-SIDE | Reference video with tracked skeleton | partial | planned | Draws the tracked skeleton as a stick figure with no video picture behind it. |
+| TAB-SIDE-BY-SIDE | Reference video with tracked skeleton | works | built | Nothing |
 | TAB-SIDE-BY-SIDE | Physics character with match % | partial | planned | Shows the latest checkpoint's result and match % as a stick figure, not the 3D character. |
 | TAB-OVERLAY | Character over the video | partial | planned | Draws the reference and result stick figures over each other, with no video and no camera alignment. |
-| TAB-REFERENCE-ONLY | Video and skeleton only | partial | planned | Shows the tracked skeleton but not the video picture. |
+| TAB-REFERENCE-ONLY | Video and skeleton only | works | built | Nothing |
 | PNL-MOTION-COMPARE | Speed 0.5×, 1× and Play | partial | planned | The speeds work and playback loops on its own, but there is no Play or pause control. |
 | TAB-CLIP | Pose thumbnails strip | works | built | Nothing |
 | TAB-CLIP | Match curve with playhead | works | built | Nothing |
@@ -517,7 +517,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | MOD-EXPORT-ANIMATION | Use the physics result | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Include root motion | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Loop the clip | partial | not in spec | BVH repeats the first frame at the end and JSON only records a flag. There is no loop blending. |
-| MOD-EXPORT-ANIMATION | Target rig "Roblox · R15 · 30 fps" | broken | not in spec | The Target field is editable local text that is never sent. There are no named target rigs and no resampling. |
+| MOD-EXPORT-ANIMATION | Target rig "Roblox · R15 · 30 fps" | works | not in spec | Nothing; the app no longer shows a Target it cannot send |
 | MOD-EXPORT-ANIMATION | File summary | works | built | Nothing |
 | MOD-EXPORT-ANIMATION | Download | works | built | Nothing |
 
@@ -677,7 +677,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-SHARE-TO-COMMUNITY | Title and description | works | built | Nothing |
 | TAB-SHARE-TO-COMMUNITY | Permission toggles | works | built | Nothing |
 | TAB-SHARE-TO-COMMUNITY | Included list | works | built | Nothing |
-| TAB-SHARE-TO-COMMUNITY | Preview card | partial | planned | Show the project thumbnail in the card; the byline and votes are already real |
+| TAB-SHARE-TO-COMMUNITY | Preview card | works | built | Nothing |
 | TAB-SHARE-TO-COMMUNITY | Save draft | works | built | Nothing |
 | TAB-SHARE-TO-COMMUNITY | Publish to community | works | built | Nothing |
 | SCR-BUILD | Export brain | works | built | Opens the export dialog |
@@ -696,7 +696,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | STA-BUILD-HARDWARE | Safety rules | works | built | From the body's top speed and what was measured |
 | STA-BUILD-HARDWARE | Parts list with total | works | built | Kit parts the body uses, approximate prices |
 | STA-BUILD-HARDWARE | Chat helps with hardware | partial | planned | A Builder role; today the project's general copilot answers, with its check_hardware tool |
-| SCR-BUILD | Export animation target | partial | planned | The target opens the real JSON/BVH motion export, but its fact says 'glTF · FBX', which the export does not write |
+| SCR-BUILD | Export animation target | works | built | Nothing |
 
 ## 3. Not in the spec yet
 
@@ -707,8 +707,6 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 | Home hero 3D scene | Sprint 14 parity pass | None | Serve a template scene (exists) | Render a real template scene behind the hero |
 | Project status pills beyond training (failed, published, edited yesterday) | Sprint 7 follow-up | `ProjectSummary.updated_at`, last run state | Fill them in `GET /projects` | Map in `projectView` |
 | Projects filter Published | Sprint 13 | Publish state on the summary | From the community client | Filter |
-| Import with no open project | Sprint 9 | None | Create a project from the import | Route through project creation |
-| System tray notifications | Sprint 13 (local half could go in Sprint 7) | None | Run events (exist) | Main-process `Notification` |
 | Training copies grid in the Scene view | Sprint 8 | None | `GET /projects/{id}/copies` (exists) | Draw copies around the edited world |
 | "Add an agent" row | Sprint 8 editor pass | None | None | Action row when no body |
 | Inspector Training section | Sprint 8 | None | None | Section built from `brain.copies` and Randomize |
@@ -777,15 +775,9 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 
 Ranked by how much each one confuses or blocks someone using the app.
 
-1. **Connectome screens show a different brain.** `STA-BRAIN-CONNECTOME` and the fly source present the trained brain's data under connectome labels. Build Sprint 11 or relabel the screens until it exists.
-2. **Rig check problems cannot be clicked, and the amber banner says "Can't train yet" when training is allowed.** Both read as broken on the first body someone imports.
-3. **Motion shows stick figures with no video behind them.** A bad track is visible only in the tracking dialog; draw the video frame under the skeleton in Side by side, Overlay and Reference only.
-4. **The Library's Community shelf always says nothing is published,** even with creations on the community service.
-5. **Import needs an open project.** "Import your own" on Home and "Open a file" on Projects only say no project is open.
-6. **Empty pictures where real data exists.** Home community cards, the share preview card and moderation previews leave the picture blank.
-7. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
-8. **Notifications never fire for local runs,** and the Notifications settings page promises system tray notifications that do not exist.
-9. **The animation export Target field is never sent,** and the export target card promises glTF and FBX, which the export does not write.
-10. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
-11. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
-12. **Creation pages have no comments, brain tab or published timelapse.**
+1. **No connectome brains.** `STA-BRAIN-CONNECTOME` and the fly source honestly show the trained brain until Sprint 11 is built.
+2. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
+3. **The animation export writes JSON and BVH only;** glTF and FBX are not written.
+4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
+5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
+6. **Creation pages have no comments, brain tab or published timelapse.**
