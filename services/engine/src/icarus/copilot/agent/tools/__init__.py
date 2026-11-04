@@ -13,7 +13,7 @@ from icarus.copilot.agent.tools.layout import LAYOUT
 from icarus.copilot.agent.tools.library import LIBRARY
 from icarus.copilot.agent.tools.look import LOOK
 from icarus.copilot.agent.tools.proposing import APPLY, PROPOSE
-from icarus.copilot.agent.tools.rigging import AUTO_RIG, FIX_BODY, IMITATE_CLIP
+from icarus.copilot.agent.tools.rigging import AUTO_RIG, FIX_BODY, IMITATE_CLIP, IMPORT_ROBOT
 from icarus.copilot.agent.tools.training import TRAIN
 from icarus.copilot.agent.tools.trying import TRY
 
@@ -41,6 +41,7 @@ REGISTRY: dict[str, Tool[Any]] = {
         CHECK_HARDWARE,
         EXPORT_ROBOT,
         AUTO_RIG,
+        IMPORT_ROBOT,
         FIX_BODY,
         IMITATE_CLIP,
     )

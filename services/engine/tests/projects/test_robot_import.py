@@ -2,9 +2,9 @@ import mujoco
 import numpy as np
 import pytest
 
-from icarus.contracts.robots import RobotImport
+from icarus.contracts.robots import RobotFile, RobotImport
 from icarus.design.compiler import compile_project
-from icarus.projects.robot_files import RobotRejected, read_robot
+from icarus.projects.robot_files import RobotRejected, decode_files, read_robot
 from icarus.projects.robot_import import import_robot
 from icarus.projects.store import ProjectStore
 from icarus.sim.env import ProjectEnv
@@ -14,6 +14,10 @@ from tests.robot_files import leg_files, robot_file, walker_files
 @pytest.fixture
 def store(tmp_path) -> ProjectStore:
     return ProjectStore(tmp_path)
+
+
+def _read(files: list[RobotFile], main: str | None = None):
+    return read_robot(decode_files(files), main)
 
 
 def _components(obj) -> dict[str, dict]:
@@ -51,7 +55,7 @@ def test_every_imported_collider_sits_where_the_file_puts_it(store):
     compiled = compile_project(store.state(project_id).project)
     data = mujoco.MjData(compiled.model)
     mujoco.mj_forward(compiled.model, data)
-    source = read_robot(walker_files()).model
+    source = _read(walker_files()).model
     original = mujoco.MjData(source)
     mujoco.mj_forward(source, original)
     shift = data.xpos[compiled.model.body("torso").id] - original.xpos[source.body("torso").id]
@@ -91,7 +95,7 @@ def test_an_imported_robot_steps_as_a_training_environment(store):
 
 def test_a_missing_mesh_is_named_without_the_private_folder():
     with pytest.raises(RobotRejected, match="foot.stl") as rejected:
-        read_robot(walker_files()[:1])
+        _read(walker_files()[:1])
     assert "icarus-robot" not in str(rejected.value)
 
 
@@ -106,14 +110,14 @@ def test_a_missing_mesh_is_named_without_the_private_folder():
 )
 def test_descriptions_that_ask_for_more_than_data_are_refused(text, reason):
     with pytest.raises(RobotRejected, match=reason):
-        read_robot([robot_file("robot.xml", text.encode())])
+        _read([robot_file("robot.xml", text.encode())])
 
 
 def test_two_descriptions_need_one_named():
     files = [*walker_files(), *leg_files()]
     with pytest.raises(RobotRejected, match="Several robot descriptions"):
-        read_robot(files)
-    assert read_robot(files, "tiny_leg.urdf").format == "urdf"
+        _read(files)
+    assert _read(files, "tiny_leg.urdf").format == "urdf"
 
 
 def test_a_failed_import_changes_nothing(store):

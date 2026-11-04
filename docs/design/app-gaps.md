@@ -324,7 +324,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-CHAT | "What the copilot did" step list | works | built | Steps arrive with the finished answer |
 | TAB-CHAT | Live steps while the copilot works | works | built | Nothing |
 | TAB-CHAT | Scene renders sent and seen | works | built | Nothing |
-| TAB-CHAT | Attach images, videos, documents | works | built | Nothing |
+| TAB-CHAT | Attach images, videos, documents | works | built | Nothing. A URDF or MJCF file attached with its meshes can be imported as the body by the copilot (import_robot) |
 | TAB-CHAT | Proposal card with diff, warning, Apply, Discard, Edit by hand | partial | built | "Edit by hand" hidden |
 | TAB-CHAT | Proposal applied, discarded or outdated | works | built | Nothing |
 | TAB-CHAT | Open proposal previewed in blue | partial | built | Only in World |

@@ -6,6 +6,7 @@ import binascii
 import re
 import tempfile
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Literal
@@ -42,18 +43,23 @@ def _decode(file: RobotFile) -> bytes:
         raise RobotRejected(f"{file.name} is not valid base64") from error
 
 
-def _files(files: list[RobotFile]) -> dict[str, bytes]:
+def named_files(files: Iterable[tuple[str, bytes]]) -> dict[str, bytes]:
+    """Each file under its name alone, refusing names a folder cannot keep and two files with one name."""
     named: dict[str, bytes] = {}
-    for file in files:
-        name = _file_name(file.name)
+    for path, data in files:
+        name = _file_name(path)
         if not _NAME.match(name):
-            raise RobotRejected(f"{file.name} is not a file name the import can keep")
+            raise RobotRejected(f"{path} is not a file name the import can keep")
         if name.lower() in {item.lower() for item in named}:
             raise RobotRejected(f"Two picked files are named {name}; robot files are looked up by name alone")
-        named[name] = _decode(file)
+        named[name] = data
     if sum(len(data) for data in named.values()) > MAX_TOTAL_BYTES:
         raise RobotRejected(f"The robot's files are larger than {MAX_TOTAL_BYTES // 1_000_000} MB together")
     return named
+
+
+def decode_files(files: list[RobotFile]) -> dict[str, bytes]:
+    return named_files((file.name, _decode(file)) for file in files)
 
 
 def _tree(name: str, data: bytes) -> ET.Element:
@@ -113,9 +119,8 @@ def _first_line(error: Exception) -> str:
     return text.splitlines()[0] if text else "unknown error"
 
 
-def read_robot(files: list[RobotFile], main: str | None = None) -> RobotModel:
-    """Compile the picked robot with MuJoCo, every file it names found among the picked files by name."""
-    named = _files(files)
+def read_robot(named: dict[str, bytes], main: str | None = None) -> RobotModel:
+    """Compile the robot with MuJoCo from files by name (see `named_files`), every file it names found among them."""
     trees = {name: _tree(name, data) for name, data in named.items() if name.lower().endswith(DESCRIPTIONS)}
     chosen = _main(trees, main)
     kind: RobotFormat = "urdf" if trees[chosen].tag == "robot" else "mjcf"

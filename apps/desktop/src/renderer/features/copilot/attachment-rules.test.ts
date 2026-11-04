@@ -19,6 +19,14 @@ describe("files added to the chat", () => {
     expect(checkAttachment({ name: "DATA.CSV", type: "", size: 10 }, 0)).toMatchObject({ mediaType: "text/csv" });
   });
 
+  it("read robot descriptions as XML documents, whatever type the system reports", () => {
+    const urdf = checkAttachment({ name: "leg.urdf", type: "", size: 10 }, 0);
+    expect(urdf).toEqual({ ok: true, kind: "document", mediaType: "text/xml", readsText: true });
+    expect(checkAttachment({ name: "robot.xml", type: "application/xml", size: 10 }, 0)).toMatchObject({
+      mediaType: "text/xml",
+    });
+  });
+
   it("send PDFs as documents whose text is not read", () => {
     expect(checkAttachment({ name: "spec.pdf", type: "application/pdf", size: 10 }, 0)).toEqual({
       ok: true,
