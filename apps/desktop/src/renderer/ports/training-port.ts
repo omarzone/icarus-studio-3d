@@ -18,6 +18,9 @@ export type RunSummary = {
   progress?: number;
   // One-line result ("16 lots · parks 71%").
   detail: string;
+  // The task's curriculum stage names and the one the run practices now, for a task with stages.
+  stages?: readonly string[];
+  stage?: number;
 };
 
 export type RunList = { selected: string; runs: readonly RunSummary[] };

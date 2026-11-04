@@ -76,6 +76,10 @@ export function runSummary(run: RunStatus): RunSummary {
   if (status === "running" || status === "paused") {
     summary.progress = run.total_steps > 0 ? Math.min(1, run.step / run.total_steps) : 0;
   }
+  if (run.stages && run.stages.length > 0) {
+    summary.stages = run.stages;
+    summary.stage = run.stage ?? 0;
+  }
   return summary;
 }
 

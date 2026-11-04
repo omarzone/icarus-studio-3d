@@ -39,6 +39,7 @@ function fakeApi() {
     project: async () => stateOf(project),
     library: async (): Promise<LibraryCatalog> => catalog,
     applyOperations,
+    runs: async () => [],
   };
   return { port: createEngineBrainPort(api), applyOperations };
 }

@@ -12,8 +12,10 @@ practices: training_steps (its default run length, "recommended" for the task's)
 layer), decisions_per_second (how often it reads its senses and sets its motors), muted_senses and muted_motors (the
 whole list of "object/component" sensors it ignores and motors it leaves at rest), start_from (a trained run and step
 it continues from, "none" for zero) and the PPO settings in ppo; PPO is the only method that trains. set_episode sets
-how each try ends: seconds, end_on_fall and end_on_success. The context lists only brain settings
-changed from their defaults.
+how each try ends: seconds, end_on_fall and end_on_success. set_curriculum replaces the task's curriculum stages
+(empty goes back to one stage); each stage has a name, settings that change episode_seconds, goal_distance,
+heading_range, align_within or stop_speed, and a promotion (success_rate over the last episodes training tries) that
+moves training to the next stage. The context lists only brain settings changed from their defaults.
 Answer in the language of the person's message and at their level: plain everyday words for beginners and casual
 messages, technical terms for technical ones. Be brief and concrete. Never show raw codes or ids to the person
 (run states like starting, task families like locomotion, kinds like distance_ray, reward term ids): say what they

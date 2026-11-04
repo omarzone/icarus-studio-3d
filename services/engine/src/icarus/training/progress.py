@@ -17,6 +17,7 @@ from icarus.contracts.training import (
     RunState,
     TrainingSnapshot,
 )
+from icarus.projects.curriculum import stage_project
 from icarus.sim.policy import CheckpointPolicy
 from icarus.training import episode_frames, film_strip
 from icarus.training.episodes import CheckpointEpisodes, EpisodeRecord
@@ -46,7 +47,9 @@ class EpisodeTally:
         self.failures.append(bool(info.get("failed", False)))
         self.terms.append(info.get("episode_terms", {}))
 
-    def metric(self, step: int, elapsed: float, steps_per_second: float, has_goal: bool) -> MetricPoint:
+    def metric(
+        self, step: int, elapsed: float, steps_per_second: float, has_goal: bool, stage: int | None = None
+    ) -> MetricPoint:
         keys = self.terms[0].keys() if self.terms else []
         return MetricPoint(
             kind="train",
@@ -58,6 +61,7 @@ class EpisodeTally:
             failure_rate=float(np.mean(self.failures)),
             reward_terms={key: float(np.mean([terms.get(key, 0.0) for terms in self.terms])) for key in keys},
             steps_per_second=steps_per_second,
+            stage=stage,
         )
 
 
@@ -76,7 +80,7 @@ class RunProgress:
         self.has_goal = False
         self.steps_per_second = 0.0
         self.stopping = False
-        self._best: tuple[float, float] | None = None
+        self._best: tuple[int, float, float] | None = None
         self._best_step: int | None = None
         self._success_rate: float | None = None
         self._saved: set[int] = set()
@@ -85,6 +89,8 @@ class RunProgress:
         self._frames_warned = False
         self.phase: RunPhase | None = None
         self._testing: int | None = None
+        # The curriculum stage the copies practice; None for a task without stages.
+        self.stage: int | None = 0 if self.project.task.curriculum else None
 
     def elapsed(self) -> float:
         return max(0.0, (datetime.now(UTC) - self.started_at).total_seconds())
@@ -103,6 +109,7 @@ class RunProgress:
                 "success_rate": self._success_rate,
                 "phase": self.phase,
                 "testing_step": self._testing,
+                "stage": self.stage,
                 **updates,
             }
         )
@@ -128,17 +135,21 @@ class RunProgress:
         model.save(self.folder.checkpoint_path(step))
         self._saved.add(step)
         policy = CheckpointPolicy(model, f"Checkpoint {step}")
-        result = evaluate(self.project, policy, self.config.evaluation_episodes, step)
+        # A checkpoint is tested on the stage the copies practice when it is saved.
+        project = self.practiced()
+        result = evaluate(project, policy, self.config.evaluation_episodes, step)
         self.folder.write_rollout(result.rollout)
         has_goal = result.success_rate is not None
         records = self._pictured(step, result)
         self.folder.write_episodes(
             CheckpointEpisodes(
-                step=step, has_goal=has_goal, episode_seconds=self.project.task.episode_seconds, episodes=records
+                step=step, has_goal=has_goal, episode_seconds=project.task.episode_seconds, episodes=records
             )
         )
-        self.folder.append_metric(result.metric(step, self.elapsed()))
-        rank = (result.success_rate if result.success_rate is not None else 0.0, result.episode_return)
+        self.folder.append_metric(result.metric(step, self.elapsed()).model_copy(update={"stage": self.stage}))
+        # A later curriculum stage is a harder test, so its checkpoints outrank every earlier stage's.
+        success = result.success_rate if result.success_rate is not None else 0.0
+        rank = (self.stage or 0, success, result.episode_return)
         if self._best is None or rank > self._best:
             self._best, self._best_step = rank, step
         self._success_rate = result.success_rate
@@ -181,9 +192,24 @@ class RunProgress:
             return list(result.episodes)
         return records
 
+    def practiced(self) -> Project:
+        """The project as the copies practice it now: its current curriculum stage applied."""
+        return stage_project(self.project, self.stage or 0)
+
+    def enter_stage(self, stage: int, success_rate: float, episodes: int, step: int) -> None:
+        """Record that training moved on to a curriculum stage, with the result that earned it."""
+        stages = self.project.task.curriculum
+        self.stage = stage
+        self.log(
+            f"Stage {stage + 1} of {len(stages)}, {stages[stage].name}, from step {step:,}: "
+            f"{_percent(success_rate)} of the last {episodes} tries of {stages[stage - 1].name} succeeded"
+        )
+        self.write_status(self.state, step)
+
     def train_point(self, tally: EpisodeTally, step: int) -> None:
         if tally.returns:
-            self.folder.append_metric(tally.metric(step, self.elapsed(), self.steps_per_second, self.has_goal))
+            point = tally.metric(step, self.elapsed(), self.steps_per_second, self.has_goal, self.stage)
+            self.folder.append_metric(point)
             self.log(
                 f"Step {step:,}: mean return {np.mean(tally.returns):.2f} over {len(tally.returns)} episodes, "
                 f"{self.steps_per_second:,.0f} steps/s"

@@ -392,6 +392,8 @@ class RunStore:
                 agent=member.agent if member else None,
                 agent_name=member.agent_name if member else None,
                 group=member.group if member else None,
+                stages=[stage.name for stage in project.task.curriculum],
+                stage=0 if project.task.curriculum else None,
             )
             folder.write_status(status)
             return status

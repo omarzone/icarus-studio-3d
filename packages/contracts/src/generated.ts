@@ -83,12 +83,78 @@ export interface BrainStart {
  * via the `definition` "TaskSpec".
  */
 export interface TaskSpec {
+  /**
+   * @maxItems 8
+   */
+  curriculum?:
+    | []
+    | [CurriculumStage]
+    | [CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ];
   end_on_fall?: boolean;
   end_on_success?: boolean;
   episode_seconds?: number;
   family: "none" | "navigation" | "locomotion" | "imitation";
   motion?: MotionReference | null;
   rewards: RewardTermSpec[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "CurriculumStage".
+ */
+export interface CurriculumStage {
+  name: string;
+  promote?: StagePromotion;
+  /**
+   * @maxItems 5
+   */
+  settings?:
+    | []
+    | [StageSetting]
+    | [StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting, StageSetting]
+    | [StageSetting, StageSetting, StageSetting, StageSetting, StageSetting];
+}
+/**
+ * A stage is passed once this share of the last `episodes` training tries succeeded.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StagePromotion".
+ */
+export interface StagePromotion {
+  episodes?: number;
+  success_rate?: number;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "StageSetting".
+ */
+export interface StageSetting {
+  parameter: "episode_seconds" | "goal_distance" | "heading_range" | "align_within" | "stop_speed";
+  value: number;
 }
 /**
  * The motion an imitation task tracks, frozen in the project so every run keeps the reference it learned.
@@ -1436,6 +1502,7 @@ export interface CopilotProposal {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1457,6 +1524,7 @@ export interface CopilotProposal {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -1647,6 +1715,46 @@ export interface SetEpisode {
   end_on_success?: boolean | null;
   op: "set_episode";
   seconds?: number | null;
+}
+/**
+ * Replaces the task's curriculum stages; an empty list goes back to one stage, the task as it is.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "SetCurriculum".
+ */
+export interface SetCurriculum {
+  agent?: string | null;
+  op: "set_curriculum";
+  /**
+   * @maxItems 8
+   */
+  stages:
+    | []
+    | [CurriculumStage]
+    | [CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage, CurriculumStage]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ]
+    | [
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage,
+        CurriculumStage
+      ];
 }
 /**
  * Removes an agent with its body and the world objects only it used; one agent left is the project's again.
@@ -2681,6 +2789,20 @@ export interface RunStatus {
   project_id: string;
   revision_number: number;
   run_id: string;
+  stage?: number | null;
+  /**
+   * @maxItems 8
+   */
+  stages?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string];
   started_at: string;
   state: "starting" | "running" | "stopping" | "done" | "stopped" | "failed";
   step: number;
@@ -2720,6 +2842,7 @@ export interface MetricPoint {
   reward_terms: {
     [k: string]: number;
   };
+  stage?: number | null;
   step: number;
   steps_per_second?: number | null;
   success_rate?: number | null;
@@ -3376,6 +3499,7 @@ export interface OperationBatch {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -3397,6 +3521,7 @@ export interface OperationBatch {
       | SetMotionReference
       | SetBrain
       | SetEpisode
+      | SetCurriculum
       | AddAgent
       | RemoveAgent
       | SetAgent
@@ -3862,6 +3987,7 @@ export interface Revision {
     | SetMotionReference
     | SetBrain
     | SetEpisode
+    | SetCurriculum
     | AddAgent
     | RemoveAgent
     | SetAgent
