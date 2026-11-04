@@ -35,6 +35,35 @@ MIN_EPISODE_SECONDS = 5.0
 MAX_EPISODE_SECONDS = 300.0
 EpisodeSeconds = Annotated[float, Field(ge=MIN_EPISODE_SECONDS, le=MAX_EPISODE_SECONDS, allow_inf_nan=False)]
 
+# Numeric task settings a curriculum stage may change: the try length, the spawn point's distance from the goal and
+# turn range, and the goal zone's alignment tolerance and stop speed.
+CurriculumParameter = Literal["episode_seconds", "goal_distance", "heading_range", "align_within", "stop_speed"]
+MAX_CURRICULUM_STAGES = 8
+
+
+class StageSetting(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    parameter: CurriculumParameter
+    value: float
+
+
+class StagePromotion(BaseModel):
+    """A stage is passed once this share of the last `episodes` training tries succeeded."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    success_rate: float = Field(default=0.8, gt=0.0, le=1.0)
+    episodes: int = Field(default=20, ge=1, le=1000)
+
+
+class CurriculumStage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=40)
+    settings: list[StageSetting] = Field(default_factory=list, max_length=5)
+    promote: StagePromotion = Field(default_factory=StagePromotion)
+
 
 class TaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -48,6 +77,9 @@ class TaskSpec(BaseModel):
     end_on_success: bool = True
     # The motion an imitation task tracks; None for every other family.
     motion: MotionReference | None = None
+    # Stages practiced in order, each on top of the settings above, moving on when its promotion holds; the last one
+    # stays. Empty is one stage: the task as it is.
+    curriculum: list[CurriculumStage] = Field(default_factory=list, max_length=MAX_CURRICULUM_STAGES)
 
 
 # Learning methods the worker really trains with.
