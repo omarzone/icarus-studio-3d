@@ -20,7 +20,7 @@ import { BrainShapePanel } from "./brain-shape/brain-shape-panel.tsx";
 import { BRAIN_VARIANTS, type BrainConfig, type BrainVariant, brainConfig } from "./brain-variants.ts";
 import { LearningPanel } from "./learning/learning-panel.tsx";
 import { NetworkDiagram, useNetworkCheckpoints } from "./network-diagram.tsx";
-import { ReadingsCard, useReadings } from "./readings-card.tsx";
+import { ReadingsCard } from "./readings-card.tsx";
 import { SensesActionsPanel } from "./senses-actions/senses-actions-panel.tsx";
 
 const PANEL_ROUTES = { "brain-sizes": "MOD-BRAIN-SIZES" } as const;
@@ -150,13 +150,8 @@ function BrainView({ variant, config }: Props) {
   const app = useRuntimeMode() === "app";
   const network = useNetworkCheckpoints(variant === "network" ? config.brain : null);
   const [checkpoint, setCheckpoint] = useState<string | null>(null);
-  const readings = useReadings(config.brain, variant !== "network").data;
-  // With a trained brain, the live views play it in the background; a saved checkpoint picked in the network does not.
-  const live =
-    variant === "network"
-      ? network.checkpoints.length > 1 && (checkpoint === null || checkpoint === LIVE)
-      : (readings?.rows.length ?? 0) > 0;
-  useLiveBrainStream(config.brain, live);
+  // Playing the brain in the background costs CPU, so it runs only once Live is picked in the network.
+  useLiveBrainStream(config.brain, variant === "network" && checkpoint === LIVE);
   switch (variant) {
     case "learned":
       return (
