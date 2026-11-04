@@ -90,3 +90,13 @@ def humanoid_obj(scale: float = 1.0) -> bytes:
 def blob_obj() -> bytes:
     """A plain 1 m box with nothing that reads as legs."""
     return _obj([((-0.5, 0.0, -0.5), (0.5, 1.0, 0.5), 4)])
+
+
+def box_stl(size: Point) -> bytes:
+    """A binary STL box of `size` centered on the origin, as robot descriptions use for their meshes."""
+    x, y, z = (value / 2 for value in size)
+    vertices, faces = _box((-x, -y, -z), (x, y, z), 1)
+    triangles = b"".join(
+        struct.pack("<12fH", 0, 0, 0, *vertices[a], *vertices[b], *vertices[c], 0) for a, b, c in faces
+    )
+    return b"\0" * 80 + struct.pack("<I", len(faces)) + triangles
