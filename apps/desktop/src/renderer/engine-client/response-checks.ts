@@ -11,6 +11,7 @@ import type {
   ProjectState,
   ProjectSummary,
   Revision,
+  RobotImported,
   SceneDescription,
   SkinImported,
   ValidationErrorBody,
@@ -149,6 +150,17 @@ export function isSkinImported(value: unknown): value is SkinImported {
     has(value, "revision", "number") &&
     has(value.skin, "id", "string") &&
     has(value.skin, "name", "string")
+  );
+}
+
+export function isRobotImported(value: unknown): value is RobotImported {
+  return (
+    isRecord(value) &&
+    has(value, "body", "string") &&
+    has(value, "name", "string") &&
+    has(value, "revision", "number") &&
+    has(value, "motors", "number") &&
+    Array.isArray(value.notes)
   );
 }
 

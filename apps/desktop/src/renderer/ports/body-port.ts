@@ -2,6 +2,7 @@ import type { SceneDescription } from "@icarus/contracts";
 import { definePort } from "../app/runtime/port.tsx";
 import { engineApi } from "../engine-client/engine-api.ts";
 import { rigApi } from "../engine-client/rig-api.ts";
+import { robotApi } from "../engine-client/robot-api.ts";
 import { skinApi } from "../engine-client/skin-api.ts";
 import { createBodyFixture } from "./body.fixture.ts";
 import { createEngineBodyPort } from "./body-engine.ts";
@@ -67,11 +68,13 @@ export type BodyPort = {
   setImportKind: (input: { body: string; kind: string }) => Promise<ImportPreview>;
   importStatic: (input: { body: string; kind: string; file: ModelFile | null }) => Promise<void>;
   importAndRig: (input: { body: string; kind: string; file: ModelFile | null }) => Promise<void>;
+  // A URDF or MJCF robot with its meshes, made the body as it is: its joints and motors come from the file.
+  importRobot: (input: { body: string; files: readonly ModelFile[] }) => Promise<void>;
   getAutoRig: (body: string) => Promise<AutoRigProgress>;
   cancelAutoRig: (body: string) => Promise<void>;
 };
 
 export const bodyPort = definePort<BodyPort>({
-  app: createEngineBodyPort(engineApi, skinApi, rigApi),
+  app: createEngineBodyPort(engineApi, skinApi, rigApi, robotApi),
   prototype: createBodyFixture,
 });
