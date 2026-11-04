@@ -25,6 +25,7 @@ from icarus.api import (
     motion,
     notes,
     play,
+    project_activity,
     project_runs,
     projects,
     rig,
@@ -392,6 +393,7 @@ def create_app(
     app.include_router(build.router)
     app.include_router(notes.router)
     app.include_router(project_runs.router)
+    app.include_router(project_activity.router)
     app.include_router(storage.router)
     app.include_router(bundles.router)
     app.add_exception_handler(StarletteHTTPException, _http_error)

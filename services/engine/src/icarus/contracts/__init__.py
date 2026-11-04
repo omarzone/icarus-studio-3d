@@ -60,7 +60,16 @@ from icarus.contracts.motion import (
 )
 from icarus.contracts.operations import OperationBatch
 from icarus.contracts.play import PlayBrainOption, PlayCommandEnvelope, PlayMessageEnvelope
-from icarus.contracts.project import CreateProject, DuplicateProject, Project, ProjectState, ProjectSummary, Revision
+from icarus.contracts.project import (
+    CreateProject,
+    DuplicateProject,
+    Project,
+    ProjectActivity,
+    ProjectClosed,
+    ProjectState,
+    ProjectSummary,
+    Revision,
+)
 from icarus.contracts.rig import (
     AutoRigStart,
     AutoRigStatus,
@@ -96,6 +105,8 @@ MODELS: tuple[type[BaseModel], ...] = (
     ProjectState,
     CreateProject,
     DuplicateProject,
+    ProjectActivity,
+    ProjectClosed,
     OperationBatch,
     DesignReport,
     SceneDescription,

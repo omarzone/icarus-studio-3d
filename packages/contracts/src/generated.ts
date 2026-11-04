@@ -3761,6 +3761,35 @@ export interface WorldSpec {
 }
 /**
  * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProjectActivity".
+ */
+export interface ProjectActivity {
+  project_id: string;
+  running: ProjectWork[];
+}
+/**
+ * Something of a project still running in the engine: a training run, the autopilot or a background task.
+ *
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProjectWork".
+ */
+export interface ProjectWork {
+  id: string;
+  kind: "training" | "autopilot" | "task";
+  progress?: number | null;
+  title: string;
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
+ * via the `definition` "ProjectClosed".
+ */
+export interface ProjectClosed {
+  project_id: string;
+  still_running: ProjectWork[];
+  stopped: ProjectWork[];
+}
+/**
+ * This interface was referenced by `IcarusContracts`'s JSON-Schema
  * via the `definition` "ProjectState".
  */
 export interface ProjectState {
