@@ -62,3 +62,25 @@ export function nextLiveSteps(steps: readonly AgentStep[], event: EngineEvent): 
 export function withTaskProgress(tasks: TaskInfo[] | undefined, event: TaskProgressEvent): TaskInfo[] | undefined {
   return tasks?.map((task) => (task.id === event.task_id ? { ...task, progress: event.progress } : task));
 }
+
+export type RunEndedNotice = { title: string; body: string };
+
+// A run that ended, as a system notification; null for every other event.
+export function runEndedNotice(event: EngineEvent): RunEndedNotice | null {
+  if (event.type !== "run_event" || event.event.type !== "status") {
+    return null;
+  }
+  const { name, state } = event.event.status;
+  switch (state) {
+    case "done":
+      return { title: `${name} finished`, body: "Its best brain is ready in Results." };
+    case "stopped":
+      return { title: `${name} stopped`, body: "Its best brain so far is kept." };
+    case "failed":
+      return { title: `${name} failed`, body: "Open Train to see what went wrong." };
+    case "starting":
+    case "running":
+    case "stopping":
+      return null;
+  }
+}

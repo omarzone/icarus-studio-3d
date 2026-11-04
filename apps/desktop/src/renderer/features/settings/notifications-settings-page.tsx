@@ -23,7 +23,7 @@ export function NotificationsSettingsPage() {
     <SettingsLayout
       section="notifications"
       title="Notifications"
-      description="Shown in the app and in your system tray."
+      description="Runs that finish while Icarus is in the background show as a system notification."
     >
       <QueryView query={query}>
         {(values) =>
