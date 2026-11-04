@@ -26,7 +26,7 @@ Add dependencies with `uv add`, never `pip install`. Justify any new dependency 
 | `migrations/` | Alembic migrations, applied by `icarus-community serve` and `migrate` | change data by hand |
 | `bundle_check.py` · `image_check.py` | Accepting only data-only project bundles and real pictures | execute or unpack anything |
 | `file_store.py` | Where bundles, thumbnails and photos live (`LocalFileStore` now) | take keys from requests |
-| `catalog.py` · `publishing.py` · `pages.py` | Creations, versions, remix lineage, votes, reports, pages and sharing | know about HTTP |
+| `catalog.py` · `comments.py` · `publishing.py` · `pages.py` | Creations, versions, remix lineage, votes, comments, reports, pages and sharing | know about HTTP |
 | `accounts.py` · `notifications.py` · `moderation.py` · `account_data.py` | Profiles, follows, blocks, notifications, moderation, export and deletion | know about HTTP |
 | `schemas/` | Request and answer models (`extra="forbid"`) | contain logic |
 | `api/` | Thin routers: parse, check the caller, delegate | contain business logic |

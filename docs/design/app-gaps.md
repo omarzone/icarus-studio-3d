@@ -38,7 +38,7 @@ There are 594 features across seven groups.
 
 | Group | Features | works | partial | pending | fixture-only | missing | broken |
 |---|---|---|---|---|---|---|---|
-| Launcher, projects, community, settings, system | 107 | 83 | 17 | 1 | 2 | 4 | 0 |
+| Launcher, projects, community, settings, system | 107 | 84 | 17 | 1 | 1 | 4 | 0 |
 | World, ideas, editor panels | 121 | 71 | 24 | 7 | 2 | 17 | 0 |
 | Copilot | 44 | 33 | 8 | 1 | 1 | 1 | 0 |
 | Brain | 68 | 34 | 20 | 1 | 5 | 8 | 0 |
@@ -110,9 +110,9 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-COMMUNITY | "Every creation is reviewed" note | partial | planned | Moderation exists, but the service defaults to publishing straight to public; require review by default or change the line. |
 | SCR-COMMUNITY | Creation cards with thumbnail, votes, author, remixes | works | built | Nothing |
 | SCR-CREATION | Hero replay with "Watch how it learned" | partial | planned | The hero shows the published thumbnail, but bundles carry no training history, so the timelapse reads "not published"; publish rollouts with the bundle. |
-| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview and Versions are real; Brain and Comments are always empty and How it learned has no published timelapse. |
+| SCR-CREATION | Tabs Overview, How it learned, Brain, Versions, Comments | partial | planned | Overview, Versions and Comments are real; Brain is always empty and How it learned has no published timelapse. |
 | SCR-CREATION | Checkpoint strip opening the timelapse at a step | fixture-only | planned | The app maps no checkpoints, so the strip never renders; needs checkpoint thumbnails in the bundle. |
-| SCR-CREATION | Comment list (read only) | fixture-only | planned | The community service has no comments; the app always shows "No comments yet". |
+| SCR-CREATION | Comment list | works | built | Nothing. The overview shows the newest three; the Comments tab lists them with a composer for signed-in people, delete for the comment's author and moderators, and Report through `MOD-REPORT`. The author's comments switch closes new ones. The comment controls are not in the design inventory. |
 | SCR-CREATION | Author card with Follow | works | built | Nothing |
 | SCR-CREATION | Votes, remixes, downloads tiles | works | built | Nothing |
 | SCR-CREATION | "Remix into my projects" | works | built | Nothing |
@@ -777,5 +777,5 @@ Ranked by how much each one confuses or blocks someone using the app.
 1. **No connectome brains.** `STA-BRAIN-CONNECTOME` and the fly source honestly show the trained brain until Sprint 11 is built.
 2. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
 3. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
-4. **Creation pages have no comments, brain tab or published timelapse.**
+4. **Creation pages have no brain tab or published timelapse.**
 5. **The animation export writes JSON, BVH and glTF;** FBX is not written.

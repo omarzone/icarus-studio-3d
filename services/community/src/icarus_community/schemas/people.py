@@ -7,7 +7,7 @@ from icarus_community.schemas.creations import Person, Strict, Visibility
 
 HANDLE_PATTERN = r"^[a-z0-9_]{3,32}$"
 Role = Literal["member", "moderator"]
-NotificationKind = Literal["vote", "remix", "follow", "invite", "moderation"]
+NotificationKind = Literal["vote", "remix", "follow", "invite", "moderation", "comment"]
 ProfileShelf = Literal["creations", "remixes", "liked", "drafts"]
 
 

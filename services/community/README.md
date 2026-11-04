@@ -1,6 +1,6 @@
 # Icarus Community service
 
-The online part of Icarus Studio 3D: accounts, creations (published project bundles with a thumbnail and a page), versions and remix lineage, categories, search, votes, reports and moderation, profiles, follows, notifications, sharing with invites, privacy, blocking, downloading your data and deleting your account.
+The online part of Icarus Studio 3D: accounts, creations (published project bundles with a thumbnail and a page), versions and remix lineage, categories, search, votes, comments, reports and moderation, profiles, follows, notifications, sharing with invites, privacy, blocking, downloading your data and deleting your account.
 
 It is a FastAPI app with SQLAlchemy and Alembic. Locally it keeps everything in SQLite and a folder; on a server it uses Postgres and the same folder layout. Sign-in belongs to [Supabase Auth](https://supabase.com/docs/guides/auth): the service never sees a password, it only verifies the tokens Supabase issues.
 
@@ -93,6 +93,8 @@ All routes are under `/v1` except `/health`. Writes need `Authorization: Bearer 
 | `GET /v1/creations/{id}` · `/thumbnail` · `/bundle` | A creation with its versions and lineage · its picture · its bundle |
 | `PUT` · `DELETE /v1/creations/{id}/vote` | Vote · take the vote back |
 | `POST /v1/creations/{id}/reports` · `/appeals` | Report (optionally blocking the author) · appeal a removal |
+| `GET` · `POST /v1/creations/{id}/comments?limit=&offset=` | Comments, newest first, with whether the author allows new ones · post one (closed when the author turned comments off) |
+| `DELETE /v1/creations/{id}/comments/{comment_id}` · `POST .../reports` | Delete a comment (its author or a moderator) · report it to the moderation queue (optionally blocking its author) |
 | `GET` · `PATCH /v1/me` · `PUT` · `DELETE /v1/me/photo` | Your profile · your photo |
 | `GET` · `PATCH /v1/me/privacy` · `POST /v1/me/blocks` · `DELETE /v1/me/blocks/{handle}` | Privacy and blocking |
 | `GET` · `PATCH /v1/me/notification-settings` · `GET /v1/me/notifications` · `POST /v1/me/notifications/read` | Notifications |

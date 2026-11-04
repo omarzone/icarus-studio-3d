@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from icarus_community.api import creations, me, moderation, profiles, service
+from icarus_community.api import comments, creations, me, moderation, profiles, service
 from icarus_community.api.deps import Services
 from icarus_community.auth import TokenVerifier
 from icarus_community.db import Database
@@ -66,6 +66,6 @@ def create_app(
         where = ".".join(str(part) for part in first.get("loc", ()) if part != "body")
         return _error(422, "invalid", f"{where}: {first.get('msg')}" if where else str(first.get("msg")))
 
-    for router in (service.router, creations.router, me.router, profiles.router, moderation.router):
+    for router in (service.router, creations.router, comments.router, me.router, profiles.router, moderation.router):
         app.include_router(router)
     return app

@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
-import type { NotificationItem } from "../community-client/community-types.ts";
+import type { CommentPage, CreationDetail, NotificationItem } from "../community-client/community-types.ts";
 import {
+  commentThreadView,
+  creationDetailView,
   initialsOf,
   licenseText,
   notificationView,
@@ -57,4 +59,45 @@ it("shows drafts as private on a profile and keeps a person's look stable", () =
   expect(initialsOf("Mara Ortiz")).toBe("MO");
   expect(initialsOf("ana")).toBe("AN");
   expect(toneOf("mara")).toBe(toneOf("mara"));
+});
+
+it("counts every comment but previews only the newest ones on the overview", () => {
+  const now = new Date("2026-11-03T12:00:00Z");
+  const comment = (id: string, canDelete: boolean): CommentPage["items"][number] => ({
+    id,
+    author: { handle: "ben", name: "Ben Ruiz", photo_path: null },
+    text: `Comment ${id}`,
+    created_at: "2026-11-03T11:00:00Z",
+    can_delete: canDelete,
+  });
+  const page: CommentPage = { items: ["a", "b", "c", "d"].map((id) => comment(id, id === "a")), total: 9, open: false };
+
+  const thread = commentThreadView(page, now);
+  expect(thread).toMatchObject({ total: 9, open: false });
+  expect(thread.comments[0]).toMatchObject({ id: "a", time: "1 h ago", canDelete: true, author: { initials: "BR" } });
+  expect(thread.comments[1]?.canDelete).toBe(false);
+
+  const creation: CreationDetail = {
+    id: "c1",
+    title: "Parking car",
+    category: "Cars",
+    author: { handle: "ana", name: "Ana", photo_path: null, creations: 1 },
+    votes: 0,
+    remixes: 0,
+    downloads: 0,
+    status: "public",
+    visibility: "public",
+    thumbnail_path: "/v1/creations/c1/thumbnail",
+    created_at: "2026-11-03T10:00:00Z",
+    description: "",
+    voted: false,
+    included: [],
+    permissions: { remix: true, download_brain: true, retrain: true, commercial: false },
+    versions: [],
+    remix_of: null,
+    can_edit: false,
+  };
+  const detail = creationDetailView(creation, page);
+  expect(detail.commentCount).toBe(9);
+  expect(detail.comments.map((item) => item.id)).toEqual(["a", "b", "c"]);
 });

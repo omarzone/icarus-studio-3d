@@ -2,7 +2,14 @@ import type { RouteId } from "../app/navigation/catalog-id.ts";
 import type * as Api from "../community-client/community-types.ts";
 import type { AvatarTone } from "../ui/avatar.tsx";
 import type { AccountSummary, Profile, ProfileCreation } from "./account-port.ts";
-import type { CommunityPerson, CreationAuthor, CreationDetail, CreationSummary } from "./community-port.ts";
+import type {
+  CommentThread,
+  CommunityPerson,
+  CreationAuthor,
+  CreationDetail,
+  CreationSummary,
+  ThreadComment,
+} from "./community-port.ts";
 import type { AppNotification, NotificationKind } from "./notifications-port.ts";
 import { relativeTime } from "./project-views.ts";
 import type { NotificationSettings, PrivacySettings } from "./settings-port.ts";
@@ -59,7 +66,24 @@ export function licenseText(permissions: Api.Permissions): string {
   return allowed.length === 0 ? "View only" : `Allows ${allowed.join(", ")}`;
 }
 
-export function creationDetailView(creation: Api.CreationDetail): CreationDetail {
+export function commentView(comment: Api.Comment, now: Date): ThreadComment {
+  return {
+    id: comment.id,
+    author: personView(comment.author),
+    text: comment.text,
+    time: relativeTime(comment.created_at, now),
+    canDelete: comment.can_delete,
+  };
+}
+
+export function commentThreadView(page: Api.CommentPage, now: Date): CommentThread {
+  return { comments: page.items.map((item) => commentView(item, now)), total: page.total, open: page.open };
+}
+
+// How many comments the overview shows under the checkpoints; the Comments tab has the rest.
+export const OVERVIEW_COMMENTS = 3;
+
+export function creationDetailView(creation: Api.CreationDetail, comments?: Api.CommentPage): CreationDetail {
   const latest = creation.versions[0];
   return {
     ...creationSummaryView(creation),
@@ -83,8 +107,12 @@ export function creationDetailView(creation: Api.CreationDetail): CreationDetail
       label: `Version ${version.number}`,
       note: version.note || `library ${version.library_version}`,
     })),
-    comments: [],
-    commentCount: 0,
+    comments: (comments?.items ?? []).slice(0, OVERVIEW_COMMENTS).map((comment) => ({
+      id: comment.id,
+      author: personView(comment.author),
+      text: comment.text,
+    })),
+    commentCount: comments?.total ?? 0,
   };
 }
 
@@ -131,6 +159,7 @@ const NOTIFICATION_TITLES: Record<Api.NotificationItem["kind"], string> = {
   follow: "New follower",
   invite: "You were invited",
   moderation: "Moderation",
+  comment: "New comment",
 };
 
 export function notificationView(item: Api.NotificationItem, now: Date): AppNotification {

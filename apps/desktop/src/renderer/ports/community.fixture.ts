@@ -91,6 +91,8 @@ function detailOf(summary: CreationSummary): CreationDetail {
 
 export function createCommunityFixture(): CommunityPort {
   let details = new Map(CREATIONS.map((item) => [item.id, detailOf(item)]));
+  // Comments written in this session belong to the person using the prototype, who may delete them.
+  const posted: string[] = [];
   const find = (id: string | undefined) => {
     const detail = details.get(id ?? "") ?? details.get(CREATIONS[0]?.id ?? "");
     if (!detail) {
@@ -117,6 +119,38 @@ export function createCommunityFixture(): CommunityPort {
     },
     remix: async (id) => ({ projectId: `remix-${id}`, name: find(id).name }),
     report: async () => undefined,
+    listComments: async (creationId) => {
+      const detail = find(creationId);
+      const own = new Set(posted);
+      return {
+        comments: detail.comments.map((comment) => ({
+          ...comment,
+          time: own.has(comment.id) ? "just now" : "",
+          canDelete: own.has(comment.id),
+        })),
+        total: detail.commentCount,
+        open: true,
+      };
+    },
+    postComment: async ({ creationId, text }) => {
+      const detail = find(creationId);
+      const id = `comment-${posted.length + 1}`;
+      posted.push(id);
+      const comment = { id, author: { handle: "you", initials: "YO", tone: 0 as const }, text: text.trim() };
+      details = new Map(details).set(detail.id, {
+        ...detail,
+        comments: [comment, ...detail.comments],
+        commentCount: detail.commentCount + 1,
+      });
+    },
+    deleteComment: async ({ creationId, commentId }) => {
+      const detail = find(creationId);
+      details = new Map(details).set(detail.id, {
+        ...detail,
+        comments: detail.comments.filter((comment) => comment.id !== commentId),
+        commentCount: Math.max(0, detail.commentCount - 1),
+      });
+    },
     getPicture: async () => null,
   };
 }
