@@ -44,7 +44,12 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
   const workspace = (clip: string): Promise<MotionWorkspace> => motion.workspace(clip);
   const project = async (clip: string) => (await api.project(clip)).project;
   const choices = (clip: string): ExportChoices => exports.get(clip) ?? { format: "JSON", options: {} };
-  const source = async (clip: string) => videoSource(await workspace(clip), await project(clip));
+  const link = (clip: string, current: MotionWorkspace) =>
+    current.clip ? motion.frameLink(clip, current.clip.id) : Promise.resolve(null);
+  const source = async (clip: string) => {
+    const current = await workspace(clip);
+    return videoSource(current, await project(clip), await link(clip, current));
+  };
   const plan = async (clip: string) =>
     trainingPlan(await workspace(clip), await project(clip), focuses.get(clip) ?? "even");
   const exported = async (clip: string) => animationExport(await workspace(clip), choices(clip));
@@ -69,6 +74,7 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
       await motion.addVideo(clip, {
         name: video.name,
         duration: video.duration,
+        start: video.start,
         fps: video.fps,
         width: video.width,
         height: video.height,
@@ -94,7 +100,10 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
       }
       await motion.track(clip);
     },
-    getTracking: async (clip) => trackingProgress(await workspace(clip)),
+    getTracking: async (clip) => {
+      const current = await workspace(clip);
+      return trackingProgress(current, await link(clip, current));
+    },
     getTrainingPlan: plan,
     setTrainingFocus: async ({ clip, focus }) => {
       focuses.set(clip, focus);

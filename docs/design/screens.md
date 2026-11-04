@@ -983,6 +983,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
   - File card with the first frame, duration, resolution, people found and a trim range.
   - *Who to copy* (people found in the video) and *Copy onto* (default humanoid or an imported character).
   - Privacy note: the video stays on this computer; only the pose is used.
+  - In the app the file card plays the chosen part of the picked video on a loop; reopened later, it plays the frames the engine kept. *Use this part* is a 12 s window over the whole video: drag it or use the arrow keys, and letting go samples that part again. After reopening, picking another part needs the video chosen again, and the window says so.
 - **Header:** `HDR-WORKSPACE` · project **Dance Copy** · workspaces World · Body · Brain · Train · Results · Build (active: **World**) · Play → disabled · primary *Train* → disabled
 - **Left column:** `PNL-EXPLORER` (**Explorer**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Preset, Clouds, Horizon, Time of day, Sun intensity, Shadows
 - **Center column:** `PNL-VIEWPORT` (**Scene**, Game view); `PNL-LIBRARY` (**Library**, Community, My files) · toolbar: Terrain, Sky, Light, Part, Agent, Goal, Import
@@ -1014,6 +1015,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Show pose tracking progress honestly.
 - **Content:**
   - Current frame with the tracked skeleton, progress bar, steps (find person, track frames, map onto character, physics check), run in background or see result.
+  - In the app the picture is the frame the pose model is reading now; once tracking is done the clip plays at its own rate with the copied person's keypoints drawn over each frame, so a bad track is visible before training.
 - **Header:** `HDR-WORKSPACE` · project **Dance Copy** · workspaces World · Body · Motion · Brain · Train · Results · Build (active: **Motion**) · Play → `SCR-MOTION` · primary *Train copy* → `MOD-MOTION-TRAIN`
 - **Left column:** `PNL-EXPLORER` (**Clip**); `PNL-INSPECTOR` (**Properties**) · inspector rows: Body height, Arms, Feet on floor, Balance help, Max joint force
 - **Center column:** `PNL-MOTION-COMPARE` (**Side by side**, Overlay, Reference only); `PNL-CLIP-TIMELINE` (**Clip · 12 s · 360 frames**, Match score) · toolbar: Video, Detect pose, Retarget, Trim, Export

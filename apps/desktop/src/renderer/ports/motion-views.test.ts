@@ -58,6 +58,26 @@ function workspace(change: Partial<MotionWorkspace> = {}): MotionWorkspace {
 }
 
 describe("the motion workspace from the engine", () => {
+  it("shows the frame being tracked, then every frame with the copied person once tracking is done", () => {
+    const link = (index: number) => `http://engine/frames/${index}`;
+    const running = trackingProgress(
+      workspace({
+        tracking: { clip: "c1", state: "running", frame: 2, frames: 4, model: "pose-model", message: null },
+      }),
+      link,
+    );
+    expect([running.current, running.strip?.url(running.current), running.poses]).toEqual([
+      2,
+      "http://engine/frames/2",
+      [],
+    ]);
+    const done = trackingProgress(workspace(), link);
+    expect([done.state, done.strip?.count, done.strip?.fps, done.poses.length]).toEqual(["done", 4, 2, 4]);
+    expect(done.poses[0]?.find((point) => point.name === "head")).toEqual({ name: "head", x: 0.5, y: 0.1 });
+    expect(trackingProgress(workspace()).strip).toBeNull();
+    expect(videoSource(workspace({ clip: null }), null, link).strip).toBeNull();
+  });
+
   it("draws tracked frames as stick figures in their box and says what is missing", () => {
     const timeline = clipTimeline(workspace(), 1);
     expect(timeline.label).toBe("Clip · 2.0 s · 4 frames");

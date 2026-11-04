@@ -51,11 +51,23 @@ export type Option = {
   // An imported character: choosing it goes through the import to pick or replace the file.
   imported?: boolean;
 };
+// The sampled frames of the clip as the engine keeps them: how many, their rate and where each picture is served.
+export type FrameStrip = { count: number; fps: number; url: (index: number) => string };
+
+// A tracked keypoint as a share of the picture's width and height.
+export type FramePoint = { name: string; x: number; y: number };
+
 export type VideoSource = {
   sources: readonly { id: string; label: string }[];
   source: string;
   file: { name: string; facts: string };
   trim: { from: number; to: number; fromLabel: string; toLabel: string };
+  // Seconds of the whole video, where the sampled part starts and how long that part can be.
+  duration: number;
+  start: number;
+  span: number;
+  // None before a video is chosen, and in the prototype.
+  strip: FrameStrip | null;
   people: readonly Option[];
   person: string;
   targets: readonly Option[];
@@ -70,6 +82,8 @@ export type VideoSource = {
 export type SampledVideo = {
   name: string;
   duration: number;
+  // Where in the video the frames start, in seconds.
+  start: number;
   fps: number;
   width: number;
   height: number;
@@ -83,6 +97,11 @@ export type TrackingProgress = {
   steps: readonly ProgressStep[];
   state: "idle" | "running" | "done" | "failed" | "stopped";
   message?: string;
+  strip: FrameStrip | null;
+  // The frame the pose model reads now, or the last one it read.
+  current: number;
+  // Once tracked: the copied person's keypoints in every frame, to draw over the pictures.
+  poses: readonly (readonly FramePoint[])[];
 };
 
 export type MotionTrainingPlan = {
