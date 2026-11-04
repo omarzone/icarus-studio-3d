@@ -8,6 +8,7 @@ import type {
   SenseInput,
   SensesActions,
 } from "./brain-port.ts";
+import { curriculumView } from "./curriculum-views.ts";
 import { nextComponentId } from "./scene-views.ts";
 
 type Family = Project["task"]["family"];
@@ -225,8 +226,8 @@ function kindOf(family: Family, term: string, weight: number, info: RewardTermIn
   return info && info.weight_min >= -1 ? "cost" : "penalty";
 }
 
-// The reward, goal and curriculum of the project's task.
-export function learningView(project: Project, catalog: LibraryCatalog): Learning {
+// The reward, goal and curriculum of the project's task; `activeStage` is the stage a run practices now.
+export function learningView(project: Project, catalog: LibraryCatalog, activeStage?: number | null): Learning {
   const family = project.task.family;
   const reward: RewardTerm[] = project.task.rewards.map((spec) => {
     const info = termInfo(catalog, spec.term);
@@ -240,7 +241,8 @@ export function learningView(project: Project, catalog: LibraryCatalog): Learnin
       kind: kindOf(family, spec.term, spec.weight, info),
     };
   });
-  return { reward, proposedChanges: 0, goal: goalOf(project.task), curriculum: [] };
+  const curriculum = curriculumView(project.task, activeStage);
+  return { reward, proposedChanges: 0, goal: goalOf(project.task), curriculum };
 }
 
 function fits(info: RewardTermInfo, family: Family): boolean {

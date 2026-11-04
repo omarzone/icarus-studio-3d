@@ -49,7 +49,7 @@ There are 594 features across seven groups.
 The short version:
 
 - **Real today:** local projects and their history; the World editor loop; ideas with tweak and mix; the copilot with proposals, check lists, live steps, run cards, milestones and chips that route by intent; live Play on MuJoCo with the newest fitting brain; Train with pause, coaching and the autopilot; Results with failure groups, diagnoses, behavior tests and the timelapse; the Brain workspace (senses, motors, rewards, settings, sizes, network from a checkpoint); the Body workspace (import as mesh, auto-rig, rig check, test poses, skin weights); Motion from video (tracking with the pose model, imitation training, comparison, JSON and BVH export); Build (export plan, ONNX, URDF, MJCF, hardware check); and the community (sign-in, catalog, creation pages, remix, votes, reports, moderation, sharing, publishing, profile and privacy settings).
-- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; curriculum stages; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
+- **Not built yet:** connectome brains (`STA-BRAIN-CONNECTOME` and the fly source), so the connectome panels show the trained brain instead; editing curriculum stages by hand; imported reference recordings; comments on creations; glTF and FBX animation export; URDF and MJCF robot import; installers (Sprint 14).
 - **Broken (says or offers something it does not do):** nothing known after Sprint 15.
 - **Most visible partials:** views that read one evaluation instead of live data (brain readings, network glow, brain activity); body tool modes; Play for a motion clip; and creation pages without comments.
 
@@ -376,8 +376,8 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | TAB-REWARD | Drag a weight | works | built | Nothing |
 | TAB-REWARD | "1 change proposed" | fixture-only | planned | Map open proposals and diagnoses onto cards; the app always reports zero. |
 | TAB-GOAL | Success condition and time limit | partial | planned | Shows the task's real time limit and end rules; success is a fixed sentence per task family and not editable. |
-| TAB-CURRICULUM | Stages that make the task harder | fixture-only | planned | Curriculum in TaskSpec and the env; the app honestly shows one stage. |
-| SCR-BRAIN | Chat explains a reward change | partial | built | The copilot can change rewards, senses, network and episode rules through operations; curriculum does not exist. |
+| TAB-CURRICULUM | Stages that make the task harder | partial | built | Shows the task's real stages, what each changes, its promotion rule and the stage a training run of this revision practices; stages are added and edited through the copilot (`set_curriculum`), not yet by hand in the tab. |
+| SCR-BRAIN | Chat explains a reward change | partial | built | The copilot can change rewards, senses, network, episode rules and curriculum stages through operations. |
 | STA-BRAIN-NETWORK | Layer size sliders | works | built | Nothing |
 | STA-BRAIN-NETWORK | Decisions per second | works | built | Nothing |
 | STA-BRAIN-NETWORK | "+ Add a layer" | partial | planned | On the network screen it opens Brain sizes instead of adding a layer; it adds in place only with that dialog open. |
@@ -730,7 +730,7 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 | Motor speed | Sprint 9 | Motor `max_velocity` | Compiler | Inspector row |
 | Motion retiming, looping, Roblox R15 target | Sprint 10 if kept; otherwise drop from the design | Export options | `motion/export.py` | Dialog fields |
 | Run inspector (method, start, budget, locks) | Sprint 7 | None | None | Inspector from `RunStatus` and `RunConfig` |
-| Run goals in the progress card | Sprint 8 (with curriculum) | Goals or curriculum stages | Stage progress per run | Progress card |
+| Run goals in the progress card | Done: curriculum stages | `RunStatus.stages` and `stage` | Worker advances stages | Progress card shows stages |
 | Stop at a chosen step | Sprint 8 | `PATCH /runs/{id}` with `total_steps` | Worker reads a new budget | Chip action |
 | Live-episode scrubber | Sprint 7 follow-up | None | Latest rollout (exists) | Fill `LiveView.episode` |
 | Reward weight change on breakdown | Sprint 8 | None | Revision diff (exists in comparisons) | Show previous weight |
@@ -751,7 +751,7 @@ Each row proposes where the feature belongs and the work by layer. "Contract" me
 | Inline action buttons | Several | Real | None |
 | Proposal card | Every workspace | Real | "Edit by hand" needs proposed values per property |
 | Build progress card | STA-WORLD-BUILDING | Real | None |
-| Run progress card with goals | SCR-TRAIN | Real progress | Goals stay empty until runs have stages (curriculum) |
+| Run progress card with goals | SCR-TRAIN | Real progress; goals are the run's curriculum stages | Runs without stages show no goals |
 | Milestone divider, coach observations | SCR-TRAIN | Real on coached runs | None |
 | "Next run, if you agree" plan card | SCR-TRAIN | Real plan | The card has no action buttons of its own |
 | Welcome with starter chips | STA-WORLD-EMPTY | Real | Chips are sent as messages, not routed intents |
@@ -779,5 +779,5 @@ Ranked by how much each one confuses or blocks someone using the app.
 2. **Brain views are snapshots, not live.** Readings, glow and activity come from one evaluation observation.
 3. **The animation export writes JSON and BVH only;** glTF and FBX are not written.
 4. **Body tool modes say not available yet.** Bone, Joint, Motor, Sensor, Mirror, Collider, Weights and Test pose in the toolbar have no action.
-5. **No curriculum.** The Curriculum tab honestly shows one stage, and run cards never show goals.
+5. **Curriculum stages are edited only through the copilot.** The Curriculum tab shows the real stages but has no add, reorder or edit controls yet.
 6. **Creation pages have no comments, brain tab or published timelapse.**

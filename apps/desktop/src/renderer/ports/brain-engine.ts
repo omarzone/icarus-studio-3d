@@ -12,8 +12,9 @@ import {
   toggleOperation,
   weightOperation,
 } from "./brain-views.ts";
+import { activeStage } from "./curriculum-views.ts";
 
-type BrainApi = Pick<EngineApi, "project" | "library" | "applyOperations">;
+type BrainApi = Pick<EngineApi, "project" | "library" | "applyOperations" | "runs">;
 
 export type EngineBrainPort = Pick<
   BrainPort,
@@ -76,8 +77,8 @@ export function createEngineBrainPort(api: BrainApi): EngineBrainPort {
     renameInput: ({ brain, id, name }) =>
       sense(brain, (project) => renameInputOperation(project, id, name), `Named a sensor ${name.trim()}`),
     getLearning: async (brain) => {
-      const { project, catalog: lib } = await load(brain);
-      return learningView(project, lib);
+      const [state, lib, runs] = await Promise.all([api.project(brain), library(), api.runs(brain)]);
+      return learningView(state.project, lib, activeStage(runs, state.revision.number));
     },
     setRewardWeight: ({ brain, id, weight }) =>
       edit(brain, (project, lib) => weightOperation(project, lib, id, weight), `Changed the ${id} weight`),
