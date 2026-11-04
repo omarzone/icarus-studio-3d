@@ -18,10 +18,12 @@ type Props = {
   brain: string;
   // Play shows only the live activity; the Brain workspace also explains behaviors and wiring.
   tabs?: readonly Tab[];
+  // Plain note on the right of the tab bar saying which brain the activity comes from.
+  note?: string;
   className?: string;
 };
 
-export function BrainActivityPanel({ brain, tabs = ALL_TABS, className = "h-49 shrink-0" }: Props) {
+export function BrainActivityPanel({ brain, tabs = ALL_TABS, note, className = "h-49 shrink-0" }: Props) {
   const port = usePort(brainPort);
   const activity = useQuery({ queryKey: ["brain", brain, "activity"], queryFn: () => port.getActivity(brain) });
   const [tab, setTab] = useState<Tab>("activity");
@@ -40,7 +42,12 @@ export function BrainActivityPanel({ brain, tabs = ALL_TABS, className = "h-49 s
           ) : null}
         </>
       }
-      options={activity.data?.live ? <span className="pr-1 text-ui text-danger">● live</span> : null}
+      options={
+        <>
+          {note ? <span className="pr-1 text-ui text-fg-tertiary">{note}</span> : null}
+          {activity.data?.live ? <span className="pr-1 text-ui text-danger">● live</span> : null}
+        </>
+      }
     >
       {tab === "activity" ? (
         <QueryView

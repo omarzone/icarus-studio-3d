@@ -1,5 +1,5 @@
 import { tokens } from "@icarus/ui-tokens";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePort } from "../../app/runtime/port.tsx";
 import { brainPort, type NetworkColumn, type NetworkView, type NeuronState } from "../../ports/brain-port.ts";
 
@@ -19,23 +19,27 @@ function nodeY(index: number, count: number): number {
   return MIDDLE + (index - (count - 1) / 2) * spacing;
 }
 
-const networkKey = (brain: string) => ["brain", brain, "network"] as const;
+const networkKey = (brain: string, checkpoint: string | null) => ["brain", brain, "network", checkpoint] as const;
 
-// Checkpoints the diagram can show (Live and saved ones); none until the network is loaded.
-export function useNetworkCheckpoints(brain: string | null): readonly string[] {
+// Checkpoints the diagram can show (Live and saved ones) and the one shown by default; none until the network is loaded.
+export function useNetworkCheckpoints(brain: string | null): { checkpoints: readonly string[]; shown: string | null } {
   const port = usePort(brainPort);
   const query = useQuery({
-    queryKey: networkKey(brain ?? ""),
+    queryKey: networkKey(brain ?? "", null),
     queryFn: () => port.getNetwork({ brain: brain ?? "" }),
     enabled: brain !== null,
   });
-  return query.data?.checkpoints ?? [];
+  return { checkpoints: query.data?.checkpoints ?? [], shown: query.data?.checkpoint ?? null };
 }
 
 // The body's senses wired into the network: hot neurons and connections lit red, drawn from the engine's network state.
-export function NetworkDiagram({ brain }: { brain: string }) {
+export function NetworkDiagram({ brain, checkpoint }: { brain: string; checkpoint: string | null }) {
   const port = usePort(brainPort);
-  const query = useQuery({ queryKey: networkKey(brain), queryFn: () => port.getNetwork({ brain }) });
+  const query = useQuery({
+    queryKey: networkKey(brain, checkpoint),
+    queryFn: () => port.getNetwork({ brain, checkpoint: checkpoint ?? undefined }),
+    placeholderData: keepPreviousData,
+  });
   const network = query.data;
   if (!network || network.columns.length === 0) {
     return null;

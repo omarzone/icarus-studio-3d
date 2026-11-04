@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Brain } from "lucide-react";
 import { useState } from "react";
 import { GoTo } from "../../app/navigation/go-to.tsx";
-import { usePort } from "../../app/runtime/port.tsx";
+import { usePort, useRuntimeMode } from "../../app/runtime/port.tsx";
 import { type BrainSourceOption, brainPort } from "../../ports/brain-port.ts";
 import { ActionButton } from "../../ui/action-button.tsx";
 import { ChoiceCard } from "../../ui/choice-card.tsx";
@@ -32,6 +32,8 @@ function Source({ brain }: { brain: string }) {
   const query = useQuery({ queryKey: ["brain", brain, "source"], queryFn: () => port.getSource(brain) });
   const [picked, setPicked] = useState<string | null>(null);
   const selected = picked ?? query.data?.selected ?? null;
+  // Connectome brains do not exist in the app yet, so the choice only keeps the trained brain and returns to it.
+  const app = useRuntimeMode() === "app";
   return (
     <Dialog
       title={query.data?.title ?? "Choose the brain"}
@@ -44,13 +46,13 @@ function Source({ brain }: { brain: string }) {
           </GoTo>
           <ActionButton
             cta="Load into the fly"
-            to="STA-BRAIN-CONNECTOME"
+            to={app ? "SCR-BRAIN" : "STA-BRAIN-CONNECTOME"}
             disabled={selected === null}
             title={selected === null ? "Choose what drives the body first" : undefined}
             run={() => port.loadSource({ brain, id: selected ?? "" })}
             className={dialogButtonClass("primary")}
           >
-            Load into the fly
+            {app ? "Use this brain" : "Load into the fly"}
           </ActionButton>
         </>
       }
