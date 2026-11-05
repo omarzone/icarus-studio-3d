@@ -1,12 +1,13 @@
 // HDR-LAUNCHER
 import { tokens } from "@icarus/ui-tokens";
-import { ArrowLeft, Bell, Search, User } from "lucide-react";
+import { ArrowLeft, Bell, Search, Settings, User } from "lucide-react";
 import { buttonClass } from "../../../ui/button-styles.ts";
 import { IcarusMark } from "../../../ui/icarus-mark.tsx";
 import { ctaSlug, type ScreenId } from "../../navigation/catalog-id.ts";
 import { Act, GoTo } from "../../navigation/go-to.tsx";
 import { useNavigation, useNavigationStore } from "../../navigation/navigation-store.tsx";
 import { takeWayBack, wayBack } from "../../navigation/way-back.ts";
+import { useRuntimeMode } from "../../runtime/port.tsx";
 import { useTitleBarHeight, WindowControlsSpace } from "../window-frame.tsx";
 
 const PAGES = ["Home", "Projects", "Community"] as const;
@@ -26,6 +27,7 @@ export type LauncherHeaderProps = {
 export function LauncherHeader({ active, activeGoesTo, account, unread = false }: LauncherHeaderProps) {
   useTitleBarHeight(tokens.size.headerLauncher);
   const go = useNavigation((state) => state.go);
+  const app = useRuntimeMode() === "app";
   return (
     <header
       data-ui-id="HDR-LAUNCHER"
@@ -94,6 +96,17 @@ export function LauncherHeader({ active, activeGoesTo, account, unread = false }
         <Bell size={18} strokeWidth={1.75} aria-hidden />
         {unread ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger" /> : null}
       </GoTo>
+      {app ? (
+        <GoTo
+          to="SCR-SETTINGS-MODELS"
+          cta="Settings"
+          aria-label="Settings"
+          title="Settings"
+          className={buttonClass("icon")}
+        >
+          <Settings size={18} strokeWidth={1.75} aria-hidden />
+        </GoTo>
+      ) : null}
       <GoTo
         to={account.signedIn ? "SCR-PROFILE" : "MOD-SIGN-IN"}
         cta={account.initial}
