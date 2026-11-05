@@ -1,5 +1,6 @@
 // TAB-SIDE-BY-SIDE
 import type { MotionCompare } from "../../../ports/motion-port.ts";
+import { EpisodeView } from "./episode-view.tsx";
 import { MotionView } from "./motion-view.tsx";
 
 // The reference video with its tracked skeleton next to the physics character and its match.
@@ -13,13 +14,17 @@ export function SideBySideTab({ compare }: { compare: MotionCompare }) {
         figures={["reference"]}
         speed={compare.speed}
       />
-      <MotionView
-        label="The character copying the pose in physics"
-        caption={compare.character}
-        playback={compare.playback}
-        figures={["result"]}
-        speed={compare.speed}
-      />
+      {compare.episode ? (
+        <EpisodeView episode={compare.episode} caption={compare.character} speed={compare.speed} />
+      ) : (
+        <MotionView
+          label="The character copying the pose in physics"
+          caption={compare.character}
+          playback={compare.playback}
+          figures={["result"]}
+          speed={compare.speed}
+        />
+      )}
     </div>
   );
 }

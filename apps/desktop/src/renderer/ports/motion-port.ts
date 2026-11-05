@@ -34,6 +34,8 @@ export type MotionCompare = {
   speed: string;
   // None until the clip is tracked (and in the prototype, which draws plain surfaces).
   playback?: MotionPlayback;
+  // The recorded physics episode the result was measured on, to replay the body itself; none before training.
+  episode?: { project: string; run: string; step: number };
 };
 
 export type ClipTimeline = {
