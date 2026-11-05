@@ -15,7 +15,7 @@ pnpm community:dev    # serve on http://127.0.0.1:8790 with development sign-in
 
 `pnpm community:dev` applies migrations, then serves with reload. Its `--dev` flag turns on **development sign-in** (`DEV_AUTH=true`) and makes `dev@icarus.localhost` a moderator, unless your environment or `.env` says otherwise. In this mode `POST /v1/dev/token` signs a one-hour token for any email, so every screen can be tried on one computer. A server started with `ENV=production` refuses to start with development sign-in on.
 
-Then run the app (`pnpm dev`) in another terminal. The desktop finds the service through **one setting**, `community_url` in `community.json` in the settings folder (`~/.icarus`, or `ICARUS_SETTINGS_DIR`), editable in Settings › Profile › Community server. It defaults to `http://127.0.0.1:8790`. With no Supabase URL and anon key there, the app signs in through the server's development mode as `dev@icarus.localhost`.
+Then run the app (`pnpm dev`) in another terminal. The desktop finds the service through **one setting**, `community_url` in `community.json` in the settings folder (`~/.icarus`, or `ICARUS_SETTINGS_DIR`); a release carries it from its build instead. It defaults to `http://127.0.0.1:8790`. With no Supabase URL and anon key there, the app signs in through the server's development mode as `dev@icarus.localhost`.
 
 To try a second person locally, ask for another token and call the API directly:
 
@@ -51,9 +51,9 @@ Every setting comes from the environment or a `.env` file in this folder; copy [
 1. Create a project at supabase.com (the free plan is enough) and enable the providers you want under Authentication › Providers: Email, Google, GitHub.
 2. Under Authentication › URL Configuration add `http://127.0.0.1:8791/auth/callback` to the redirect URLs. The app listens there while you sign in, so the browser can hand the sign-in back to it.
 3. On the server set `SUPABASE_URL=https://<project>.supabase.co` and turn `DEV_AUTH` off.
-4. In the app, Settings › Profile › Community server: set the Supabase URL and the project's anon (public) key, and the community server address.
+4. Build the app with `MAIN_VITE_COMMUNITY_URL`, `MAIN_VITE_SUPABASE_URL` and `MAIN_VITE_SUPABASE_ANON_KEY` set (in `apps/desktop/.env.production`, see `apps/desktop/.env.example`), so the release reaches your server and project with nothing to set. For development, the same three values can go in `community.json` (`community_url`, `supabase_url`, `supabase_anon_key`).
 
-The anon key is public by design; the service role key never goes in the app.
+The anon key is public by design; the service role key and the database address never go in the app. If the service keeps its tables in the Supabase Postgres, turn on row level security on every table with no policies, so the anon key cannot reach them through Supabase's own API.
 
 ## Migrations
 

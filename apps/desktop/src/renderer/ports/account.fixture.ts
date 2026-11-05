@@ -63,7 +63,7 @@ export function createAccountFixture(): AccountPort {
     }
     return other;
   };
-  let connection: CommunityConnection = {
+  const connection: CommunityConnection = {
     communityUrl: "http://127.0.0.1:8790",
     supabaseUrl: "",
     hasAnonKey: false,
@@ -80,17 +80,6 @@ export function createAccountFixture(): AccountPort {
       account = { ...account, signedIn: false };
     },
     getConnection: async () => connection,
-    saveConnection: async ({ communityUrl, supabaseUrl, supabaseAnonKey }) => {
-      const hasAnonKey = supabaseAnonKey === undefined ? connection.hasAnonKey : supabaseAnonKey !== "";
-      connection = {
-        ...connection,
-        communityUrl: communityUrl || connection.communityUrl,
-        supabaseUrl,
-        hasAnonKey,
-        authMode: supabaseUrl && hasAnonKey ? "supabase" : "dev",
-      };
-      return connection;
-    },
     getProfile: async (handle) => find(handle),
     listProfileCreations: async ({ handle, shelf }) =>
       find(handle).own && shelf === "creations" ? [...OWN_CREATIONS] : [],

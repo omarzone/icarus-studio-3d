@@ -12,7 +12,7 @@ type Call = { url: string; init: RequestInit | undefined };
 
 function service(answer: (url: string, init: RequestInit | undefined) => Response | Promise<Response>) {
   const calls: Call[] = [];
-  let config: CommunityConfig = { communityUrl: SERVER, supabaseUrl: "", supabaseAnonKey: "" };
+  const config: CommunityConfig = { communityUrl: SERVER, supabaseUrl: "", supabaseAnonKey: "" };
   const fetchFn: typeof fetch = async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
@@ -25,9 +25,6 @@ function service(answer: (url: string, init: RequestInit | undefined) => Respons
   });
   const community = new CommunityService({
     readConfig: () => config,
-    writeConfig: (next) => {
-      config = next;
-    },
     vault,
     openExternal: async () => undefined,
     waitForCallback: () => Promise.reject(new Error("not used")),
@@ -89,18 +86,4 @@ it("returns pictures as data URLs and nothing else as a picture", async () => {
   expect(await community.request({ method: "GET", path: "/v1/profiles/a/photo", picture: true })).toMatchObject({
     dataUrl: null,
   });
-});
-
-it("forgets the session when the server or the Supabase project changes", async () => {
-  const { community } = service(() => json({ access_token: "dev-token", expires_in: 3600 }));
-  await community.signIn({ provider: "google" });
-
-  const saved = await community.saveConnection({
-    communityUrl: "https://community.example.org",
-    supabaseUrl: "https://project.supabase.co",
-    supabaseAnonKey: "anon",
-  });
-
-  expect(saved).toMatchObject({ communityUrl: "https://community.example.org", authMode: "supabase" });
-  expect(await community.session()).toEqual({ signedIn: false });
 });

@@ -70,13 +70,6 @@ export function createCommunityAccount(
     },
     signOut: () => community().signOut(),
     getConnection: () => connection(community()),
-    saveConnection: async (edit) => {
-      const saved: unknown = await community().saveConnection(edit);
-      if (!isCommunityConnection(saved)) {
-        throw new Error("The app could not save its community settings");
-      }
-      return saved;
-    },
     getProfile: async (handle) => profileView(handle === undefined ? await api.me() : await api.profile(handle)),
     listProfileCreations: async ({ handle, shelf }) =>
       (await api.profileCreations(await own(handle), shelf)).map(profileCreationView),

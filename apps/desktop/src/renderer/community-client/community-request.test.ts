@@ -13,7 +13,6 @@ import {
 function answering(response: CommunityResponse): () => CommunityBridge {
   const bridge: CommunityBridge = {
     connection: () => Promise.reject(new Error("unused")),
-    saveConnection: () => Promise.reject(new Error("unused")),
     session: () => Promise.resolve({ signedIn: false }),
     signIn: () => Promise.reject(new Error("unused")),
     signOut: () => Promise.resolve(),

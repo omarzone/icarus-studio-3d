@@ -2102,7 +2102,7 @@ Order follows the main flows. For each entry: kind, parent, how you get there, p
 - **Purpose:** Edit the public profile and signature.
 - **Content:**
   - *Change photo* picks a PNG, JPEG or WebP picture; *Remove* goes back to the initials.
-  - Below the profile, **Community server**: the server address (default `http://127.0.0.1:8790`), the Supabase URL and anon key, a line saying how people sign in (Supabase, with the redirect URL to allow, or the server's development sign-in), *Save server* and *Sign out*. It shows even when signed out or when the server does not answer.
+  - Below the profile, while signed in, **Account** with *Sign out*. The community server comes with the app and is not a setting.
 - **Header:** `HDR-LAUNCHER` · active: **Home**
 - **Side navigation:** no tabbed panels
 - **Page:** no tabbed panels

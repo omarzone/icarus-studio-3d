@@ -1,6 +1,5 @@
 import type {
   CommunityConnection,
-  CommunityConnectionInput,
   CommunityRequest,
   CommunityResponse,
   CommunitySession,
@@ -8,7 +7,6 @@ import type {
   SignInResult,
 } from "../../shared/community-bridge.ts";
 import type { CommunityConfig } from "./community-config.ts";
-import { applyInput } from "./community-config.ts";
 import { DevSession } from "./dev-session.ts";
 import type { CallbackWait } from "./loopback-callback.ts";
 import { CALLBACK_PATH, DEFAULT_CALLBACK_PORT } from "./loopback-callback.ts";
@@ -20,7 +18,6 @@ const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export type CommunityServiceDeps = {
   readConfig: () => CommunityConfig;
-  writeConfig: (config: CommunityConfig) => void;
   vault: SessionVault;
   openExternal: (url: string) => Promise<void>;
   waitForCallback: (timeoutMs: number) => Promise<CallbackWait>;
@@ -51,22 +48,6 @@ export class CommunityService {
       authMode: supabase ? "supabase" : "dev",
       callbackUrl: `http://127.0.0.1:${DEFAULT_CALLBACK_PORT}${CALLBACK_PATH}`,
     };
-  }
-
-  async saveConnection(input: CommunityConnectionInput): Promise<CommunityConnection> {
-    const next = applyInput(this.config, input);
-    const changed =
-      next.communityUrl !== this.config.communityUrl ||
-      next.supabaseUrl !== this.config.supabaseUrl ||
-      next.supabaseAnonKey !== this.config.supabaseAnonKey;
-    if (changed) {
-      // A session belongs to one server and one Supabase project.
-      await this.signOut();
-      this.config = next;
-      this.deps.writeConfig(next);
-      this.supabase = null;
-    }
-    return this.connection();
   }
 
   onSession(listener: (session: CommunitySession) => void): () => void {
