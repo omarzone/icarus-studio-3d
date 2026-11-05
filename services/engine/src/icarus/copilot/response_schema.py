@@ -100,3 +100,50 @@ def response_schema(output: type[BaseModel]) -> tuple[dict[str, Any], bool]:
     original = output.model_json_schema()
     strict = not _has_open_map(original)
     return _strict(original), strict
+
+
+# Some services refuse a tool schema nested deeper than this, counting every object and list in the JSON.
+MAX_SCHEMA_DEPTH = 10
+
+
+def _inline(node: Any, defs: dict[str, Any], seen: tuple[str, ...] = ()) -> Any:
+    if isinstance(node, list):
+        return [_inline(item, defs, seen) for item in node]
+    if not isinstance(node, dict):
+        return node
+    ref = node.get("$ref")
+    if isinstance(ref, str):
+        name = ref.rsplit("/", 1)[-1]
+        if name in seen or name not in defs:
+            return {"type": "object"}
+        return _inline(defs[name], defs, (*seen, name))
+    return {key: _inline(value, defs, seen) for key, value in node.items() if key != "$defs"}
+
+
+def _json_depth(node: Any) -> int:
+    if isinstance(node, dict):
+        return 1 + max((_json_depth(value) for value in node.values()), default=0)
+    if isinstance(node, list):
+        return 1 + max((_json_depth(item) for item in node), default=0)
+    return 0
+
+
+def _cut(node: Any, room: int) -> Any:
+    if isinstance(node, list):
+        return [_cut(item, room - 1) for item in node]
+    if not isinstance(node, dict):
+        return node
+    if room <= 2 and _json_depth(node) > room:
+        # Deeper parts are left open; validation still checks them against the full model.
+        kept = {key: node[key] for key in ("type", "description") if isinstance(node.get(key), str)}
+        return kept or {}
+    return {key: _cut(value, room - 1) for key, value in node.items()}
+
+
+def shallow_schema(schema: dict[str, Any], limit: int = MAX_SCHEMA_DEPTH) -> tuple[dict[str, Any], bool]:
+    """The schema unchanged when it fits the depth limit with its references resolved; otherwise inlined and cut to
+    fit, and no longer strict."""
+    inlined = _inline(schema, schema.get("$defs", {}))
+    if _json_depth(inlined) <= limit:
+        return schema, True
+    return _cut(inlined, limit), False

@@ -13,7 +13,7 @@ from icarus.contracts.project import ProjectState
 from icarus.copilot.attachments import AttachmentStore
 from icarus.copilot.chat_training import ChatTrainer
 from icarus.copilot.language import Language
-from icarus.copilot.response_schema import response_schema
+from icarus.copilot.response_schema import response_schema, shallow_schema
 from icarus.design.compiler import CompiledModel
 from icarus.projects.store import ProjectStore
 from icarus.sim.views import ViewRenderer
@@ -172,6 +172,8 @@ class Tool[A: ToolArgs]:
 def tool_definition(name: str, description: str, args: type[BaseModel]) -> dict[str, Any]:
     """One OpenAI function definition; strict only when the schema can be expressed in strict mode."""
     schema, strict = response_schema(args)
+    schema, fits = shallow_schema(schema)
+    strict = strict and fits
     function: dict[str, Any] = {"name": name, "description": description, "parameters": schema}
     if strict:
         function["strict"] = True
