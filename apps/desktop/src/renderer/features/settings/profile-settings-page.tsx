@@ -12,7 +12,7 @@ import { buttonClass } from "../../ui/button-styles.ts";
 import { QueryView } from "../../ui/query-view.tsx";
 import { Switch } from "../../ui/switch.tsx";
 import { TextField } from "../../ui/text-field.tsx";
-import { CommunityServerSection } from "./community-server-section.tsx";
+import { AccountSection } from "./account-section.tsx";
 import { SettingsLayout } from "./settings-layout.tsx";
 
 function readAsDataUrl(file: File): Promise<string> {
@@ -31,7 +31,7 @@ export function ProfileSettingsPage() {
   return (
     <SettingsLayout section="profile" title="Profile" description="How people see you in the community.">
       <QueryView query={query}>{(profile) => <ProfileForm profile={profile} />}</QueryView>
-      <CommunityServerSection />
+      <AccountSection />
     </SettingsLayout>
   );
 }

@@ -50,8 +50,6 @@ export type CommunityConnection = {
   callbackUrl: string;
 };
 
-export type CommunityConnectionEdit = { communityUrl: string; supabaseUrl: string; supabaseAnonKey?: string };
-
 export type SignInOutcome =
   | { kind: "signed-in"; account: AccountSummary }
   // A sign-in link went to this address; opening it finishes signing in.
@@ -62,7 +60,6 @@ export type AccountPort = {
   signIn: (input: { provider: SignInProvider; email?: string }) => Promise<SignInOutcome>;
   signOut: () => Promise<void>;
   getConnection: () => Promise<CommunityConnection>;
-  saveConnection: (edit: CommunityConnectionEdit) => Promise<CommunityConnection>;
   // Without a handle, the signed-in person's own profile.
   getProfile: (handle: string | undefined) => Promise<Profile>;
   listProfileCreations: (input: { handle: string | undefined; shelf: ProfileShelf }) => Promise<ProfileCreation[]>;

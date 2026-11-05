@@ -1,13 +1,8 @@
 import { join } from "node:path";
 import type { BrowserWindow } from "electron";
 import { app, ipcMain, safeStorage, shell } from "electron";
-import {
-  COMMUNITY_CHANNEL,
-  isCommunityRequest,
-  isCommunitySignIn,
-  isConnectionInput,
-} from "../../shared/community-bridge.ts";
-import { readConfig, writeConfig } from "./community-config.ts";
+import { COMMUNITY_CHANNEL, isCommunityRequest, isCommunitySignIn } from "../../shared/community-bridge.ts";
+import { readConfig } from "./community-config.ts";
 import { CommunityService } from "./community-service.ts";
 import { DEFAULT_CALLBACK_PORT, waitForCallback } from "./loopback-callback.ts";
 import { SessionVault } from "./session-vault.ts";
@@ -29,18 +24,11 @@ export function registerCommunity(win: BrowserWindow): CommunityService {
   });
   const service = new CommunityService({
     readConfig: () => readConfig(),
-    writeConfig: (config) => writeConfig(config),
     vault,
     openExternal: openInBrowser,
     waitForCallback: (timeoutMs) => waitForCallback(DEFAULT_CALLBACK_PORT, timeoutMs),
   });
   ipcMain.handle(COMMUNITY_CHANNEL.connection, () => service.connection());
-  ipcMain.handle(COMMUNITY_CHANNEL.saveConnection, (_event, input: unknown) => {
-    if (!isConnectionInput(input)) {
-      throw new Error("Not a community connection");
-    }
-    return service.saveConnection(input);
-  });
   ipcMain.handle(COMMUNITY_CHANNEL.session, () => service.session());
   ipcMain.handle(COMMUNITY_CHANNEL.signIn, (_event, request: unknown) => {
     if (!isCommunitySignIn(request)) {

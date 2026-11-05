@@ -13,13 +13,6 @@ export type CommunityConnection = {
   callbackUrl: string;
 };
 
-export type CommunityConnectionInput = {
-  communityUrl: string;
-  supabaseUrl: string;
-  // Absent keeps the stored key; an empty string removes it.
-  supabaseAnonKey?: string;
-};
-
 export type CommunitySession = { signedIn: false } | { signedIn: true; email: string };
 
 export type SignInProviderId = "google" | "github" | "email";
@@ -43,7 +36,6 @@ export type CommunityResponse =
 
 export type CommunityBridge = {
   connection(): Promise<CommunityConnection>;
-  saveConnection(input: CommunityConnectionInput): Promise<CommunityConnection>;
   session(): Promise<CommunitySession>;
   signIn(request: CommunitySignIn): Promise<SignInResult>;
   signOut(): Promise<void>;
@@ -53,7 +45,6 @@ export type CommunityBridge = {
 
 export const COMMUNITY_CHANNEL = {
   connection: "community:connection",
-  saveConnection: "community:save-connection",
   session: "community:session",
   signIn: "community:sign-in",
   signOut: "community:sign-out",
@@ -84,15 +75,6 @@ export function isCommunitySignIn(value: unknown): value is CommunitySignIn {
     return false;
   }
   return value.email === undefined || (typeof value.email === "string" && value.email.length <= 320);
-}
-
-export function isConnectionInput(value: unknown): value is CommunityConnectionInput {
-  return (
-    isRecord(value) &&
-    typeof value.communityUrl === "string" &&
-    typeof value.supabaseUrl === "string" &&
-    (value.supabaseAnonKey === undefined || typeof value.supabaseAnonKey === "string")
-  );
 }
 
 export function isCommunitySession(value: unknown): value is CommunitySession {

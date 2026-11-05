@@ -32,7 +32,6 @@ const exportBridge: ExportBridge = {
 
 const community: CommunityBridge = {
   connection: () => ipcRenderer.invoke(COMMUNITY_CHANNEL.connection),
-  saveConnection: (input) => ipcRenderer.invoke(COMMUNITY_CHANNEL.saveConnection, input),
   session: () => ipcRenderer.invoke(COMMUNITY_CHANNEL.session),
   signIn: (request) => ipcRenderer.invoke(COMMUNITY_CHANNEL.signIn, request),
   signOut: () => ipcRenderer.invoke(COMMUNITY_CHANNEL.signOut),

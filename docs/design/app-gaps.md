@@ -175,7 +175,7 @@ Every reference render in `docs/design/reference/` (62 IDs) and every screen in 
 | SCR-SETTINGS-TRAINING | Engine status with Restart | works | built | "healthy" is hardcoded but only shown after the engine answered |
 | SCR-SETTINGS-NOTIFICATIONS | Run finished, copilot needs OK, remixes, news | partial | planned | The run-finished switch drives the system notification; copilot notifications are never sent |
 | SCR-SETTINGS-NOTIFICATIONS | Notifications in the system tray | works | not in spec | Nothing |
-| SCR-SETTINGS | Community server (official or self-hosted) | works | built | Nothing |
+| SCR-SETTINGS | Community server comes with the build (official or self-hosted) | works | built | Nothing |
 | SYS-ENGINE-DOWN | Full-screen "The Icarus engine stopped" | works | built | Nothing |
 | SYS-ENGINE-DOWN | Copy "Training runs pause until the engine is back" | works | not in spec | Nothing |
 | SYS-ENGINE-DOWN | Restart returns to the covered screen | works | built | Nothing |

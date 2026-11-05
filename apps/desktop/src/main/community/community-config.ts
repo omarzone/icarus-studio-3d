@@ -1,17 +1,22 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import type { CommunityConnectionInput } from "../../shared/community-bridge.ts";
+import { join } from "node:path";
 import { isRecord } from "../../shared/community-bridge.ts";
 
-// The community server and Supabase project the app uses, kept in `community.json` in the settings folder (the
-// same folder as the engine's settings). Switching to another server is changing `community_url` there or in
-// Settings › Profile › Community server.
+// The community server and Supabase project the app uses. A release carries them from its build (MAIN_VITE_*
+// variables), so people never set them; `community.json` in the settings folder overrides any of them, for
+// development against another server. Only the public anon key ever ships: server secrets stay on the server.
 
 export const DEFAULT_COMMUNITY_URL = "http://127.0.0.1:8790";
 export const CONFIG_FILE = "community.json";
 
 export type CommunityConfig = { communityUrl: string; supabaseUrl: string; supabaseAnonKey: string };
+
+export const BUILT_CONFIG: CommunityConfig = {
+  communityUrl: import.meta.env.MAIN_VITE_COMMUNITY_URL ?? "",
+  supabaseUrl: import.meta.env.MAIN_VITE_SUPABASE_URL ?? "",
+  supabaseAnonKey: import.meta.env.MAIN_VITE_SUPABASE_ANON_KEY ?? "",
+};
 
 export function settingsDir(env: NodeJS.ProcessEnv = process.env): string {
   return env.ICARUS_SETTINGS_DIR || join(homedir(), ".icarus");
@@ -43,7 +48,7 @@ function stringField(record: Record<string, unknown>, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
-export function parseConfig(text: string): CommunityConfig {
+export function parseConfig(text: string, built: CommunityConfig = BUILT_CONFIG): CommunityConfig {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -59,9 +64,12 @@ export function parseConfig(text: string): CommunityConfig {
     }
   };
   return {
-    communityUrl: safe(stringField(record, "community_url"), "Community server") || DEFAULT_COMMUNITY_URL,
-    supabaseUrl: safe(stringField(record, "supabase_url"), "Supabase URL"),
-    supabaseAnonKey: stringField(record, "supabase_anon_key").trim(),
+    communityUrl:
+      safe(stringField(record, "community_url"), "Community server") ||
+      safe(built.communityUrl, "Community server") ||
+      DEFAULT_COMMUNITY_URL,
+    supabaseUrl: safe(stringField(record, "supabase_url"), "Supabase URL") || safe(built.supabaseUrl, "Supabase URL"),
+    supabaseAnonKey: stringField(record, "supabase_anon_key").trim() || built.supabaseAnonKey.trim(),
   };
 }
 
@@ -71,24 +79,4 @@ export function readConfig(folder: string = settingsDir()): CommunityConfig {
   } catch {
     return parseConfig("{}");
   }
-}
-
-export function applyInput(current: CommunityConfig, input: CommunityConnectionInput): CommunityConfig {
-  return {
-    communityUrl: serverAddress(input.communityUrl, "Community server") || DEFAULT_COMMUNITY_URL,
-    supabaseUrl: serverAddress(input.supabaseUrl, "Supabase URL"),
-    supabaseAnonKey: input.supabaseAnonKey === undefined ? current.supabaseAnonKey : input.supabaseAnonKey.trim(),
-  };
-}
-
-export function writeConfig(config: CommunityConfig, folder: string = settingsDir()): void {
-  const path = join(folder, CONFIG_FILE);
-  mkdirSync(dirname(path), { recursive: true });
-  const text = JSON.stringify(
-    { community_url: config.communityUrl, supabase_url: config.supabaseUrl, supabase_anon_key: config.supabaseAnonKey },
-    null,
-    2,
-  );
-  writeFileSync(`${path}.tmp`, `${text}\n`, "utf8");
-  renameSync(`${path}.tmp`, path);
 }
