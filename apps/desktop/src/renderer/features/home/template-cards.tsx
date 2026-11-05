@@ -19,7 +19,8 @@ type Props = { templates: readonly TemplateSummary[]; scene: TemplatesPort["temp
 
 export function TemplateCards({ templates, scene }: Props) {
   return (
-    <div className="grid grid-cols-6 gap-3">
+    // One row: every template and the import card side by side.
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${templates.length + 1}, minmax(0, 1fr))` }}>
       {templates.map((template) => (
         <GoTo
           key={template.id}
@@ -33,9 +34,9 @@ export function TemplateCards({ templates, scene }: Props) {
             load={scene ? () => scene(template.id) : null}
             className="h-27.5 w-full"
           />
-          <span className="flex flex-col gap-0.5 px-3 py-2.5">
+          <span className="flex flex-col gap-0.5 px-3 py-2.5" title={template.description}>
             <span className="leading-tight font-semibold">{template.name}</span>
-            <span className="text-ui leading-tight text-fg-tertiary">{template.description}</span>
+            <span className="line-clamp-2 text-ui leading-tight text-fg-tertiary">{template.description}</span>
           </span>
         </GoTo>
       ))}

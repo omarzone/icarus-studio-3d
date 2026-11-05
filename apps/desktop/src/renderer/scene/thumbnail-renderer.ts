@@ -25,6 +25,8 @@ const WIDTH = 720;
 const HEIGHT = 360;
 // Share of the camera's far distance the sky dome reaches, so the dome is never clipped.
 const DOME_REACH = 0.9;
+// Cards crop the scene's outer edge so the bodies read at card size instead of the arena around them.
+const CARD_MARGIN = 0.92;
 
 // One WebGL context for every card: browsers allow only a handful, and a page can show many cards.
 let shared: WebGLRenderer | null = null;
@@ -51,7 +53,13 @@ function renderer(): WebGLRenderer {
 
 // Draws the engine's compiled scene at its initial pose from a fixed three-quarter view, as a PNG data URL.
 export function renderSceneThumbnail(description: SceneDescription): string {
-  return renderSceneView(description, { view: "three-quarter", width: WIDTH, height: HEIGHT, type: "image/png" });
+  return renderSceneView(description, {
+    view: "three-quarter",
+    width: WIDTH,
+    height: HEIGHT,
+    type: "image/png",
+    margin: CARD_MARGIN,
+  });
 }
 
 export type SceneViewOptions = {
@@ -59,6 +67,8 @@ export type SceneViewOptions = {
   width: number;
   height: number;
   type: "image/png" | "image/jpeg";
+  // How much room is left around the scene; omitted, the whole scene fits with a little air.
+  margin?: number;
 };
 
 // The same still picture from a chosen side and size, as a data URL (the copilot's look at the scene).
@@ -75,7 +85,7 @@ export function renderSceneView(description: SceneDescription, options: SceneVie
   scene.add(new HemisphereLight(hemisphere.sky, hemisphere.ground, hemisphere.intensity));
   const frame = options.view === "top" ? topCamera : thumbnailCamera;
   const bounds = sceneBounds(description.geoms);
-  const framing = frame(bounds, width / height);
+  const framing = frame(bounds, width / height, undefined, options.margin);
   const dome = look ? createSkyDome(look, framing.far * DOME_REACH, domeExtras(sky, description.lights[0])) : null;
   const environment = needsEnvironment(description.geoms)
     ? createSkyEnvironment(look?.top ?? colors.background, look?.horizon ?? colors.background, ground)

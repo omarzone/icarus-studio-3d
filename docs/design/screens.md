@@ -60,7 +60,7 @@ Top bar of every project workspace. Always visible while a project is open. Fold
 Top bar of the pages outside a project: Home, Projects, Community, Profile, Settings. Folder: `app/shell/launcher-header/`.
 
 - Logo, nav links **Home** (`SCR-HOME`), **Projects** (`SCR-PROJECTS`), **Community** (`SCR-COMMUNITY`); the active one is underlined.
-- **Search creations** field → `SCR-COMMUNITY` with results. **Bell** with an unread dot → `POP-NOTIFICATIONS`. **Avatar** → `SCR-PROFILE` (signed out: `MOD-SIGN-IN`).
+- **Search creations** field → `SCR-COMMUNITY` with results. **Bell** with an unread dot → `POP-NOTIFICATIONS`. **Avatar** → `SCR-PROFILE` (signed out: `MOD-SIGN-IN`). In the app a **gear** between the bell and the avatar → `SCR-SETTINGS-MODELS`, so settings are one click away without opening a project.
 - In the app a **way back** before the logo, with Escape doing the same: on every Settings page *Back to project* (or *Back to Home*, *Back to Projects*… for the page Settings was opened from; *Back to Home* when there is none), and on Home, Projects, Community, Creation and Profile *Back to project* when they were opened from a project. It returns to the exact project and workspace, and a reload keeps it.
 
 ### `HDR-PLAY` Play header

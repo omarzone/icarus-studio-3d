@@ -72,15 +72,21 @@ export function sceneBounds(geoms: readonly SceneGeom[], zones: readonly SceneZo
 }
 
 // How far back a camera with this vertical field of view must be for the sphere to fit the narrower side.
-function fitDistance(radius: number, aspect: number, fov: number): number {
+function fitDistance(radius: number, aspect: number, fov: number, margin: number): number {
   const vertical = (fov * Math.PI) / 180;
   const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
-  return (radius * MARGIN) / Math.sin(Math.min(vertical, horizontal) / 2);
+  return (radius * margin) / Math.sin(Math.min(vertical, horizontal) / 2);
 }
 
-function cameraAt(direction: Vector3, bounds: SceneBounds | null, aspect: number, fov: number): ThumbnailCamera {
+function cameraAt(
+  direction: Vector3,
+  bounds: SceneBounds | null,
+  aspect: number,
+  fov: number,
+  margin: number,
+): ThumbnailCamera {
   const { center, radius } = bounds ?? EMPTY;
-  const away = fitDistance(radius, aspect, fov);
+  const away = fitDistance(radius, aspect, fov, margin);
   const length = Math.hypot(...direction);
   const eye: Vector3 = [
     center[0] + (direction[0] / length) * away,
@@ -97,11 +103,17 @@ function cameraAt(direction: Vector3, bounds: SceneBounds | null, aspect: number
 }
 
 // A fixed three-quarter view far enough back that the bounding sphere fits the narrower side of the picture.
-export function thumbnailCamera(bounds: SceneBounds | null, aspect: number, fov = FOV): ThumbnailCamera {
-  return cameraAt(DIRECTION, bounds, aspect, fov);
+// A margin under 1 crops the sphere's edges, for pictures that should feel close to their subject.
+export function thumbnailCamera(
+  bounds: SceneBounds | null,
+  aspect: number,
+  fov = FOV,
+  margin = MARGIN,
+): ThumbnailCamera {
+  return cameraAt(DIRECTION, bounds, aspect, fov, margin);
 }
 
 // Straight down on the scene; a hair off vertical so orbiting from it has a defined "up".
-export function topCamera(bounds: SceneBounds | null, aspect: number, fov = FOV): ThumbnailCamera {
-  return cameraAt(TOP, bounds, aspect, fov);
+export function topCamera(bounds: SceneBounds | null, aspect: number, fov = FOV, margin = MARGIN): ThumbnailCamera {
+  return cameraAt(TOP, bounds, aspect, fov, margin);
 }
