@@ -372,3 +372,13 @@ def test_a_structured_reply_carries_the_measured_usage():
     )
     usage = client.ask("verdict", Verdict, "s", "u").usage
     assert usage is not None and (usage.prompt_tokens, usage.completion_tokens) == (50, 4)
+
+
+def test_tool_schemas_fit_the_nesting_some_services_allow() -> None:
+    from icarus.copilot.agent.loop import definitions
+    from icarus.copilot.response_schema import MAX_SCHEMA_DEPTH, _inline, _json_depth
+
+    for tool in definitions():
+        parameters = tool["function"]["parameters"]
+        resolved = _inline(parameters, parameters.get("$defs", {}))
+        assert _json_depth(resolved) <= MAX_SCHEMA_DEPTH, tool["function"]["name"]
