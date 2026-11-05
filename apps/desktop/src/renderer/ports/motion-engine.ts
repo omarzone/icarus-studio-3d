@@ -55,7 +55,9 @@ export function createEngineMotionPort(api: ProjectApi, motion: MotionApi): Moti
   };
   const compare = async (clip: string) => {
     const current = await workspace(clip);
-    return motionCompare(current, speeds.get(clip) ?? "1×", await link(clip, current));
+    const shown = motionCompare(current, speeds.get(clip) ?? "1×", await link(clip, current));
+    const measured = current.comparison;
+    return measured ? { ...shown, episode: { project: clip, run: measured.run_id, step: measured.step } } : shown;
   };
   const plan = async (clip: string) =>
     trainingPlan(await workspace(clip), await project(clip), focuses.get(clip) ?? "even");
