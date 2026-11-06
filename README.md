@@ -14,6 +14,8 @@
 ![Training](https://img.shields.io/badge/training-PPO%20on%20CPU-262626?style=flat-square)
 ![Desktop](https://img.shields.io/badge/desktop-Electron%20%2B%20React%20Three%20Fiber-262626?style=flat-square)
 
+<img src="docs/media/icarus-demo.gif" alt="Icarus Studio 3D training a humanoid and a self-parking car in real physics" width="900" />
+
 </div>
 
 > [!NOTE]
